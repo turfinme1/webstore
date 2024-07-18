@@ -85,11 +85,10 @@ const seedNaselenoMqsto = async (client) => {
         const kmetstvoId = res.rows[0].id;
         return [nm.ekatte, nm.name_en, nm.name, kmetstvoId];
       }
-      return [nm.ekatte, nm.name_en, nm.name, 0];
+      return [nm.ekatte, nm.name_en, nm.name, null];
     })
   );
-  dataset = dataset.filter((nm) => nm[3] > 0);
-
+  console.log(dataset);
   const queryString =
     "INSERT INTO naseleno_mqsto(ekatte, name_en, name, kmetstvo_id) VALUES($1, $2, $3, $4) RETURNING *";
   for (const values of dataset) {
