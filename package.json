@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/index.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +16,8 @@
     "url": "https://github.com/telebid-interns/borislav.a-training/issues"
   },
   "homepage": "https://github.com/telebid-interns/borislav.a-training#readme",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "pg": "^8.12.0"
+  }
 }
