@@ -47,6 +47,8 @@ const server = http.createServer(async (req, res) => {
         console.log(e);
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Invalid JSON" }));
+      } finally {
+        client.release();
       }
       break;
     default:
