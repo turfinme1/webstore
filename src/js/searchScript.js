@@ -38,15 +38,15 @@ const createTableRows = (data) => {
     row.appendChild(naselenoCell);
 
     const kmetstvoCell = document.createElement("td");
-    kmetstvoCell.textContent = item.kmetstvo || "";
+    kmetstvoCell.textContent = item.kmetstvo || "null";
     row.appendChild(kmetstvoCell);
 
     const obshtinaCell = document.createElement("td");
-    obshtinaCell.textContent = item.obshtina || "";
+    obshtinaCell.textContent = item.obshtina || "null";
     row.appendChild(obshtinaCell);
 
     const oblastCell = document.createElement("td");
-    oblastCell.textContent = item.oblast || "";
+    oblastCell.textContent = item.oblast || "null";
     row.appendChild(oblastCell);
 
     tbody.appendChild(row);
