@@ -2,6 +2,16 @@ const form = document.getElementById("form");
 const search = document.getElementById("searchInput");
 const tbody = document.getElementById("tbody");
 
+const fetchStatistics = () => {
+  fetch("/statistics")
+    .then((res) => res.json())
+    .then((data) => {
+      console.log(data);
+      fillStatistics(data);
+    });
+};
+fetchStatistics();
+
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   const searchValue = search.value.trim();
@@ -51,4 +61,16 @@ const createTableRows = (data) => {
 
     tbody.appendChild(row);
   });
+};
+
+const fillStatistics = (data) => {
+  const settlementsCount = document.getElementById("settlementsCount");
+  const townHallsCount = document.getElementById("townHallsCount");
+  const municipalitiesCount = document.getElementById("municipalitiesCount");
+  const regionsCount = document.getElementById("regionsCount");
+
+  settlementsCount.textContent = data.countsettlements;
+  townHallsCount.textContent = data.counttownhalls;
+  municipalitiesCount.textContent = data.countmunicipalities;
+  regionsCount.textContent = data.countregions;
 };
