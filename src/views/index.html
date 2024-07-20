@@ -3,6 +3,7 @@
 <head>
     <title>Main page</title>
     <script defer src="../js/searchScript.js"></script>
+    <link rel="stylesheet" href="../css/index.css">
     <meta charset="UTF-8"> 
 </head>
 <body>
@@ -12,7 +13,26 @@
             <input type="text" id="searchInput" placeholder="Search...">
             <input type="submit" value="SEARCH"></input>
     </div>
-    
+
+    <div class="statistics">
+        <div class="stat-item">
+            <h3>Settlements</h3>
+            <p id="settlementsCount">0</p>
+        </div>
+        <div class="stat-item">
+            <h3>Town Halls</h3>
+            <p id="townHallsCount">0</p>
+        </div>
+        <div class="stat-item">
+            <h3>Municipalities</h3>
+            <p id="municipalitiesCount">0</p>
+        </div>
+        <div class="stat-item">
+            <h3>Regions</h3>
+            <p id="regionsCount">0</p>
+        </div>
+    </div>
+
     <table id="resultTable">
         <thead>
             <tr>
