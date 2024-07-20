@@ -1,15 +1,18 @@
 import pg from "pg";
-import config from "./database/dbConfig.js";
 import http from "http";
 import path from "path";
 import fs from "fs";
 const { Pool } = pg;
 const __dirname = import.meta.dirname;
+import config from "./database/dbConfig.js";
+import fileImport from "./database/fileImport.js";
 
 const PORT = 3000;
+const pool = new Pool(config);
+
+await fileImport(await pool.connect());
 
 const server = http.createServer(async (req, res) => {
-  const pool = new Pool(config);
   const client = await pool.connect();
 
   switch (req.url) {
