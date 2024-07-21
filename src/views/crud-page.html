@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>CRUD Operations</title>
+  <script defer src="../js/crudScript.js"></script>
+  <link rel="stylesheet" href="../css/crudPage.css">
+</head>
+
+<body>
+  <div id="container">
+    <h1>CRUD Operations</h1>
+    <div id="input-container">
+      <input type="text" id="name" placeholder="Име">
+      <input type="text" id="nameEn" placeholder="Име (латиница)">
+      <input type="text" id="ekkate" placeholder="EKATTE">
+      <input type="text" id="obshtina" placeholder="Община">
+      <input type="text" id="selishte" placeholder="Селище">
+      <input type="text" id="kmestvo" placeholder="Кметство">
+      <button id="add-btn">Add</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>EKATTE</th>
+          <th>Селище</th>
+          <th>Кметство</th>
+          <th>Община</th>
+          <th>Област</th>
+          <th>Actions </th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="update-container">
+      <input type="text" id="name" placeholder="Име">
+      <input type="text" id="nameEn" placeholder="Име (латиница)">
+      <input type="text" id="ekkate" placeholder="EKATTE">
+      <input type="text" id="obshtina" placeholder="Община">
+      <input type="text" id="selishte" placeholder="Селище">
+      <input type="text" id="kmestvo" placeholder="Кметство">
+      <button id="update-btn">Update</button>
+      <button id="cancel-btn">Cancel</button>
+    </div>
+  </div>
+</body>
+
+</html>
