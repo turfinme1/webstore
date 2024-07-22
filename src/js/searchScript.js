@@ -16,13 +16,7 @@ form.addEventListener("submit", (e) => {
   e.preventDefault();
   const searchValue = search.value.trim();
 
-  fetch("/settlements", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ searchValue }),
-  })
+  fetch(`/settlements?name=${searchValue}`)
     .then((res) => res.json())
     .then((data) => {
       console.log(data);
