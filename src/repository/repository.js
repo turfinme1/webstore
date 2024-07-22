@@ -16,12 +16,15 @@ class Repository {
     return rows[0];
   }
 
+  async getAllSettlementsByNameAsync(name) {
+    const query = `SELECT nm.ekatte,nm.name as "naseleno",COALESCE (km.name, 'not found') as "kmetstvo",COALESCE (ob.name, 'not found') as "obshtina",COALESCE(obl.name, 'not found') as "oblast" FROM public.${this.tableName} nm LEFT JOIN public.kmetstvo km ON km.id = nm.kmetstvo_id LEFT JOIN public.obshtina ob ON ob.id = km.obshtina_id LEFT JOIN public.oblast obl ON obl.id = ob.oblast_id WHERE LOWER(nm.name) = LOWER($1)`;
+    const { rows } = await this.client.query(query, [name]);
+    return rows;
+  }
+
   async createAsync(entity) {
     const keys = Object.keys(entity);
     const values = Object.values(entity);
-    console.log("keys", keys);
-    console.log("values", values);
-    console.log("map", keys.map((_, i) => `$${i + 1}`).join(","));
     const query = `INSERT INTO ${this.tableName}(${keys.join(
       ","
     )}) VALUES(${keys.map((_, i) => `$${i + 1}`).join(",")}) RETURNING *`;
