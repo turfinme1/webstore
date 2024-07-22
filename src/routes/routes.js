@@ -1,7 +1,7 @@
 import { getRequestBody, createResponse } from "../util/requestUtilities.js";
 
 const routes = ({ client }) => ({
-  "/settlements:POST": async (request, response) => {
+  "/regions:POST": async (request, response) => {
     const queryText =
       "INSERT INTO oblast(oblast_code, name_en, name) VALUES($1, $2, $3) RETURNING *";
     const body = await getRequestBody(request);
@@ -45,7 +45,7 @@ const routes = ({ client }) => ({
     }
   },
 
-  "/settlements:DELETE": async (request, response) => {
+  "/regions:DELETE": async (request, response) => {
     const queryText = "DELETE FROM oblast WHERE id = $1 RETURNING *";
     const requestParams = request.params;
     console.log("requestParams", requestParams);
@@ -73,6 +73,31 @@ const routes = ({ client }) => ({
       const result = await client.query(queryText);
       console.log(result.rows);
       return createResponse(response, 200, "application/json", result.rows[0]);
+    } catch (e) {
+      console.log(e);
+      return createResponse(response, 500, "application/json", {
+        error: "Internal Server Error",
+      });
+    } finally {
+      client.release();
+    }
+  },
+
+  "/regions:GET": async (request, response) => {
+    const queryText = "SELECT * FROM public.oblast WHERE id = $1 LIMIT 1";
+    const requestParams = request.params;
+
+    try {
+      console.log("Received JSON data:", requestParams);
+
+      if (requestParams.id) {
+        const result = await client.query(queryText, [requestParams.id]);
+        console.log(result.rows);
+        if (!result.rows[0]) {
+          return createResponse(response, 404, "application/json", result.rows);
+        }
+        return createResponse(response, 200, "application/json", result.rows);
+      }
     } catch (e) {
       console.log(e);
       return createResponse(response, 500, "application/json", {
