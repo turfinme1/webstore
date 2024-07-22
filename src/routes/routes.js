@@ -107,6 +107,35 @@ const routes = ({ client }) => ({
       client.release();
     }
   },
+
+  "/regions:PUT": async (request, response) => {
+    const queryText = `UPDATE oblast SET oblast_code = $1, name = $2, name_en = $3 WHERE id = $4 RETURNING *`;
+    const requestParams = request.params;
+    const body = await getRequestBody(request);
+
+    try {
+      const { oblastCode, name, nameEn } = JSON.parse(body);
+      const params = [oblastCode, name, nameEn, requestParams.id];
+
+      const result = await client.query(queryText, params);
+      console.log(result.rows);
+
+      if (result.rows.length === 0) {
+        return createResponse(response, 404, "application/json", {
+          error: "Region not found",
+        });
+      }
+
+      return createResponse(response, 200, "application/json", result.rows);
+    } catch (e) {
+      console.log(e);
+      return createResponse(response, 400, "application/json", {
+        error: "Region could not be updated",
+      });
+    } finally {
+      client.release();
+    }
+  },
 });
 
 export default routes;
