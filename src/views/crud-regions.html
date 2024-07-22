@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD REGIONS</title>
+    <script defer src="../js/crudRegions.js"></script>
+    <link rel="stylesheet" href="../css/crudPage.css">
+</head>
+
+<body>
+    <div id="container">
+        <h1>CRUD Operations - REGION</h1>
+        <div id="input-container">
+            <form id="create-form">
+
+                <input type="text" id="oblast_code" placeholder="EKATTE">
+                <input type="text" id="name" placeholder="Име">
+                <input type="text" id="name_en" placeholder="Име (латиница)">
+                <input type="submit" value="Add"></button>
+                <div id="error-message"></div>
+            </form>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>REGION CODE</th>
+                    <th>NAME</th>
+                    <th>NAME (EN)</th>
+                    <th>Actions </th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+        <div id="update-container">
+            <input type="text" id="name" placeholder="Име">
+            <input type="text" id="nameEn" placeholder="Име (латиница)">
+            <input type="text" id="ekkate" placeholder="EKATTE">
+            <input type="text" id="obshtina" placeholder="Община">
+            <input type="text" id="selishte" placeholder="Селище">
+            <input type="text" id="kmestvo" placeholder="Кметство">
+            <button id="update-btn">Update</button>
+            <button id="cancel-btn">Cancel</button>
+        </div>
+    </div>
+</body>
+
+</html>
