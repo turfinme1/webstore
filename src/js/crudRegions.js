@@ -16,7 +16,7 @@ const deleteHandler = (rowData, row) => {
       return res.json();
     })
     .then((data) => {
-      if (data[0].id === rowData.id) {
+      if (data.id === rowData.id) {
         row.remove();
       } else {
         errorMessage.textContent = data.error;
@@ -59,7 +59,7 @@ const updateHandler = (id, row) => {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ oblastCode, name, nameEn }),
+    body: JSON.stringify({ name, name_en: nameEn, oblast_code: oblastCode }),
   })
     .then((res) => res.json())
     .then((data) => {
@@ -92,7 +92,7 @@ createForm.addEventListener("submit", (e) => {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ name, nameEn, oblastCode }),
+    body: JSON.stringify({ name, name_en: nameEn, oblast_code: oblastCode }),
   })
     .then((res) => res.json())
     .then((data) => {
@@ -100,7 +100,7 @@ createForm.addEventListener("submit", (e) => {
       if (data.error) {
         errorMessage.textContent = data.error;
       } else {
-        const id = data[0].id;
+        const id = data.id;
         createTableRow({ id, name, nameEn, oblastCode });
       }
     });
