@@ -45,6 +45,27 @@ const routes = ({ client }) => ({
     }
   },
 
+  "/settlements:DELETE": async (request, response) => {
+    const queryText = "DELETE FROM oblast WHERE id = $1 RETURNING *";
+    const requestParams = request.params;
+    console.log("requestParams", requestParams);
+    const params = [requestParams.id];
+
+    try {
+      const result = await client.query(queryText, params);
+      console.log(result.rows);
+
+      return createResponse(response, 200, "application/json", result.rows);
+    } catch (e) {
+      console.log(e);
+      return createResponse(response, 400, "application/json", {
+        error: "Region could not be deleted",
+      });
+    } finally {
+      client.release();
+    }
+  },
+
   "/statistics:GET": async (request, response) => {
     const queryText = `SELECT (SELECT COUNT(*) FROM naseleno_mqsto) AS countSettlements,(SELECT COUNT(*) FROM kmetstvo) AS countTownHalls,(SELECT COUNT(*) FROM obshtina) AS countMunicipalities,(SELECT COUNT(*) FROM oblast) AS countRegions LIMIT 1;`;
 

@@ -1,6 +1,30 @@
 const createForm = document.getElementById("create-form");
 const tbody = document.getElementById("tbody");
 const errorMessage = document.getElementById("error-message");
+
+const deleteHandler = (rowData, row) => {
+  console.log("delete rowData", rowData);
+
+  fetch(`/settlements?id=${rowData.id}`, {
+    method: "DELETE",
+  })
+    .then((res) => {
+      console.log(res);
+      return res.json();
+    })
+    .then((data) => {
+      if (data[0].id === rowData.id) {
+        row.remove();
+      } else {
+        errorMessage.textContent = data.error;
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      errorMessage.textContent = "An error occurred while deleting the item.";
+    });
+};
+
 createForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const oblastCode = document.getElementById("oblast_code").value;
@@ -21,7 +45,8 @@ createForm.addEventListener("submit", (e) => {
       if (data.error) {
         errorMessage.textContent = data.error;
       } else {
-        createTableRow({ name, nameEn, oblastCode });
+        const id = data[0].id;
+        createTableRow({ id, name, nameEn, oblastCode });
       }
     });
 });
@@ -48,6 +73,7 @@ const createTableRow = (data) => {
 
   const deleteBtn = document.createElement("button");
   deleteBtn.textContent = "Delete";
+  deleteBtn.addEventListener("click", () => deleteHandler(data, row));
   actionsCell.appendChild(deleteBtn);
 
   row.appendChild(actionsCell);
