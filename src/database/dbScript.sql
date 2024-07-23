@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS settlement;
 DROP TABLE IF EXISTS town_hall;
-DROP TABLE IF EXISTS manucipality;
+DROP TABLE IF EXISTS municipality;
 DROP TABLE IF EXISTS region;
 
 CREATE TABLE region (
@@ -12,7 +12,7 @@ CREATE TABLE region (
 
 CREATE TABLE municipality (
     id BIGSERIAL PRIMARY KEY,
-    municipality_code TEXT UNIQUE NOT NULL CHECK (char_length(manucipality_code) >= 5),
+    municipality_code TEXT UNIQUE NOT NULL CHECK (char_length(municipality_code) >= 5),
     name_en TEXT NOT NULL CHECK (char_length(name_en) >= 3), 
     name TEXT NOT NULL CHECK (char_length(name) >= 3),
     region_id BIGINT REFERENCES region (id)
