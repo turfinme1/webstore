@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD Municipalities</title>
+    <script defer src="../js/crudMunicipalities.js"></script>
+    <link rel="stylesheet" href="../css/crudPage.css">
+</head>
+
+<body>
+    <div id="container">
+        <h1>CRUD Operations - Municipalities</h1>
+        <div id="input-container">
+            <form id="create-form">
+                <input type="text" id="municipality_code" placeholder="Municipality Code">
+                <input type="text" id="name" placeholder="Name">
+                <input type="text" id="name_en" placeholder="Name (EN)">
+                <select name="oblast_id" id="oblast_id">
+                    <option value="999">Choose a region</option>
+                    <option value="3">Choose a region</option>
+                    <option value="16">Choose a region</option>
+                </select>
+                <input type="submit" value="Add">
+                <div id="error-message"></div>
+            </form>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>MUNICIPALITY CODE</th>
+                    <th>NAME</th>
+                    <th>NAME (EN)</th>
+                    <th>REGION NAME</th>
+                    <th>ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+        <div id="update-container" style="display:none;">
+            <form id="update-form">
+                <input type="hidden" id="update-id">
+                <input type="text" id="update-municipality_code" placeholder="Municipality Code">
+                <input type="text" id="update-name" placeholder="Name">
+                <input type="text" id="update-name_en" placeholder="Name (EN)">
+                <select name="oblast_id" id="update-oblast_id">
+                    <option value="999">Choose a region</option>
+                    <option value="3">3</option>
+                    <option value="16">16</option>
+                    <option value="25">25</option>
+                </select>
+                <div id="update-error-message"></div>
+                <button id="update-btn">Update</button>
+                <button id="cancel-btn" type="button">Cancel</button>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>
