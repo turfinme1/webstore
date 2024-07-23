@@ -5,6 +5,39 @@ const updateContainer = document.getElementById("update-container");
 const updateForm = document.getElementById("update-form");
 const updateErrorMessage = document.getElementById("update-error-message");
 
+document.addEventListener("DOMContentLoaded", () => {
+  fetchRegions();
+});
+
+const fetchRegions = () => {
+  fetch("/regions")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.error) {
+        errorMessage.textContent = data.error;
+      } else {
+        const regionSelect = document.getElementById("region_id");
+        const updateRegionSelect = document.getElementById("update-region_id");
+
+        data.forEach((region) => {
+          const option = document.createElement("option");
+          option.value = region.id;
+          option.textContent = region.name;
+          regionSelect.appendChild(option);
+
+          const updateOption = document.createElement("option");
+          updateOption.value = region.id;
+          updateOption.textContent = region.name;
+          updateRegionSelect.appendChild(updateOption);
+        });
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      errorMessage.textContent = "An error occurred while fetching regions.";
+    });
+};
+
 const deleteHandler = (rowData, row) => {
   console.log("delete rowData", rowData);
 
@@ -41,7 +74,7 @@ const showUpdateForm = (data, row) => {
           latestData.obshtina_code;
         document.getElementById("update-name").value = latestData.name;
         document.getElementById("update-name_en").value = latestData.name_en;
-        document.getElementById("update-oblast_id").value =
+        document.getElementById("update-region_id").value =
           latestData.oblast_id;
 
         createForm.style.display = "none";
@@ -71,7 +104,10 @@ const updateHandler = (id, row) => {
   ).value;
   const name = document.getElementById("update-name").value;
   const nameEn = document.getElementById("update-name_en").value;
-  const regionId = document.getElementById("update-oblast_id").value;
+  const regionId = document.getElementById("update-region_id").value;
+  const select = document.getElementById("update-region_id");
+  const regionName = select.options[select.selectedIndex].text;
+
   fetch(`/municipalities?id=${id}`, {
     method: "PUT",
     headers: {
@@ -92,7 +128,7 @@ const updateHandler = (id, row) => {
         row.cells[0].textContent = municipalityCode;
         row.cells[1].textContent = name;
         row.cells[2].textContent = nameEn;
-        row.cells[3].textContent = regionId;
+        row.cells[3].textContent = regionName;
         createForm.style.display = "block";
         updateContainer.style.display = "none";
       }
@@ -109,7 +145,9 @@ createForm.addEventListener("submit", (e) => {
   const municipalityCode = document.getElementById("municipality_code").value;
   const name = document.getElementById("name").value;
   const nameEn = document.getElementById("name_en").value;
-  const regionId = document.getElementById("oblast_id").value;
+  const regionId = document.getElementById("region_id").value;
+  const select = document.getElementById("region_id");
+  const regionName = select.options[select.selectedIndex].text;
 
   console.log({ name, nameEn, oblastCode: municipalityCode });
   fetch("/municipalities", {
@@ -136,7 +174,7 @@ createForm.addEventListener("submit", (e) => {
           municipalityCode,
           name,
           nameEn,
-          oblastCode: regionId,
+          oblastCode: regionName,
         });
       }
     });
@@ -157,9 +195,9 @@ const createTableRow = (data) => {
   nameEnCell.textContent = data.nameEn;
   row.appendChild(nameEnCell);
 
-  const regionCodeCell = document.createElement("td");
-  regionCodeCell.textContent = data.oblastCode;
-  row.appendChild(regionCodeCell);
+  const regionNameCell = document.createElement("td");
+  regionNameCell.textContent = data.oblastCode;
+  row.appendChild(regionNameCell);
 
   const actionsCell = document.createElement("td");
   const updateBtn = document.createElement("button");
