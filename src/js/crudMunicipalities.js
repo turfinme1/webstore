@@ -29,26 +29,40 @@ const deleteHandler = (rowData, row) => {
 };
 
 const showUpdateForm = (data, row) => {
-  document.getElementById("update-id").value = data.id;
-  document.getElementById("update-municipality_code").value =
-    data.municipalityCode;
-  document.getElementById("update-name").value = data.name;
-  document.getElementById("update-name_en").value = data.nameEn;
-  document.getElementById("update-oblast_id").value = data.oblastCode;
+  fetch(`/municipalities?id=${data.id}`)
+    .then((res) => res.json())
+    .then((latestData) => {
+      console.log("latestData", latestData);
+      if (latestData.error) {
+        updateErrorMessage.textContent = latestData.error;
+      } else {
+        document.getElementById("update-id").value = latestData.id;
+        document.getElementById("update-municipality_code").value =
+          latestData.obshtina_code;
+        document.getElementById("update-name").value = latestData.name;
+        document.getElementById("update-name_en").value = latestData.name_en;
+        document.getElementById("update-oblast_id").value =
+          latestData.oblast_id;
 
-  createForm.style.display = "none";
-  updateContainer.style.display = "block";
+        createForm.style.display = "none";
+        updateContainer.style.display = "block";
 
-  updateForm.onsubmit = (e) => {
-    e.preventDefault();
-    updateHandler(data.id, row);
-  };
+        updateForm.onsubmit = (e) => {
+          e.preventDefault();
+          updateHandler(latestData.id, row);
+        };
 
-  document.getElementById("cancel-btn").onclick = () => {
-    createForm.style.display = "block";
-    updateContainer.style.display = "none";
-    updateErrorMessage.textContent = "";
-  };
+        document.getElementById("cancel-btn").onclick = () => {
+          createForm.style.display = "block";
+          updateContainer.style.display = "none";
+          updateErrorMessage.textContent = "";
+        };
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      updateErrorMessage.textContent = "An error occurred while fetching.";
+    });
 };
 
 const updateHandler = (id, row) => {
@@ -58,7 +72,6 @@ const updateHandler = (id, row) => {
   const name = document.getElementById("update-name").value;
   const nameEn = document.getElementById("update-name_en").value;
   const regionId = document.getElementById("update-oblast_id").value;
-
   fetch(`/municipalities?id=${id}`, {
     method: "PUT",
     headers: {
@@ -79,6 +92,7 @@ const updateHandler = (id, row) => {
         row.cells[0].textContent = municipalityCode;
         row.cells[1].textContent = name;
         row.cells[2].textContent = nameEn;
+        row.cells[3].textContent = regionId;
         createForm.style.display = "block";
         updateContainer.style.display = "none";
       }
