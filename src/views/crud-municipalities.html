@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>CRUD Municipalities</title>
-    <script defer src="../js/crudMunicipalities.js"></script>
+    <script defer type="module" src="../js/crudMunicipalities.js"></script>
     <link rel="stylesheet" href="../css/crudPage.css">
 </head>
 
@@ -13,10 +13,10 @@
         <h1>CRUD Operations - Municipalities</h1>
         <div id="input-container">
             <form id="create-form">
-                <input type="text" id="municipality_code" placeholder="Municipality Code">
+                <input type="text" id="municipality-code" placeholder="Municipality Code">
                 <input type="text" id="name" placeholder="Name">
-                <input type="text" id="name_en" placeholder="Name (EN)">
-                <select name="region_id" id="region_id">
+                <input type="text" id="name-en" placeholder="Name (EN)">
+                <select name="region-id" id="region-id">
                     <option value="">--Choose a region--</option>
                 </select>
                 <input type="submit" value="Add">
@@ -38,11 +38,10 @@
         <div id="update-container" style="display:none;">
             <form id="update-form">
                 <input type="hidden" id="update-id">
-                <input type="text" id="update-municipality_code" placeholder="Municipality Code">
+                <input type="text" id="update-municipality-code" placeholder="Municipality Code">
                 <input type="text" id="update-name" placeholder="Name">
-                <input type="text" id="update-name_en" placeholder="Name (EN)">
-                <select name="region_id" id="update-region_id">
-                    <option value="">--Choose a region--</option>
+                <input type="text" id="update-name-en" placeholder="Name (EN)">
+                <select name="region-id" id="update-region-id">
                 </select>
                 <div id="update-error-message"></div>
                 <button id="update-btn">Update</button>

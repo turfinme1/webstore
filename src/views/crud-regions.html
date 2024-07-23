@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>CRUD REGIONS</title>
-    <script defer src="../js/crudRegions.js"></script>
+    <script defer type="module" src="../js/crudRegions.js"></script>
     <link rel="stylesheet" href="../css/crudPage.css">
 </head>
 
@@ -13,9 +13,9 @@
         <h1>CRUD Operations - REGION</h1>
         <div id="input-container">
             <form id="create-form">
-                <input type="text" id="oblast_code" placeholder="EKATTE">
+                <input type="text" id="region-code" placeholder="EKATTE">
                 <input type="text" id="name" placeholder="Име">
-                <input type="text" id="name_en" placeholder="Име (латиница)">
+                <input type="text" id="name-en" placeholder="Име (латиница)">
                 <input type="submit" value="Add"></button>
                 <div id="error-message"></div>
             </form>
@@ -31,12 +31,12 @@
             </thead>
             <tbody id="tbody"></tbody>
         </table>
-        <div id="update-container">
+        <div id="update-container" style="display: none;">
             <form id="update-form">
                 <input type="hidden" id="update-id">
-                <input type="text" id="update-oblast_code" placeholder="EKATTE">
+                <input type="text" id="update-region-code" placeholder="EKATTE">
                 <input type="text" id="update-name" placeholder="Име">
-                <input type="text" id="update-name_en" placeholder="Име (латиница)">
+                <input type="text" id="update-name-en" placeholder="Име (латиница)">
                 <input type="submit" value="Update">
                 <div id="update-error-message"></div>
                 <button type="button" id="cancel-btn">Cancel</button>
