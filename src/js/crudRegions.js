@@ -29,24 +29,38 @@ const deleteHandler = (rowData, row) => {
 };
 
 const showUpdateForm = (data, row) => {
-  document.getElementById("update-id").value = data.id;
-  document.getElementById("update-oblast_code").value = data.oblastCode;
-  document.getElementById("update-name").value = data.name;
-  document.getElementById("update-name_en").value = data.nameEn;
+  fetch(`/regions?id=${data.id}`)
+    .then((res) => res.json())
+    .then((latestData) => {
+      console.log("latestData", latestData);
+      if (latestData.error) {
+        updateErrorMessage.textContent = latestData.error;
+      } else {
+        document.getElementById("update-id").value = latestData.id;
+        document.getElementById("update-oblast_code").value =
+          latestData.oblast_code;
+        document.getElementById("update-name").value = latestData.name;
+        document.getElementById("update-name_en").value = latestData.name_en;
 
-  createForm.style.display = "none";
-  updateContainer.style.display = "block";
+        createForm.style.display = "none";
+        updateContainer.style.display = "block";
 
-  updateForm.onsubmit = (e) => {
-    e.preventDefault();
-    updateHandler(data.id, row);
-  };
+        updateForm.onsubmit = (e) => {
+          e.preventDefault();
+          updateHandler(latestData.id, row);
+        };
 
-  document.getElementById("cancel-btn").onclick = () => {
-    createForm.style.display = "block";
-    updateContainer.style.display = "none";
-    updateErrorMessage.textContent = "";
-  };
+        document.getElementById("cancel-btn").onclick = () => {
+          createForm.style.display = "block";
+          updateContainer.style.display = "none";
+          updateErrorMessage.textContent = "";
+        };
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      updateErrorMessage.textContent = "An error occurred while fetching.";
+    });
 };
 
 const updateHandler = (id, row) => {
