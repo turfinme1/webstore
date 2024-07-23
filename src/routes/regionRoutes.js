@@ -1,4 +1,5 @@
 import { getRequestBody, createResponse } from "../util/requestUtilities.js";
+import { validateRegionEntity } from "../util/validation.js";
 
 const regionRoutes = (client, regionRepository) => ({
   "/regions:GET": async (request, response) => {
@@ -32,6 +33,14 @@ const regionRoutes = (client, regionRepository) => ({
 
     try {
       const entity = JSON.parse(body);
+
+      const erors = validateRegionEntity(entity);
+      if (erors.length > 0) {
+        return createResponse(response, 400, "application/json", {
+          errors: erors,
+        });
+      }
+
       const result = await regionRepository.createAsync(entity);
       return createResponse(response, 201, "application/json", result);
     } catch (e) {
@@ -50,6 +59,14 @@ const regionRoutes = (client, regionRepository) => ({
 
     try {
       const entity = JSON.parse(body);
+
+      const erors = validateRegionEntity(entity);
+      if (erors.length > 0) {
+        return createResponse(response, 400, "application/json", {
+          errors: erors,
+        });
+      }
+
       const result = await regionRepository.updateAsync(id, entity);
 
       if (!result) {

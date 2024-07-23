@@ -1,4 +1,5 @@
 import { getRequestBody, createResponse } from "../util/requestUtilities.js";
+import { validateMunicipalityEntity } from "../util/validation.js";
 
 const municipalityRoutes = (client, municipalityRepository) => ({
   "/municipalities:GET": async (request, response) => {
@@ -32,6 +33,13 @@ const municipalityRoutes = (client, municipalityRepository) => ({
 
     try {
       const entity = JSON.parse(body);
+
+      const erors = validateMunicipalityEntity(entity);
+      if (erors.length > 0) {
+        return createResponse(response, 400, "application/json", {
+          errors: erors,
+        });
+      }
       const result = await municipalityRepository.createAsync(entity);
       return createResponse(response, 201, "application/json", result);
     } catch (e) {
@@ -50,6 +58,14 @@ const municipalityRoutes = (client, municipalityRepository) => ({
 
     try {
       const entity = JSON.parse(body);
+
+      const erors = validateMunicipalityEntity(entity);
+      if (erors.length > 0) {
+        return createResponse(response, 400, "application/json", {
+          errors: erors,
+        });
+      }
+
       const result = await municipalityRepository.updateAsync(id, entity);
 
       if (!result) {
