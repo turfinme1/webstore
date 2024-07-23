@@ -1,35 +1,47 @@
-drop table if exists naseleno_mqsto;
-drop table if exists kmetstvo;
-drop table if exists obshtina;
-drop table if exists oblast;
+DROP TABLE IF EXISTS settlement;
+DROP TABLE IF EXISTS town_hall;
+DROP TABLE IF EXISTS manucipality;
+DROP TABLE IF EXISTS region;
 
-create table oblast (
-	id bigserial primary key,
-	oblast_code text UNIQUE NOT NULL,
-	name_en text NOT NULL,
-	name text NOT NULL
+CREATE TABLE region (
+    id BIGSERIAL PRIMARY KEY,
+    region_code TEXT UNIQUE NOT NULL CHECK (char_length(region_code) >= 3),
+    name_en TEXT NOT NULL CHECK (char_length(name_en) >= 3),
+    name TEXT NOT NULL CHECK (char_length(name) >= 3) 
 );
 
-create table obshtina (
-	id bigserial primary key,
-	obshtina_code text UNIQUE NOT NULL,
-	name_en text NOT NULL,
-	name text NOT NULL,
-	oblast_id bigint references oblast (id)
+CREATE TABLE municipality (
+    id BIGSERIAL PRIMARY KEY,
+    municipality_code TEXT UNIQUE NOT NULL CHECK (char_length(manucipality_code) >= 5),
+    name_en TEXT NOT NULL CHECK (char_length(name_en) >= 3), 
+    name TEXT NOT NULL CHECK (char_length(name) >= 3),
+    region_id BIGINT REFERENCES region (id)
 );
 
-create table kmetstvo (
-	id bigserial primary key,
-	kmetstvo_code text UNIQUE NOT NULL,
-	name_en text NOT NULL,
-	name text NOT NULL,
-	obshtina_id bigint references obshtina (id)
+CREATE TABLE town_hall (
+    id BIGSERIAL PRIMARY KEY,
+    town_hall_code TEXT UNIQUE NOT NULL CHECK (char_length(town_hall_code) >= 8), 
+    name_en TEXT NOT NULL CHECK (char_length(name_en) >= 3), 
+    name TEXT NOT NULL CHECK (char_length(name) >= 3),
+    municipality_id BIGINT REFERENCES municipality (id)
 );
 
-create table naseleno_mqsto(
-	id bigserial primary key,
-	ekatte text UNIQUE NOT NULL,
-	name_en text NOT NULL,
-	name text NOT NULL,
-	kmetstvo_id bigint NULL references kmetstvo (id)
+CREATE TABLE settlement (
+    id BIGSERIAL PRIMARY KEY,
+    ekatte TEXT UNIQUE NOT NULL CHECK (char_length(ekatte) >= 5),
+    name_en TEXT NOT NULL CHECK (char_length(name_en) >= 3), 
+    name TEXT NOT NULL CHECK (char_length(name) >= 3), 
+    town_hall_id BIGINT NULL REFERENCES town_hall (id)
 );
+
+CREATE INDEX index_town_hall_id_on_settlement
+ON settlement (town_hall_id);
+
+CREATE INDEX index_name_on_settlement
+ON settlement (name);
+
+CREATE INDEX index_municipality_id_on_town_hall
+ON town_hall (municipality_id);
+
+CREATE INDEX index_region_id_on_municipality
+ON municipality (region_id);
