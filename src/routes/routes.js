@@ -23,10 +23,10 @@ const routes = ({ client }) => ({
     }
   },
 
-  ...regionRoutes(client, new Repository(client, "oblast")),
-  ...municipalityRoutes(client, new Repository(client, "obshtina")),
-  ...townHallRoutes(client, new Repository(client, "kmetstvo")),
-  ...settlementRoutes(client, new Repository(client, "naseleno_mqsto")),
+  ...regionRoutes(client, new Repository(client, "region")),
+  ...municipalityRoutes(client, new Repository(client, "municipality")),
+  ...townHallRoutes(client, new Repository(client, "town_hall")),
+  ...settlementRoutes(client, new Repository(client, "settlement")),
 });
 
 export default routes;
