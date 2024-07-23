@@ -1,74 +1,108 @@
-import oblasti from "../data/ek_oblast.json" with {type:"json"};
-import obshtini from "../data/ek_obshtina.json" with {type:"json"};
-import kmetstva from "../data/ek_kmetstvo.json" with {type:"json"};
-import naseleniMesta from "../data/ek_naseleno.json" with {type:"json"};
+import regions from "../data/ek_oblast.json" with {type:"json"};
+import municipalities from "../data/ek_obshtina.json" with {type:"json"};
+import townHalls from "../data/ek_kmetstvo.json" with {type:"json"};
+import settlements from "../data/ek_naseleno.json" with {type:"json"};
 import { from } from "pg-copy-streams";
 import { Readable } from "stream";
 
 const fileImport = async (client) => {
-  await seedOblasti(client);
-  await seedObshtini(client);
-  await seedKmetstva(client);
-  await seedNaselenoMqsto(client);
+  await seedRegions(client);
+  await seedMunicipalities(client);
+  await seedTownHalls(client);
+  await seedSettlements(client);
   client.release();
 };
 
-const seedOblasti = async (client) => {
-  const queryString =
-    "INSERT INTO oblast(oblast_code, name_en, name) VALUES($1, $2, $3) ON CONFLICT (oblast_code) DO NOTHING RETURNING *";
+const seedRegions = async (client) => {
+  const queryString = 
+    `INSERT INTO region(region_code, name_en, name) 
+     VALUES($1, $2, $3) 
+     ON CONFLICT (region_code) DO NOTHING RETURNING *`;
 
-  oblasti.map(async (ob) => {
-    let params = [ob.oblast, ob.name_en, ob.name];
-    let res = await client.query(queryString, params);
-    console.log(res.rows[0]);
-  });
+  try {
+    await client.query("BEGIN");
+    regions.map(async (ob) => {
+      let params = [ob.oblast, ob.name_en, ob.name];
+      await client.query(queryString, params);
+    });
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+  }
 };
 
-const seedObshtini = async (client) => {
-  const queryString =
-    "INSERT INTO obshtina(obshtina_code, name_en, name, oblast_id) VALUES($1, $2, $3, (SELECT id FROM oblast WHERE oblast_code = $4 LIMIT 1)) ON CONFLICT (obshtina_code) DO NOTHING RETURNING *";
+const seedMunicipalities = async (client) => {
+  const queryString = 
+    `INSERT INTO municipality(municipality_code, name_en, name, region_id) 
+     VALUES($1, $2, $3, (SELECT id FROM region WHERE region_code = $4 LIMIT 1)) 
+     ON CONFLICT (municipality_code) DO NOTHING RETURNING *`;
 
-  obshtini.map(async (ob) => {
-    let oblastCode = ob.obshtina.substring(0, 3);
-    let params = [ob.obshtina, ob.name_en, ob.name, oblastCode];
-    let res = await client.query(queryString, params);
-    console.log(res.rows[0]);
-  });
+  try {
+    await client.query("BEGIN");
+    municipalities.map(async (ob) => {
+      let regionCode = ob.obshtina.substring(0, 3);
+      let params = [ob.obshtina, ob.name_en, ob.name, regionCode];
+      let res = await client.query(queryString, params);
+      console.log(res.rows[0]);
+    });
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+  }
 };
 
-const seedKmetstva = async (client) => {
-  const queryString =
-    "INSERT INTO kmetstvo(kmetstvo_code, name_en, name, obshtina_id) VALUES($1, $2, $3, (SELECT id FROM obshtina WHERE obshtina_code = $4 LIMIT 1)) ON CONFLICT (kmetstvo_code) DO NOTHING RETURNING *";
+const seedTownHalls = async (client) => {
+  const queryString = 
+    `INSERT INTO town_hall(town_hall_code, name_en, name, municipality_id) 
+     VALUES($1, $2, $3, (SELECT id FROM municipality WHERE municipality_code = $4 LIMIT 1)) 
+     ON CONFLICT (town_hall_code) DO NOTHING RETURNING *`;
 
-  kmetstva.map(async (km) => {
-    let obshtinaCode = km.kmetstvo.substring(0, 5);
-    let params = [km.kmetstvo, km.name_en, km.name, obshtinaCode];
-    let res = await client.query(queryString, params);
-    console.log(res.rows[0]);
-  });
+  try {
+    await client.query("BEGIN");
+    townHalls.map(async (km) => {
+      let municipalityCode = km.kmetstvo.substring(0, 5);
+      let params = [km.kmetstvo, km.name_en, km.name, municipalityCode];
+      let res = await client.query(queryString, params);
+      console.log(res.rows[0]);
+    });
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+  }
 };
 
-const seedNaselenoMqsto = async (client) => {
-  const queryString =
-    "INSERT INTO naseleno_mqsto(ekatte, name_en, name, kmetstvo_id) VALUES($1, $2, $3, (SELECT COALESCE((SELECT id FROM kmetstvo WHERE kmetstvo_code = $4 LIMIT 1), NULL))) ON CONFLICT (ekatte) DO NOTHING RETURNING *";
+const seedSettlements = async (client) => {
+  const queryString = 
+    `INSERT INTO settlement(ekatte, name_en, name, town_hall_id) 
+     VALUES($1, $2, $3, (SELECT COALESCE((SELECT id FROM town_hall WHERE town_hall_code = $4 LIMIT 1), NULL))) 
+     ON CONFLICT (ekatte) DO NOTHING RETURNING *`;
 
-  naseleniMesta.map(async (nm) => {
-    let params = [nm.ekatte, nm.name_en, nm.name, nm.kmetstvo];
-    let res = await client.query(queryString, params);
-    console.log(res.rows[0]);
-  });
+  try {
+    await client.query("BEGIN");
+    settlements.map(async (nm) => {
+      let params = [nm.ekatte, nm.name_en, nm.name, nm.kmetstvo];
+      let res = await client.query(queryString, params);
+      console.log(res.rows[0]);
+    });
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+  }
 };
 
-const seedNaselenoMqstoWithCopy = async (client) => {
-  const map = await precomputeKmetstvoIds(client, naseleniMesta);
+const seedSettlementsWithCopy = async (client) => {
+  const map = await precomputeSettlementIds(client, settlements);
   const copyFromQuery =
-      "COPY naseleno_mqsto (ekatte, name_en, name, kmetstvo_id) FROM STDIN WITH CSV NULL 'null'";
+    "COPY settlement (ekatte, name_en, name, town_hall_id) FROM STDIN WITH CSV NULL 'null'";
+
   try {
     const dataStream = new Readable({
       read() {
-        naseleniMesta.forEach((nm) => {
-            const csvLine = `${nm.ekatte},${nm.name_en},${nm.name},${map.get(nm.kmetstvo)}\n`;
-            this.push(csvLine);
+        settlements.forEach((nm) => {
+          const csvLine = `${nm.ekatte},${nm.name_en},${nm.name},${map.get(
+            nm.kmetstvo
+          )}\n`;
+          this.push(csvLine);
         });
         this.push(null);
       },
@@ -87,19 +121,19 @@ const seedNaselenoMqstoWithCopy = async (client) => {
   } catch (err) {
     console.error("Error during database operation:", err);
   }
-}
+};
 
-const precomputeKmetstvoIds = async (client, naseleniMesta) =>{
+const precomputeSettlementIds = async (client, settlements) => {
   let map = new Map();
-  const kmetstvoIdSubquery = `(SELECT COALESCE((SELECT id FROM kmetstvo WHERE kmetstvo_code = $1 LIMIT 1), NULL))`;
+  const kmetstvoIdSubquery = `(SELECT COALESCE((SELECT id FROM town_hall WHERE town_hall_code = $1 LIMIT 1), NULL))`;
 
-  for (let nm of naseleniMesta) {
+  for (let nm of settlements) {
     if (!map.get(nm.kmetstvo)) {
       const res = await client.query(kmetstvoIdSubquery, [nm.kmetstvo]);
       map.set(nm.kmetstvo, res.rows[0].coalesce);
     }
   }
-  
+
   return map;
 };
 
