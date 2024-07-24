@@ -1,12 +1,21 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Main page</title>
     <script defer src="../js/searchScript.js"></script>
     <link rel="stylesheet" href="../css/index.css">
-    <meta charset="UTF-8"> 
+    <meta charset="UTF-8">
 </head>
+
 <body>
+    <div class="navbar">
+        <button onclick="location.href='/'">Search</button>
+        <button onclick="location.href='crud-settlements.html'">Settlements</button>
+        <button onclick="location.href='crud-town-halls.html'">Town Halls</button>
+        <button onclick="location.href='crud-municipalities.html'">Municipalities</button>
+        <button onclick="location.href='crud-regions.html'">Regions</button>
+    </div>
     <div>
         <form id="form">
             <label for="searchInput">Search:</label>
@@ -47,5 +56,6 @@
             <!-- Table rows will be dynamically populated based on the search results -->
         </tbody>
     </table>
-    </body>
+</body>
+
 </html>

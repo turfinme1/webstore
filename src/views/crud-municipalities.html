@@ -9,6 +9,14 @@
 </head>
 
 <body>
+    <div class="navbar">
+        <button onclick="location.href='/'">Search</button>
+        <button onclick="location.href='crud-settlements.html'">Settlements</button>
+        <button onclick="location.href='crud-town-halls.html'">Town Halls</button>
+        <button onclick="location.href='crud-municipalities.html'">Municipalities</button>
+        <button onclick="location.href='crud-regions.html'">Regions</button>
+    </div>
+
     <div id="container">
         <h1>CRUD Operations - Municipalities</h1>
         <div id="input-container">
@@ -17,7 +25,7 @@
                 <input type="text" id="name" placeholder="Name">
                 <input type="text" id="name-en" placeholder="Name (EN)">
                 <select name="region-id" id="region-id">
-                    <option value="">--Choose a region--</option>
+                    <option value="">Choose a region</option>
                 </select>
                 <input type="submit" value="Add">
                 <div id="error-message"></div>
