@@ -38,19 +38,19 @@ const createTableRows = (data) => {
     row.appendChild(ekatteCell);
 
     const naselenoCell = document.createElement("td");
-    naselenoCell.textContent = item.naseleno;
+    naselenoCell.textContent = item.settlement;
     row.appendChild(naselenoCell);
 
     const kmetstvoCell = document.createElement("td");
-    kmetstvoCell.textContent = item.kmetstvo || "null";
+    kmetstvoCell.textContent = item.town_hall;
     row.appendChild(kmetstvoCell);
 
     const obshtinaCell = document.createElement("td");
-    obshtinaCell.textContent = item.obshtina || "null";
+    obshtinaCell.textContent = item.municipality;
     row.appendChild(obshtinaCell);
 
     const oblastCell = document.createElement("td");
-    oblastCell.textContent = item.oblast || "null";
+    oblastCell.textContent = item.region;
     row.appendChild(oblastCell);
 
     tbody.appendChild(row);

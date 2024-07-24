@@ -17,7 +17,16 @@ class Repository {
   }
 
   async getAllSettlementsByNameAsync(name) {
-    const query = `SELECT nm.ekatte,nm.name as "naseleno",COALESCE (km.name, 'not found') as "kmetstvo",COALESCE (ob.name, 'not found') as "obshtina",COALESCE(obl.name, 'not found') as "oblast" FROM public.${this.tableName} nm LEFT JOIN public.kmetstvo km ON km.id = nm.kmetstvo_id LEFT JOIN public.obshtina ob ON ob.id = km.obshtina_id LEFT JOIN public.oblast obl ON obl.id = ob.oblast_id WHERE LOWER(nm.name) = LOWER($1)`;
+    const query = `
+    SELECT nm.ekatte, nm.name as "settlement",
+    COALESCE(km.name, 'not found') as "town_hall",
+    COALESCE(ob.name, 'not found') as "municipality",
+    COALESCE(obl.name, 'not found') as "region" 
+    FROM public.region obl
+    JOIN public.municipality ob ON obl.id = ob.region_id
+    JOIN public.town_hall km ON ob.id = km.municipality_id
+    RIGHT JOIN public.${this.tableName} nm ON km.id = nm.town_hall_id 
+    WHERE LOWER(nm.name) = LOWER($1)`;
     const { rows } = await this.client.query(query, [name]);
     return rows;
   }
