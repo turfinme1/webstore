@@ -11,6 +11,23 @@ const updateContainer = document.getElementById("update-container");
 const updateForm = document.getElementById("update-form");
 const updateErrorMessage = document.getElementById("update-error-message");
 
+const fetchRecords = async () => {
+  try {
+    const res = await fetch("/regions");
+    const data = await res.json();
+    if (data.error) {
+      errorMessage.textContent = data.error;
+    } else {
+      data.forEach((record) => {
+        createTableRow(record);
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    errorMessage.textContent = "An error occurred while fetching records.";
+  }
+};
+
 const deleteHandler = async (rowData, row) => {
   try {
     const res = await fetch(`/regions?id=${rowData.id}`, { method: "DELETE" });
@@ -110,7 +127,7 @@ const createTableRow = (data) => {
     <td>${data.name}</td>
     <td>${data.name_en}</td>
     <td>
-      <button class="update-btn">Update</button>
+      <button class="update-btn">Edit</button>
       <button class="delete-btn">Delete</button>
     </td>
   `;
@@ -121,7 +138,7 @@ const createTableRow = (data) => {
   const deleteBtn = row.querySelector(".delete-btn");
   deleteBtn.addEventListener("click", () => deleteHandler(data, row));
 
-  tbody.appendChild(row);
+  tbody.insertBefore(row, tbody.firstChild);
 };
 
 const handleCreateFormSubmit = async (e) => {
@@ -162,5 +179,8 @@ const resetForm = () => {
   updateContainer.style.display = "none";
   updateErrorMessage.textContent = "";
 };
+
+// Fetch records and populate the table when the page loads
+document.addEventListener("DOMContentLoaded", fetchRecords);
 
 createForm.addEventListener("submit", handleCreateFormSubmit);

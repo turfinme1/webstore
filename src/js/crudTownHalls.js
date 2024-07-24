@@ -11,7 +11,12 @@ const updateContainer = document.getElementById("update-container");
 const updateForm = document.getElementById("update-form");
 const updateErrorMessage = document.getElementById("update-error-message");
 
-document.addEventListener("DOMContentLoaded", fetchMunicipalities);
+const municipalityMap = new Map();
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await fetchMunicipalities();
+  fetchTownHalls();
+});
 
 async function fetchMunicipalities() {
   try {
@@ -21,11 +26,34 @@ async function fetchMunicipalities() {
       errorMessage.textContent = data.error;
     } else {
       populateMunicipalitySelect(data);
+      data.forEach((municipality) => {
+        municipalityMap.set(municipality.id, municipality.name);
+      });
     }
   } catch (error) {
     console.error("Error:", error);
     errorMessage.textContent =
       "An error occurred while fetching municipalities.";
+  }
+}
+
+async function fetchTownHalls() {
+  try {
+    const res = await fetch("/townhalls");
+    const data = await res.json();
+    if (data.error) {
+      errorMessage.textContent = data.error;
+    } else {
+      data.forEach((townHall) => {
+        townHall.municipality_name = municipalityMap.get(
+          townHall.municipality_id
+        );
+        addTableRow(townHall);
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    errorMessage.textContent = "An error occurred while fetching town halls.";
   }
 }
 
@@ -47,7 +75,6 @@ function createOption(value, text) {
   const option = document.createElement("option");
   option.value = value;
   option.textContent = text;
-  console.log(option);
   return option;
 }
 
@@ -59,10 +86,7 @@ async function handleCreateFormSubmit(e) {
   const name = document.getElementById("name").value;
   const nameEn = document.getElementById("name-en").value;
   const municipalityId = document.getElementById("municipality-id").value;
-  const municipalityName =
-    document.getElementById("municipality-id").options[
-      document.getElementById("municipality-id").selectedIndex
-    ].text;
+  const municipalityName = municipalityMap.get(municipalityId);
 
   const validationError =
     validateTownHallCode(townHallCode) ||
@@ -91,7 +115,7 @@ async function handleCreateFormSubmit(e) {
       errorMessage.textContent = data.error;
     } else {
       data.municipality_name = municipalityName;
-      addTableRow(data);
+      addTableRow(data, true);
     }
   } catch (error) {
     console.error("Error:", error);
@@ -99,9 +123,13 @@ async function handleCreateFormSubmit(e) {
   }
 }
 
-function addTableRow(data) {
+function addTableRow(data, prepend = false) {
   const row = createTableRow(data);
-  tbody.appendChild(row);
+  if (prepend) {
+    tbody.prepend(row);
+  } else {
+    tbody.appendChild(row);
+  }
 }
 
 function createTableRow(data) {
@@ -113,9 +141,7 @@ function createTableRow(data) {
   const municipalityNameCell = createTableCell(data.municipality_name);
 
   const actionsCell = document.createElement("td");
-  const updateBtn = createActionButton("Update", () =>
-    showUpdateForm(data, row)
-  );
+  const updateBtn = createActionButton("Edit", () => showUpdateForm(data, row));
   const deleteBtn = createActionButton("Delete", () =>
     deleteHandler(data, row)
   );

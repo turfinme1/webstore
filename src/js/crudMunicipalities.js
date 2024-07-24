@@ -11,7 +11,12 @@ const updateContainer = document.getElementById("update-container");
 const updateForm = document.getElementById("update-form");
 const updateErrorMessage = document.getElementById("update-error-message");
 
-document.addEventListener("DOMContentLoaded", fetchRegions);
+const regionMap = new Map();
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await fetchRegions();
+  fetchMunicipalities();
+});
 
 async function fetchRegions() {
   try {
@@ -21,10 +26,32 @@ async function fetchRegions() {
       errorMessage.textContent = data.error;
     } else {
       populateRegionSelect(data);
+      data.forEach((region) => {
+        regionMap.set(region.id, region.name);
+      });
     }
   } catch (error) {
     console.error("Error:", error);
     errorMessage.textContent = "An error occurred while fetching regions.";
+  }
+}
+
+async function fetchMunicipalities() {
+  try {
+    const res = await fetch("/municipalities");
+    const data = await res.json();
+    if (data.error) {
+      errorMessage.textContent = data.error;
+    } else {
+      data.forEach((municipality) => {
+        municipality.region_name = regionMap.get(municipality.region_id);
+        addTableRow(municipality);
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    errorMessage.textContent =
+      "An error occurred while fetching municipalities.";
   }
 }
 
@@ -56,10 +83,7 @@ async function handleCreateFormSubmit(e) {
   const name = document.getElementById("name").value;
   const nameEn = document.getElementById("name-en").value;
   const regionId = document.getElementById("region-id").value;
-  const regionName =
-    document.getElementById("region-id").options[
-      document.getElementById("region-id").selectedIndex
-    ].text;
+
   const validationError =
     validateMunicipalityCode(municipalityCode) ||
     validateName(name) ||
@@ -83,10 +107,10 @@ async function handleCreateFormSubmit(e) {
       body: JSON.stringify(requestData),
     });
     const data = await res.json();
-    if (data.error) {
-      errorMessage.textContent = data.error;
+    if (data.errors) {
+      errorMessage.textContent = data.errors;
     } else {
-      data.region_name = regionName;
+      data.region_name = regionMap.get(regionId);
       addTableRow(data);
     }
   } catch (error) {
@@ -97,7 +121,7 @@ async function handleCreateFormSubmit(e) {
 
 function addTableRow(data) {
   const row = createTableRow(data);
-  tbody.appendChild(row);
+  tbody.insertBefore(row, tbody.firstChild);
 }
 
 function createTableRow(data) {
@@ -109,9 +133,7 @@ function createTableRow(data) {
   const regionNameCell = createTableCell(data.region_name);
 
   const actionsCell = document.createElement("td");
-  const updateBtn = createActionButton("Update", () =>
-    showUpdateForm(data, row)
-  );
+  const updateBtn = createActionButton("Edit", () => showUpdateForm(data, row));
   const deleteBtn = createActionButton("Delete", () =>
     deleteHandler(data, row)
   );
@@ -197,7 +219,6 @@ function fillUpdateForm(data, row) {
   };
 }
 
-// Function to handle updates
 async function updateHandler(id, row) {
   const municipalityCode = document.getElementById(
     "update-municipality-code"
@@ -242,10 +263,7 @@ async function updateHandler(id, row) {
 }
 
 function updateTableRow(row, data) {
-  const regionName =
-    document.getElementById("update-region-id").options[
-      document.getElementById("update-region-id").selectedIndex
-    ].text;
+  const regionName = regionMap.get(data.regionId);
   row.cells[0].textContent = data.municipalityCode;
   row.cells[1].textContent = data.name;
   row.cells[2].textContent = data.nameEn;

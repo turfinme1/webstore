@@ -11,7 +11,12 @@ const updateContainer = document.getElementById("update-container");
 const updateForm = document.getElementById("update-form");
 const updateErrorMessage = document.getElementById("update-error-message");
 
-document.addEventListener("DOMContentLoaded", fetchTownHalls);
+const townHallMap = new Map();
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await fetchTownHalls();
+  fetchSettlements();
+});
 
 async function fetchTownHalls() {
   try {
@@ -21,10 +26,31 @@ async function fetchTownHalls() {
       errorMessage.textContent = data.error;
     } else {
       populateTownHallSelect(data);
+      data.forEach((townHall) => {
+        townHallMap.set(townHall.id, townHall.name);
+      });
     }
   } catch (error) {
     console.error("Error:", error);
     errorMessage.textContent = "An error occurred while fetching town halls.";
+  }
+}
+
+async function fetchSettlements() {
+  try {
+    const res = await fetch("/settlements");
+    const data = await res.json();
+    if (data.error) {
+      errorMessage.textContent = data.error;
+    } else {
+      data.forEach((settlement) => {
+        settlement.town_hall_name = townHallMap.get(settlement.town_hall_id);
+        addTableRow(settlement);
+      });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    errorMessage.textContent = "An error occurred while fetching settlements.";
   }
 }
 
@@ -105,12 +131,10 @@ function createTableRow(data) {
   const ekatteCell = createTableCell(data.ekatte);
   const nameCell = createTableCell(data.name);
   const nameEnCell = createTableCell(data.name_en);
-  const regionNameCell = createTableCell(data.town_hall_name);
+  const townHallNameCell = createTableCell(data.town_hall_name);
 
   const actionsCell = document.createElement("td");
-  const updateBtn = createActionButton("Update", () =>
-    showUpdateForm(data, row)
-  );
+  const updateBtn = createActionButton("Edit", () => showUpdateForm(data, row));
   const deleteBtn = createActionButton("Delete", () =>
     deleteHandler(data, row)
   );
@@ -121,7 +145,7 @@ function createTableRow(data) {
   row.appendChild(ekatteCell);
   row.appendChild(nameCell);
   row.appendChild(nameEnCell);
-  row.appendChild(regionNameCell);
+  row.appendChild(townHallNameCell);
   row.appendChild(actionsCell);
 
   return row;
