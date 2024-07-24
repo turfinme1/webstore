@@ -12,6 +12,20 @@ export const validateMunicipalityCode = (municipality_code) => {
   return "";
 };
 
+export const validateTownHallCode = (town_hall_code) => {
+  if (!town_hall_code || town_hall_code.length <= 7) {
+    return "Town hall code must be at least 8 characters long.";
+  }
+  return "";
+};
+
+export const validateEkatte = (ekatte) => {
+  if (!ekatte || ekatte.length <= 4) {
+    return "Ekkate code must be at least 5 characters long.";
+  }
+  return "";
+};
+
 export const validateName = (name) => {
   if (!name || name.length <= 2) {
     return "Name must be at least 3 character long.";
