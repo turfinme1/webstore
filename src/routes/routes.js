@@ -7,7 +7,11 @@ import settlementRoutes from "./settlementRoutes.js";
 
 const routes = ({ client }) => ({
   "/statistics:GET": async (request, response) => {
-    const queryText = `SELECT (SELECT COUNT(*) FROM naseleno_mqsto) AS countSettlements,(SELECT COUNT(*) FROM kmetstvo) AS countTownHalls,(SELECT COUNT(*) FROM obshtina) AS countMunicipalities,(SELECT COUNT(*) FROM oblast) AS countRegions LIMIT 1;`;
+    const queryText = `
+    SELECT (SELECT COUNT(*) FROM settlement) AS countSettlements,
+    (SELECT COUNT(*) FROM town_hall) AS countTownHalls,
+    (SELECT COUNT(*) FROM municipality) AS countMunicipalities,
+    (SELECT COUNT(*) FROM region) AS countRegions LIMIT 1;`;
 
     try {
       const result = await client.query(queryText);
