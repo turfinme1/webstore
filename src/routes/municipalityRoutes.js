@@ -1,5 +1,16 @@
-import { getRequestBody, createResponse } from "../util/requestUtilities.js";
+import {
+  getRequestBody,
+  createResponse,
+  mapRequestToEntity,
+} from "../util/requestUtilities.js";
 import { validateMunicipalityEntity } from "../util/validation.js";
+
+const municipalityEntity = {
+  municipality_code: "",
+  name_en: "",
+  name: "",
+  region_id: "",
+};
 
 const municipalityRoutes = (client, municipalityRepository) => ({
   "/municipalities:GET": async (request, response) => {
@@ -32,14 +43,17 @@ const municipalityRoutes = (client, municipalityRepository) => ({
     const body = await getRequestBody(request);
 
     try {
-      const entity = JSON.parse(body);
+      const requestObject = JSON.parse(body);
 
-      const erors = validateMunicipalityEntity(entity);
+      const erors = validateMunicipalityEntity(requestObject);
       if (erors.length > 0) {
         return createResponse(response, 400, "application/json", {
-          errors: erors,
+          error: erors,
         });
       }
+
+      const entity = mapRequestToEntity(municipalityEntity, requestObject);
+
       const result = await municipalityRepository.createAsync(entity);
       return createResponse(response, 201, "application/json", result);
     } catch (e) {
@@ -57,14 +71,16 @@ const municipalityRoutes = (client, municipalityRepository) => ({
     const body = await getRequestBody(request);
 
     try {
-      const entity = JSON.parse(body);
+      const requestObject = JSON.parse(body);
 
-      const erors = validateMunicipalityEntity(entity);
+      const erors = validateMunicipalityEntity(requestObject);
       if (erors.length > 0) {
         return createResponse(response, 400, "application/json", {
-          errors: erors,
+          error: erors,
         });
       }
+
+      const entity = mapRequestToEntity(municipalityEntity, requestObject);
 
       const result = await municipalityRepository.updateAsync(id, entity);
 
