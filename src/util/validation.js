@@ -70,3 +70,37 @@ export const validateRegionEntity = (entity) => {
   }
   return errors;
 };
+
+export const validateSettlementEntity = (entity) => {
+  const errors = [];
+  if (!entity.ekatte || entity.ekatte.length <= 4) {
+    errors.push("Ekatte code must be at least 5 characters long.");
+  }
+  if (!entity.name || entity.name.length <= 2) {
+    errors.push("Name must be at least 3 character long.");
+  }
+  if (!entity.name_en || entity.name_en.length <= 2) {
+    errors.push("Name (EN) must be at least 3 character long.");
+  }
+  if (!entity.town_hall_id) {
+    errors.push("Town hall ID is required.");
+  }
+  return errors;
+};
+
+export const validateTownHallEntity = (entity) => {
+  const errors = [];
+  if (!entity.town_hall_code || entity.town_hall_code.length <= 7) {
+    errors.push("Town hall code must be at least 8 characters long.");
+  }
+  if (!entity.name || entity.name.length <= 2) {
+    errors.push("Name must be at least 3 character long.");
+  }
+  if (!entity.name_en || entity.name_en.length <= 2) {
+    errors.push("Name (EN) must be at least 3 character long.");
+  }
+  if (!entity.municipality_id) {
+    errors.push("Municipality ID is required.");
+  }
+  return errors;
+};

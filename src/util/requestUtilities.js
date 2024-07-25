@@ -73,10 +73,20 @@ const createResponse = (response, statusCode, contentType, data) => {
   );
 };
 
+const mapRequestToEntity = (entityObject, requestObject) => {
+  for (const key in requestObject) {
+    if (entityObject.hasOwnProperty(key)) {
+      entityObject[key] = requestObject[key];
+    }
+  }
+  return entityObject;
+};
+
 export {
   getRequestBody,
   getFilePath,
   getContentType,
   serveFile,
   createResponse,
+  mapRequestToEntity,
 };

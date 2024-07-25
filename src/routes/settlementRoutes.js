@@ -1,4 +1,16 @@
-import { getRequestBody, createResponse } from "../util/requestUtilities.js";
+import {
+  getRequestBody,
+  createResponse,
+  mapRequestToEntity,
+} from "../util/requestUtilities.js";
+import { validateSettlementEntity } from "../util/validation.js";
+
+const settlementEntity = {
+  ekatte: "",
+  name_en: "",
+  name: "",
+  town_hall_id: "",
+};
 
 const settlementRoutes = (client, settlementRepository) => ({
   "/settlements:GET": async (request, response) => {
@@ -40,7 +52,16 @@ const settlementRoutes = (client, settlementRepository) => ({
     const body = await getRequestBody(request);
 
     try {
-      const entity = JSON.parse(body);
+      const requestObject = JSON.parse(body);
+      const entity = mapRequestToEntity(settlementEntity, requestObject);
+
+      const erors = validateSettlementEntity(entity);
+      if (erors.length > 0) {
+        return createResponse(response, 400, "application/json", {
+          error: erors,
+        });
+      }
+
       const result = await settlementRepository.createAsync(entity);
       return createResponse(response, 201, "application/json", result);
     } catch (e) {
@@ -58,7 +79,16 @@ const settlementRoutes = (client, settlementRepository) => ({
     const body = await getRequestBody(request);
 
     try {
-      const entity = JSON.parse(body);
+      const requestObject = JSON.parse(body);
+      const entity = mapRequestToEntity(settlementEntity, requestObject);
+
+      const erors = validateSettlementEntity(entity);
+      if (erors.length > 0) {
+        return createResponse(response, 400, "application/json", {
+          error: erors,
+        });
+      }
+
       const result = await settlementRepository.updateAsync(id, entity);
 
       if (!result) {
@@ -66,6 +96,7 @@ const settlementRoutes = (client, settlementRepository) => ({
           error: "Settlement not found",
         });
       }
+
       return createResponse(response, 200, "application/json", result);
     } catch (e) {
       console.log(e);
