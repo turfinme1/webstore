@@ -1,4 +1,16 @@
-import { getRequestBody, createResponse } from "../util/requestUtilities.js";
+import {
+  getRequestBody,
+  createResponse,
+  mapRequestToEntity,
+} from "../util/requestUtilities.js";
+import { validateTownHallEntity } from "../util/validation.js";
+
+const townHallEntity = {
+  town_hall_code: "",
+  name_en: "",
+  name: "",
+  municipality_id: "",
+};
 
 const townHallRoutes = (client, townHallRepository) => ({
   "/townhalls:GET": async (request, response) => {
@@ -31,7 +43,16 @@ const townHallRoutes = (client, townHallRepository) => ({
     const body = await getRequestBody(request);
 
     try {
-      const entity = JSON.parse(body);
+      const requestObject = JSON.parse(body);
+      const entity = mapRequestToEntity(townHallEntity, requestObject);
+
+      const erors = validateTownHallEntity(entity);
+      if (erors.length > 0) {
+        return createResponse(response, 400, "application/json", {
+          error: erors,
+        });
+      }
+
       const result = await townHallRepository.createAsync(entity);
       return createResponse(response, 201, "application/json", result);
     } catch (e) {
@@ -49,7 +70,16 @@ const townHallRoutes = (client, townHallRepository) => ({
     const body = await getRequestBody(request);
 
     try {
-      const entity = JSON.parse(body);
+      const requestObject = JSON.parse(body);
+      const entity = mapRequestToEntity(townHallEntity, requestObject);
+
+      const erors = validateTownHallEntity(entity);
+      if (erors.length > 0) {
+        return createResponse(response, 400, "application/json", {
+          error: erors,
+        });
+      }
+
       const result = await townHallRepository.updateAsync(id, entity);
 
       if (!result) {
