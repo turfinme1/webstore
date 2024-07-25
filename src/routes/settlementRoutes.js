@@ -101,7 +101,7 @@ const settlementRoutes = (client, settlementRepository) => ({
     } catch (e) {
       console.log(e);
       return createResponse(response, 500, "application/json", {
-        error: "Internal Server Error",
+        error: "Settlement could not be updated (ekatte duplicate)",
       });
     } finally {
       client.release();

@@ -94,7 +94,7 @@ const municipalityRoutes = (client, municipalityRepository) => ({
     } catch (e) {
       console.log(e);
       return createResponse(response, 500, "application/json", {
-        error: "Internal Server Error",
+        error: "Municipality could not be updated (code duplicate)",
       });
     } finally {
       client.release();

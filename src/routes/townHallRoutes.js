@@ -91,7 +91,7 @@ const townHallRoutes = (client, townHallRepository) => ({
     } catch (e) {
       console.log(e);
       return createResponse(response, 500, "application/json", {
-        error: "Internal Server Error",
+        error: "TownHall could not be updated (code duplicate)",
       });
     } finally {
       client.release();

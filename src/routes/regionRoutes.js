@@ -93,7 +93,7 @@ const regionRoutes = (client, regionRepository) => ({
     } catch (e) {
       console.log(e);
       return createResponse(response, 400, "application/json", {
-        error: "Region could not be updated",
+        error: "Region could not be updated (duplicate code)",
       });
     } finally {
       client.release();
