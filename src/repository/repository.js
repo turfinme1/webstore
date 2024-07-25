@@ -5,7 +5,7 @@ class Repository {
   }
 
   async getAllAsync() {
-    const query = `SELECT * FROM ${this.tableName}`;
+    const query = `SELECT * FROM ${this.tableName} ORDER BY id DESC`;
     const { rows } = await this.client.query(query);
     return rows;
   }
