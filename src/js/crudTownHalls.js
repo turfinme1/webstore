@@ -1,3 +1,4 @@
+import { createActionButton, createTableCell } from "../util/pageUtilities.js";
 import {
   validateTownHallCode,
   validateName,
@@ -158,19 +159,6 @@ function createTableRow(data) {
   return row;
 }
 
-function createTableCell(textContent) {
-  const cell = document.createElement("td");
-  cell.textContent = textContent;
-  return cell;
-}
-
-function createActionButton(text, onClick) {
-  const button = document.createElement("button");
-  button.textContent = text;
-  button.addEventListener("click", onClick);
-  return button;
-}
-
 async function deleteHandler(rowData, row) {
   try {
     const res = await fetch(`/townhalls?id=${rowData.id}`, {
@@ -280,7 +268,7 @@ function updateTableRow(row, data) {
   row.cells[3].textContent = regionName;
 }
 
-function resetForm() {
+export function resetForm() {
   createForm.style.display = "block";
   updateContainer.style.display = "none";
   updateErrorMessage.textContent = "";

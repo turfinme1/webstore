@@ -1,3 +1,4 @@
+import { createActionButton, createTableCell } from "../util/pageUtilities.js";
 import {
   validateRegionCode,
   validateName,
@@ -11,7 +12,9 @@ const updateContainer = document.getElementById("update-container");
 const updateForm = document.getElementById("update-form");
 const updateErrorMessage = document.getElementById("update-error-message");
 
-const fetchRecords = async () => {
+document.addEventListener("DOMContentLoaded", fetchRecords);
+
+async function fetchRecords() {
   try {
     const res = await fetch("/regions");
     const data = await res.json();
@@ -26,7 +29,7 @@ const fetchRecords = async () => {
     console.error("Error:", error);
     errorMessage.textContent = "An error occurred while fetching records.";
   }
-};
+}
 
 const deleteHandler = async (rowData, row) => {
   try {
@@ -131,26 +134,29 @@ function addTableRow(data, prepend = false) {
 const createTableRow = (data) => {
   const row = document.createElement("tr");
 
-  row.innerHTML = `
-    <td>${data.region_code}</td>
-    <td>${data.name}</td>
-    <td>${data.name_en}</td>
-    <td>
-      <button class="update-btn">Edit</button>
-      <button class="delete-btn">Delete</button>
-    </td>
-  `;
+  const regionCell = createTableCell(data.region_code);
+  const nameCell = createTableCell(data.name);
+  const nameEnCell = createTableCell(data.name_en);
 
-  const updateBtn = row.querySelector(".update-btn");
-  updateBtn.addEventListener("click", () => showUpdateForm(data, row));
+  const actionsCell = document.createElement("td");
+  const updateBtn = createActionButton("Edit", () => showUpdateForm(data, row));
+  const deleteBtn = createActionButton("Delete", () =>
+    deleteHandler(data, row)
+  );
+  actionsCell.appendChild(updateBtn);
+  actionsCell.appendChild(deleteBtn);
 
-  const deleteBtn = row.querySelector(".delete-btn");
-  deleteBtn.addEventListener("click", () => deleteHandler(data, row));
+  row.appendChild(regionCell);
+  row.appendChild(nameCell);
+  row.appendChild(nameEnCell);
+  row.appendChild(actionsCell);
 
   return row;
 };
 
-const handleCreateFormSubmit = async (e) => {
+createForm.addEventListener("submit", handleCreateFormSubmit);
+
+async function handleCreateFormSubmit(e) {
   e.preventDefault();
   const region_code = document.getElementById("region-code").value;
   const name = document.getElementById("name").value;
@@ -182,14 +188,10 @@ const handleCreateFormSubmit = async (e) => {
     console.error("Error:", error);
     errorMessage.textContent = "An error occurred while creating.";
   }
-};
+}
 
-const resetForm = () => {
+function resetForm() {
   createForm.style.display = "block";
   updateContainer.style.display = "none";
   updateErrorMessage.textContent = "";
-};
-
-document.addEventListener("DOMContentLoaded", fetchRecords);
-
-createForm.addEventListener("submit", handleCreateFormSubmit);
+}

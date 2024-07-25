@@ -1,3 +1,4 @@
+import { createActionButton, createTableCell } from "../util/pageUtilities.js";
 import {
   validateMunicipalityCode,
   validateName,
@@ -107,8 +108,8 @@ async function handleCreateFormSubmit(e) {
       body: JSON.stringify(requestData),
     });
     const data = await res.json();
-    if (data.errors) {
-      errorMessage.textContent = data.errors;
+    if (data.error) {
+      errorMessage.textContent = data.error;
     } else {
       data.region_name = regionMap.get(regionId);
       addTableRow(data, true);
@@ -152,19 +153,6 @@ function createTableRow(data) {
   row.appendChild(actionsCell);
 
   return row;
-}
-
-function createTableCell(textContent) {
-  const cell = document.createElement("td");
-  cell.textContent = textContent;
-  return cell;
-}
-
-function createActionButton(text, onClick) {
-  const button = document.createElement("button");
-  button.textContent = text;
-  button.addEventListener("click", onClick);
-  return button;
 }
 
 async function deleteHandler(rowData, row) {
@@ -274,7 +262,7 @@ function updateTableRow(row, data) {
   row.cells[3].textContent = regionName;
 }
 
-function resetForm() {
+export function resetForm() {
   createForm.style.display = "block";
   updateContainer.style.display = "none";
   updateErrorMessage.textContent = "";
