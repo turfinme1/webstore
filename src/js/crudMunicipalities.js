@@ -111,7 +111,7 @@ async function handleCreateFormSubmit(e) {
       errorMessage.textContent = data.errors;
     } else {
       data.region_name = regionMap.get(regionId);
-      addTableRow(data);
+      addTableRow(data, true);
     }
   } catch (error) {
     console.error("Error:", error);
@@ -119,9 +119,13 @@ async function handleCreateFormSubmit(e) {
   }
 }
 
-function addTableRow(data) {
+function addTableRow(data, prepend = false) {
   const row = createTableRow(data);
-  tbody.insertBefore(row, tbody.firstChild);
+  if (prepend) {
+    tbody.prepend(row);
+  } else {
+    tbody.appendChild(row);
+  }
 }
 
 function createTableRow(data) {

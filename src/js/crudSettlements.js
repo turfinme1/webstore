@@ -112,7 +112,7 @@ async function handleCreateFormSubmit(e) {
       errorMessage.textContent = data.error;
     } else {
       data.town_hall_name = townHallName;
-      addTableRow(data);
+      addTableRow(data, true);
     }
   } catch (error) {
     console.error("Error:", error);
@@ -120,9 +120,13 @@ async function handleCreateFormSubmit(e) {
   }
 }
 
-function addTableRow(data) {
+function addTableRow(data, prepend = false) {
   const row = createTableRow(data);
-  tbody.appendChild(row);
+  if (prepend) {
+    tbody.prepend(row);
+  } else {
+    tbody.appendChild(row);
+  }
 }
 
 function createTableRow(data) {

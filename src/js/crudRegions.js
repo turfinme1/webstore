@@ -19,7 +19,7 @@ const fetchRecords = async () => {
       errorMessage.textContent = data.error;
     } else {
       data.forEach((record) => {
-        createTableRow(record);
+        addTableRow(record);
       });
     }
   } catch (error) {
@@ -119,6 +119,15 @@ const updateHandler = async (id, row) => {
   }
 };
 
+function addTableRow(data, prepend = false) {
+  const row = createTableRow(data);
+  if (prepend) {
+    tbody.prepend(row);
+  } else {
+    tbody.appendChild(row);
+  }
+}
+
 const createTableRow = (data) => {
   const row = document.createElement("tr");
 
@@ -138,7 +147,7 @@ const createTableRow = (data) => {
   const deleteBtn = row.querySelector(".delete-btn");
   deleteBtn.addEventListener("click", () => deleteHandler(data, row));
 
-  tbody.insertBefore(row, tbody.firstChild);
+  return row;
 };
 
 const handleCreateFormSubmit = async (e) => {
@@ -166,7 +175,8 @@ const handleCreateFormSubmit = async (e) => {
     if (data.error) {
       errorMessage.textContent = data.error;
     } else {
-      createTableRow({ id: data.id, region_code, name, name_en });
+      const obj = { id: data.id, region_code, name, name_en };
+      addTableRow(data, true);
     }
   } catch (error) {
     console.error("Error:", error);
@@ -180,7 +190,6 @@ const resetForm = () => {
   updateErrorMessage.textContent = "";
 };
 
-// Fetch records and populate the table when the page loads
 document.addEventListener("DOMContentLoaded", fetchRecords);
 
 createForm.addEventListener("submit", handleCreateFormSubmit);
