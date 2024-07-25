@@ -1,5 +1,15 @@
-import { getRequestBody, createResponse } from "../util/requestUtilities.js";
+import {
+  getRequestBody,
+  createResponse,
+  mapRequestToEntity,
+} from "../util/requestUtilities.js";
 import { validateRegionEntity } from "../util/validation.js";
+
+const regionEntity = {
+  region_code: "",
+  name_en: "",
+  name: "",
+};
 
 const regionRoutes = (client, regionRepository) => ({
   "/regions:GET": async (request, response) => {
@@ -32,14 +42,16 @@ const regionRoutes = (client, regionRepository) => ({
     const body = await getRequestBody(request);
 
     try {
-      const entity = JSON.parse(body);
+      const requestObject = JSON.parse(body);
 
-      const erors = validateRegionEntity(entity);
+      const erors = validateRegionEntity(requestObject);
       if (erors.length > 0) {
         return createResponse(response, 400, "application/json", {
-          errors: erors,
+          error: erors,
         });
       }
+
+      const entity = mapRequestToEntity(regionEntity, requestObject);
 
       const result = await regionRepository.createAsync(entity);
       return createResponse(response, 201, "application/json", result);
@@ -58,14 +70,16 @@ const regionRoutes = (client, regionRepository) => ({
     const body = await getRequestBody(request);
 
     try {
-      const entity = JSON.parse(body);
+      const requestObject = JSON.parse(body);
 
-      const erors = validateRegionEntity(entity);
+      const erors = validateRegionEntity(requestObject);
       if (erors.length > 0) {
         return createResponse(response, 400, "application/json", {
           errors: erors,
         });
       }
+
+      const entity = mapRequestToEntity(regionEntity, requestObject);
 
       const result = await regionRepository.updateAsync(id, entity);
 
