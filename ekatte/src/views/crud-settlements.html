@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD Settlements</title>
+    <script defer type="module" src="../js/crudSettlements.js"></script>
+    <link rel="stylesheet" href="../css/crudPage.css">
+</head>
+
+<body>
+    <div class="navbar">
+        <button onclick="location.href='/'">Search</button>
+        <button onclick="location.href='crud-settlements.html'">Settlements</button>
+        <button onclick="location.href='crud-town-halls.html'">Town Halls</button>
+        <button onclick="location.href='crud-municipalities.html'">Municipalities</button>
+        <button onclick="location.href='crud-regions.html'">Regions</button>
+    </div>
+
+    <div id="container">
+        <h1>CRUD Operations - Settlements</h1>
+        <div id="input-container">
+            <form id="create-form">
+                <input type="text" id="ekatte" placeholder="EKATTE">
+                <input type="text" id="name" placeholder="Name">
+                <input type="text" id="name-en" placeholder="Name (EN)">
+                <select name="town-hall-id" id="town-hall-id">
+                    <option value="">Choose a town hall</option>
+                </select>
+                <input type="submit" value="Add">
+                <div id="error-message"></div>
+            </form>
+        </div>
+        <div id="update-container" style="display:none;">
+            <form id="update-form">
+                <input type="hidden" id="update-id">
+                <input type="text" id="update-ekatte" placeholder="EKATTE">
+                <input type="text" id="update-name" placeholder="Name">
+                <input type="text" id="update-name-en" placeholder="Name (EN)">
+                <select name="town-hall-id" id="update-town-hall-id">
+                </select>
+                <div id="update-error-message"></div>
+                <button id="update-btn">Update</button>
+                <button id="cancel-btn" type="button">Cancel</button>
+            </form>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>EKATTE</th>
+                    <th>NAME</th>
+                    <th>NAME (EN)</th>
+                    <th>TOWN HALL NAME</th>
+                    <th>ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+
+    </div>
+</body>
+
+</html>
