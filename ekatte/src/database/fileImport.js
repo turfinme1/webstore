@@ -14,10 +14,10 @@ const fileImport = async (client) => {
 };
 
 const seedRegions = async (client) => {
-  const queryString = 
-    `INSERT INTO region(region_code, name_en, name) 
-     VALUES($1, $2, $3) 
-     ON CONFLICT (region_code) DO NOTHING RETURNING *`;
+  const queryString = `
+    INSERT INTO region(region_code, name_en, name) 
+    VALUES($1, $2, $3) 
+    ON CONFLICT (region_code) DO NOTHING RETURNING *`;
 
   try {
     await client.query("BEGIN");
@@ -32,10 +32,10 @@ const seedRegions = async (client) => {
 };
 
 const seedMunicipalities = async (client) => {
-  const queryString = 
-    `INSERT INTO municipality(municipality_code, name_en, name, region_id) 
-     VALUES($1, $2, $3, (SELECT id FROM region WHERE region_code = $4 LIMIT 1)) 
-     ON CONFLICT (municipality_code) DO NOTHING RETURNING *`;
+  const queryString = `
+    INSERT INTO municipality(municipality_code, name_en, name, region_id) 
+    VALUES($1, $2, $3, (SELECT id FROM region WHERE region_code = $4 LIMIT 1)) 
+    ON CONFLICT (municipality_code) DO NOTHING RETURNING *`;
 
   try {
     await client.query("BEGIN");
@@ -52,10 +52,10 @@ const seedMunicipalities = async (client) => {
 };
 
 const seedTownHalls = async (client) => {
-  const queryString = 
-    `INSERT INTO town_hall(town_hall_code, name_en, name, municipality_id) 
-     VALUES($1, $2, $3, (SELECT id FROM municipality WHERE municipality_code = $4 LIMIT 1)) 
-     ON CONFLICT (town_hall_code) DO NOTHING RETURNING *`;
+  const queryString = `
+    INSERT INTO town_hall(town_hall_code, name_en, name, municipality_id) 
+    VALUES($1, $2, $3, (SELECT id FROM municipality WHERE municipality_code = $4 LIMIT 1)) 
+    ON CONFLICT (town_hall_code) DO NOTHING RETURNING *`;
 
   try {
     await client.query("BEGIN");
@@ -72,18 +72,47 @@ const seedTownHalls = async (client) => {
 };
 
 const seedSettlements = async (client) => {
-  const queryString = 
-    `INSERT INTO settlement(ekatte, name_en, name, town_hall_id) 
-     VALUES($1, $2, $3, (SELECT COALESCE((SELECT id FROM town_hall WHERE town_hall_code = $4 LIMIT 1), NULL))) 
-     ON CONFLICT (ekatte) DO NOTHING RETURNING *`;
+  const insertSettlementQuery = `
+    INSERT INTO settlement (ekatte, name_en, name, town_hall_id)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (ekatte) DO NOTHING
+    RETURNING *
+  `;
+  const insertTownHallQuery = `
+    INSERT INTO town_hall (town_hall_code, name_en, name, municipality_id)
+    VALUES ($1, $2, $3, (SELECT id FROM municipality WHERE municipality_code = $4 LIMIT 1))
+    ON CONFLICT (town_hall_code) DO NOTHING
+    RETURNING id`;
 
   try {
     await client.query("BEGIN");
-    settlements.map(async (nm) => {
-      let params = [nm.ekatte, nm.name_en, nm.name, nm.kmetstvo];
-      let res = await client.query(queryString, params);
+
+    for (const nm of settlements) {
+      let townHallResult = await client.query(
+        "SELECT id FROM town_hall WHERE town_hall_code = $1",
+        [nm.kmetstvo]
+      );
+
+      let townHallId;
+
+      if (townHallResult.rows.length === 0) {
+        const createTownHallResult = await client.query(insertTownHallQuery, [
+          nm.kmetstvo,
+          nm.name_en,
+          nm.name,
+          nm.obshtina,
+        ]);
+
+        townHallId = createTownHallResult.rows[0]?.id;
+      } else {
+        townHallId = townHallResult.rows[0].id;
+      }
+
+      const settlementParams = [nm.ekatte, nm.name_en, nm.name, townHallId];
+      const res = await client.query(insertSettlementQuery, settlementParams);
       console.log(res.rows[0]);
-    });
+    }
+
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
