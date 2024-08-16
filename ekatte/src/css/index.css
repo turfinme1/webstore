@@ -46,8 +46,22 @@ h1 {
 
 form {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-items: center;
+    max-width: max-content;
+    margin: 0 auto 20px auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#form-row {
+    display: flex;
     justify-content: center;
-    margin-bottom: 20px;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
 label {
@@ -81,7 +95,6 @@ input[type="submit"]:hover {
     margin-bottom: 20px;
     flex-wrap: wrap;
 }
-
 
 .stat-item {
     border: 1px solid #ccc;
@@ -122,4 +135,9 @@ tbody tr:nth-child(even) {
 
 tbody tr:hover {
     background-color: #ddd;
+}
+
+#errorMessage {
+    color: red;
+    text-align: center;
 }

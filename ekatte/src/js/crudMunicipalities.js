@@ -1,12 +1,12 @@
-import { createActionButton, createTableCell } from "../util/pageUtilities.js";
+import { fetchData, createTableRow } from "../util/crudUtilities.js";
 import {
   validateMunicipalityCode,
   validateName,
   validateNameEn,
+  validateReferenceId,
 } from "../util/validation.js";
 
 const createForm = document.getElementById("create-form");
-const tbody = document.getElementById("tbody");
 const errorMessage = document.getElementById("error-message");
 const updateContainer = document.getElementById("update-container");
 const updateForm = document.getElementById("update-form");
@@ -15,21 +15,23 @@ const updateErrorMessage = document.getElementById("update-error-message");
 const regionMap = new Map();
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await fetchRegions();
-  fetchMunicipalities();
+  await initialize();
 });
+
+async function initialize() {
+  await fetchRegions();
+  await fetchMunicipalities();
+}
 
 async function fetchRegions() {
   try {
-    const res = await fetch("/regions");
-    const data = await res.json();
-    if (data.error) {
-      errorMessage.textContent = data.error;
+    const regions = await fetchData("/regions");
+    if (!regions.errors) {
+      populateSelect("region-id", regions);
+      populateSelect("update-region-id", regions);
+      regions.forEach((region) => regionMap.set(region.id, region.name));
     } else {
-      populateRegionSelect(data);
-      data.forEach((region) => {
-        regionMap.set(region.id, region.name);
-      });
+      errorMessage.textContent = regions.errors;
     }
   } catch (error) {
     console.error("Error:", error);
@@ -39,15 +41,11 @@ async function fetchRegions() {
 
 async function fetchMunicipalities() {
   try {
-    const res = await fetch("/municipalities");
-    const data = await res.json();
-    if (data.error) {
-      errorMessage.textContent = data.error;
+    const municipalities = await fetchData("/municipalities");
+    if (!municipalities.errors) {
+      generateTable(municipalities);
     } else {
-      data.forEach((municipality) => {
-        municipality.region_name = regionMap.get(municipality.region_id);
-        addTableRow(municipality);
-      });
+      errorMessage.textContent = municipalities.errors;
     }
   } catch (error) {
     console.error("Error:", error);
@@ -56,29 +54,17 @@ async function fetchMunicipalities() {
   }
 }
 
-function populateRegionSelect(regions) {
-  const regionSelect = document.getElementById("region-id");
-  const updateRegionSelect = document.getElementById("update-region-id");
-
-  regions.forEach((region) => {
-    const option = createOption(region.id, region.name);
-    const updateOption = createOption(region.id, region.name);
-    regionSelect.appendChild(option);
-    updateRegionSelect.appendChild(updateOption);
+function populateSelect(id, options) {
+  const select = document.getElementById(id);
+  options.forEach((option) => {
+    const opt = document.createElement("option");
+    opt.value = option.id;
+    opt.textContent = option.name;
+    select.appendChild(opt);
   });
 }
 
-function createOption(value, text) {
-  const option = document.createElement("option");
-  option.value = value;
-  option.textContent = text;
-  console.log(option);
-  return option;
-}
-
-createForm.addEventListener("submit", handleCreateFormSubmit);
-
-async function handleCreateFormSubmit(e) {
+createForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const municipalityCode = document.getElementById("municipality-code").value;
   const name = document.getElementById("name").value;
@@ -88,7 +74,8 @@ async function handleCreateFormSubmit(e) {
   const validationError =
     validateMunicipalityCode(municipalityCode) ||
     validateName(name) ||
-    validateNameEn(nameEn);
+    validateNameEn(nameEn) ||
+    validateReferenceId("Region", regionId);;
   if (validationError) {
     errorMessage.textContent = validationError;
     return;
@@ -102,93 +89,97 @@ async function handleCreateFormSubmit(e) {
   };
 
   try {
-    const res = await fetch("/municipalities", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestData),
-    });
-    const data = await res.json();
-    if (data.error) {
-      errorMessage.textContent = data.error;
+    const data = await fetchData("/municipalities", "POST", requestData);
+    if (data.errors) {
+      errorMessage.textContent = data.errors;
     } else {
       data.region_name = regionMap.get(regionId);
-      addTableRow(data, true);
+      addTableRow(data);
+      errorMessage.textContent = "";
     }
   } catch (error) {
     console.error("Error:", error);
     errorMessage.textContent = "An error occurred while creating.";
   }
-}
+});
 
-function addTableRow(data, prepend = false) {
-  const row = createTableRow(data);
-  if (prepend) {
-    tbody.prepend(row);
-  } else {
-    tbody.appendChild(row);
+function generateTable(data) {
+  const container = document.getElementById("table-container");
+  container.innerHTML = "";
+
+  if (data.length === 0) {
+    return;
   }
+
+  const table = document.createElement("table");
+  const columnNames = [
+    "municipality_code",
+    "name_en",
+    "name",
+    "region_name",
+    "actions",
+  ];
+
+  generateTableHead(table, columnNames);
+  generateTableBody(table, data);
+
+  container.appendChild(table);
 }
 
-function createTableRow(data) {
-  const row = document.createElement("tr");
+function generateTableHead(table, columnNames) {
+  const thead = table.createTHead();
+  const row = thead.insertRow();
+  columnNames.forEach((name) => {
+    const th = document.createElement("th");
+    const text = document.createTextNode(name.replaceAll("_", " "));
+    th.appendChild(text);
+    row.appendChild(th);
+  });
+}
 
-  const municipalityCodeCell = createTableCell(data.municipality_code);
-  const nameCell = createTableCell(data.name);
-  const nameEnCell = createTableCell(data.name_en);
-  const regionNameCell = createTableCell(data.region_name);
+function generateTableBody(table, data) {
+  const tbody = table.createTBody();
+  data.forEach((municipality) => {
+    const row = createTableRow(municipality, showUpdateForm, deleteHandler);
+    tbody.appendChild(row);
+  });
+}
 
-  const actionsCell = document.createElement("td");
-  const updateBtn = createActionButton("Edit", () => showUpdateForm(data, row));
-  const deleteBtn = createActionButton("Delete", () =>
-    deleteHandler(data, row)
+function addTableRow(data) {
+  const table = document.querySelector("table");
+  const tbody = table.querySelector("tbody");
+  const row = createTableRow(data, showUpdateForm, deleteHandler);
+
+  tbody.insertBefore(row, tbody.firstChild);
+}
+
+async function deleteHandler(data) {
+  const userConfirmed = window.confirm(
+    `Are you sure you want to delete ${data.name}?`
   );
 
-  actionsCell.appendChild(updateBtn);
-  actionsCell.appendChild(deleteBtn);
-
-  row.appendChild(municipalityCodeCell);
-  row.appendChild(nameCell);
-  row.appendChild(nameEnCell);
-  row.appendChild(regionNameCell);
-  row.appendChild(actionsCell);
-
-  return row;
-}
-
-async function deleteHandler(rowData, row) {
-  try {
-    const res = await fetch(`/municipalities?id=${rowData.id}`, {
-      method: "DELETE",
-    });
-    const data = await res.json();
-    if (data.id === rowData.id) {
-      row.remove();
-    } else {
-      errorMessage.textContent = data.error;
+  if (userConfirmed) {
+    try {
+      const response = await fetchData(
+        `/municipalities?id=${data.id}`,
+        "DELETE"
+      );
+      if (response.errors) {
+        errorMessage.textContent = response.errors;
+      } else {
+        const row = document.querySelector(`tr[data-id='${data.id}']`);
+        if (row) {
+          row.remove();
+        }
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      errorMessage.textContent = "An error occurred while deleting.";
     }
-  } catch (error) {
-    console.error("Error:", error);
-    errorMessage.textContent = "An error occurred while deleting.";
   }
 }
 
-async function showUpdateForm(data, row) {
-  updateErrorMessage.textContent = "";
-  try {
-    const res = await fetch(`/municipalities?id=${data.id}`);
-    const latestData = await res.json();
-    if (latestData.error) {
-      updateErrorMessage.textContent = latestData.error;
-    } else {
-      fillUpdateForm(latestData, row);
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    updateErrorMessage.textContent = "An error occurred while fetching.";
-  }
-}
-
-function fillUpdateForm(data, row) {
+function showUpdateForm(data) {
   document.getElementById("update-id").value = data.id;
   document.getElementById("update-municipality-code").value =
     data.municipality_code;
@@ -198,71 +189,60 @@ function fillUpdateForm(data, row) {
 
   createForm.style.display = "none";
   updateContainer.style.display = "block";
+  updateErrorMessage.textContent = "";
 
-  updateForm.onsubmit = (e) => {
+  updateForm.onsubmit = async (e) => {
     e.preventDefault();
-    updateHandler(data.id, row);
-  };
+    const updatedData = {
+      municipality_code: document.getElementById("update-municipality-code")
+        .value,
+      name: document.getElementById("update-name").value,
+      name_en: document.getElementById("update-name-en").value,
+      region_id: document.getElementById("update-region-id").value,
+    };
 
-  document.getElementById("cancel-btn").onclick = () => {
-    createForm.style.display = "block";
-    updateContainer.style.display = "none";
-    updateErrorMessage.textContent = "";
-  };
-}
-
-async function updateHandler(id, row) {
-  const municipalityCode = document.getElementById(
-    "update-municipality-code"
-  ).value;
-  const name = document.getElementById("update-name").value;
-  const nameEn = document.getElementById("update-name-en").value;
-  const regionId = document.getElementById("update-region-id").value;
-
-  const validationError =
-    validateMunicipalityCode(municipalityCode) ||
-    validateName(name) ||
-    validateNameEn(nameEn);
-  if (validationError) {
-    updateErrorMessage.textContent = validationError;
-    return;
-  }
-
-  const requestData = {
-    municipality_code: municipalityCode,
-    name,
-    name_en: nameEn,
-    region_id: regionId,
-  };
-
-  try {
-    const res = await fetch(`/municipalities?id=${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestData),
-    });
-    const data = await res.json();
-    if (data.error) {
-      updateErrorMessage.textContent = data.error;
-    } else {
-      updateTableRow(row, { municipalityCode, name, nameEn, regionId });
-      resetForm();
+    const validationError =
+      validateMunicipalityCode(updatedData.municipality_code) ||
+      validateName(updatedData.name) ||
+      validateNameEn(updatedData.name_en) ||
+      validateReferenceId("Region", updatedData.region_id);
+    if (validationError) {
+      updateErrorMessage.textContent = validationError;
+      return;
     }
-  } catch (error) {
-    console.error("Error:", error);
-    updateErrorMessage.textContent = "An error occurred while updating.";
-  }
+
+    try {
+      const response = await fetchData(
+        `/municipalities?id=${data.id}`,
+        "PUT",
+        updatedData
+      );
+      if (response.errors) {
+        updateErrorMessage.textContent = response.errors;
+      } else {
+        updateTableRow(
+          document.querySelector(`tr[data-id='${data.id}']`),
+          updatedData
+        );
+        resetForm();
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      updateErrorMessage.textContent = "An error occurred while updating.";
+    }
+  };
+
+  document.getElementById("cancel-btn").onclick = resetForm;
 }
 
 function updateTableRow(row, data) {
-  const regionName = regionMap.get(data.regionId);
-  row.cells[0].textContent = data.municipalityCode;
+  row.cells[0].textContent = data.municipality_code;
   row.cells[1].textContent = data.name;
-  row.cells[2].textContent = data.nameEn;
-  row.cells[3].textContent = regionName;
+  row.cells[2].textContent = data.name_en;
+  row.cells[3].textContent = regionMap.get(data.region_id);
 }
 
-export function resetForm() {
+function resetForm() {
   createForm.style.display = "block";
   updateContainer.style.display = "none";
   updateErrorMessage.textContent = "";

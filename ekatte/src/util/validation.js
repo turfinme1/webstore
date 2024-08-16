@@ -1,106 +1,123 @@
 export const validateRegionCode = (region_code) => {
-  if (!region_code || region_code.length <= 2) {
-    return "Region code must be at least 3 characters long.";
+  const regionCodeRegex = /^[a-zA-Z]{3,}$/;
+  if (!region_code || !regionCodeRegex.test(region_code)) {
+    return "Region code must be at least 3 characters long and contain only Latin letters and digits.";
   }
-  return "";
 };
 
 export const validateMunicipalityCode = (municipality_code) => {
-  if (!municipality_code || municipality_code.length <= 4) {
-    return "Municipality code must be at least 5 characters long.";
+  const municipalityCodeRegex = /^[a-zA-Z0-9]{5,}$/;
+  if (!municipality_code || !municipalityCodeRegex.test(municipality_code)) {
+    return "Municipality code must be at least 5 characters long and contain only Latin letters and digits.";
   }
-  return "";
 };
 
 export const validateTownHallCode = (town_hall_code) => {
-  if (!town_hall_code || town_hall_code.length <= 7) {
-    return "Town hall code must be at least 8 characters long.";
+  const townHallCodeRegex = /^[A-Z]{3,}[0-9]{2,}-\d{2,}$/;
+  if (!town_hall_code || !townHallCodeRegex.test(town_hall_code)) {
+    return "Town hall code must contain be at least 8 characters long and contain only Latin letters and digits. (ABC99-99)";
   }
-  return "";
 };
 
 export const validateEkatte = (ekatte) => {
-  if (!ekatte || ekatte.length <= 4) {
-    return "Ekkate code must be at least 5 characters long.";
+  const ekatteRegex = /^[0-9]{5,}$/;
+  if (!ekatte || !ekatteRegex.test(ekatte)) {
+    return "Ekatte code must be at least 5 characters long and contain only Latin letters and digits.";
   }
-  return "";
 };
 
 export const validateName = (name) => {
-  if (!name || name.length <= 2) {
-    return "Name must be at least 3 character long.";
+  const cyrillicRegex = /^[а-яА-Я]{3,}$/;
+  if (!name || !cyrillicRegex.test(name)) {
+    return "Name must be at least 3 characters long and contain only Cyrillic letters.";
   }
-  return "";
 };
 
 export const validateNameEn = (name_en) => {
-  if (!name_en || name_en.length <= 2) {
-    return "Name (EN) must be at least 3 character long.";
+  const latinRegex = /^[a-zA-Z]{3,}$/;
+  if (!name_en || !latinRegex.test(name_en)) {
+    return "Name (EN) must be at least 3 characters long and contain only Latin letters.";
   }
-  return "";
 };
+
+export const validateReferenceId = (name, id) => {
+  if(! id) {
+    return `${name} is required.`
+  }
+}
 
 export const validateMunicipalityEntity = (entity) => {
   const errors = [];
-  if (!entity.municipality_code || entity.municipality_code.length <= 4) {
-    errors.push("Municipality code must be at least 5 characters long.");
-  }
-  if (!entity.name || entity.name.length <= 2) {
-    errors.push("Name must be at least 3 character long.");
-  }
-  if (!entity.name_en || entity.name_en.length <= 2) {
-    errors.push("Name (EN) must be at least 3 character long.");
-  }
+  let error;
+
+  error = validateMunicipalityCode(entity.municipality_code);
+  if (error) errors.push(error);
+
+  error = validateName(entity.name);
+  if (error) errors.push(error);
+
+  error = validateNameEn(entity.name_en);
+  if (error) errors.push(error);
+
   if (!entity.region_id) {
-    errors.push("Region ID is required.");
+    errors.push("Region is required.");
   }
+
   return errors;
 };
 
 export const validateRegionEntity = (entity) => {
   const errors = [];
-  if (!entity.region_code || entity.region_code.length <= 2) {
-    errors.push("Region code must be at least 3 characters long.");
-  }
-  if (!entity.name || entity.name.length <= 2) {
-    errors.push("Name must be at least 3 character long.");
-  }
-  if (!entity.name_en || entity.name_en.length <= 2) {
-    errors.push("Name (EN) must be at least 3 character long.");
-  }
+  let error;
+
+  error = validateRegionCode(entity.region_code);
+  if (error) errors.push(error);
+
+  error = validateName(entity.name);
+  if (error) errors.push(error);
+
+  error = validateNameEn(entity.name_en);
+  if (error) errors.push(error);
+
   return errors;
 };
 
 export const validateSettlementEntity = (entity) => {
   const errors = [];
-  if (!entity.ekatte || entity.ekatte.length <= 4) {
-    errors.push("Ekatte code must be at least 5 characters long.");
-  }
-  if (!entity.name || entity.name.length <= 2) {
-    errors.push("Name must be at least 3 character long.");
-  }
-  if (!entity.name_en || entity.name_en.length <= 2) {
-    errors.push("Name (EN) must be at least 3 character long.");
-  }
+  let error;
+
+  error = validateEkatte(entity.ekatte);
+  if (error) errors.push(error);
+
+  error = validateName(entity.name);
+  if (error) errors.push(error);
+
+  error = validateNameEn(entity.name_en);
+  if (error) errors.push(error);
+
   if (!entity.town_hall_id) {
-    errors.push("Town hall ID is required.");
+    errors.push("Town hall is required.");
   }
+
   return errors;
 };
 
 export const validateTownHallEntity = (entity) => {
   const errors = [];
-  if (!entity.town_hall_code || entity.town_hall_code.length <= 7) {
-    errors.push("Town hall code must be at least 8 characters long.");
-  }
-  if (!entity.name || entity.name.length <= 2) {
-    errors.push("Name must be at least 3 character long.");
-  }
-  if (!entity.name_en || entity.name_en.length <= 2) {
-    errors.push("Name (EN) must be at least 3 character long.");
-  }
+  let error;
+
+  error = validateTownHallCode(entity.town_hall_code);
+  if (error) errors.push(error);
+
+  error = validateName(entity.name);
+  if (error) errors.push(error);
+
+  error = validateNameEn(entity.name_en);
+  if (error) errors.push(error);
+
   if (!entity.municipality_id) {
-    errors.push("Municipality ID is required.");
+    errors.push("Municipality is required.");
   }
+
   return errors;
 };

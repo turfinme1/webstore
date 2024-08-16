@@ -20,35 +20,43 @@
         <h1>CRUD Operations - Regions</h1>
         <div id="input-container">
             <form id="create-form">
-                <input type="text" id="region-code" placeholder="EKATTE">
-                <input type="text" id="name" placeholder="Име">
-                <input type="text" id="name-en" placeholder="Име (латиница)">
-                <input type="submit" value="Add"></button>
+                <label for="region-code">Region code:</label>
+                <input type="text" id="region-code" placeholder="Region code">
+                
+                <label for="name">Name:</label>
+                <input type="text" id="name" placeholder="Name">
+                
+                <label for="name-en">Name (EN):</label>
+                <input type="text" id="name-en" placeholder="Name (EN)">
+                
+                <input type="submit" value="Add">
                 <div id="error-message"></div>
             </form>
         </div>
-        <div id="update-container" style="display: none;">
+        
+        <div id="update-container" style="display:none;">
             <form id="update-form">
                 <input type="hidden" id="update-id">
-                <input type="text" id="update-region-code" placeholder="EKATTE">
+                
+                <label for="update-region-code">Region code:</label>
+                <input type="text" id="update-region-code" placeholder="Region code">
+                
+                <label for="update-name">Име:</label>
                 <input type="text" id="update-name" placeholder="Име">
+                
+                <label for="update-name-en">Име (латиница):</label>
                 <input type="text" id="update-name-en" placeholder="Име (латиница)">
+                
                 <input type="submit" value="Update">
                 <div id="update-error-message"></div>
                 <button type="button" id="cancel-btn">Cancel</button>
             </form>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>REGION CODE</th>
-                    <th>NAME</th>
-                    <th>NAME (EN)</th>
-                    <th>ACTIONS</th>
-                </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-        </table>
+        
+       
+
+    </div>
+    <div id="table-container">
 
     </div>
 </body>
