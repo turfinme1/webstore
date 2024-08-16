@@ -18,9 +18,13 @@
     </div>
     <div>
         <form id="form">
-            <label for="searchInput">Search:</label>
-            <input type="text" id="searchInput" placeholder="Search...">
-            <input type="submit" value="SEARCH"></input>
+            <div id="form-row">
+                <label for="searchInput">Search by settlement name:</label>
+                <input type="text" id="searchInput" placeholder="Name">
+                <input type="submit" value="SEARCH"></input>
+            </div>
+            <div id="errorMessage"></div>
+        </form>
     </div>
 
     <div class="statistics">
@@ -42,20 +46,9 @@
         </div>
     </div>
 
-    <table id="resultTable">
-        <thead>
-            <tr>
-                <th>EKATTE</th>
-                <th>Селище</th>
-                <th>Кметство</th>
-                <th>Община</th>
-                <th>Област</th>
-            </tr>
-        </thead>
-        <tbody id="tbody">
-            <!-- Table rows will be dynamically populated based on the search results -->
-        </tbody>
-    </table>
+    <div id="container">
+    </div>
+
 </body>
 
 </html>

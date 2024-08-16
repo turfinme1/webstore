@@ -1,60 +1,36 @@
 class Repository {
-  constructor(client, tableName) {
-    this.client = client;
+  constructor(pool, tableName) {
+    this.pool = pool;
     this.tableName = tableName;
   }
 
-  async getAllAsync() {
-    const query = `SELECT * FROM ${this.tableName} ORDER BY id DESC`;
-    const { rows } = await this.client.query(query);
-    return rows;
+  async _query(query, values = []) {
+    const client = await this.pool.connect();
+    try {
+      const { rows } = await client.query(query, values);
+      return rows;
+    } catch (error) {
+        if (error.code === '23505') {
+          throw { success: false, statusCode: 409, data: null, errors: 'Entity already exists' };
+        } else if (error.code === '23503') {
+          throw { success: false, statusCode: 404, data: null, errors: 'Entity ID not found' };
+        }
+        throw { success: false, statusCode: 500, data: null, errors: "Internal Server Error" };
+    } 
+    finally {
+      client.release();
+    }
   }
 
-  async getByIdAsync(id) {
-    const query = `SELECT * FROM ${this.tableName} WHERE id = $1`;
-    const { rows } = await this.client.query(query, [id]);
-    return rows[0];
-  }
-
-  async getAllSettlementsByNameAsync(name) {
+  async getStatistics() {
     const query = `
-    SELECT nm.ekatte, nm.name as "settlement",
-    COALESCE(km.name, 'not found') as "town_hall",
-    COALESCE(ob.name, 'not found') as "municipality",
-    COALESCE(obl.name, 'not found') as "region" 
-    FROM public.region obl
-    JOIN public.municipality ob ON obl.id = ob.region_id
-    JOIN public.town_hall km ON ob.id = km.municipality_id
-    RIGHT JOIN public.${this.tableName} nm ON km.id = nm.town_hall_id 
-    WHERE LOWER(nm.name) = LOWER($1)`;
-    const { rows } = await this.client.query(query, [name]);
-    return rows;
-  }
-
-  async createAsync(entity) {
-    const keys = Object.keys(entity);
-    const values = Object.values(entity);
-    const query = `INSERT INTO ${this.tableName}(${keys.join(
-      ","
-    )}) VALUES(${keys.map((_, i) => `$${i + 1}`).join(",")}) RETURNING *`;
-    const { rows } = await this.client.query(query, values);
-    return rows[0];
-  }
-
-  async updateAsync(id, entity) {
-    const keys = Object.keys(entity);
-    const values = Object.values(entity);
-    const query = `UPDATE ${this.tableName} SET ${keys
-      .map((key, i) => `${key} = $${i + 1}`)
-      .join(",")} WHERE id = $${keys.length + 1} RETURNING *`;
-    const { rows } = await this.client.query(query, [...values, id]);
-    return rows[0];
-  }
-
-  async deleteAsync(id) {
-    const query = `DELETE FROM ${this.tableName} WHERE id = $1 RETURNING *`;
-    const { rows } = await this.client.query(query, [id]);
-    return rows[0];
+      SELECT 
+        (SELECT COUNT(*) FROM settlement) AS countSettlements,
+        (SELECT COUNT(*) FROM town_hall) AS countTownHalls,
+        (SELECT COUNT(*) FROM municipality) AS countMunicipalities,
+        (SELECT COUNT(*) FROM region) AS countRegions LIMIT 1;`;
+    const rows = await this._query(query);
+    return { success: true, data: rows[0], statusCode: 200 };
   }
 }
 

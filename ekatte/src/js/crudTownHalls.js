@@ -1,98 +1,59 @@
-import { createActionButton, createTableCell } from "../util/pageUtilities.js";
+import { fetchData, createTableRow } from "../util/crudUtilities.js";
 import {
   validateTownHallCode,
   validateName,
   validateNameEn,
+  validateReferenceId,
 } from "../util/validation.js";
 
 const createForm = document.getElementById("create-form");
-const tbody = document.getElementById("tbody");
 const errorMessage = document.getElementById("error-message");
 const updateContainer = document.getElementById("update-container");
 const updateForm = document.getElementById("update-form");
 const updateErrorMessage = document.getElementById("update-error-message");
 
-const municipalityMap = new Map();
-
 document.addEventListener("DOMContentLoaded", async () => {
-  await fetchMunicipalities();
-  fetchTownHalls();
+  await initialize(); 
 });
 
-async function fetchMunicipalities() {
-  try {
-    const res = await fetch("/municipalities");
-    const data = await res.json();
-    if (data.error) {
-      errorMessage.textContent = data.error;
+async function initialize() {
+  const municipalities = await fetchData("/municipalities");
+  if (!municipalities.errors) {
+    populateSelect("municipality-id", municipalities);
+    populateSelect("update-municipality-id", municipalities);
+    const townHalls = await fetchData("/townhalls");
+    if (!townHalls.errors) {
+      generateTable(townHalls);
     } else {
-      populateMunicipalitySelect(data);
-      data.forEach((municipality) => {
-        municipalityMap.set(municipality.id, municipality.name);
-      });
+      errorMessage.textContent = townHalls.errors;
     }
-  } catch (error) {
-    console.error("Error:", error);
-    errorMessage.textContent =
-      "An error occurred while fetching municipalities.";
+  } else {
+    errorMessage.textContent = municipalities.errors;
   }
 }
 
-async function fetchTownHalls() {
-  try {
-    const res = await fetch("/townhalls");
-    const data = await res.json();
-    if (data.error) {
-      errorMessage.textContent = data.error;
-    } else {
-      data.forEach((townHall) => {
-        townHall.municipality_name = municipalityMap.get(
-          townHall.municipality_id
-        );
-        addTableRow(townHall);
-      });
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    errorMessage.textContent = "An error occurred while fetching town halls.";
-  }
-}
-
-function populateMunicipalitySelect(regions) {
-  const municipalitySelect = document.getElementById("municipality-id");
-  const updateMunicipalitySelect = document.getElementById(
-    "update-municipality-id"
-  );
-
-  regions.forEach((mn) => {
-    const option = createOption(mn.id, mn.name);
-    const updateOption = createOption(mn.id, mn.name);
-    municipalitySelect.appendChild(option);
-    updateMunicipalitySelect.appendChild(updateOption);
+function populateSelect(id, options) {
+  const select = document.getElementById(id);
+  options.forEach((option) => {
+    const opt = document.createElement("option");
+    opt.value = option.id;
+    opt.textContent = option.name;
+    select.appendChild(opt);
   });
 }
 
-function createOption(value, text) {
-  const option = document.createElement("option");
-  option.value = value;
-  option.textContent = text;
-  return option;
-}
-
-createForm.addEventListener("submit", handleCreateFormSubmit);
-
-async function handleCreateFormSubmit(e) {
+createForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const townHallCode = document.getElementById("town-hall-code").value;
   const name = document.getElementById("name").value;
   const nameEn = document.getElementById("name-en").value;
   const municipalityId = document.getElementById("municipality-id").value;
-  const municipalityName = municipalityMap.get(municipalityId);
 
   const validationError =
     validateTownHallCode(townHallCode) ||
     validateName(name) ||
-    validateNameEn(nameEn);
+    validateNameEn(nameEn) ||
+    validateReferenceId("Municipality", municipalityId);
   if (validationError) {
     errorMessage.textContent = validationError;
     return;
@@ -104,95 +65,85 @@ async function handleCreateFormSubmit(e) {
     name_en: nameEn,
     municipality_id: municipalityId,
   };
+  const data = await fetchData("/townhalls", "POST", requestData);
 
-  try {
-    const res = await fetch("/townhalls", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestData),
-    });
-    const data = await res.json();
-    if (data.error) {
-      errorMessage.textContent = data.error;
-    } else {
-      data.municipality_name = municipalityName;
-      addTableRow(data, true);
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    errorMessage.textContent = "An error occurred while creating.";
-  }
-}
-
-function addTableRow(data, prepend = false) {
-  const row = createTableRow(data);
-  if (prepend) {
-    tbody.prepend(row);
+  if (data.errors) {
+    errorMessage.textContent = data.errors;
   } else {
-    tbody.appendChild(row);
+    errorMessage.textContent = "";
+    addTableRow(data);
+  }
+});
+
+function generateTable(data) {
+  const container = document.getElementById("table-container");
+  container.innerHTML = "";
+
+  if (data.length === 0) {
+    return;
+  }
+
+  const table = document.createElement("table");
+  const columnNames = [
+    "town_hall_code",
+    "name_en",
+    "name",
+    "municipality_name",
+    "actions",
+  ];
+
+  generateTableHead(table, columnNames);
+  generateTableBody(table, data);
+
+  container.appendChild(table);
+}
+
+function generateTableHead(table, columnNames) {
+  const thead = table.createTHead();
+  const row = thead.insertRow();
+  for (let name of columnNames) {
+    const th = document.createElement("th");
+    const text = document.createTextNode(name.replaceAll("_", " "));
+    th.appendChild(text);
+    row.appendChild(th);
   }
 }
 
-function createTableRow(data) {
-  const row = document.createElement("tr");
+function generateTableBody(table, data) {
+  const tbody = table.createTBody();
+  data.forEach((townHall) => {
+    const row = createTableRow(townHall, showUpdateForm, deleteHandler);
+    tbody.appendChild(row);
+  });
+}
 
-  const townHallCodeCell = createTableCell(data.town_hall_code);
-  const nameCell = createTableCell(data.name);
-  const nameEnCell = createTableCell(data.name_en);
-  const municipalityNameCell = createTableCell(data.municipality_name);
+function addTableRow(data) {
+  const table = document.querySelector("table");
+  const tbody = table.querySelector("tbody");
+  const row = createTableRow(data, showUpdateForm, deleteHandler);
 
-  const actionsCell = document.createElement("td");
-  const updateBtn = createActionButton("Edit", () => showUpdateForm(data, row));
-  const deleteBtn = createActionButton("Delete", () =>
-    deleteHandler(data, row)
+  tbody.insertBefore(row, tbody.firstChild);
+}
+
+async function deleteHandler(data) {
+  const userConfirmed = window.confirm(
+    `Are you sure you want to delete ${data.name}?`
   );
 
-  actionsCell.appendChild(updateBtn);
-  actionsCell.appendChild(deleteBtn);
-
-  row.appendChild(townHallCodeCell);
-  row.appendChild(nameCell);
-  row.appendChild(nameEnCell);
-  row.appendChild(municipalityNameCell);
-  row.appendChild(actionsCell);
-
-  return row;
-}
-
-async function deleteHandler(rowData, row) {
-  try {
-    const res = await fetch(`/townhalls?id=${rowData.id}`, {
-      method: "DELETE",
-    });
-    const data = await res.json();
-    if (data.id === rowData.id) {
-      row.remove();
+  if (userConfirmed) {
+    const response = await fetchData(`/townhalls?id=${data.id}`, "DELETE");
+    if (response.errors) {
+      errorMessage.textContent = response.errors;
     } else {
-      errorMessage.textContent = data.error;
+      const row = document.querySelector(`tr[data-id='${data.id}']`);
+      if (row) {
+        row.remove();
+      }
     }
-  } catch (error) {
-    console.error("Error:", error);
-    errorMessage.textContent = "An error occurred while deleting.";
   }
 }
 
-async function showUpdateForm(data, row) {
-  updateErrorMessage.textContent = "";
-  try {
-    const res = await fetch(`/townhalls?id=${data.id}`);
-    const latestData = await res.json();
-    if (latestData.error) {
-      updateErrorMessage.textContent = latestData.error;
-    } else {
-      fillUpdateForm(latestData, row);
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    updateErrorMessage.textContent = "An error occurred while fetching.";
-  }
-}
-
-function fillUpdateForm(data, row) {
+function showUpdateForm(data) {
   document.getElementById("update-id").value = data.id;
   document.getElementById("update-town-hall-code").value = data.town_hall_code;
   document.getElementById("update-name").value = data.name;
@@ -202,73 +153,56 @@ function fillUpdateForm(data, row) {
 
   createForm.style.display = "none";
   updateContainer.style.display = "block";
+  updateErrorMessage.textContent = "";
 
-  updateForm.onsubmit = (e) => {
+  updateForm.onsubmit = async (e) => {
     e.preventDefault();
-    updateHandler(data.id, row);
-  };
+    const updatedData = {
+      town_hall_code: document.getElementById("update-town-hall-code").value,
+      name: document.getElementById("update-name").value,
+      name_en: document.getElementById("update-name-en").value,
+      municipality_id: document.getElementById("update-municipality-id").value,
+    };
 
-  document.getElementById("cancel-btn").onclick = () => {
-    createForm.style.display = "block";
-    updateContainer.style.display = "none";
-    updateErrorMessage.textContent = "";
-  };
-}
+    const validationError =
+      validateTownHallCode(updatedData.town_hall_code) ||
+      validateName(updatedData.name) ||
+      validateNameEn(updatedData.name_en) ||
+      validateReferenceId("Municipality", updatedData.municipality_id);;
+    if (validationError) {
+      updateErrorMessage.textContent = validationError;
+      return;
+    }
 
-async function updateHandler(id, row) {
-  const townHallCode = document.getElementById("update-town-hall-code").value;
-  const name = document.getElementById("update-name").value;
-  const nameEn = document.getElementById("update-name-en").value;
-  const municipalityId = document.getElementById(
-    "update-municipality-id"
-  ).value;
-
-  const validationError =
-    validateTownHallCode(townHallCode) ||
-    validateName(name) ||
-    validateNameEn(nameEn);
-  if (validationError) {
-    updateErrorMessage.textContent = validationError;
-    return;
-  }
-
-  const requestData = {
-    town_hall_code: townHallCode,
-    name,
-    name_en: nameEn,
-    municipality_id: municipalityId,
-  };
-
-  try {
-    const res = await fetch(`/townhalls?id=${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestData),
-    });
-    const data = await res.json();
-    if (data.error) {
-      updateErrorMessage.textContent = data.error;
+    const response = await fetchData(
+      `/townhalls?id=${data.id}`,
+      "PUT",
+      updatedData
+    );
+    if (response.errors) {
+      updateErrorMessage.textContent = response.errors;
     } else {
-      updateTableRow(row, { townHallCode, name, nameEn, municipalityId });
+      updateTableRow(
+        document.querySelector(`tr[data-id='${data.id}']`),
+        updatedData
+      );
       resetForm();
     }
-  } catch (error) {
-    console.error("Error:", error);
-    updateErrorMessage.textContent = "An error occurred while updating.";
-  }
+  };
+
+  document.getElementById("cancel-btn").onclick = resetForm;
 }
 
 function updateTableRow(row, data) {
-  const regionName = document.getElementById("update-municipality-id").options[
-    document.getElementById("update-municipality-id").selectedIndex
-  ].text;
-  row.cells[0].textContent = data.townHallCode;
+  row.cells[0].textContent = data.town_hall_code;
   row.cells[1].textContent = data.name;
-  row.cells[2].textContent = data.nameEn;
-  row.cells[3].textContent = regionName;
+  row.cells[2].textContent = data.name_en;
+  row.cells[3].textContent = document.getElementById(
+    "update-municipality-id"
+  ).selectedOptions[0].text;
 }
 
-export function resetForm() {
+function resetForm() {
   createForm.style.display = "block";
   updateContainer.style.display = "none";
   updateErrorMessage.textContent = "";

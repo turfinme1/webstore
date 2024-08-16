@@ -1,63 +1,92 @@
 const form = document.getElementById("form");
 const search = document.getElementById("searchInput");
 const tbody = document.getElementById("tbody");
+const errorMessage = document.getElementById("errorMessage");
 
-const fetchStatistics = () => {
-  fetch("/statistics")
-    .then((res) => res.json())
-    .then((data) => {
-      console.log(data);
-      fillStatistics(data);
-    });
-};
 fetchStatistics();
 
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const searchValue = search.value.trim();
 
-  fetch(`/settlements?name=${searchValue}`)
-    .then((res) => res.json())
-    .then((data) => {
-      console.log(data);
-      createTableRows(data);
-    });
+  if (isInputValid(searchValue)) {
+    errorMessage.textContent = "";
+    errorMessage.classList.remove("errorMessage");
+
+    try {
+      const response = await fetch(`/settlements?name=${searchValue}`);
+      if (!response.ok) {
+        throw new Error("Error while fetching settlements");
+      }
+      const data = await response.json();
+      if (data.length === 0) {
+        throw new Error("No settlements found");
+      }
+
+      fillAuthorStatisticsTable(data);
+    } catch (e) {
+      errorMessage.classList.add("errorMessage");
+      errorMessage.textContent =
+        e.message || "Error while fetching settlements";
+    }
+  } else {
+    errorMessage.classList.add("errorMessage");
+    errorMessage.textContent =
+      "The settlement name must be at least 3 characters long and contain only cyrillic letters";
+  }
 });
 
-const createTableRows = (data) => {
-  // Clear existing rows
-  tbody.innerHTML = "";
+async function fetchStatistics() {
+  try {
+    const response = await fetch("/statistics");
+    const data = await response.json();
+    fillStatistics(data);
+  } catch (e) {
+    errorMessage.classList.add("errorMessage");
+    errorMessage.textContent = "Error while fetching statistics";
+  }
+}
 
-  // Iterate over the data array and create rows
-  data.forEach((item) => {
-    const row = document.createElement("tr");
+function fillAuthorStatisticsTable(data) {
+  const mainContent = document.getElementById("container");
+  mainContent.innerHTML = "";
 
-    // Create cells for each property
-    const ekatteCell = document.createElement("td");
-    ekatteCell.textContent = item.ekatte;
-    row.appendChild(ekatteCell);
+  if (data.length === 0) {
+    return;
+  }
 
-    const naselenoCell = document.createElement("td");
-    naselenoCell.textContent = item.settlement;
-    row.appendChild(naselenoCell);
+  const table = document.createElement("table");
+  const columnNames = Object.keys(data[0]);
 
-    const kmetstvoCell = document.createElement("td");
-    kmetstvoCell.textContent = item.town_hall;
-    row.appendChild(kmetstvoCell);
+  generateTableHead(table, columnNames);
+  generateTable(table, data);
 
-    const obshtinaCell = document.createElement("td");
-    obshtinaCell.textContent = item.municipality;
-    row.appendChild(obshtinaCell);
+  mainContent.appendChild(table);
+}
 
-    const oblastCell = document.createElement("td");
-    oblastCell.textContent = item.region;
-    row.appendChild(oblastCell);
+function generateTableHead(table, columnNames) {
+  const thead = table.createTHead();
+  const row = thead.insertRow();
+  for (let name of columnNames) {
+    const th = document.createElement("th");
+    const text = document.createTextNode(name.replaceAll("_", " "));
+    th.appendChild(text);
+    row.appendChild(th);
+  }
+}
 
-    tbody.appendChild(row);
-  });
-};
+function generateTable(table, data) {
+  for (let element of data) {
+    const row = table.insertRow();
+    for (let key in element) {
+      const cell = row.insertCell();
+      const text = document.createTextNode(element[key] || "----");
+      cell.appendChild(text);
+    }
+  }
+}
 
-const fillStatistics = (data) => {
+function fillStatistics(data) {
   const settlementsCount = document.getElementById("settlementsCount");
   const townHallsCount = document.getElementById("townHallsCount");
   const municipalitiesCount = document.getElementById("municipalitiesCount");
@@ -67,4 +96,9 @@ const fillStatistics = (data) => {
   townHallsCount.textContent = data.counttownhalls;
   municipalitiesCount.textContent = data.countmunicipalities;
   regionsCount.textContent = data.countregions;
-};
+}
+
+function isInputValid(input) {
+  const regex = /^[а-яА-Я]{3,}$/;
+  return regex.test(input);
+}

@@ -21,41 +21,49 @@
         <h1>CRUD Operations - Town Halls</h1>
         <div id="input-container">
             <form id="create-form">
+                <label for="town-hall-code">Town Hall Code:</label>
                 <input type="text" id="town-hall-code" placeholder="Town Hall Code">
+                <label for="name">Name:</label>
                 <input type="text" id="name" placeholder="Name">
+                <label for="name-en">Name (EN):</label>
                 <input type="text" id="name-en" placeholder="Name (EN)">
+                <label for="municipality-id">Municipality:</label>
                 <select name="municipality-id" id="municipality-id">
                     <option value="">Choose a municipality</option>
                 </select>
                 <input type="submit" value="Add">
+
                 <div id="error-message"></div>
             </form>
         </div>
+
         <div id="update-container" style="display:none;">
             <form id="update-form">
                 <input type="hidden" id="update-id">
-                <input type="text" id="update-town-hall-code" placeholder="Municipality Code">
+
+                <label for="update-town-hall-code">Town Hall Code:</label>
+                <input type="text" id="update-town-hall-code" placeholder="Town Hall Code">
+
+                <label for="update-name">Name:</label>
                 <input type="text" id="update-name" placeholder="Name">
+
+                <label for="update-name-en">Name (EN):</label>
                 <input type="text" id="update-name-en" placeholder="Name (EN)">
+
+
+                <label for="update-municipality-id">Municipality:</label>
                 <select name="municipality-id" id="update-municipality-id">
                 </select>
+
                 <div id="update-error-message"></div>
                 <button id="update-btn">Update</button>
                 <button id="cancel-btn" type="button">Cancel</button>
             </form>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>TOWN HALL CODE</th>
-                    <th>NAME</th>
-                    <th>NAME (EN)</th>
-                    <th>MUNICIPALITY NAME</th>
-                    <th>ACTIONS</th>
-                </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-        </table>
+
+    </div>
+    <div id="table-container">
+
     </div>
 </body>
 

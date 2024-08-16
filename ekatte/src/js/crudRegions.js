@@ -1,4 +1,4 @@
-import { createActionButton, createTableCell } from "../util/pageUtilities.js";
+import { fetchData, createTableRow } from "../util/crudUtilities.js";
 import {
   validateRegionCode,
   validateName,
@@ -6,24 +6,22 @@ import {
 } from "../util/validation.js";
 
 const createForm = document.getElementById("create-form");
-const tbody = document.getElementById("tbody");
 const errorMessage = document.getElementById("error-message");
 const updateContainer = document.getElementById("update-container");
 const updateForm = document.getElementById("update-form");
 const updateErrorMessage = document.getElementById("update-error-message");
 
-document.addEventListener("DOMContentLoaded", fetchRecords);
+document.addEventListener("DOMContentLoaded", async () => {
+  await initialize();
+});
 
-async function fetchRecords() {
+async function initialize() {
   try {
-    const res = await fetch("/regions");
-    const data = await res.json();
-    if (data.error) {
-      errorMessage.textContent = data.error;
+    const regions = await fetchData("/regions");
+    if (regions.errors) {
+      errorMessage.textContent = regions.errors;
     } else {
-      data.forEach((record) => {
-        addTableRow(record);
-      });
+      generateTable(regions);
     }
   } catch (error) {
     console.error("Error:", error);
@@ -31,38 +29,71 @@ async function fetchRecords() {
   }
 }
 
-const deleteHandler = async (rowData, row) => {
-  try {
-    const res = await fetch(`/regions?id=${rowData.id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (data.id === rowData.id) {
-      row.remove();
-    } else {
-      errorMessage.textContent = data.error;
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    errorMessage.textContent = "An error occurred while deleting.";
-  }
-};
+function generateTable(data) {
+  const container = document.getElementById("table-container");
+  container.innerHTML = "";
 
-const showUpdateForm = async (data, row) => {
-  updateErrorMessage.textContent = "";
-  try {
-    const res = await fetch(`/regions?id=${data.id}`);
-    const latestData = await res.json();
-    if (latestData.error) {
-      updateErrorMessage.textContent = latestData.error;
-    } else {
-      fillUpdateForm(latestData, row);
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    updateErrorMessage.textContent = "An error occurred while fetching.";
+  if (data.length === 0) {
+    return;
   }
-};
 
-const fillUpdateForm = (data, row) => {
+  const table = document.createElement("table");
+  const columnNames = [
+    "region_code",
+    "name_en",
+    "name",
+    "actions",
+  ];
+
+  generateTableHead(table, columnNames);
+  generateTableBody(table, data);
+
+  container.appendChild(table);
+}
+
+function generateTableHead(table, columnNames) {
+  const thead = table.createTHead();
+  const row = thead.insertRow();
+  for (let name of columnNames) {
+    const th = document.createElement("th");
+    const text = document.createTextNode(name.replaceAll("_", " "));
+    th.appendChild(text);
+    row.appendChild(th);
+  }
+}
+
+function generateTableBody(table, data) {
+  const tbody = table.createTBody();
+  data.forEach((region) => {
+    const row = createTableRow(region, showUpdateForm, deleteHandler);
+    tbody.appendChild(row);
+  });
+}
+
+async function deleteHandler(data) {
+  const userConfirmed = window.confirm(
+    `Are you sure you want to delete ${data.name}?`
+  );
+
+  if (userConfirmed) {
+    try {
+      const response = await fetchData(`/regions?id=${data.id}`, "DELETE");
+      if (response.errors) {
+        errorMessage.textContent = response.errors;
+      } else {
+        const row = document.querySelector(`tr[data-id='${data.id}']`);
+        if (row) {
+          row.remove();
+        }
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      errorMessage.textContent = "An error occurred while deleting.";
+    }
+  }
+}
+
+function showUpdateForm(data) {
   document.getElementById("update-id").value = data.id;
   document.getElementById("update-region-code").value = data.region_code;
   document.getElementById("update-name").value = data.name;
@@ -70,26 +101,17 @@ const fillUpdateForm = (data, row) => {
 
   createForm.style.display = "none";
   updateContainer.style.display = "block";
+  updateErrorMessage.textContent = "";
 
-  updateForm.onsubmit = (e) => {
+  updateForm.onsubmit = async (e) => {
     e.preventDefault();
-    updateHandler(data.id, row);
+    await updateHandler(data.id);
   };
 
-  document.getElementById("cancel-btn").onclick = () => {
-    createForm.style.display = "block";
-    updateContainer.style.display = "none";
-    updateErrorMessage.textContent = "";
-  };
-};
+  document.getElementById("cancel-btn").onclick = resetForm;
+}
 
-const updateTableRow = (row, data) => {
-  row.cells[0].textContent = data.region_code;
-  row.cells[1].textContent = data.name;
-  row.cells[2].textContent = data.name_en;
-};
-
-const updateHandler = async (id, row) => {
+async function updateHandler(id) {
   const region_code = document.getElementById("update-region-code").value;
   const name = document.getElementById("update-name").value;
   const name_en = document.getElementById("update-name-en").value;
@@ -104,15 +126,15 @@ const updateHandler = async (id, row) => {
   }
 
   try {
-    const res = await fetch(`/regions?id=${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, name_en, region_code }),
-    });
-    const data = await res.json();
-    if (data.error) {
-      updateErrorMessage.textContent = data.error;
+    const response = await fetchData(
+      `/regions?id=${id}`,
+      "PUT",
+      { region_code, name, name_en }
+    );
+    if (response.errors) {
+      updateErrorMessage.textContent = response.errors;
     } else {
+      const row = document.querySelector(`tr[data-id='${id}']`);
       updateTableRow(row, { region_code, name, name_en });
       resetForm();
     }
@@ -120,43 +142,15 @@ const updateHandler = async (id, row) => {
     console.error("Error:", error);
     updateErrorMessage.textContent = "An error occurred while updating.";
   }
-};
-
-function addTableRow(data, prepend = false) {
-  const row = createTableRow(data);
-  if (prepend) {
-    tbody.prepend(row);
-  } else {
-    tbody.appendChild(row);
-  }
 }
 
-const createTableRow = (data) => {
-  const row = document.createElement("tr");
+function updateTableRow(row, data) {
+  row.cells[0].textContent = data.region_code;
+  row.cells[1].textContent = data.name;
+  row.cells[2].textContent = data.name_en;
+}
 
-  const regionCell = createTableCell(data.region_code);
-  const nameCell = createTableCell(data.name);
-  const nameEnCell = createTableCell(data.name_en);
-
-  const actionsCell = document.createElement("td");
-  const updateBtn = createActionButton("Edit", () => showUpdateForm(data, row));
-  const deleteBtn = createActionButton("Delete", () =>
-    deleteHandler(data, row)
-  );
-  actionsCell.appendChild(updateBtn);
-  actionsCell.appendChild(deleteBtn);
-
-  row.appendChild(regionCell);
-  row.appendChild(nameCell);
-  row.appendChild(nameEnCell);
-  row.appendChild(actionsCell);
-
-  return row;
-};
-
-createForm.addEventListener("submit", handleCreateFormSubmit);
-
-async function handleCreateFormSubmit(e) {
+createForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const region_code = document.getElementById("region-code").value;
   const name = document.getElementById("name").value;
@@ -172,21 +166,31 @@ async function handleCreateFormSubmit(e) {
   }
 
   try {
-    const res = await fetch("/regions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, name_en, region_code }),
+    const data = await fetchData("/regions", "POST", {
+      region_code,
+      name,
+      name_en,
     });
-    const data = await res.json();
-    if (data.error) {
-      errorMessage.textContent = data.error;
+    if (data.errors) {
+      errorMessage.textContent = data.errors;
     } else {
-      const obj = { id: data.id, region_code, name, name_en };
       addTableRow(data, true);
     }
   } catch (error) {
     console.error("Error:", error);
     errorMessage.textContent = "An error occurred while creating.";
+  }
+});
+
+function addTableRow(data, prepend = false) {
+  const row = createTableRow(data, showUpdateForm, deleteHandler);
+  const table = document.querySelector("table");
+  const tbody = table.querySelector("tbody");
+
+  if (prepend) {
+    tbody.prepend(row);
+  } else {
+    tbody.appendChild(row);
   }
 }
 
