@@ -2,20 +2,6 @@ import fsPromises from "fs/promises";
 import path from "path";
 const __dirname = import.meta.dirname;
 
-// export function getRequestBody(req) {
-//   return new Promise((resolve, reject) => {
-//     let body = "";
-//     req.on("data", (chunk) => {
-//       body += chunk.toString();
-//     });
-//     req.on("end", () => {
-//       resolve(body);
-//     });
-//     req.on("error", (err) => {
-//       reject(err);
-//     });
-//   });
-// }
 export async function getRequestBody(req) {
   let body = "";
 
@@ -23,8 +9,14 @@ export async function getRequestBody(req) {
     for await (const chunk of req) {
       body += chunk.toString();
     }
-    return JSON.parse(body);
+
+    if (! body) {
+      return {};
+    } else {
+      return JSON.parse(body);
+    }
   } catch (err) {
+    console.log(err);
     throw new Error("Invalid JSON");
   }
 }
