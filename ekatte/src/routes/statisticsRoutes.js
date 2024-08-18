@@ -1,3 +1,5 @@
+import { createResponse } from "../util/requestUtilities.js";
+
 const statisticsRoutes = (statisticsController) => {
   return {
     "/statistics:GET": async (request, response) => {
