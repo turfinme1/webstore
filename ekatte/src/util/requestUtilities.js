@@ -2,22 +2,34 @@ import fsPromises from "fs/promises";
 import path from "path";
 const __dirname = import.meta.dirname;
 
-const getRequestBody = (req) => {
-  return new Promise((resolve, reject) => {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
-    });
-    req.on("end", () => {
-      resolve(body);
-    });
-    req.on("error", (err) => {
-      reject(err);
-    });
-  });
-};
+// export function getRequestBody(req) {
+//   return new Promise((resolve, reject) => {
+//     let body = "";
+//     req.on("data", (chunk) => {
+//       body += chunk.toString();
+//     });
+//     req.on("end", () => {
+//       resolve(body);
+//     });
+//     req.on("error", (err) => {
+//       reject(err);
+//     });
+//   });
+// }
+export async function getRequestBody(req) {
+  let body = "";
 
-const getFilePath = (contentType, reqUrl, extension) => {
+  try {
+    for await (const chunk of req) {
+      body += chunk.toString();
+    }
+    return JSON.parse(body);
+  } catch (err) {
+    throw new Error("Invalid JSON");
+  }
+}
+
+export function getFilePath(contentType, reqUrl, extension) {
   let filePath;
 
   if (contentType === "text/html" && reqUrl === "/") {
@@ -33,9 +45,9 @@ const getFilePath = (contentType, reqUrl, extension) => {
   }
 
   return filePath;
-};
+}
 
-const getContentType = (extension) => {
+export function getContentType(extension) {
   switch (extension) {
     case ".html":
       return "text/html";
@@ -52,9 +64,9 @@ const getContentType = (extension) => {
     default:
       return "text/html";
   }
-};
+}
 
-const serveFile = async (filePath, contentType, response) => {
+export async function serveFile(filePath, contentType, response) {
   try {
     const rawData = await fsPromises.readFile(filePath, "utf-8");
 
@@ -64,29 +76,29 @@ const serveFile = async (filePath, contentType, response) => {
     response.statusCode = 500;
     response.end();
   }
-};
+}
 
-const createResponse = (response, statusCode, contentType, data) => {
+export function createResponse(response, statusCode, contentType, data) {
   response.writeHead(statusCode, { "Content-Type": contentType });
   response.end(
     contentType === "application/json" ? JSON.stringify(data) : data
   );
-};
+}
 
-const mapRequestToEntity = (entityObject, requestObject) => {
-  for (const key in requestObject) {
-    if (entityObject.hasOwnProperty(key)) {
-      entityObject[key] = requestObject[key];
-    }
-  }
-  return entityObject;
-};
+// export function mapRequestToEntity(entityObject, requestObject) {
+//   for (const key in requestObject) {
+//     if (entityObject.hasOwnProperty(key)) {
+//       entityObject[key] = requestObject[key];
+//     }
+//   }
+//   return entityObject;
+// }
 
-export {
-  getRequestBody,
-  getFilePath,
-  getContentType,
-  serveFile,
-  createResponse,
-  mapRequestToEntity,
-};
+// export {
+//   getRequestBody,
+//   getFilePath,
+//   getContentType,
+//   serveFile,
+//   createResponse,
+//   mapRequestToEntity,
+// };
