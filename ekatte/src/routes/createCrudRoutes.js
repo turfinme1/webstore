@@ -26,12 +26,12 @@ export const createCrudRoutes = (entitySchema, entityController) => {
 
     [`/${entityName}:POST`]: async (request, response) => {
       try {
-        const bodyObject = JSON.parse(request.bodyData);
+        const bodyObject = request.bodyData;
         validateSchema(entitySchema, bodyObject);
         await entityController.create(bodyObject, response);
       } catch (error) {
         console.log(error);
-        return createResponse(response, 400, "application/json", {
+        return createResponse(response, 500, "application/json", {
           errors: error.errors || `${entityName} could not be created`,
         });
       }
@@ -40,7 +40,7 @@ export const createCrudRoutes = (entitySchema, entityController) => {
     [`/${entityName}:PUT`]: async (request, response) => {
       try {
         const { id } = request.params;
-        const bodyObject = JSON.parse(request.bodyData);
+        const bodyObject = request.bodyData;
         validateSchema(entitySchema, bodyObject);
         await entityController.update(id, bodyObject, response);
       } catch (error) {
