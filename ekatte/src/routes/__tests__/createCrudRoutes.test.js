@@ -1,11 +1,5 @@
 import { createCrudRoutes } from "../createCrudRoutes.js";
-// import { validateSchema } from "../../schemas/validateSchema.js";
 import { jest } from "@jest/globals";
-
-// jest.mock("../../schemas/validateSchema.js", () => ({
-//   __esModule: true,
-//   default: jest.fn(),
-// }));
 
 describe("createCrudRoutes", () => {
   let entityController;
@@ -94,23 +88,6 @@ describe("createCrudRoutes", () => {
       );
     });
 
-    // it("should handle schema validation errors", async () => {
-    //   validateSchema.mockImplementation(() => {
-    //     throw { errors: ["Schema error"] };
-    //   });
-
-    //   mockRequest.bodyData = JSON.stringify({});
-
-    //   await routes["/test:POST"](mockRequest, mockResponse);
-
-    //   expect(mockResponse.writeHead).toHaveBeenCalledWith(400, {
-    //     "Content-Type": "application/json",
-    //   });
-    //   expect(mockResponse.end).toHaveBeenCalledWith(
-    //     JSON.stringify({ errors: ["Schema error"] })
-    //   );
-    // });
-
     it("should handle other errors and return a 400 response", async () => {
       entityController.create.mockRejectedValue(new Error("error"));
 
@@ -137,24 +114,6 @@ describe("createCrudRoutes", () => {
         mockResponse
       );
     });
-
-    // it("should handle schema validation errors", async () => {
-    //   validateSchema.mockImplementation(() => {
-    //     throw { errors: ["Schema error"] };
-    //   });
-
-    //   mockRequest.params = { id: "1" };
-    //   mockRequest.bodyData = JSON.stringify({});
-
-    //   await routes["/test:PUT"](mockRequest, mockResponse);
-
-    //   expect(mockResponse.writeHead).toHaveBeenCalledWith(500, {
-    //     "Content-Type": "application/json",
-    //   });
-    //   expect(mockResponse.end).toHaveBeenCalledWith(
-    //     JSON.stringify({ errors: ["Schema error"] })
-    //   );
-    // });
 
     it("should handle other errors and return a 500 response", async () => {
       entityController.update.mockRejectedValue(new Error("error"));

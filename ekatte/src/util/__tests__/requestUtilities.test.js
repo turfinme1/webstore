@@ -1,12 +1,8 @@
 import {
   getRequestBody,
-  getFilePath,
   getContentType,
-  serveFile,
   createResponse,
 } from "../requestUtilities.js";
-import fsPromises from "fs/promises";
-import path from "path";
 import { jest } from "@jest/globals";
 
 jest.mock("path", () => ({
@@ -61,46 +57,6 @@ describe("requestUtilities", () => {
     ])("should return correct content type for %s", (extension, expected) => {
       expect(getContentType(extension)).toBe(expected);
     });
-  });
-
-  describe("serveFile", () => {
-    let mockResponse;
-
-    // beforeEach(() => {
-    //   mockResponse = {
-    //     writeHead: jest.fn(),
-    //     end: jest.fn(),
-    //     statusCode: 200,
-    //   };
-    // });
-
-    // it("should serve file content with correct headers and status code 200", async () => {
-    //   const filePath = "/mocked/path";
-    //   const contentType = "text/html";
-    //   const fileContent = "<html></html>";
-
-    //   fsPromises.readFile.mockResolvedValue(fileContent);
-
-    //   await serveFile(filePath, contentType, mockResponse);
-
-    //   expect(fsPromises.readFile).toHaveBeenCalledWith(filePath, "utf-8");
-    //   expect(mockResponse.writeHead).toHaveBeenCalledWith(200, {
-    //     "Content-Type": contentType,
-    //   });
-    //   expect(mockResponse.end).toHaveBeenCalledWith(fileContent);
-    // });
-
-    // it("should respond with status code 500 if file reading fails", async () => {
-    //   const filePath = "/mocked/path";
-    //   const contentType = "text/html";
-
-    //   fsPromises.readFile.mockRejectedValue(new Error("File not found"));
-
-    //   await serveFile(filePath, contentType, mockResponse);
-
-    //   expect(mockResponse.statusCode).toBe(500);
-    //   expect(mockResponse.end).toHaveBeenCalled();
-    // });
   });
 
   describe("createResponse", () => {

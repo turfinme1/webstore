@@ -76,21 +76,3 @@ export function createResponse(response, statusCode, contentType, data) {
     contentType === "application/json" ? JSON.stringify(data) : data
   );
 }
-
-// export function mapRequestToEntity(entityObject, requestObject) {
-//   for (const key in requestObject) {
-//     if (entityObject.hasOwnProperty(key)) {
-//       entityObject[key] = requestObject[key];
-//     }
-//   }
-//   return entityObject;
-// }
-
-// export {
-//   getRequestBody,
-//   getFilePath,
-//   getContentType,
-//   serveFile,
-//   createResponse,
-//   mapRequestToEntity,
-// };
