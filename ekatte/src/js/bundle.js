@@ -7577,6 +7577,8 @@ var settlementSchema = {
       type: "string",
       minLength: 5,
       pattern: "^[0-9]+$",
+      label: "Ekatte Code",
+      placeholder: "Enter Ekatte Code",
       errorMessage: {
         minLength: "Ekatte code must be at least 5 characters long.",
         pattern: "Ekatte code must contain only digits."
@@ -7586,29 +7588,35 @@ var settlementSchema = {
       type: "string",
       minLength: 3,
       pattern: "^[a-zA-Z ]+$",
+      label: "Name (EN)",
+      placeholder: "Enter Name (EN)",
+      searchable: true,
       errorMessage: {
         minLength: "Name (EN) must be at least 3 characters long.",
         pattern: "Name (EN) must contain only Latin letters and spaces."
-      },
-      searchable: true
+      }
     },
     name: {
       type: "string",
       minLength: 3,
       pattern: "^[а-яА-Я ]+$",
+      label: "Name",
+      placeholder: "Enter Name",
+      searchable: true,
       errorMessage: {
         minLength: "Name must be at least 3 characters long.",
         pattern: "Name must contain only Cyrillic letters and spaces."
-      },
-      searchable: true
+      }
     },
     town_hall_id: {
       type: "string",
       minLength: 1,
       pattern: "^[0-9]+$",
+      label: "Town Hall ID",
+      placeholder: "Enter Town Hall ID",
       errorMessage: {
         minLength: "Town hall ID must not be empty.",
-        pattern: "Town Hall ID must contain only digits."
+        pattern: "Town hall ID must contain only digits."
       }
     }
   },
@@ -7646,6 +7654,8 @@ var townHallSchema = {
       type: "string",
       minLength: 8,
       pattern: "^[A-Z]{3,}[0-9]{2,}-\\d{2,}$",
+      label: "Town Hall Code",
+      placeholder: "Enter Town Hall Code",
       errorMessage: {
         minLength: "Town hall code must be at least 8 characters long.",
         pattern: "Town hall code must follow the pattern ABC99-22."
@@ -7655,26 +7665,32 @@ var townHallSchema = {
       type: "string",
       minLength: 3,
       pattern: "^[a-zA-Z ]+$",
+      label: "Name (EN)",
+      placeholder: "Enter Name (EN)",
+      searchable: true,
       errorMessage: {
         minLength: "Name (EN) must be at least 3 characters long.",
         pattern: "Name (EN) must contain only Latin letters and spaces."
-      },
-      searchable: true
+      }
     },
     name: {
       type: "string",
       minLength: 3,
       pattern: "^[а-яА-Я ]+$",
+      label: "Name",
+      placeholder: "Enter Name",
+      searchable: true,
       errorMessage: {
         minLength: "Name must be at least 3 characters long.",
         pattern: "Name must contain only Cyrillic letters and spaces."
-      },
-      searchable: true
+      }
     },
     municipality_id: {
       type: "string",
       minLength: 1,
       pattern: "^[0-9]+$",
+      label: "Municipality ID",
+      placeholder: "Enter Municipality ID",
       errorMessage: {
         minLength: "Municipality ID must not be empty.",
         pattern: "Municipality ID must contain only digits."
@@ -7798,8 +7814,6 @@ function _objectWithoutPropertiesLoose(r, e) { if (null == r) return {}; var t =
 
 
 
-
-// Initialize AJV
 var ajv = new ajv__WEBPACK_IMPORTED_MODULE_0__["default"]({
   allErrors: true
 });
@@ -7883,18 +7897,18 @@ function handleFormSubmission(_x, _x2, _x3, _x4, _x5) {
   return _handleFormSubmission.apply(this, arguments);
 }
 function _handleFormSubmission() {
-  _handleFormSubmission = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(url, method, data, formId, entityId) {
+  _handleFormSubmission = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3(url, method, data, formId, entityId) {
     var form, genericErrorMessage, response, responseData;
-    return _regeneratorRuntime().wrap(function _callee$(_context) {
-      while (1) switch (_context.prev = _context.next) {
+    return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+      while (1) switch (_context3.prev = _context3.next) {
         case 0:
           form = document.getElementById(formId);
           genericErrorMessage = form.querySelector(".generic-error-message");
-          _context.prev = 2;
+          _context3.prev = 2;
           if (entityId) {
             url = "".concat(url, "?id=").concat(entityId);
           }
-          _context.next = 6;
+          _context3.next = 6;
           return fetch("".concat(url), {
             method: method,
             headers: {
@@ -7903,11 +7917,11 @@ function _handleFormSubmission() {
             body: JSON.stringify(data)
           });
         case 6:
-          response = _context.sent;
-          _context.next = 9;
+          response = _context3.sent;
+          _context3.next = 9;
           return response.json();
         case 9:
-          responseData = _context.sent;
+          responseData = _context3.sent;
           if (!response.ok) {
             genericErrorMessage.innerText = responseData.errors || "An error occurred during submission.";
           } else {
@@ -7915,20 +7929,320 @@ function _handleFormSubmission() {
             // Handle successful form submission (e.g., navigate to another page, reset form, etc.)
             location.reload();
           }
-          _context.next = 17;
+          _context3.next = 17;
           break;
         case 13:
-          _context.prev = 13;
-          _context.t0 = _context["catch"](2);
-          console.error("Submission error:", _context.t0);
+          _context3.prev = 13;
+          _context3.t0 = _context3["catch"](2);
+          console.error("Submission error:", _context3.t0);
           genericErrorMessage.innerText = "An unexpected error occurred.";
         case 17:
         case "end":
-          return _context.stop();
+          return _context3.stop();
       }
-    }, _callee, null, [[2, 13]]);
+    }, _callee3, null, [[2, 13]]);
   }));
   return _handleFormSubmission.apply(this, arguments);
+}
+function createForm(schema, formId) {
+  var isUpdate = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+  var form = document.createElement("form");
+  form.id = formId;
+  var formTitle = document.createElement("h2");
+  formTitle.innerText = isUpdate ? "Update ".concat(schema.name) : "Create ".concat(schema.name);
+  form.appendChild(formTitle);
+  var tableContainer = document.getElementById("table-container");
+  tableContainer.innerHTML = ""; // Clear the table
+  var hiddenIdField = document.createElement("input");
+  hiddenIdField.type = "hidden";
+  hiddenIdField.id = "id";
+  hiddenIdField.name = "id"; // Ensure the name matches what your backend expects
+  form.appendChild(hiddenIdField);
+
+  // Iterate over schema properties
+  for (var key in schema.properties) {
+    var field = schema.properties[key];
+
+    // Create a wrapper div for each input and its error message
+    var wrapper = document.createElement("div");
+    wrapper.className = "form-group";
+    var label = document.createElement("label");
+    label.htmlFor = isUpdate ? "".concat(key) : key;
+    label.innerText = field.label;
+    var input = document.createElement("input");
+    input.type = "text";
+    input.id = isUpdate ? "".concat(key) : key;
+    input.name = key;
+    input.placeholder = field.placeholder;
+
+    // Create an element for the field-specific error message
+    var errorMessage = document.createElement("div");
+    errorMessage.className = "field-error-message";
+    errorMessage.id = "".concat(input.id, "-error");
+    wrapper.appendChild(label);
+    wrapper.appendChild(input);
+    wrapper.appendChild(errorMessage);
+    form.appendChild(wrapper);
+  }
+
+  // Create a generic error message container
+  var genericErrorMessage = document.createElement("div");
+  genericErrorMessage.className = "generic-error-message";
+  genericErrorMessage.id = "".concat(formId, "-generic-error");
+  form.appendChild(genericErrorMessage);
+  var submitButton = document.createElement("input");
+  submitButton.type = "submit";
+  submitButton.value = isUpdate ? "Update" : "Add";
+  form.appendChild(submitButton);
+  var cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.innerText = "Cancel";
+  cancelButton.addEventListener("click", function () {
+    // Clear the form container or handle cancel action
+    var formContainer = document.getElementById("form-container");
+    formContainer.innerHTML = ""; // Clear the form
+    renderTable(schema); // Re-render the table
+  });
+  form.appendChild(cancelButton);
+  return form;
+}
+function createSearchForm(schema, formId) {
+  var form = document.createElement("form");
+  form.id = formId;
+  var formTitle = document.createElement("h2");
+  formTitle.innerText = "Search ".concat(schema.name);
+  form.appendChild(formTitle);
+
+  // Iterate over schema properties that are marked as searchable
+  for (var key in schema.properties) {
+    var field = schema.properties[key];
+    if (field.searchable) {
+      var wrapper = document.createElement("div");
+      wrapper.className = "form-group";
+      var label = document.createElement("label");
+      label.htmlFor = key;
+      label.innerText = "Search by ".concat(field.label);
+      var input = document.createElement("input");
+      input.type = "text";
+      input.id = key;
+      input.name = key;
+      input.placeholder = "Enter ".concat(field.label.toLowerCase());
+      wrapper.appendChild(label);
+      wrapper.appendChild(input);
+      form.appendChild(wrapper);
+    }
+  }
+  var submitButton = document.createElement("input");
+  submitButton.type = "submit";
+  submitButton.value = "Search";
+  form.appendChild(submitButton);
+  var event = new Event("searchFormCreated");
+  document.dispatchEvent(event);
+  return form;
+}
+function createTable(schema, data) {
+  var table = document.createElement("table");
+  table.className = "data-table";
+
+  // Create table header
+  var thead = document.createElement("thead");
+  var headerRow = document.createElement("tr");
+  for (var key in schema.properties) {
+    var th = document.createElement("th");
+    th.innerText = schema.properties[key].label;
+    headerRow.appendChild(th);
+  }
+
+  // Add Edit and Delete column headers
+  var thEdit = document.createElement("th");
+  thEdit.innerText = "Edit";
+  headerRow.appendChild(thEdit);
+  var thDelete = document.createElement("th");
+  thDelete.innerText = "Delete";
+  headerRow.appendChild(thDelete);
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Create table body
+  var tbody = document.createElement("tbody");
+  data.forEach(function (item) {
+    var row = document.createElement("tr");
+    for (var _key in schema.properties) {
+      var td = document.createElement("td");
+      td.innerText = item[_key] || ""; // Handle missing data
+      row.appendChild(td);
+    }
+
+    // Create Edit button
+    var tdEdit = document.createElement("td");
+    var editButton = document.createElement("button");
+    editButton.innerText = "Edit";
+    editButton.className = "edit-button";
+    editButton.addEventListener("click", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+      return _regeneratorRuntime().wrap(function _callee$(_context) {
+        while (1) switch (_context.prev = _context.next) {
+          case 0:
+            return _context.abrupt("return", handleEdit(schema, item));
+          case 1:
+          case "end":
+            return _context.stop();
+        }
+      }, _callee);
+    })));
+    tdEdit.appendChild(editButton);
+    row.appendChild(tdEdit);
+
+    // Create Delete button
+    var tdDelete = document.createElement("td");
+    var deleteButton = document.createElement("button");
+    deleteButton.innerText = "Delete";
+    deleteButton.className = "delete-button";
+    deleteButton.addEventListener("click", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+      return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+        while (1) switch (_context2.prev = _context2.next) {
+          case 0:
+            return _context2.abrupt("return", handleDelete(schema, item));
+          case 1:
+          case "end":
+            return _context2.stop();
+        }
+      }, _callee2);
+    })));
+    tdDelete.appendChild(deleteButton);
+    row.appendChild(tdDelete);
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  return table;
+}
+function renderTable(_x6) {
+  return _renderTable.apply(this, arguments);
+} // Edit and Delete handlers
+function _renderTable() {
+  _renderTable = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4(schema) {
+    var tableContainer, response, data, table;
+    return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+      while (1) switch (_context4.prev = _context4.next) {
+        case 0:
+          tableContainer = document.getElementById("table-container");
+          _context4.next = 3;
+          return fetch("/".concat(schema.routeName));
+        case 3:
+          response = _context4.sent;
+          _context4.next = 6;
+          return response.json();
+        case 6:
+          data = _context4.sent;
+          if (schema) {
+            table = createTable(schema, data);
+            tableContainer.innerHTML = ""; // Clear previous content
+            tableContainer.appendChild(table);
+          } else {
+            console.error("No schema found for this page.");
+          }
+        case 8:
+        case "end":
+          return _context4.stop();
+      }
+    }, _callee4);
+  }));
+  return _renderTable.apply(this, arguments);
+}
+function handleEdit(_x7, _x8) {
+  return _handleEdit.apply(this, arguments);
+}
+function _handleEdit() {
+  _handleEdit = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(schema, item) {
+    var response, data, formContainer, updateFormElement, key, input, event;
+    return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+      while (1) switch (_context5.prev = _context5.next) {
+        case 0:
+          console.log("Editing item:", item);
+          _context5.prev = 1;
+          _context5.next = 4;
+          return fetch("/".concat(schema.routeName, "?id=").concat(item.id));
+        case 4:
+          response = _context5.sent;
+          if (response.ok) {
+            _context5.next = 7;
+            break;
+          }
+          throw new Error("Failed to fetch the ".concat(schema.name, " data."));
+        case 7:
+          _context5.next = 9;
+          return response.json();
+        case 9:
+          data = _context5.sent;
+          // Assuming data is an object representing the region
+          console.log("Editing item with fetched data:", data);
+
+          // Populate the form with the fetched data
+          formContainer = document.getElementById("form-container");
+          formContainer.innerHTML = ""; // Clear the container
+          updateFormElement = createForm(schema, "update-form", true);
+          formContainer.appendChild(updateFormElement);
+
+          // Populate form fields with the fetched data
+          for (key in data) {
+            input = document.getElementById("".concat(key));
+            if (input) {
+              input.value = data[key];
+            }
+          }
+
+          // Trigger the event for attaching validation listeners
+          event = new Event("formCreated");
+          document.dispatchEvent(event);
+          _context5.next = 24;
+          break;
+        case 20:
+          _context5.prev = 20;
+          _context5.t0 = _context5["catch"](1);
+          console.error("Error fetching ".concat(item.name, " data:"), _context5.t0);
+          alert("An error occurred while fetching the ".concat(schema.name, ". Please try again."));
+        case 24:
+        case "end":
+          return _context5.stop();
+      }
+    }, _callee5, null, [[1, 20]]);
+  }));
+  return _handleEdit.apply(this, arguments);
+}
+function handleDelete(_x9, _x10) {
+  return _handleDelete.apply(this, arguments);
+}
+function _handleDelete() {
+  _handleDelete = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6(schema, item) {
+    var response;
+    return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+      while (1) switch (_context6.prev = _context6.next) {
+        case 0:
+          if (!confirm("Are you sure you want to delete region: ".concat(item.name, "?"))) {
+            _context6.next = 6;
+            break;
+          }
+          console.log("Deleting item:", item);
+          // Send a DELETE request to the server to remove the item
+          _context6.next = 4;
+          return fetch("/".concat(schema.routeName, "?id=").concat(item.id), {
+            method: "DELETE"
+          });
+        case 4:
+          response = _context6.sent;
+          if (!response.ok) {
+            console.error("Failed to delete the ".concat(schema.name, "."));
+            alert("An error occurred while deleting ".concat(schema.name, ". Please try again."));
+          } else {
+            alert("".concat(item.name, " deleted successfully."));
+            renderTable(schema);
+          }
+        case 6:
+        case "end":
+          return _context6.stop();
+      }
+    }, _callee6);
+  }));
+  return _handleDelete.apply(this, arguments);
 }
 
 //# sourceMappingURL=bundle.js.map
