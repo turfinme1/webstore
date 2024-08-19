@@ -7,6 +7,8 @@ export const townHallSchema = {
       type: "string",
       minLength: 8,
       pattern: "^[A-Z]{3,}[0-9]{2,}-\\d{2,}$",
+      label: "Town Hall Code",
+      placeholder: "Enter Town Hall Code",
       errorMessage: {
         minLength: "Town hall code must be at least 8 characters long.",
         pattern: "Town hall code must follow the pattern ABC99-22.",
@@ -16,26 +18,32 @@ export const townHallSchema = {
       type: "string",
       minLength: 3,
       pattern: "^[a-zA-Z ]+$",
+      label: "Name (EN)",
+      placeholder: "Enter Name (EN)",
+      searchable: true,
       errorMessage: {
         minLength: "Name (EN) must be at least 3 characters long.",
         pattern: "Name (EN) must contain only Latin letters and spaces.",
       },
-      searchable: true,
     },
     name: {
       type: "string",
       minLength: 3,
       pattern: "^[а-яА-Я ]+$",
+      label: "Name",
+      placeholder: "Enter Name",
+      searchable: true,
       errorMessage: {
         minLength: "Name must be at least 3 characters long.",
         pattern: "Name must contain only Cyrillic letters and spaces.",
       },
-      searchable: true,
     },
     municipality_id: {
       type: "string",
       minLength: 1,
       pattern: "^[0-9]+$",
+      label: "Municipality ID",
+      placeholder: "Enter Municipality ID",
       errorMessage: {
         minLength: "Municipality ID must not be empty.",
         pattern: "Municipality ID must contain only digits.",

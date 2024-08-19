@@ -7,6 +7,8 @@ export const settlementSchema = {
       type: "string",
       minLength: 5,
       pattern: "^[0-9]+$",
+      label: "Ekatte Code",
+      placeholder: "Enter Ekatte Code",
       errorMessage: {
         minLength: "Ekatte code must be at least 5 characters long.",
         pattern: "Ekatte code must contain only digits.",
@@ -16,30 +18,35 @@ export const settlementSchema = {
       type: "string",
       minLength: 3,
       pattern: "^[a-zA-Z ]+$",
+      label: "Name (EN)",
+      placeholder: "Enter Name (EN)",
+      searchable: true,
       errorMessage: {
         minLength: "Name (EN) must be at least 3 characters long.",
         pattern: "Name (EN) must contain only Latin letters and spaces.",
       },
-      searchable: true,
     },
     name: {
       type: "string",
       minLength: 3,
       pattern: "^[а-яА-Я ]+$",
+      label: "Name",
+      placeholder: "Enter Name",
+      searchable: true,
       errorMessage: {
         minLength: "Name must be at least 3 characters long.",
         pattern: "Name must contain only Cyrillic letters and spaces.",
       },
-      searchable: true,
     },
     town_hall_id: {
       type: "string",
       minLength: 1,
       pattern: "^[0-9]+$",
+      label: "Town Hall ID",
+      placeholder: "Enter Town Hall ID",
       errorMessage: {
         minLength: "Town hall ID must not be empty.",
-        pattern:
-          "Town Hall ID must contain only digits.",
+        pattern: "Town hall ID must contain only digits.",
       },
     },
   },
