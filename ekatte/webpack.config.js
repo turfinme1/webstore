@@ -5,7 +5,7 @@ export default {
   entry: './src/index.js', // Entry point for your application
   output: {
     filename: 'bundle.js', // Output file name
-    path: path.resolve(__dirname, 'dist'), // Output directory (absolute path)
+    path: path.resolve(__dirname, 'src', 'js'), // Output directory (absolute path)
     publicPath: '/dist/', // Public URL of the output directory when referenced in a browser
     module: true, // Indicates that output should use the module format
     environment: {

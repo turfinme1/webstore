@@ -1,398 +1,130 @@
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import ajvErrors from "ajv-errors";
+import { municipalitySchema } from "./schemas/municipalityEntitySchema.js";
+import { regionSchema } from "./schemas/regionEntitySchema.js";
+import { townHallSchema } from "./schemas/townHallEntitySchema.js";
+import { settlementSchema } from "./schemas/settlementEntitySchema.js";
 
 // Initialize AJV
 const ajv = new Ajv.default({ allErrors: true });
 addFormats(ajv);
 ajvErrors(ajv);
 
-// region and municipality schemas
-const regionSchema = {
-  type: "object",
-  properties: {
-    region_code: {
-      type: "string",
-      minLength: 3,
-      pattern: "^[a-zA-Z0-9]+$",
-    },
-    name_en: {
-      type: "string",
-      minLength: 3,
-      pattern: "^[a-zA-Z ]+$",
-    },
-    name: {
-      type: "string",
-      minLength: 3,
-      pattern: "^[а-яА-Я ]+$",
-    },
-  },
-  required: ["region_code", "name_en", "name"],
-  additionalProperties: false,
-  errorMessage: {
-    properties: {
-      region_code:
-        "Region code must be at least 3 characters long and contain only Latin letters and digits.",
-      name_en:
-        "Name (EN) must be at least 3 characters long and contain only Latin letters and spaces.",
-      name: "Name must be at least 3 characters long and contain only Cyrillic letters and spaces.",
-    },
-    required: {
-      region_code: "Region code is required.",
-      name_en: "Name (EN) is required.",
-      name: "Name is required.",
-    },
-    additionalProperties: "No additional properties are allowed.",
-  },
+const schemas = {
+  "crud-regions": regionSchema,
+  "crud-municipalities": municipalitySchema,
+  "crud-town-halls": townHallSchema,
+  "crud-settlements": settlementSchema,
 };
 
-const municipalitySchema = {
-  type: "object",
-  properties: {
-    municipality_code: {
-      type: "string",
-      minLength: 5,
-      pattern: "^[a-zA-Z0-9]+$",
-    },
-    name_en: {
-      type: "string",
-      minLength: 3,
-      pattern: "^[a-zA-Z ]+$",
-    },
-    name: {
-      type: "string",
-      minLength: 3,
-      pattern: "^[а-яА-Я ]+$",
-    },
-    region_id: {
-      type: "string",
-      minLength: 1,
-      pattern: "^[0-9]+$",
-    },
-  },
-  required: ["municipality_code", "name_en", "name", "region_id"],
-  additionalProperties: false,
-  errorMessage: {
-    properties: {
-      municipality_code:
-        "Municipality code must be at least 5 characters long and contain only Latin letters and digits.",
-      name_en:
-        "Name (EN) must be at least 3 characters long and contain only Latin letters and spaces.",
-      name: "Name must be at least 3 characters long and contain only Cyrillic letters and spaces.",
-      region_id: "Region ID must contain only digits and must not be empty.",
-    },
-    required: {
-      municipality_code: "Municipality code is required.",
-      name_en: "Name (EN) is required.",
-      name: "Name is required.",
-      region_id: "Region ID is required.",
-    },
-    additionalProperties: "No additional properties are allowed.",
-  },
-};
-
-// compiles schemas with AJV
-const validateRegion = ajv.compile(regionSchema);
-const validateMunicipality = ajv.compile(municipalitySchema);
-
-// DOM elements
-const createForm = document.getElementById("create-form");
-const errorMessage = document.getElementById("error-message");
-const updateContainer = document.getElementById("update-container");
-const updateForm = document.getElementById("update-form");
-const updateErrorMessage = document.getElementById("update-error-message");
-const regionMap = new Map();
-
-document.addEventListener("DOMContentLoaded", async () => {
-  await initialize();
-});
-
-async function initialize() {
-  await fetchRegions();
-  await fetchMunicipalities();
+function getSchemaBasedOnUrl() {
+  const path = window.location.pathname.split("/").pop().replace(".html", "");
+  return schemas[path] || null;
 }
 
-// fetching regions
-async function fetchRegions() {
-  try {
-    const regions = await fetchData("/regions");
-    if (!regions.errors) {
-      populateSelect("region-id", regions);
-      populateSelect("update-region-id", regions);
-      regions.forEach((region) => regionMap.set(region.id, region.name));
-    } else {
-      errorMessage.textContent = regions.errors;
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    errorMessage.textContent = "An error occurred while fetching regions.";
-  }
-}
+function attachValidationListeners(formId, schema) {
+  const form = document.getElementById(formId);
+  if (!form) return;
 
-// fetching municipalities
-async function fetchMunicipalities() {
-  try {
-    const municipalities = await fetchData("/municipalities");
-    if (!municipalities.errors) {
-      generateTable(municipalities);
-    } else {
-      errorMessage.textContent = municipalities.errors;
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    errorMessage.textContent =
-      "An error occurred while fetching municipalities.";
-  }
-}
+  const ajv = new Ajv({ allErrors: true, strict: false });
+  ajvErrors(ajv);
+  const validate = ajv.compile(schema);
 
-// populate select options
-function populateSelect(id, options) {
-  const select = document.getElementById(id);
-  options.forEach((option) => {
-    const opt = document.createElement("option");
-    opt.value = option.id;
-    opt.textContent = option.name;
-    select.appendChild(opt);
-  });
-}
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+    const { id, ...dataWithoutId } = data;
+    // Clear previous error messages
+    document
+      .querySelectorAll(".field-error-message")
+      .forEach((el) => (el.innerText = ""));
+    document.querySelector(".generic-error-message").innerText = "";
 
-// create form submit event
-createForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const formData = getFormData("create");
+    const valid = validate(dataWithoutId);
 
-  const validationError = validateMunicipality(formData)
-    ? null
-    : ajv.errorsText(validateMunicipality.errors);
-  if (validationError) {
-    errorMessage.textContent = validationError;
-    return;
-  }
+    if (!valid) {
+      // Display errors
+      validate.errors.forEach((error) => {
+        const field = error.instancePath.slice(1); // remove the leading slash
+        const errorMessageEl = document.getElementById(`${field}-error`);
 
-  try {
-    const data = await fetchData("/municipalities", "POST", formData);
-    if (data.errors) {
-      errorMessage.textContent = data.errors;
-    } else {
-      data.region_name = regionMap.get(formData.region_id);
-      addTableRow(data);
-      errorMessage.textContent = "";
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    errorMessage.textContent = "An error occurred while creating.";
-  }
-});
-
-// utility to get form data
-function getFormData(formType) {
-  if (formType === "create") {
-    return {
-      municipality_code: document.getElementById("municipality-code").value,
-      name: document.getElementById("name").value,
-      name_en: document.getElementById("name-en").value,
-      region_id: document.getElementById("region-id").value,
-    };
-  } else {
-    return {
-      municipality_code: document.getElementById("update-municipality-code")
-        .value,
-      name: document.getElementById("update-name").value,
-      name_en: document.getElementById("update-name-en").value,
-      region_id: document.getElementById("update-region-id").value,
-    };
-  }
-}
-
-// generate table for data
-function generateTable(data) {
-  const container = document.getElementById("table-container");
-  container.innerHTML = "";
-
-  if (data.length === 0) {
-    return;
-  }
-
-  const table = document.createElement("table");
-  const columnNames = [
-    "municipality_code",
-    "name_en",
-    "name",
-    "region_name",
-    "actions",
-  ];
-
-  generateTableHead(table, columnNames);
-  generateTableBody(table, data);
-
-  container.appendChild(table);
-}
-
-// generate table head
-function generateTableHead(table, columnNames) {
-  const thead = table.createTHead();
-  const row = thead.insertRow();
-  columnNames.forEach((name) => {
-    const th = document.createElement("th");
-    const text = document.createTextNode(name.replaceAll("_", " "));
-    th.appendChild(text);
-    row.appendChild(th);
-  });
-}
-
-// generate table body
-function generateTableBody(table, data) {
-  const tbody = table.createTBody();
-  data.forEach((municipality) => {
-    const row = createTableRow(municipality, showUpdateForm, deleteHandler);
-    tbody.appendChild(row);
-  });
-}
-
-// add table row
-function addTableRow(data) {
-  const table = document.querySelector("table");
-  const tbody = table.querySelector("tbody");
-  const row = createTableRow(data, showUpdateForm, deleteHandler);
-
-  tbody.insertBefore(row, tbody.firstChild);
-}
-
-// delete handler
-async function deleteHandler(data) {
-  const userConfirmed = window.confirm(
-    `Are you sure you want to delete ${data.name}?`
-  );
-
-  if (userConfirmed) {
-    try {
-      const response = await fetchData(
-        `/municipalities?id=${data.id}`,
-        "DELETE"
-      );
-      if (response.errors) {
-        errorMessage.textContent = response.errors;
-      } else {
-        const row = document.querySelector(`tr[data-id='${data.id}']`);
-        if (row) {
-          row.remove();
+        if (errorMessageEl) {
+          errorMessageEl.innerText = error.message;
         }
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      errorMessage.textContent = "An error occurred while deleting.";
-    }
-  }
-}
-
-// update handler
-async function updateHandler(e) {
-  e.preventDefault();
-  const formData = getFormData("update");
-
-  const validationError = validateMunicipality(formData)
-    ? null
-    : ajv.errorsText(validateMunicipality.errors);
-  if (validationError) {
-    updateErrorMessage.textContent = validationError;
-    return;
-  }
-
-  try {
-    const response = await fetchData(`/municipalities?id=${updateContainer.dataset.id}`, "PUT", {
-      ...formData,
-    });
-    if (response.errors) {
-      updateErrorMessage.textContent = response.errors;
+      });
+      console.log("Form data is invalid", validate.errors);
+      document.querySelector(".generic-error-message").innerText =
+        "Please fix the errors above.";
     } else {
-      const row = document.querySelector(
-        `tr[data-id='${updateContainer.dataset.id}']`
-      );
-      updateTableRow(row, formData);
-      hideUpdateForm();
-      updateErrorMessage.textContent = "";
+      console.log("Form data is valid", data);
+
+      const schemaBasedUrl = `/${schema.routeName}`;
+      const method = formId.includes("update") ? "PUT" : "POST";
+      const entityId = formId.includes("update") ? id : null;
+      // Submit form data to the server
+      handleFormSubmission(schemaBasedUrl, method, dataWithoutId, formId, entityId);
+      // Handle valid form submission (e.g., send to server)
     }
-  } catch (error) {
-    console.error("Error:", error);
-    updateErrorMessage.textContent = "An error occurred while updating.";
+  });
+}
+
+document.addEventListener("formCreated", () => {
+  const schema = getSchemaBasedOnUrl();
+
+  if (schema) {
+    // Attach validation for the create form
+    attachValidationListeners("create-form", schema);
+
+    // Attach validation for the update form if it exists
+    attachValidationListeners("update-form", schema);
+  } else {
+    console.error("No schema found for this page.");
   }
-}
+});
 
-// update table row
-function updateTableRow(row, data) {
-  row.cells[0].textContent = data.municipality_code;
-  row.cells[1].textContent = data.name_en;
-  row.cells[2].textContent = data.name;
-  row.cells[3].textContent = regionMap.get(data.region_id);
-}
+document.addEventListener("searchFormCreated", () => {
+  const schema = getSchemaBasedOnUrl();
 
-// show update form
-function showUpdateForm(data) {
-  updateContainer.dataset.id = data.id;
-  document.getElementById("update-municipality-code").value =
-    data.municipality_code;
-  document.getElementById("update-name").value = data.name;
-  document.getElementById("update-name-en").value = data.name_en;
-  document.getElementById("update-region-id").value = data.region_id;
+  if (schema) {
+    // Attach validation for the search form
+    attachValidationListeners("search-form", schema);
+  } else {
+    console.error("No schema found for this page.");
+  }
+});
 
-  updateContainer.style.display = "block";
-}
+async function handleFormSubmission(url, method, data, formId, entityId) {
+  const form = document.getElementById(formId);
+  const genericErrorMessage = form.querySelector(".generic-error-message");
 
-// hide update form
-function hideUpdateForm() {
-  updateContainer.style.display = "none";
-}
-
-// event listener for update form
-updateForm.addEventListener("submit", updateHandler);
-document
-  .getElementById("update-cancel")
-  .addEventListener("click", hideUpdateForm);
-
-async function fetchData(url, method = "GET", body = null) {
   try {
-    const options = {
-      method,
+    if (entityId) {
+      url = `${url}?id=${entityId}`;
+    }
+
+    const response = await fetch(`${url}`, {
+      method: method,
       headers: {
         "Content-Type": "application/json",
       },
-      body: body ? JSON.stringify(body) : null,
-    };
+      body: JSON.stringify(data),
+    });
 
-    const response = await fetch(url, options);
-    return await response.json();
-  } catch (error) {
-    console.error("Error:", error);
-    return { errors: "Network error occurred." };
-  }
-}
+    const responseData = await response.json();
 
-// create a table row for given data
-function createTableRow(data, showUpdateForm, deleteHandler) {
-  const row = document.createElement("tr");
-  row.dataset.id = data.id;
+    if (!response.ok) {
 
-  Object.keys(data).forEach((key) => {
-    if (key !== "id") {
-      const cell = document.createElement("td");
-      cell.textContent = data[key];
-      row.appendChild(cell);
+      genericErrorMessage.innerText =
+        responseData.errors || "An error occurred during submission.";
+    } else {
+      console.log("Form submission successful:", responseData);
+      // Handle successful form submission (e.g., navigate to another page, reset form, etc.)
+      location.reload();
     }
-  });
-
-  const actionsCell = document.createElement("td");
-
-  const editButton = document.createElement("button");
-  editButton.textContent = "Edit";
-  editButton.addEventListener("click", () => showUpdateForm(data));
-  actionsCell.appendChild(editButton);
-
-  const deleteButton = document.createElement("button");
-  deleteButton.textContent = "Delete";
-  deleteButton.addEventListener("click", () => deleteHandler(data));
-  actionsCell.appendChild(deleteButton);
-
-  row.appendChild(actionsCell);
-
-  return row;
+  } catch (error) {
+    console.error("Submission error:", error);
+    genericErrorMessage.innerText = "An unexpected error occurred.";
+  }
 }
