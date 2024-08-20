@@ -2,6 +2,7 @@ export const townHallSchema = {
   type: "object",
   name: "town_hall",
   routeName: "townhalls",
+  views: "town_hall_view",
   properties: {
     town_hall_code: {
       type: "string",

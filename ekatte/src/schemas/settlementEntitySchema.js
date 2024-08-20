@@ -2,6 +2,7 @@ export const settlementSchema = {
   type: "object",
   name: "settlement",
   routeName: "settlements",
+  views: "settlement_view",
   properties: {
     ekatte: {
       type: "string",

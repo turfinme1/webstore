@@ -2,6 +2,7 @@ export const regionSchema = {
   type: "object",
   name: "region",
   routeName: "regions",
+  views: "region_view",
   properties: {
     region_code: {
       type: "string",

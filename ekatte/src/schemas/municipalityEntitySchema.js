@@ -2,6 +2,7 @@ export const municipalitySchema = {
   type: "object",
   name: "municipality",
   routeName: "municipalities",
+  views: "municipality_view",
   properties: {
     municipality_code: {
       type: "string",
