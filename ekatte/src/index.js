@@ -63,7 +63,13 @@ function attachValidationListeners(formId, schema) {
       const method = formId.includes("update") ? "PUT" : "POST";
       const entityId = formId.includes("update") ? id : null;
       // Submit form data to the server
-      handleFormSubmission(schemaBasedUrl, method, dataWithoutId, formId, entityId);
+      handleFormSubmission(
+        schemaBasedUrl,
+        method,
+        dataWithoutId,
+        formId,
+        entityId
+      );
       // Handle valid form submission (e.g., send to server)
     }
   });
@@ -88,7 +94,7 @@ document.addEventListener("searchFormCreated", () => {
 
   if (schema) {
     // Attach validation for the search form
-    attachValidationListeners("search-form", schema);
+    // attachValidationListeners("search-form", schema);
   } else {
     console.error("No schema found for this page.");
   }
@@ -114,7 +120,6 @@ async function handleFormSubmission(url, method, data, formId, entityId) {
     const responseData = await response.json();
 
     if (!response.ok) {
-
       genericErrorMessage.innerText =
         responseData.errors || "An error occurred during submission.";
     } else {
@@ -209,37 +214,72 @@ function createSearchForm(schema, formId) {
   formTitle.innerText = `Search ${schema.name}`;
   form.appendChild(formTitle);
 
-  // Iterate over schema properties that are marked as searchable
+  // Create search input field
+  const searchInputWrapper = document.createElement("div");
+  searchInputWrapper.className = "form-group";
+
+  const searchInputLabel = document.createElement("label");
+  searchInputLabel.htmlFor = "searchParam";
+  searchInputLabel.innerText = "Search Term";
+
+  const searchInput = document.createElement("input");
+  searchInput.type = "text";
+  searchInput.id = "searchParam";
+  searchInput.name = "searchParam";
+  searchInput.placeholder = "Enter search term";
+
+  searchInputWrapper.appendChild(searchInputLabel);
+  searchInputWrapper.appendChild(searchInput);
+  form.appendChild(searchInputWrapper);
+
+  // Create search column select dropdown
+  const searchSelectWrapper = document.createElement("div");
+  searchSelectWrapper.className = "form-group";
+
+  const searchSelectLabel = document.createElement("label");
+  searchSelectLabel.htmlFor = "searchColumn";
+  searchSelectLabel.innerText = "Search by ";
+
+  const searchSelect = document.createElement("select");
+  searchSelect.id = "searchColumn";
+  searchSelect.name = "searchColumn";
+
+  // Add option for searching all columns
+  const optionAll = document.createElement("option");
+  optionAll.value = "all";
+  optionAll.innerText = "All Fields";
+  searchSelect.appendChild(optionAll);
+
+  // Add options for each searchable field
   for (const key in schema.properties) {
-    const field = schema.properties[key];
-
-    if (field.searchable) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "form-group";
-
-      const label = document.createElement("label");
-      label.htmlFor = key;
-      label.innerText = `Search by ${field.label}`;
-
-      const input = document.createElement("input");
-      input.type = "text";
-      input.id = key;
-      input.name = key;
-      input.placeholder = `Enter ${field.label.toLowerCase()}`;
-
-      wrapper.appendChild(label);
-      wrapper.appendChild(input);
-      form.appendChild(wrapper);
+    if (schema.properties[key].searchable) {
+      const option = document.createElement("option");
+      option.value = key;
+      option.innerText = schema.properties[key].label || key;
+      searchSelect.appendChild(option);
     }
   }
 
+  searchSelectWrapper.appendChild(searchSelectLabel);
+  searchSelectWrapper.appendChild(searchSelect);
+  form.appendChild(searchSelectWrapper);
+
+  const genericErrorMessage = document.createElement("div");
+  genericErrorMessage.className = "generic-error-message";
+  genericErrorMessage.id = `${formId}-generic-error`;
+  form.appendChild(genericErrorMessage);
+
+    // Add submit button
   const submitButton = document.createElement("input");
   submitButton.type = "submit";
   submitButton.value = "Search";
   form.appendChild(submitButton);
 
-  const event = new Event("searchFormCreated");
-  document.dispatchEvent(event);
+  form.addEventListener("submit",async (event) => {
+    event.preventDefault();
+    await handleSearchFormSubmission(schema, formId);
+  });
+
   return form;
 }
 
@@ -309,22 +349,27 @@ function createTable(schema, data) {
   return table;
 }
 
-async function renderTable(schema) {
+async function renderTable(schema, tableData) {
   const tableContainer = document.getElementById("table-container");
+  let data;
+  
+  try {
+    if (tableData) {
+      data = tableData;
+    }
+    else {
+      const response = await fetch(`/${schema.routeName}`);
+      data = await response.json();
+    }
 
-  const response = await fetch(`/${schema.routeName}`);
-  const data = await response.json();
-
-  if (schema) {
     const table = createTable(schema, data);
-    tableContainer.innerHTML = ""; // Clear previous content
+    tableContainer.innerHTML = "";
     tableContainer.appendChild(table);
-  } else {
-    console.error("No schema found for this page.");
+  } catch (error) {
+    console.error(`Error fetching ${schema.name} data:`, error);
   }
 }
 
-// Edit and Delete handlers
 async function handleEdit(schema, item) {
   console.log("Editing item:", item);
   try {
@@ -381,5 +426,35 @@ async function handleDelete(schema, item) {
       alert(`${item.name} deleted successfully.`);
       renderTable(schema);
     }
+  }
+}
+
+async function handleSearchFormSubmission(schema, formId) {
+  const form = document.getElementById(formId);
+  const searchParam = form.querySelector("#searchParam").value;
+  const searchColumn = form.querySelector("#searchColumn").value;
+
+  const queryParams = new URLSearchParams({
+    searchParam,
+    searchColumn,
+    orderColumn: "id",
+    orderType: "ASC",  
+    page: 1,
+    pageSize: 100,     
+  });
+
+  const url = `/${schema.routeName}?${queryParams.toString()}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to search the ${schema.name} data.`);
+    }
+    const data = await response.json();
+
+    renderTable(schema, data);
+
+  } catch (error) {
+    
   }
 }
