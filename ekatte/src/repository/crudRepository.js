@@ -84,6 +84,35 @@ class CrudRepository {
     const rows = await this._query(query, searchText);
     return { success: true, data: rows, statusCode: 200 };
   }
+
+  async getEntitiesOrderedPaginated(data) {
+    let {searchParam = '', orderColumn = 'id', orderType = 'ASC', searchColumn = 'all', page = 1, pageSize = 20} = data;
+    const viewName = this.schema.views;
+
+    if (searchColumn === 'all') {
+      searchColumn = Object.keys(this.schema.properties).filter(
+      (key) => this.schema.properties[key].searchable
+    );
+    } else {
+      searchColumn = [searchColumn];
+    }
+
+    let conditions = searchColumn.map(column => `STRPOS(LOWER(CAST(${column} AS text)), LOWER($1)) > 0`).join(' OR ');
+
+    const offset = (page - 1) * pageSize;
+    const query = 
+        `SELECT * FROM ${viewName}
+        WHERE ${conditions}
+        ORDER BY ${orderColumn} ${orderType}
+        LIMIT $2 OFFSET $3`;
+    ;
+
+    const searchText = [searchParam, pageSize, offset];
+
+    const rows = await this._query(query, searchText);
+
+    return { success: true, data: rows, statusCode: 200 };
+  }
 }
 
 export default CrudRepository;

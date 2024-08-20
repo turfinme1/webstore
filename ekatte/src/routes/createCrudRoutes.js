@@ -7,12 +7,14 @@ export const createCrudRoutes = (entitySchema, entityController) => {
   return {
     [`/${entityName}:GET`]: async (request, response) => {
       try {
-        const { id } = request.params;
-        const { name } = request.params;
+        const { id , name, ...searchOrderPaginateParams } = request.params;
+        console.log(request.params);
         if (id) {
           await entityController.getById(id, response);
         } else if (name) {
           await entityController.getEntities(name, response);
+        } else if (searchOrderPaginateParams){
+          await entityController.getEntitiesOrderedPaginated(searchOrderPaginateParams, response);
         } else {
           await entityController.getAll(response);
         }

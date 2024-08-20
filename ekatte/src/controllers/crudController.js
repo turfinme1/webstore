@@ -31,6 +31,10 @@ export default class CrudController {
     return this._handleResult(this.repository.getEntities(data), response);
   }
 
+  async getEntitiesOrderedPaginated(data, response) {
+    return this._handleResult(this.repository.getEntitiesOrderedPaginated(data), response);
+  }
+
   async create(data, response) {
     return this._handleResult(this.repository.create(data), response);
   }
