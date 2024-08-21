@@ -46,11 +46,17 @@ ON town_hall (municipality_id);
 CREATE INDEX index_region_id_on_municipality
 ON municipality (region_id);
 
+
+DROP VIEW municipality_view;
+DROP VIEW settlement_view;
+DROP VIEW full_hierarchy_view;
+DROP VIEW town_hall_view;
+
 CREATE OR REPLACE VIEW municipality_view AS
 SELECT 
 	municipality.*,
-    region.name_en AS region_name_en,
     region.name AS region_name
+    region.name_en AS region_name_en,
 FROM 
     municipality
 JOIN 
