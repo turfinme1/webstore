@@ -47,10 +47,17 @@ CREATE INDEX index_region_id_on_municipality
 ON municipality (region_id);
 
 
-DROP VIEW municipality_view;
-DROP VIEW settlement_view;
-DROP VIEW full_hierarchy_view;
-DROP VIEW town_hall_view;
+DROP VIEW IF EXISTS municipality_view;
+DROP VIEW IF EXISTS settlement_view;
+DROP VIEW IF EXISTS full_hierarchy_view;
+DROP VIEW IF EXISTS town_hall_view;
+DROP VIEW IF EXISTS region_view;
+
+CREATE OR REPLACE VIEW region_view AS
+SELECT 
+    region.*
+FROM
+    region;
 
 CREATE OR REPLACE VIEW municipality_view AS
 SELECT 
