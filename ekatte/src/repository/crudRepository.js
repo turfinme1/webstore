@@ -106,12 +106,14 @@ class CrudRepository {
         ORDER BY ${orderColumn} ${orderType}
         LIMIT $2 OFFSET $3`;
     ;
+    const countQuery = `
+      SELECT COUNT(*) FROM ${viewName} 
+      WHERE ${conditions}`;
 
-    const searchText = [searchParam, pageSize, offset];
-
-    const rows = await this._query(query, searchText);
-
-    return { success: true, data: rows, statusCode: 200 };
+    const rows = await this._query(query, [searchParam, pageSize, offset]);
+    const totalRowCount = await this._query(countQuery, [searchParam]);
+    const count = totalRowCount[0].count;
+    return { success: true, data: {rows, totalRowCount: count}, statusCode: 200 };
   }
 }
 
