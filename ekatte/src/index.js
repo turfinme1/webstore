@@ -295,7 +295,7 @@ function createSearchForm(schema, formId) {
   return form;
 }
 
-function createTable(schema, data, totalRowCount, currentOrderColumn, currentOrderType) {
+function createTable(schema, data, totalRowCount, searchParam, searchColumn, orderColumn, orderType, page, pageSize) {
   const tableContainer = document.getElementById("table-container");
   tableContainer.innerHTML = "";
 
@@ -314,19 +314,20 @@ function createTable(schema, data, totalRowCount, currentOrderColumn, currentOrd
   for (const key in schema.displayProperties) {
     const th = document.createElement("th");
     const columnLabel = schema.displayProperties[key].label;
-
+    
     // Determine the sort order for the next click
-    let nextOrderType = 'ASC';
-    if (currentOrderColumn === key && currentOrderType === 'ASC') {
-      nextOrderType = 'DESC';
-    }
+    let nextOrderType = orderType === 'ASC' ? 'DESC' : 'ASC';
 
     th.innerText = columnLabel;
     th.className = 'sortable'; // Optional: add a class for styling sortable columns
 
+    if (key === orderColumn) {
+      th.classList.add(orderType.toLowerCase());
+    }
+
     // Add a click event listener to handle sorting
     th.addEventListener("click", () => {
-      goToPage('', 'all', key, nextOrderType, 1); // Reset to page 1 on sort
+      goToPage(searchParam, searchColumn, key, nextOrderType, page, pageSize); // Reset to page 1 on sort
     });
 
     headerRow.appendChild(th);
@@ -385,7 +386,7 @@ function createTable(schema, data, totalRowCount, currentOrderColumn, currentOrd
   return table;
 }
 
-async function renderTable(schema, searchParam = '', searchColumn = 'all', orderColumn = 'id', orderType = 'ASC', page = 1, pageSize = 10) {
+async function renderTable(schema, searchParam = '', searchColumn = 'all', orderColumn = "id", orderType = 'ASC', page = 1, pageSize = 10) {
   try {
     const queryParams = new URLSearchParams({
       searchParam,
@@ -406,7 +407,7 @@ async function renderTable(schema, searchParam = '', searchColumn = 'all', order
     const data = await response.json();
     const { rows, totalRowCount } = data;
 
-    const table = createTable(schema, rows, totalRowCount, orderColumn, orderType);
+    const table = createTable(schema, rows, totalRowCount, searchParam, searchColumn, orderColumn, orderType, page, pageSize);
 
     // Generate pagination controls
     const totalPages = Math.ceil(totalRowCount / pageSize);

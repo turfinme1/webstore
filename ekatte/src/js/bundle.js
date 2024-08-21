@@ -8164,7 +8164,7 @@ function createSearchForm(schema, formId) {
   }());
   return form;
 }
-function createTable(schema, data, totalRowCount, currentOrderColumn, currentOrderType) {
+function createTable(schema, data, totalRowCount, searchParam, searchColumn, orderColumn, orderType, page, pageSize) {
   var tableContainer = document.getElementById("table-container");
   tableContainer.innerHTML = "";
   var summaryBox = document.createElement("div");
@@ -8182,16 +8182,17 @@ function createTable(schema, data, totalRowCount, currentOrderColumn, currentOrd
     var columnLabel = schema.displayProperties[key].label;
 
     // Determine the sort order for the next click
-    var nextOrderType = 'ASC';
-    if (currentOrderColumn === key && currentOrderType === 'ASC') {
-      nextOrderType = 'DESC';
-    }
+    var nextOrderType = orderType === 'ASC' ? 'DESC' : 'ASC';
     th.innerText = columnLabel;
     th.className = 'sortable'; // Optional: add a class for styling sortable columns
 
+    if (key === orderColumn) {
+      th.classList.add(orderType.toLowerCase());
+    }
+
     // Add a click event listener to handle sorting
     th.addEventListener("click", function () {
-      goToPage('', 'all', key, nextOrderType, 1); // Reset to page 1 on sort
+      goToPage(searchParam, searchColumn, key, nextOrderType, page, pageSize); // Reset to page 1 on sort
     });
     headerRow.appendChild(th);
   };
@@ -8287,7 +8288,7 @@ function _renderTable() {
         case 0:
           searchParam = _args5.length > 1 && _args5[1] !== undefined ? _args5[1] : '';
           searchColumn = _args5.length > 2 && _args5[2] !== undefined ? _args5[2] : 'all';
-          orderColumn = _args5.length > 3 && _args5[3] !== undefined ? _args5[3] : 'id';
+          orderColumn = _args5.length > 3 && _args5[3] !== undefined ? _args5[3] : "id";
           orderType = _args5.length > 4 && _args5[4] !== undefined ? _args5[4] : 'ASC';
           page = _args5.length > 5 && _args5[5] !== undefined ? _args5[5] : 1;
           pageSize = _args5.length > 6 && _args5[6] !== undefined ? _args5[6] : 10;
@@ -8315,7 +8316,7 @@ function _renderTable() {
         case 15:
           data = _context5.sent;
           rows = data.rows, totalRowCount = data.totalRowCount;
-          table = createTable(schema, rows, totalRowCount, orderColumn, orderType); // Generate pagination controls
+          table = createTable(schema, rows, totalRowCount, searchParam, searchColumn, orderColumn, orderType, page, pageSize); // Generate pagination controls
           totalPages = Math.ceil(totalRowCount / pageSize);
           if (totalPages > 0) {
             createPaginationButtons(searchParam, searchColumn, orderColumn, orderType, page, pageSize, totalPages);
