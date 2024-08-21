@@ -86,8 +86,12 @@ class CrudRepository {
   }
 
   async getEntitiesOrderedPaginated(data) {
-    let {searchParam = '', orderColumn = 'id', orderType = 'ASC', searchColumn = 'all', page = 1, pageSize = 20} = data;
+    let {searchParam = '', orderColumn, orderType = 'ASC', searchColumn = 'all', page = 1, pageSize = 20} = data;
     const viewName = this.schema.views;
+
+    if (!orderColumn) {
+      orderColumn = Object.keys(this.schema.displayProperties)[0];
+    }
 
     if (searchColumn === 'all') {
       searchColumn = Object.keys(this.schema.properties).filter(
@@ -101,7 +105,7 @@ class CrudRepository {
 
     const offset = (page - 1) * pageSize;
     const query = 
-        `SELECT * FROM ${viewName}
+        `SELECT * FROM ${viewName}  
         WHERE ${conditions}
         ORDER BY ${orderColumn} ${orderType}
         LIMIT $2 OFFSET $3`;
