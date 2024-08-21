@@ -1,4 +1,10 @@
-body, h1, h2, h3, p, table, form {
+body,
+h1,
+h2,
+h3,
+p,
+table,
+form {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -20,7 +26,7 @@ body {
 h1 {
     margin-top: 0;
     font-size: 48px;
-    color: #0056b3; 
+    color: #0056b3;
 }
 
 #input-container {
@@ -51,7 +57,8 @@ input[type="text"] {
 }
 
 /* Styling for the submit button */
-input[type="submit"], button {
+input[type="submit"],
+button {
     padding: 10px 15px;
     font-size: 16px;
     background-color: #4CAF50;
@@ -69,7 +76,8 @@ input[type="submit"]:hover {
 }
 
 /* Styling for the field-specific error messages */
-.field-error-message, .generic-error-message{
+.field-error-message,
+.generic-error-message {
     color: red;
     font-size: 12px;
     margin-top: 5px;
@@ -81,7 +89,7 @@ input,
 select {
     padding: 8px;
     font-size: 16px;
-    border-radius: 4px; 
+    border-radius: 4px;
     border: 1px solid #ccc;
 }
 
@@ -115,11 +123,14 @@ table {
     width: 100%;
 }
 
-table, th, td {
+table,
+th,
+td {
     border: 1px solid #ddd;
 }
 
-th, td {
+th,
+td {
     padding: 12px;
     text-align: left;
 }
@@ -176,7 +187,7 @@ tbody tr:hover {
     gap: 6px;
 }
 
-#pagination-container button, 
+#pagination-container button,
 #pagination-container input[type="number"] {
     padding: 8px 12px;
     font-size: 16px;
@@ -195,4 +206,89 @@ tbody tr:hover {
     text-align: center;
     border-radius: 4px;
     border: 1px solid #ccc;
+}
+
+
+.data-table tbody tr:nth-child(odd) {
+    background-color: #fafafa;
+}
+
+.data-table tbody tr:nth-child(even) {
+    background-color: #f1f1f1;
+}
+
+.data-table td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.summary-box {
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: #555;
+}
+
+/* Style for sortable columns */
+.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 25px;
+    /* Adjust padding for arrow space */
+    transition: background-color 0.3s ease;
+}
+
+/* Arrows */
+.sortable::after {
+    content: "";
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+}
+
+/* Ascending arrow */
+.sortable.asc::after {
+    border-bottom-color: #d32f2f;
+}
+
+/* Descending arrow */
+.sortable.desc::after {
+    border-top-color: #d32f2f;
+}
+
+/* Hover effect for sortable columns */
+.sortable:hover {
+    background-color: #f4f4f4;
+    color: #333;
+    background-color: #eaeaea;
+}
+
+/* Edit and Delete buttons */
+.edit-button,
+.delete-button {
+    padding: 6px 12px;
+    margin: 2px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.edit-button {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.delete-button {
+    background-color: #f44336;
+    color: white;
+}
+
+.edit-button:hover {
+    background-color: #45a049;
+}
+
+.delete-button:hover {
+    background-color: #d32f2f;
 }
