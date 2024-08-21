@@ -7479,6 +7479,23 @@ var municipalitySchema = {
       }
     }
   },
+  displayProperties: {
+    municipality_code: {
+      label: "Municipality Code"
+    },
+    name_en: {
+      label: "Name (EN)"
+    },
+    name: {
+      label: "Name"
+    },
+    region_name: {
+      label: "Region Name"
+    },
+    region_name_en: {
+      label: "Region Name (EN)"
+    }
+  },
   required: ["municipality_code", "name_en", "name", "region_id"],
   additionalProperties: false,
   errorMessage: {
@@ -7544,6 +7561,17 @@ var regionSchema = {
         minLength: "Name must be at least 3 characters long.",
         pattern: "Name must contain only Cyrillic letters and spaces."
       }
+    }
+  },
+  displayProperties: {
+    region_code: {
+      label: "Region Code"
+    },
+    name_en: {
+      label: "Name (EN)"
+    },
+    name: {
+      label: "Name"
     }
   },
   required: ["region_code", "name_en", "name"],
@@ -7623,6 +7651,23 @@ var settlementSchema = {
       }
     }
   },
+  displayProperties: {
+    ekatte: {
+      label: "Ekatte Code"
+    },
+    name_en: {
+      label: "Name (EN)"
+    },
+    name: {
+      label: "Name"
+    },
+    town_hall_name: {
+      label: "Town Hall Name"
+    },
+    town_hall_name_en: {
+      label: "Town Hall Name (EN)"
+    }
+  },
   required: ["ekatte", "name_en", "name", "town_hall_id"],
   additionalProperties: false,
   errorMessage: {
@@ -7699,6 +7744,23 @@ var townHallSchema = {
         minLength: "Municipality ID must not be empty.",
         pattern: "Municipality ID must contain only digits."
       }
+    }
+  },
+  displayProperties: {
+    town_hall_code: {
+      label: "Town Hall Code"
+    },
+    name_en: {
+      label: "Name (EN)"
+    },
+    name: {
+      label: "Name"
+    },
+    municipality_name: {
+      label: "Municipality Name"
+    },
+    municipality_name_en: {
+      label: "Municipality Name (EN)"
     }
   },
   required: ["town_hall_code", "name_en", "name", "municipality_id"],
@@ -7953,10 +8015,13 @@ function createForm(schema, formId) {
   var form = document.createElement("form");
   form.id = formId;
   var formTitle = document.createElement("h2");
-  formTitle.innerText = isUpdate ? "Update ".concat(schema.name) : "Create ".concat(schema.name);
+  var entityName = schema.name.replace("_", " ");
+  formTitle.innerText = isUpdate ? "Update ".concat(entityName) : "Create ".concat(entityName);
   form.appendChild(formTitle);
   var tableContainer = document.getElementById("table-container");
   tableContainer.innerHTML = ""; // Clear the table
+  var paginationContainer = document.getElementById("pagination-container");
+  paginationContainer.innerHTML = ""; // Clear the pagination
   var hiddenIdField = document.createElement("input");
   hiddenIdField.type = "hidden";
   hiddenIdField.id = "id";
@@ -8014,7 +8079,8 @@ function createSearchForm(schema, formId) {
   var form = document.createElement("form");
   form.id = formId;
   var formTitle = document.createElement("h2");
-  formTitle.innerText = "Search ".concat(schema.name);
+  var entityName = schema.name.replace("_", " ");
+  formTitle.innerText = "Search ".concat(entityName);
   form.appendChild(formTitle);
 
   // Create search input field
@@ -8072,13 +8138,21 @@ function createSearchForm(schema, formId) {
   form.appendChild(submitButton);
   form.addEventListener("submit", /*#__PURE__*/function () {
     var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(event) {
+      var formData, searchParam, searchColumn, orderType, orderColumn, page, pageSize;
       return _regeneratorRuntime().wrap(function _callee$(_context) {
         while (1) switch (_context.prev = _context.next) {
           case 0:
             event.preventDefault();
-            _context.next = 3;
-            return handleSearchFormSubmission(schema, formId);
-          case 3:
+            formData = new FormData(event.target);
+            searchParam = formData.get("searchParam");
+            searchColumn = formData.get("searchColumn");
+            orderType = formData.get("orderType") || "ASC";
+            orderColumn = formData.get("orderColumn") || "id";
+            page = 1;
+            pageSize = formData.get("pageSize") || 10;
+            _context.next = 10;
+            return renderTable(schema, searchParam, searchColumn, orderColumn, orderType, page, pageSize);
+          case 10:
           case "end":
             return _context.stop();
         }
@@ -8090,17 +8164,39 @@ function createSearchForm(schema, formId) {
   }());
   return form;
 }
-function createTable(schema, data) {
+function createTable(schema, data, totalRowCount, currentOrderColumn, currentOrderType) {
+  var tableContainer = document.getElementById("table-container");
+  tableContainer.innerHTML = "";
+  var summaryBox = document.createElement("div");
+  summaryBox.className = "summary-box";
+  summaryBox.innerText = "Found ".concat(totalRowCount, " records.");
+  tableContainer.appendChild(summaryBox);
   var table = document.createElement("table");
   table.className = "data-table";
 
   // Create table header
   var thead = document.createElement("thead");
   var headerRow = document.createElement("tr");
-  for (var key in schema.properties) {
+  var _loop = function _loop(key) {
     var th = document.createElement("th");
-    th.innerText = schema.properties[key].label;
+    var columnLabel = schema.displayProperties[key].label;
+
+    // Determine the sort order for the next click
+    var nextOrderType = 'ASC';
+    if (currentOrderColumn === key && currentOrderType === 'ASC') {
+      nextOrderType = 'DESC';
+    }
+    th.innerText = columnLabel;
+    th.className = 'sortable'; // Optional: add a class for styling sortable columns
+
+    // Add a click event listener to handle sorting
+    th.addEventListener("click", function () {
+      goToPage('', 'all', key, nextOrderType, 1); // Reset to page 1 on sort
+    });
     headerRow.appendChild(th);
+  };
+  for (var key in schema.displayProperties) {
+    _loop(key);
   }
 
   // Add Edit and Delete column headers
@@ -8117,7 +8213,7 @@ function createTable(schema, data) {
   var tbody = document.createElement("tbody");
   data.forEach(function (item) {
     var row = document.createElement("tr");
-    for (var _key in schema.properties) {
+    for (var _key in schema.displayProperties) {
       var td = document.createElement("td");
       td.innerText = item[_key] || ""; // Handle missing data
       row.appendChild(td);
@@ -8163,54 +8259,155 @@ function createTable(schema, data) {
     tbody.appendChild(row);
   });
   table.appendChild(tbody);
+  tableContainer.appendChild(table);
   return table;
 }
-function renderTable(_x7, _x8) {
+function renderTable(_x7) {
   return _renderTable.apply(this, arguments);
 }
 function _renderTable() {
-  _renderTable = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(schema, tableData) {
-    var tableContainer, data, response, table;
+  _renderTable = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(schema) {
+    var searchParam,
+      searchColumn,
+      orderColumn,
+      orderType,
+      page,
+      pageSize,
+      queryParams,
+      response,
+      data,
+      rows,
+      totalRowCount,
+      table,
+      totalPages,
+      paginationContainer,
+      _args5 = arguments;
     return _regeneratorRuntime().wrap(function _callee5$(_context5) {
       while (1) switch (_context5.prev = _context5.next) {
         case 0:
-          tableContainer = document.getElementById("table-container");
-          _context5.prev = 1;
-          if (!tableData) {
-            _context5.next = 6;
+          searchParam = _args5.length > 1 && _args5[1] !== undefined ? _args5[1] : '';
+          searchColumn = _args5.length > 2 && _args5[2] !== undefined ? _args5[2] : 'all';
+          orderColumn = _args5.length > 3 && _args5[3] !== undefined ? _args5[3] : 'id';
+          orderType = _args5.length > 4 && _args5[4] !== undefined ? _args5[4] : 'ASC';
+          page = _args5.length > 5 && _args5[5] !== undefined ? _args5[5] : 1;
+          pageSize = _args5.length > 6 && _args5[6] !== undefined ? _args5[6] : 10;
+          _context5.prev = 6;
+          queryParams = new URLSearchParams({
+            searchParam: searchParam,
+            orderColumn: orderColumn,
+            orderType: orderType,
+            searchColumn: searchColumn,
+            page: page,
+            pageSize: pageSize
+          }).toString(); // Fetch data with pagination and search criteria
+          _context5.next = 10;
+          return fetch("/".concat(schema.routeName, "?").concat(queryParams));
+        case 10:
+          response = _context5.sent;
+          if (response.ok) {
+            _context5.next = 13;
             break;
           }
-          data = tableData;
-          _context5.next = 12;
-          break;
-        case 6:
-          _context5.next = 8;
-          return fetch("/".concat(schema.routeName));
-        case 8:
-          response = _context5.sent;
-          _context5.next = 11;
+          throw new Error("Failed to fetch the ".concat(schema.name, " data."));
+        case 13:
+          _context5.next = 15;
           return response.json();
-        case 11:
+        case 15:
           data = _context5.sent;
-        case 12:
-          table = createTable(schema, data);
-          tableContainer.innerHTML = "";
-          tableContainer.appendChild(table);
-          _context5.next = 20;
+          rows = data.rows, totalRowCount = data.totalRowCount;
+          table = createTable(schema, rows, totalRowCount, orderColumn, orderType); // Generate pagination controls
+          totalPages = Math.ceil(totalRowCount / pageSize);
+          if (totalPages > 0) {
+            createPaginationButtons(searchParam, searchColumn, orderColumn, orderType, page, pageSize, totalPages);
+          } else {
+            paginationContainer = document.getElementById("pagination-container");
+            paginationContainer.innerHTML = "";
+          }
+          _context5.next = 25;
           break;
-        case 17:
-          _context5.prev = 17;
-          _context5.t0 = _context5["catch"](1);
+        case 22:
+          _context5.prev = 22;
+          _context5.t0 = _context5["catch"](6);
           console.error("Error fetching ".concat(schema.name, " data:"), _context5.t0);
-        case 20:
+        case 25:
         case "end":
           return _context5.stop();
       }
-    }, _callee5, null, [[1, 17]]);
+    }, _callee5, null, [[6, 22]]);
   }));
   return _renderTable.apply(this, arguments);
 }
-function handleEdit(_x9, _x10) {
+function createPaginationButtons(searchParam, searchColumn, orderColumn, orderType, currentPage, pageSize, totalPages) {
+  var container = document.getElementById("pagination-container");
+  container.innerHTML = ""; // Clear previous pagination
+
+  // Previous Button
+  var prevButton = document.createElement("button");
+  prevButton.innerText = "Previous";
+  prevButton.disabled = currentPage <= 1; // Disable if on the first page
+  prevButton.addEventListener("click", function () {
+    if (currentPage > 1) {
+      goToPage(searchParam, searchColumn, orderColumn, orderType, currentPage - 1, pageSize);
+    }
+  });
+  container.appendChild(prevButton);
+
+  // Current Page Display
+  var currentPageDisplay = document.createElement("span");
+  currentPageDisplay.innerText = "Page ".concat(currentPage, " of ").concat(totalPages);
+  // currentPageDisplay.style.margin = "0 10px";
+  container.appendChild(currentPageDisplay);
+
+  // Next Button
+  var nextButton = document.createElement("button");
+  nextButton.innerText = "Next";
+  nextButton.disabled = currentPage >= totalPages; // Disable if on the last page
+  nextButton.addEventListener("click", function () {
+    if (currentPage < totalPages) {
+      goToPage(searchParam, searchColumn, orderColumn, orderType, currentPage + 1, pageSize);
+    }
+  });
+  container.appendChild(nextButton);
+
+  // "Go to Page" Input
+  var goToPageWrapper = document.createElement("div");
+  // goToPageWrapper.style.display = "inline-block";
+  // goToPageWrapper.style.marginLeft = "20px";
+
+  var goToPageLabel = document.createElement("label");
+  goToPageLabel.innerText = "Go to Page: ";
+  // goToPageLabel.style.marginRight = "5px";
+  goToPageWrapper.appendChild(goToPageLabel);
+  var goToPageInput = document.createElement("input");
+  goToPageInput.type = "number";
+  goToPageInput.value = currentPage;
+  goToPageInput.min = 1;
+  goToPageInput.max = totalPages;
+  // goToPageInput.style.width = "50px";
+  goToPageWrapper.appendChild(goToPageInput);
+  var goToPageButton = document.createElement("button");
+  goToPageButton.innerText = "Go";
+  goToPageButton.addEventListener("click", function () {
+    var targetPage = parseInt(goToPageInput.value);
+    if (targetPage >= 1 && targetPage <= totalPages) {
+      goToPage(searchParam, searchColumn, orderColumn, orderType, targetPage, pageSize);
+    }
+  });
+  goToPageWrapper.appendChild(goToPageButton);
+  container.appendChild(goToPageWrapper);
+
+  // Handle case where there are no pages (i.e., totalPages is 0)
+  if (totalPages === 0) {
+    prevButton.disabled = true;
+    nextButton.disabled = true;
+    goToPageInput.disabled = true;
+  }
+}
+function goToPage(searchParam, searchColumn, orderColumn, orderType, page, pageSize) {
+  var schema = getSchemaBasedOnUrl();
+  renderTable(schema, searchParam, searchColumn, orderColumn, orderType, page, pageSize);
+}
+function handleEdit(_x8, _x9) {
   return _handleEdit.apply(this, arguments);
 }
 function _handleEdit() {
@@ -8255,14 +8452,13 @@ function _handleEdit() {
           // Trigger the event for attaching validation listeners
           event = new Event("formCreated");
           document.dispatchEvent(event);
-          _context6.next = 24;
+          _context6.next = 23;
           break;
         case 20:
           _context6.prev = 20;
           _context6.t0 = _context6["catch"](1);
-          console.error("Error fetching ".concat(item.name, " data:"), _context6.t0);
-          alert("An error occurred while fetching the ".concat(schema.name, ". Please try again."));
-        case 24:
+          alert("An error occurred while fetching ".concat(item.name, ". Please try again."));
+        case 23:
         case "end":
           return _context6.stop();
       }
@@ -8270,17 +8466,17 @@ function _handleEdit() {
   }));
   return _handleEdit.apply(this, arguments);
 }
-function handleDelete(_x11, _x12) {
+function handleDelete(_x10, _x11) {
   return _handleDelete.apply(this, arguments);
 }
 function _handleDelete() {
   _handleDelete = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7(schema, item) {
-    var response;
+    var response, data;
     return _regeneratorRuntime().wrap(function _callee7$(_context7) {
       while (1) switch (_context7.prev = _context7.next) {
         case 0:
           if (!confirm("Are you sure you want to delete region: ".concat(item.name, "?"))) {
-            _context7.next = 6;
+            _context7.next = 15;
             break;
           }
           console.log("Deleting item:", item);
@@ -8291,70 +8487,28 @@ function _handleDelete() {
           });
         case 4:
           response = _context7.sent;
-          if (!response.ok) {
-            console.error("Failed to delete the ".concat(schema.name, "."));
-            alert("An error occurred while deleting ".concat(schema.name, ". Please try again."));
-          } else {
-            alert("".concat(item.name, " deleted successfully."));
-            renderTable(schema);
+          if (response.ok) {
+            _context7.next = 13;
+            break;
           }
-        case 6:
+          _context7.next = 8;
+          return response.json();
+        case 8:
+          data = _context7.sent;
+          console.error("Error deleting item:", data);
+          alert("An error occurred while deleting ".concat(item.name, ". Please try again."));
+          _context7.next = 15;
+          break;
+        case 13:
+          alert("".concat(item.name, " deleted successfully."));
+          renderTable(schema);
+        case 15:
         case "end":
           return _context7.stop();
       }
     }, _callee7);
   }));
   return _handleDelete.apply(this, arguments);
-}
-function handleSearchFormSubmission(_x13, _x14) {
-  return _handleSearchFormSubmission.apply(this, arguments);
-}
-function _handleSearchFormSubmission() {
-  _handleSearchFormSubmission = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee8(schema, formId) {
-    var form, searchParam, searchColumn, queryParams, url, response, data;
-    return _regeneratorRuntime().wrap(function _callee8$(_context8) {
-      while (1) switch (_context8.prev = _context8.next) {
-        case 0:
-          form = document.getElementById(formId);
-          searchParam = form.querySelector("#searchParam").value;
-          searchColumn = form.querySelector("#searchColumn").value;
-          queryParams = new URLSearchParams({
-            searchParam: searchParam,
-            searchColumn: searchColumn,
-            orderColumn: "id",
-            orderType: "ASC",
-            page: 1,
-            pageSize: 100
-          });
-          url = "/".concat(schema.routeName, "?").concat(queryParams.toString());
-          _context8.prev = 5;
-          _context8.next = 8;
-          return fetch(url);
-        case 8:
-          response = _context8.sent;
-          if (response.ok) {
-            _context8.next = 11;
-            break;
-          }
-          throw new Error("Failed to search the ".concat(schema.name, " data."));
-        case 11:
-          _context8.next = 13;
-          return response.json();
-        case 13:
-          data = _context8.sent;
-          renderTable(schema, data);
-          _context8.next = 19;
-          break;
-        case 17:
-          _context8.prev = 17;
-          _context8.t0 = _context8["catch"](5);
-        case 19:
-        case "end":
-          return _context8.stop();
-      }
-    }, _callee8, null, [[5, 17]]);
-  }));
-  return _handleSearchFormSubmission.apply(this, arguments);
 }
 
 //# sourceMappingURL=bundle.js.map

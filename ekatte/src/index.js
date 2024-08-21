@@ -138,13 +138,16 @@ function createForm(schema, formId, isUpdate = false) {
   form.id = formId;
 
   const formTitle = document.createElement("h2");
+  const entityName = schema.name.replace("_", " ");
   formTitle.innerText = isUpdate
-    ? `Update ${schema.name}`
-    : `Create ${schema.name}`;
+    ? `Update ${entityName}`
+    : `Create ${entityName}`;
   form.appendChild(formTitle);
 
   const tableContainer = document.getElementById("table-container");
   tableContainer.innerHTML = ""; // Clear the table
+  const paginationContainer = document.getElementById("pagination-container");
+  paginationContainer.innerHTML = ""; // Clear the pagination
   const hiddenIdField = document.createElement("input");
   hiddenIdField.type = "hidden";
   hiddenIdField.id = "id";
@@ -211,7 +214,8 @@ function createSearchForm(schema, formId) {
   form.id = formId;
 
   const formTitle = document.createElement("h2");
-  formTitle.innerText = `Search ${schema.name}`;
+  const entityName = schema.name.replace("_", " ");
+  formTitle.innerText = `Search ${entityName}`;
   form.appendChild(formTitle);
 
   // Create search input field
@@ -277,13 +281,29 @@ function createSearchForm(schema, formId) {
 
   form.addEventListener("submit",async (event) => {
     event.preventDefault();
-    await handleSearchFormSubmission(schema, formId);
+
+    const formData = new FormData(event.target);
+    const searchParam = formData.get("searchParam");
+    const searchColumn = formData.get("searchColumn");
+    const orderType = formData.get("orderType") || "ASC";
+    const orderColumn = formData.get("orderColumn") || "id";
+    const page = 1;
+    const pageSize = formData.get("pageSize") || 10;
+    await renderTable(schema, searchParam, searchColumn, orderColumn, orderType, page, pageSize);
   });
 
   return form;
 }
 
-function createTable(schema, data) {
+function createTable(schema, data, totalRowCount, currentOrderColumn, currentOrderType) {
+  const tableContainer = document.getElementById("table-container");
+  tableContainer.innerHTML = "";
+
+  const summaryBox = document.createElement("div");
+  summaryBox.className = "summary-box";
+  summaryBox.innerText = `Found ${totalRowCount} records.`;
+  tableContainer.appendChild(summaryBox);
+
   const table = document.createElement("table");
   table.className = "data-table";
 
@@ -291,9 +311,24 @@ function createTable(schema, data) {
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
 
-  for (const key in schema.properties) {
+  for (const key in schema.displayProperties) {
     const th = document.createElement("th");
-    th.innerText = schema.properties[key].label;
+    const columnLabel = schema.displayProperties[key].label;
+
+    // Determine the sort order for the next click
+    let nextOrderType = 'ASC';
+    if (currentOrderColumn === key && currentOrderType === 'ASC') {
+      nextOrderType = 'DESC';
+    }
+
+    th.innerText = columnLabel;
+    th.className = 'sortable'; // Optional: add a class for styling sortable columns
+
+    // Add a click event listener to handle sorting
+    th.addEventListener("click", () => {
+      goToPage('', 'all', key, nextOrderType, 1); // Reset to page 1 on sort
+    });
+
     headerRow.appendChild(th);
   }
 
@@ -315,7 +350,7 @@ function createTable(schema, data) {
   data.forEach((item) => {
     const row = document.createElement("tr");
 
-    for (const key in schema.properties) {
+    for (const key in schema.displayProperties) {
       const td = document.createElement("td");
       td.innerText = item[key] || ""; // Handle missing data
       row.appendChild(td);
@@ -345,29 +380,129 @@ function createTable(schema, data) {
   });
 
   table.appendChild(tbody);
+  tableContainer.appendChild(table);
 
   return table;
 }
 
-async function renderTable(schema, tableData) {
-  const tableContainer = document.getElementById("table-container");
-  let data;
-  
+async function renderTable(schema, searchParam = '', searchColumn = 'all', orderColumn = 'id', orderType = 'ASC', page = 1, pageSize = 10) {
   try {
-    if (tableData) {
-      data = tableData;
-    }
-    else {
-      const response = await fetch(`/${schema.routeName}`);
-      data = await response.json();
+    const queryParams = new URLSearchParams({
+      searchParam,
+      orderColumn,
+      orderType,
+      searchColumn,
+      page,
+      pageSize,
+    }).toString();
+
+    // Fetch data with pagination and search criteria
+    const response = await fetch(`/${schema.routeName}?${queryParams}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch the ${schema.name} data.`);
     }
 
-    const table = createTable(schema, data);
-    tableContainer.innerHTML = "";
-    tableContainer.appendChild(table);
+    const data = await response.json();
+    const { rows, totalRowCount } = data;
+
+    const table = createTable(schema, rows, totalRowCount, orderColumn, orderType);
+
+    // Generate pagination controls
+    const totalPages = Math.ceil(totalRowCount / pageSize);
+    if (totalPages > 0) {
+      createPaginationButtons(
+        searchParam,
+        searchColumn,
+        orderColumn,
+        orderType,
+        page,
+        pageSize,
+        totalPages
+      );
+    } else {
+      const paginationContainer = document.getElementById("pagination-container");
+      paginationContainer.innerHTML = "";
+    }
+
   } catch (error) {
     console.error(`Error fetching ${schema.name} data:`, error);
   }
+}
+
+function createPaginationButtons(searchParam, searchColumn, orderColumn, orderType, currentPage, pageSize, totalPages) {
+  const container = document.getElementById("pagination-container");
+  container.innerHTML = ""; // Clear previous pagination
+
+  // Previous Button
+  const prevButton = document.createElement("button");
+  prevButton.innerText = "Previous";
+  prevButton.disabled = currentPage <= 1; // Disable if on the first page
+  prevButton.addEventListener("click", () => {
+    if (currentPage > 1) {
+      goToPage(searchParam, searchColumn, orderColumn, orderType, currentPage - 1, pageSize);
+    }
+  });
+  container.appendChild(prevButton);
+
+  // Current Page Display
+  const currentPageDisplay = document.createElement("span");
+  currentPageDisplay.innerText = `Page ${currentPage} of ${totalPages}`;
+  // currentPageDisplay.style.margin = "0 10px";
+  container.appendChild(currentPageDisplay);
+
+  // Next Button
+  const nextButton = document.createElement("button");
+  nextButton.innerText = "Next";
+  nextButton.disabled = currentPage >= totalPages; // Disable if on the last page
+  nextButton.addEventListener("click", () => {
+    if (currentPage < totalPages) {
+      goToPage(searchParam, searchColumn, orderColumn, orderType, currentPage + 1, pageSize);
+    }
+  });
+  container.appendChild(nextButton);
+
+  // "Go to Page" Input
+  const goToPageWrapper = document.createElement("div");
+  // goToPageWrapper.style.display = "inline-block";
+  // goToPageWrapper.style.marginLeft = "20px";
+
+  const goToPageLabel = document.createElement("label");
+  goToPageLabel.innerText = "Go to Page: ";
+  // goToPageLabel.style.marginRight = "5px";
+  goToPageWrapper.appendChild(goToPageLabel);
+
+  const goToPageInput = document.createElement("input");
+  goToPageInput.type = "number";
+  goToPageInput.value = currentPage;
+  goToPageInput.min = 1;
+  goToPageInput.max = totalPages;
+  // goToPageInput.style.width = "50px";
+  goToPageWrapper.appendChild(goToPageInput);
+
+  const goToPageButton = document.createElement("button");
+  goToPageButton.innerText = "Go";
+  goToPageButton.addEventListener("click", () => {
+    const targetPage = parseInt(goToPageInput.value);
+    if (targetPage >= 1 && targetPage <= totalPages) {
+      goToPage(searchParam, searchColumn, orderColumn, orderType, targetPage, pageSize);
+    }
+  });
+  goToPageWrapper.appendChild(goToPageButton);
+
+  container.appendChild(goToPageWrapper);
+
+  // Handle case where there are no pages (i.e., totalPages is 0)
+  if (totalPages === 0) {
+    prevButton.disabled = true;
+    nextButton.disabled = true;
+    goToPageInput.disabled = true;
+  }
+}
+
+function goToPage(searchParam, searchColumn, orderColumn, orderType, page, pageSize) {
+  const schema = getSchemaBasedOnUrl();
+  renderTable(schema, searchParam, searchColumn, orderColumn, orderType, page, pageSize);
 }
 
 async function handleEdit(schema, item) {
@@ -403,9 +538,8 @@ async function handleEdit(schema, item) {
     const event = new Event("formCreated");
     document.dispatchEvent(event);
   } catch (error) {
-    console.error(`Error fetching ${item.name} data:`, error);
     alert(
-      `An error occurred while fetching the ${schema.name}. Please try again.`
+      `An error occurred while fetching ${item.name}. Please try again.`
     );
   }
 }
@@ -418,43 +552,14 @@ async function handleDelete(schema, item) {
       method: "DELETE",
     });
     if (!response.ok) {
-      console.error(`Failed to delete the ${schema.name}.`);
+      const data = await response.json();
+      console.error("Error deleting item:", data);
       alert(
-        `An error occurred while deleting ${schema.name}. Please try again.`
+        `An error occurred while deleting ${item.name}. Please try again.`
       );
-    } else {
+    } else {  
       alert(`${item.name} deleted successfully.`);
       renderTable(schema);
     }
-  }
-}
-
-async function handleSearchFormSubmission(schema, formId) {
-  const form = document.getElementById(formId);
-  const searchParam = form.querySelector("#searchParam").value;
-  const searchColumn = form.querySelector("#searchColumn").value;
-
-  const queryParams = new URLSearchParams({
-    searchParam,
-    searchColumn,
-    orderColumn: "id",
-    orderType: "ASC",  
-    page: 1,
-    pageSize: 100,     
-  });
-
-  const url = `/${schema.routeName}?${queryParams.toString()}`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to search the ${schema.name} data.`);
-    }
-    const data = await response.json();
-
-    renderTable(schema, data);
-
-  } catch (error) {
-    
   }
 }
