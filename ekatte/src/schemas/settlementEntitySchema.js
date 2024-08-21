@@ -51,6 +51,23 @@ export const settlementSchema = {
       },
     },
   },
+  displayProperties: {
+    ekatte: {
+      label: "Ekatte Code",
+    },
+    name_en: {
+      label: "Name (EN)",
+    },
+    name: {
+      label: "Name",
+    },
+    town_hall_name: {
+      label: "Town Hall Name",
+    },
+    town_hall_name_en: {
+      label: "Town Hall Name (EN)",
+    },
+  },
   required: ["ekatte", "name_en", "name", "town_hall_id"],
   additionalProperties: false,
   errorMessage: {

@@ -51,6 +51,23 @@ export const townHallSchema = {
       },
     },
   },
+  displayProperties: {
+    town_hall_code: {
+      label: "Town Hall Code",
+    },
+    name_en: {
+      label: "Name (EN)",
+    },
+    name: {
+      label: "Name",
+    },
+    municipality_name: {
+      label: "Municipality Name",
+    },
+    municipality_name_en: {
+      label: "Municipality Name (EN)",
+    },
+  },
   required: ["town_hall_code", "name_en", "name", "municipality_id"],
   additionalProperties: false,
   errorMessage: {

@@ -12,7 +12,8 @@ export const municipalitySchema = {
       placeholder: "Enter Municipality Code",
       errorMessage: {
         minLength: "Municipality code must be at least 5 characters long.",
-        pattern: "Municipality code must contain only Latin letters and digits.",
+        pattern:
+          "Municipality code must contain only Latin letters and digits.",
       },
     },
     name_en: {
@@ -49,6 +50,23 @@ export const municipalitySchema = {
         minLength: "Region ID must not be empty.",
         pattern: "Region ID must contain only digits.",
       },
+    },
+  },
+  displayProperties: {
+    municipality_code: {
+      label: "Municipality Code",
+    },
+    name_en: {
+      label: "Name (EN)",
+    },
+    name: {
+      label: "Name",
+    },
+    region_name: {
+      label: "Region Name",
+    },
+    region_name_en: {
+      label: "Region Name (EN)",
     },
   },
   required: ["municipality_code", "name_en", "name", "region_id"],

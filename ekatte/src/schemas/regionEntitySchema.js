@@ -40,6 +40,17 @@ export const regionSchema = {
       },
     },
   },
+  displayProperties: {
+    region_code: {
+      label: "Region Code",
+    },
+    name_en: {
+      label: "Name (EN)",
+    },
+    name: {
+      label: "Name",
+    },
+  },
   required: ["region_code", "name_en", "name"],
   additionalProperties: false,
   errorMessage: {
