@@ -7471,8 +7471,9 @@ var municipalitySchema = {
       type: "string",
       minLength: 1,
       pattern: "^[0-9]+$",
-      label: "Region ID",
-      placeholder: "Enter Region ID",
+      label: "Region",
+      placeholder: "Enter Region",
+      routeName: "regions",
       errorMessage: {
         minLength: "Region ID must not be empty.",
         pattern: "Region ID must contain only digits."
@@ -7643,8 +7644,9 @@ var settlementSchema = {
       type: "string",
       minLength: 1,
       pattern: "^[0-9]+$",
-      label: "Town Hall ID",
-      placeholder: "Enter Town Hall ID",
+      label: "Town Hall",
+      placeholder: "Enter Town Hall",
+      routeName: "townhalls",
       errorMessage: {
         minLength: "Town hall ID must not be empty.",
         pattern: "Town hall ID must contain only digits."
@@ -7738,8 +7740,9 @@ var townHallSchema = {
       type: "string",
       minLength: 1,
       pattern: "^[0-9]+$",
-      label: "Municipality ID",
-      placeholder: "Enter Municipality ID",
+      label: "Municipality",
+      placeholder: "Enter Municipality",
+      routeName: "municipalities",
       errorMessage: {
         minLength: "Municipality ID must not be empty.",
         pattern: "Municipality ID must contain only digits."
@@ -7963,18 +7966,18 @@ function handleFormSubmission(_x, _x2, _x3, _x4, _x5) {
   return _handleFormSubmission.apply(this, arguments);
 }
 function _handleFormSubmission() {
-  _handleFormSubmission = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4(url, method, data, formId, entityId) {
+  _handleFormSubmission = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(url, method, data, formId, entityId) {
     var form, genericErrorMessage, response, responseData;
-    return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-      while (1) switch (_context4.prev = _context4.next) {
+    return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+      while (1) switch (_context5.prev = _context5.next) {
         case 0:
           form = document.getElementById(formId);
           genericErrorMessage = form.querySelector(".generic-error-message");
-          _context4.prev = 2;
+          _context5.prev = 2;
           if (entityId) {
             url = "".concat(url, "?id=").concat(entityId);
           }
-          _context4.next = 6;
+          _context5.next = 6;
           return fetch("".concat(url), {
             method: method,
             headers: {
@@ -7983,11 +7986,11 @@ function _handleFormSubmission() {
             body: JSON.stringify(data)
           });
         case 6:
-          response = _context4.sent;
-          _context4.next = 9;
+          response = _context5.sent;
+          _context5.next = 9;
           return response.json();
         case 9:
-          responseData = _context4.sent;
+          responseData = _context5.sent;
           if (!response.ok) {
             genericErrorMessage.innerText = responseData.errors || "An error occurred during submission.";
           } else {
@@ -7995,18 +7998,18 @@ function _handleFormSubmission() {
             // Handle successful form submission (e.g., navigate to another page, reset form, etc.)
             location.reload();
           }
-          _context4.next = 17;
+          _context5.next = 17;
           break;
         case 13:
-          _context4.prev = 13;
-          _context4.t0 = _context4["catch"](2);
-          console.error("Submission error:", _context4.t0);
+          _context5.prev = 13;
+          _context5.t0 = _context5["catch"](2);
+          console.error("Submission error:", _context5.t0);
           genericErrorMessage.innerText = "An unexpected error occurred.";
         case 17:
         case "end":
-          return _context4.stop();
+          return _context5.stop();
       }
-    }, _callee4, null, [[2, 13]]);
+    }, _callee5, null, [[2, 13]]);
   }));
   return _handleFormSubmission.apply(this, arguments);
 }
@@ -8029,7 +8032,7 @@ function createForm(schema, formId) {
   form.appendChild(hiddenIdField);
 
   // Iterate over schema properties
-  for (var key in schema.properties) {
+  var _loop = function _loop() {
     var field = schema.properties[key];
 
     // Create a wrapper div for each input and its error message
@@ -8038,20 +8041,84 @@ function createForm(schema, formId) {
     var label = document.createElement("label");
     label.htmlFor = isUpdate ? "".concat(key) : key;
     label.innerText = field.label;
-    var input = document.createElement("input");
-    input.type = "text";
-    input.id = isUpdate ? "".concat(key) : key;
-    input.name = key;
-    input.placeholder = field.placeholder;
+    var input;
+    if (key.endsWith("_id")) {
+      var inputButtonContainer = document.createElement("div");
+      inputButtonContainer.className = "input-button-container";
+
+      // Create a text input for search and a button to trigger the search
+      input = document.createElement("input");
+      input.type = "text";
+      // input.id = isUpdate ? `${key}` : key;
+      // input.name = key;
+      input.placeholder = "Search for ".concat(field.label);
+      var searchButton = document.createElement("button");
+      searchButton.type = "button";
+      searchButton.innerText = "Search";
+      searchButton.addEventListener("click", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+        var searchValue, resource, results;
+        return _regeneratorRuntime().wrap(function _callee$(_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              searchValue = input.value;
+              resource = field.routeName; // Assuming the routeName is the resource to search
+              _context.next = 4;
+              return fetchSearchResults(resource, searchValue);
+            case 4:
+              results = _context.sent;
+              // Function to fetch search results
+
+              // Clear previous options
+              select.innerHTML = "";
+
+              // Populate select with new options
+              results.forEach(function (result) {
+                var option = document.createElement("option");
+                option.value = result.id;
+                option.innerText = result.name; // Assuming the search result has an `id` and `name` field
+                select.appendChild(option);
+              });
+
+              // Show select dropdown after search results are populated
+              select.style.display = "block";
+            case 8:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee);
+      })));
+      var select = document.createElement("select");
+      select.id = "".concat(key, "_select");
+      select.name = key;
+      select.className = "form-select";
+
+      // Initially hide the select dropdown until there are search results
+      select.style.display = "none";
+      inputButtonContainer.appendChild(input);
+      inputButtonContainer.appendChild(searchButton);
+      wrapper.appendChild(label);
+      wrapper.appendChild(inputButtonContainer);
+      wrapper.appendChild(select);
+    } else {
+      // Default text input for other fields
+      input = document.createElement("input");
+      input.type = "text";
+      input.id = isUpdate ? "".concat(key) : key;
+      input.name = key;
+      input.placeholder = field.placeholder;
+      wrapper.appendChild(label);
+      wrapper.appendChild(input);
+    }
 
     // Create an element for the field-specific error message
     var errorMessage = document.createElement("div");
     errorMessage.className = "field-error-message";
     errorMessage.id = "".concat(input.id, "-error");
-    wrapper.appendChild(label);
-    wrapper.appendChild(input);
     wrapper.appendChild(errorMessage);
     form.appendChild(wrapper);
+  };
+  for (var key in schema.properties) {
+    _loop();
   }
 
   // Create a generic error message container
@@ -8074,6 +8141,74 @@ function createForm(schema, formId) {
   });
   form.appendChild(cancelButton);
   return form;
+}
+function fetchSearchResults(_x6, _x7) {
+  return _fetchSearchResults.apply(this, arguments);
+}
+function _fetchSearchResults() {
+  _fetchSearchResults = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6(key, query) {
+    var pageSize,
+      response,
+      data,
+      _args6 = arguments;
+    return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+      while (1) switch (_context6.prev = _context6.next) {
+        case 0:
+          pageSize = _args6.length > 2 && _args6[2] !== undefined ? _args6[2] : 100;
+          _context6.next = 3;
+          return fetch("/".concat(key, "?searchParam=").concat(encodeURIComponent(query), "&pageSize=").concat(pageSize));
+        case 3:
+          response = _context6.sent;
+          if (!response.ok) {
+            _context6.next = 9;
+            break;
+          }
+          _context6.next = 7;
+          return response.json();
+        case 7:
+          data = _context6.sent;
+          return _context6.abrupt("return", data.rows);
+        case 9:
+          return _context6.abrupt("return", []);
+        case 10:
+        case "end":
+          return _context6.stop();
+      }
+    }, _callee6);
+  }));
+  return _fetchSearchResults.apply(this, arguments);
+}
+function fetchReferentialEntity(_x8, _x9) {
+  return _fetchReferentialEntity.apply(this, arguments);
+}
+function _fetchReferentialEntity() {
+  _fetchReferentialEntity = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7(key, id) {
+    var response, data;
+    return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+      while (1) switch (_context7.prev = _context7.next) {
+        case 0:
+          _context7.next = 2;
+          return fetch("/".concat(key, "?id=").concat(id));
+        case 2:
+          response = _context7.sent;
+          if (!response.ok) {
+            _context7.next = 8;
+            break;
+          }
+          _context7.next = 6;
+          return response.json();
+        case 6:
+          data = _context7.sent;
+          return _context7.abrupt("return", data);
+        case 8:
+          return _context7.abrupt("return", []);
+        case 9:
+        case "end":
+          return _context7.stop();
+      }
+    }, _callee7);
+  }));
+  return _fetchReferentialEntity.apply(this, arguments);
 }
 function createSearchForm(schema, formId) {
   var form = document.createElement("form");
@@ -8137,10 +8272,10 @@ function createSearchForm(schema, formId) {
   submitButton.value = "Search";
   form.appendChild(submitButton);
   form.addEventListener("submit", /*#__PURE__*/function () {
-    var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(event) {
+    var _ref2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(event) {
       var formData, searchParam, searchColumn, orderType, orderColumn, page, pageSize;
-      return _regeneratorRuntime().wrap(function _callee$(_context) {
-        while (1) switch (_context.prev = _context.next) {
+      return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+        while (1) switch (_context2.prev = _context2.next) {
           case 0:
             event.preventDefault();
             formData = new FormData(event.target);
@@ -8150,16 +8285,16 @@ function createSearchForm(schema, formId) {
             orderColumn = formData.get("orderColumn") || "id";
             page = 1;
             pageSize = formData.get("pageSize") || 10;
-            _context.next = 10;
+            _context2.next = 10;
             return renderTable(schema, searchParam, searchColumn, orderColumn, orderType, page, pageSize);
           case 10:
           case "end":
-            return _context.stop();
+            return _context2.stop();
         }
-      }, _callee);
+      }, _callee2);
     }));
-    return function (_x6) {
-      return _ref.apply(this, arguments);
+    return function (_x10) {
+      return _ref2.apply(this, arguments);
     };
   }());
   return form;
@@ -8177,14 +8312,14 @@ function createTable(schema, data, totalRowCount, searchParam, searchColumn, ord
   // Create table header
   var thead = document.createElement("thead");
   var headerRow = document.createElement("tr");
-  var _loop = function _loop(key) {
+  var _loop2 = function _loop2(key) {
     var th = document.createElement("th");
     var columnLabel = schema.displayProperties[key].label;
 
     // Determine the sort order for the next click
-    var nextOrderType = orderType === 'ASC' ? 'DESC' : 'ASC';
+    var nextOrderType = orderType === "ASC" ? "DESC" : "ASC";
     th.innerText = columnLabel;
-    th.className = 'sortable'; // Optional: add a class for styling sortable columns
+    th.className = "sortable"; // Optional: add a class for styling sortable columns
 
     if (key === orderColumn) {
       th.classList.add(orderType.toLowerCase());
@@ -8197,7 +8332,7 @@ function createTable(schema, data, totalRowCount, searchParam, searchColumn, ord
     headerRow.appendChild(th);
   };
   for (var key in schema.displayProperties) {
-    _loop(key);
+    _loop2(key);
   }
 
   // Add Edit and Delete column headers
@@ -8225,16 +8360,16 @@ function createTable(schema, data, totalRowCount, searchParam, searchColumn, ord
     var editButton = document.createElement("button");
     editButton.innerText = "Edit";
     editButton.className = "edit-button";
-    editButton.addEventListener("click", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-      return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-        while (1) switch (_context2.prev = _context2.next) {
+    editButton.addEventListener("click", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+      return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+        while (1) switch (_context3.prev = _context3.next) {
           case 0:
-            return _context2.abrupt("return", handleEdit(schema, item));
+            return _context3.abrupt("return", handleEdit(schema, item));
           case 1:
           case "end":
-            return _context2.stop();
+            return _context3.stop();
         }
-      }, _callee2);
+      }, _callee3);
     })));
     tdEdit.appendChild(editButton);
     row.appendChild(tdEdit);
@@ -8244,16 +8379,16 @@ function createTable(schema, data, totalRowCount, searchParam, searchColumn, ord
     var deleteButton = document.createElement("button");
     deleteButton.innerText = "Delete";
     deleteButton.className = "delete-button";
-    deleteButton.addEventListener("click", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
-      return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-        while (1) switch (_context3.prev = _context3.next) {
+    deleteButton.addEventListener("click", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+      return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+        while (1) switch (_context4.prev = _context4.next) {
           case 0:
-            return _context3.abrupt("return", handleDelete(schema, item));
+            return _context4.abrupt("return", handleDelete(schema, item));
           case 1:
           case "end":
-            return _context3.stop();
+            return _context4.stop();
         }
-      }, _callee3);
+      }, _callee4);
     })));
     tdDelete.appendChild(deleteButton);
     row.appendChild(tdDelete);
@@ -8263,11 +8398,11 @@ function createTable(schema, data, totalRowCount, searchParam, searchColumn, ord
   tableContainer.appendChild(table);
   return table;
 }
-function renderTable(_x7) {
+function renderTable(_x11) {
   return _renderTable.apply(this, arguments);
 }
 function _renderTable() {
-  _renderTable = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5(schema) {
+  _renderTable = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee8(schema) {
     var searchParam,
       searchColumn,
       orderColumn,
@@ -8282,17 +8417,17 @@ function _renderTable() {
       table,
       totalPages,
       paginationContainer,
-      _args5 = arguments;
-    return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-      while (1) switch (_context5.prev = _context5.next) {
+      _args8 = arguments;
+    return _regeneratorRuntime().wrap(function _callee8$(_context8) {
+      while (1) switch (_context8.prev = _context8.next) {
         case 0:
-          searchParam = _args5.length > 1 && _args5[1] !== undefined ? _args5[1] : '';
-          searchColumn = _args5.length > 2 && _args5[2] !== undefined ? _args5[2] : 'all';
-          orderColumn = _args5.length > 3 && _args5[3] !== undefined ? _args5[3] : "id";
-          orderType = _args5.length > 4 && _args5[4] !== undefined ? _args5[4] : 'ASC';
-          page = _args5.length > 5 && _args5[5] !== undefined ? _args5[5] : 1;
-          pageSize = _args5.length > 6 && _args5[6] !== undefined ? _args5[6] : 10;
-          _context5.prev = 6;
+          searchParam = _args8.length > 1 && _args8[1] !== undefined ? _args8[1] : "";
+          searchColumn = _args8.length > 2 && _args8[2] !== undefined ? _args8[2] : "all";
+          orderColumn = _args8.length > 3 && _args8[3] !== undefined ? _args8[3] : "id";
+          orderType = _args8.length > 4 && _args8[4] !== undefined ? _args8[4] : "ASC";
+          page = _args8.length > 5 && _args8[5] !== undefined ? _args8[5] : 1;
+          pageSize = _args8.length > 6 && _args8[6] !== undefined ? _args8[6] : 10;
+          _context8.prev = 6;
           queryParams = new URLSearchParams({
             searchParam: searchParam,
             orderColumn: orderColumn,
@@ -8301,20 +8436,20 @@ function _renderTable() {
             page: page,
             pageSize: pageSize
           }).toString(); // Fetch data with pagination and search criteria
-          _context5.next = 10;
+          _context8.next = 10;
           return fetch("/".concat(schema.routeName, "?").concat(queryParams));
         case 10:
-          response = _context5.sent;
+          response = _context8.sent;
           if (response.ok) {
-            _context5.next = 13;
+            _context8.next = 13;
             break;
           }
           throw new Error("Failed to fetch the ".concat(schema.name, " data."));
         case 13:
-          _context5.next = 15;
+          _context8.next = 15;
           return response.json();
         case 15:
-          data = _context5.sent;
+          data = _context8.sent;
           rows = data.rows, totalRowCount = data.totalRowCount;
           table = createTable(schema, rows, totalRowCount, searchParam, searchColumn, orderColumn, orderType, page, pageSize); // Generate pagination controls
           totalPages = Math.ceil(totalRowCount / pageSize);
@@ -8324,17 +8459,17 @@ function _renderTable() {
             paginationContainer = document.getElementById("pagination-container");
             paginationContainer.innerHTML = "";
           }
-          _context5.next = 25;
+          _context8.next = 25;
           break;
         case 22:
-          _context5.prev = 22;
-          _context5.t0 = _context5["catch"](6);
-          console.error("Error fetching ".concat(schema.name, " data:"), _context5.t0);
+          _context8.prev = 22;
+          _context8.t0 = _context8["catch"](6);
+          console.error("Error fetching ".concat(schema.name, " data:"), _context8.t0);
         case 25:
         case "end":
-          return _context5.stop();
+          return _context8.stop();
       }
-    }, _callee5, null, [[6, 22]]);
+    }, _callee8, null, [[6, 22]]);
   }));
   return _renderTable.apply(this, arguments);
 }
@@ -8408,31 +8543,31 @@ function goToPage(searchParam, searchColumn, orderColumn, orderType, page, pageS
   var schema = getSchemaBasedOnUrl();
   renderTable(schema, searchParam, searchColumn, orderColumn, orderType, page, pageSize);
 }
-function handleEdit(_x8, _x9) {
+function handleEdit(_x12, _x13) {
   return _handleEdit.apply(this, arguments);
 }
 function _handleEdit() {
-  _handleEdit = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6(schema, item) {
-    var response, data, formContainer, updateFormElement, key, input, event;
-    return _regeneratorRuntime().wrap(function _callee6$(_context6) {
-      while (1) switch (_context6.prev = _context6.next) {
+  _handleEdit = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee9(schema, item) {
+    var response, data, formContainer, updateFormElement, key, input, select, relatedData, option, event;
+    return _regeneratorRuntime().wrap(function _callee9$(_context9) {
+      while (1) switch (_context9.prev = _context9.next) {
         case 0:
           console.log("Editing item:", item);
-          _context6.prev = 1;
-          _context6.next = 4;
+          _context9.prev = 1;
+          _context9.next = 4;
           return fetch("/".concat(schema.routeName, "?id=").concat(item.id));
         case 4:
-          response = _context6.sent;
+          response = _context9.sent;
           if (response.ok) {
-            _context6.next = 7;
+            _context9.next = 7;
             break;
           }
           throw new Error("Failed to fetch the ".concat(schema.name, " data."));
         case 7:
-          _context6.next = 9;
+          _context9.next = 9;
           return response.json();
         case 9:
-          data = _context6.sent;
+          data = _context9.sent;
           // Assuming data is an object representing the region
           console.log("Editing item with fetched data:", data);
 
@@ -8443,71 +8578,97 @@ function _handleEdit() {
           formContainer.appendChild(updateFormElement);
 
           // Populate form fields with the fetched data
-          for (key in data) {
-            input = document.getElementById("".concat(key));
-            if (input) {
-              input.value = data[key];
-            }
+          _context9.t0 = _regeneratorRuntime().keys(data);
+        case 16:
+          if ((_context9.t1 = _context9.t0()).done) {
+            _context9.next = 34;
+            break;
           }
-
+          key = _context9.t1.value;
+          input = document.getElementById("".concat(key));
+          if (input) {
+            input.value = data[key];
+          }
+          select = document.getElementById("".concat(key, "_select"));
+          if (!select) {
+            _context9.next = 32;
+            break;
+          }
+          _context9.next = 24;
+          return fetchReferentialEntity(schema.properties[key].routeName, data[key]);
+        case 24:
+          relatedData = _context9.sent;
+          select.innerHTML = "";
+          option = document.createElement("option");
+          option.value = relatedData.id;
+          option.innerText = relatedData.name;
+          if (relatedData.id === data[key]) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+          select.style.display = "block"; // Show the select element
+        case 32:
+          _context9.next = 16;
+          break;
+        case 34:
           // Trigger the event for attaching validation listeners
           event = new Event("formCreated");
           document.dispatchEvent(event);
-          _context6.next = 23;
+          _context9.next = 41;
           break;
-        case 20:
-          _context6.prev = 20;
-          _context6.t0 = _context6["catch"](1);
+        case 38:
+          _context9.prev = 38;
+          _context9.t2 = _context9["catch"](1);
           alert("An error occurred while fetching ".concat(item.name, ". Please try again."));
-        case 23:
+        case 41:
         case "end":
-          return _context6.stop();
+          return _context9.stop();
       }
-    }, _callee6, null, [[1, 20]]);
+    }, _callee9, null, [[1, 38]]);
   }));
   return _handleEdit.apply(this, arguments);
 }
-function handleDelete(_x10, _x11) {
+function handleDelete(_x14, _x15) {
   return _handleDelete.apply(this, arguments);
 }
 function _handleDelete() {
-  _handleDelete = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7(schema, item) {
+  _handleDelete = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee10(schema, item) {
     var response, data;
-    return _regeneratorRuntime().wrap(function _callee7$(_context7) {
-      while (1) switch (_context7.prev = _context7.next) {
+    return _regeneratorRuntime().wrap(function _callee10$(_context10) {
+      while (1) switch (_context10.prev = _context10.next) {
         case 0:
           if (!confirm("Are you sure you want to delete region: ".concat(item.name, "?"))) {
-            _context7.next = 15;
+            _context10.next = 15;
             break;
           }
           console.log("Deleting item:", item);
           // Send a DELETE request to the server to remove the item
-          _context7.next = 4;
+          _context10.next = 4;
           return fetch("/".concat(schema.routeName, "?id=").concat(item.id), {
             method: "DELETE"
           });
         case 4:
-          response = _context7.sent;
+          response = _context10.sent;
           if (response.ok) {
-            _context7.next = 13;
+            _context10.next = 13;
             break;
           }
-          _context7.next = 8;
+          _context10.next = 8;
           return response.json();
         case 8:
-          data = _context7.sent;
+          data = _context10.sent;
           console.error("Error deleting item:", data);
           alert("An error occurred while deleting ".concat(item.name, ". Please try again."));
-          _context7.next = 15;
+          _context10.next = 15;
           break;
         case 13:
           alert("".concat(item.name, " deleted successfully."));
           renderTable(schema);
         case 15:
         case "end":
-          return _context7.stop();
+          return _context10.stop();
       }
-    }, _callee7);
+    }, _callee10);
   }));
   return _handleDelete.apply(this, arguments);
 }

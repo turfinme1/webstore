@@ -166,19 +166,72 @@ function createForm(schema, formId, isUpdate = false) {
     label.htmlFor = isUpdate ? `${key}` : key;
     label.innerText = field.label;
 
-    const input = document.createElement("input");
-    input.type = "text";
-    input.id = isUpdate ? `${key}` : key;
-    input.name = key;
-    input.placeholder = field.placeholder;
+    let input;
+    if (key.endsWith("_id")) {
+      const inputButtonContainer = document.createElement("div");
+      inputButtonContainer.className = "input-button-container";  
+
+      // Create a text input for search and a button to trigger the search
+      input = document.createElement("input");
+      input.type = "text";
+      // input.id = isUpdate ? `${key}` : key;
+      // input.name = key;
+      input.placeholder = `Search for ${field.label}`;
+
+      const searchButton = document.createElement("button");
+      searchButton.type = "button";
+      searchButton.innerText = "Search";
+      searchButton.addEventListener("click", async () => {
+        const searchValue = input.value;
+        const resource = field.routeName; // Assuming the routeName is the resource to search
+        const results = await fetchSearchResults(resource, searchValue); // Function to fetch search results
+
+        // Clear previous options
+        select.innerHTML = "";
+
+        // Populate select with new options
+        results.forEach((result) => {
+          const option = document.createElement("option");
+          option.value = result.id;
+          option.innerText = result.name; // Assuming the search result has an `id` and `name` field
+          select.appendChild(option);
+        });
+
+        // Show select dropdown after search results are populated
+        select.style.display = "block";
+      });
+
+      const select = document.createElement("select");
+      select.id = `${key}_select`;
+      select.name = key;
+      select.className = "form-select";
+
+      // Initially hide the select dropdown until there are search results
+      select.style.display = "none";
+
+      inputButtonContainer.appendChild(input);
+      inputButtonContainer.appendChild(searchButton);
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(inputButtonContainer);
+      wrapper.appendChild(select);
+    } else {
+      // Default text input for other fields
+      input = document.createElement("input");
+      input.type = "text";
+      input.id = isUpdate ? `${key}` : key;
+      input.name = key;
+      input.placeholder = field.placeholder;
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(input);
+    }
 
     // Create an element for the field-specific error message
     const errorMessage = document.createElement("div");
     errorMessage.className = "field-error-message";
     errorMessage.id = `${input.id}-error`;
 
-    wrapper.appendChild(label);
-    wrapper.appendChild(input);
     wrapper.appendChild(errorMessage);
 
     form.appendChild(wrapper);
@@ -207,6 +260,26 @@ function createForm(schema, formId, isUpdate = false) {
   form.appendChild(cancelButton);
 
   return form;
+}
+
+async function fetchSearchResults(key, query, pageSize = 100) {
+  const response = await fetch(
+    `/${key}?searchParam=${encodeURIComponent(query)}&pageSize=${pageSize}`
+  );
+  if (response.ok) {
+    const data = await response.json();
+    return data.rows; // Assuming the response has a `results` array
+  }
+  return [];
+}
+
+async function fetchReferentialEntity(key, id) {
+  const response = await fetch(`/${key}?id=${id}`);
+  if (response.ok) {
+    const data = await response.json();
+    return data; // Assuming the response is the entity object
+  }
+  return [];
 }
 
 function createSearchForm(schema, formId) {
@@ -273,13 +346,13 @@ function createSearchForm(schema, formId) {
   genericErrorMessage.id = `${formId}-generic-error`;
   form.appendChild(genericErrorMessage);
 
-    // Add submit button
+  // Add submit button
   const submitButton = document.createElement("input");
   submitButton.type = "submit";
   submitButton.value = "Search";
   form.appendChild(submitButton);
 
-  form.addEventListener("submit",async (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const formData = new FormData(event.target);
@@ -289,13 +362,31 @@ function createSearchForm(schema, formId) {
     const orderColumn = formData.get("orderColumn") || "id";
     const page = 1;
     const pageSize = formData.get("pageSize") || 10;
-    await renderTable(schema, searchParam, searchColumn, orderColumn, orderType, page, pageSize);
+    await renderTable(
+      schema,
+      searchParam,
+      searchColumn,
+      orderColumn,
+      orderType,
+      page,
+      pageSize
+    );
   });
 
   return form;
 }
 
-function createTable(schema, data, totalRowCount, searchParam, searchColumn, orderColumn, orderType, page, pageSize) {
+function createTable(
+  schema,
+  data,
+  totalRowCount,
+  searchParam,
+  searchColumn,
+  orderColumn,
+  orderType,
+  page,
+  pageSize
+) {
   const tableContainer = document.getElementById("table-container");
   tableContainer.innerHTML = "";
 
@@ -314,12 +405,12 @@ function createTable(schema, data, totalRowCount, searchParam, searchColumn, ord
   for (const key in schema.displayProperties) {
     const th = document.createElement("th");
     const columnLabel = schema.displayProperties[key].label;
-    
+
     // Determine the sort order for the next click
-    let nextOrderType = orderType === 'ASC' ? 'DESC' : 'ASC';
+    let nextOrderType = orderType === "ASC" ? "DESC" : "ASC";
 
     th.innerText = columnLabel;
-    th.className = 'sortable'; // Optional: add a class for styling sortable columns
+    th.className = "sortable"; // Optional: add a class for styling sortable columns
 
     if (key === orderColumn) {
       th.classList.add(orderType.toLowerCase());
@@ -386,7 +477,15 @@ function createTable(schema, data, totalRowCount, searchParam, searchColumn, ord
   return table;
 }
 
-async function renderTable(schema, searchParam = '', searchColumn = 'all', orderColumn = "id", orderType = 'ASC', page = 1, pageSize = 10) {
+async function renderTable(
+  schema,
+  searchParam = "",
+  searchColumn = "all",
+  orderColumn = "id",
+  orderType = "ASC",
+  page = 1,
+  pageSize = 10
+) {
   try {
     const queryParams = new URLSearchParams({
       searchParam,
@@ -407,7 +506,17 @@ async function renderTable(schema, searchParam = '', searchColumn = 'all', order
     const data = await response.json();
     const { rows, totalRowCount } = data;
 
-    const table = createTable(schema, rows, totalRowCount, searchParam, searchColumn, orderColumn, orderType, page, pageSize);
+    const table = createTable(
+      schema,
+      rows,
+      totalRowCount,
+      searchParam,
+      searchColumn,
+      orderColumn,
+      orderType,
+      page,
+      pageSize
+    );
 
     // Generate pagination controls
     const totalPages = Math.ceil(totalRowCount / pageSize);
@@ -422,16 +531,25 @@ async function renderTable(schema, searchParam = '', searchColumn = 'all', order
         totalPages
       );
     } else {
-      const paginationContainer = document.getElementById("pagination-container");
+      const paginationContainer = document.getElementById(
+        "pagination-container"
+      );
       paginationContainer.innerHTML = "";
     }
-
   } catch (error) {
     console.error(`Error fetching ${schema.name} data:`, error);
   }
 }
 
-function createPaginationButtons(searchParam, searchColumn, orderColumn, orderType, currentPage, pageSize, totalPages) {
+function createPaginationButtons(
+  searchParam,
+  searchColumn,
+  orderColumn,
+  orderType,
+  currentPage,
+  pageSize,
+  totalPages
+) {
   const container = document.getElementById("pagination-container");
   container.innerHTML = ""; // Clear previous pagination
 
@@ -441,7 +559,14 @@ function createPaginationButtons(searchParam, searchColumn, orderColumn, orderTy
   prevButton.disabled = currentPage <= 1; // Disable if on the first page
   prevButton.addEventListener("click", () => {
     if (currentPage > 1) {
-      goToPage(searchParam, searchColumn, orderColumn, orderType, currentPage - 1, pageSize);
+      goToPage(
+        searchParam,
+        searchColumn,
+        orderColumn,
+        orderType,
+        currentPage - 1,
+        pageSize
+      );
     }
   });
   container.appendChild(prevButton);
@@ -458,7 +583,14 @@ function createPaginationButtons(searchParam, searchColumn, orderColumn, orderTy
   nextButton.disabled = currentPage >= totalPages; // Disable if on the last page
   nextButton.addEventListener("click", () => {
     if (currentPage < totalPages) {
-      goToPage(searchParam, searchColumn, orderColumn, orderType, currentPage + 1, pageSize);
+      goToPage(
+        searchParam,
+        searchColumn,
+        orderColumn,
+        orderType,
+        currentPage + 1,
+        pageSize
+      );
     }
   });
   container.appendChild(nextButton);
@@ -486,7 +618,14 @@ function createPaginationButtons(searchParam, searchColumn, orderColumn, orderTy
   goToPageButton.addEventListener("click", () => {
     const targetPage = parseInt(goToPageInput.value);
     if (targetPage >= 1 && targetPage <= totalPages) {
-      goToPage(searchParam, searchColumn, orderColumn, orderType, targetPage, pageSize);
+      goToPage(
+        searchParam,
+        searchColumn,
+        orderColumn,
+        orderType,
+        targetPage,
+        pageSize
+      );
     }
   });
   goToPageWrapper.appendChild(goToPageButton);
@@ -501,9 +640,24 @@ function createPaginationButtons(searchParam, searchColumn, orderColumn, orderTy
   }
 }
 
-function goToPage(searchParam, searchColumn, orderColumn, orderType, page, pageSize) {
+function goToPage(
+  searchParam,
+  searchColumn,
+  orderColumn,
+  orderType,
+  page,
+  pageSize
+) {
   const schema = getSchemaBasedOnUrl();
-  renderTable(schema, searchParam, searchColumn, orderColumn, orderType, page, pageSize);
+  renderTable(
+    schema,
+    searchParam,
+    searchColumn,
+    orderColumn,
+    orderType,
+    page,
+    pageSize
+  );
 }
 
 async function handleEdit(schema, item) {
@@ -533,15 +687,31 @@ async function handleEdit(schema, item) {
       if (input) {
         input.value = data[key];
       }
+
+      const select = document.getElementById(`${key}_select`);
+      if (select) {
+        // Fetch options for the select field
+        const relatedData = await fetchReferentialEntity(
+          schema.properties[key].routeName,
+          data[key]
+        );
+        select.innerHTML = "";
+        const option = document.createElement("option");
+        option.value = relatedData.id;
+        option.innerText = relatedData.name;
+        if (relatedData.id === data[key]) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+        select.style.display = "block"; // Show the select element
+      }
     }
 
     // Trigger the event for attaching validation listeners
     const event = new Event("formCreated");
     document.dispatchEvent(event);
   } catch (error) {
-    alert(
-      `An error occurred while fetching ${item.name}. Please try again.`
-    );
+    alert(`An error occurred while fetching ${item.name}. Please try again.`);
   }
 }
 
@@ -555,10 +725,8 @@ async function handleDelete(schema, item) {
     if (!response.ok) {
       const data = await response.json();
       console.error("Error deleting item:", data);
-      alert(
-        `An error occurred while deleting ${item.name}. Please try again.`
-      );
-    } else {  
+      alert(`An error occurred while deleting ${item.name}. Please try again.`);
+    } else {
       alert(`${item.name} deleted successfully.`);
       renderTable(schema);
     }
