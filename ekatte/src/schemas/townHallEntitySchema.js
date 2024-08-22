@@ -43,8 +43,9 @@ export const townHallSchema = {
       type: "string",
       minLength: 1,
       pattern: "^[0-9]+$",
-      label: "Municipality ID",
-      placeholder: "Enter Municipality ID",
+      label: "Municipality",
+      placeholder: "Enter Municipality",
+      routeName: "municipalities",
       errorMessage: {
         minLength: "Municipality ID must not be empty.",
         pattern: "Municipality ID must contain only digits.",

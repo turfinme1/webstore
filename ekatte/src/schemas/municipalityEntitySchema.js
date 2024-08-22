@@ -44,8 +44,9 @@ export const municipalitySchema = {
       type: "string",
       minLength: 1,
       pattern: "^[0-9]+$",
-      label: "Region ID",
-      placeholder: "Enter Region ID",
+      label: "Region",
+      placeholder: "Enter Region",
+      routeName: "regions",
       errorMessage: {
         minLength: "Region ID must not be empty.",
         pattern: "Region ID must contain only digits.",

@@ -43,8 +43,9 @@ export const settlementSchema = {
       type: "string",
       minLength: 1,
       pattern: "^[0-9]+$",
-      label: "Town Hall ID",
-      placeholder: "Enter Town Hall ID",
+      label: "Town Hall",
+      placeholder: "Enter Town Hall",
+      routeName: "townhalls",
       errorMessage: {
         minLength: "Town hall ID must not be empty.",
         pattern: "Town hall ID must contain only digits.",
