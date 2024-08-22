@@ -14,12 +14,12 @@ form.addEventListener("submit", async (e) => {
     errorMessage.classList.remove("errorMessage");
 
     try {
-      const response = await fetch(`/settlements?name=${searchValue}`);
+      const response = await fetch(`/settlements?searchParam=${searchValue}&page=1&pageSize=10000`);
       if (!response.ok) {
         throw new Error("Error while fetching settlements");
       }
       const data = await response.json();
-      if (data.length === 0) {
+      if (data.rows.length === 0) {
         throw new Error("No settlements found");
       }
 
@@ -32,7 +32,7 @@ form.addEventListener("submit", async (e) => {
   } else {
     errorMessage.classList.add("errorMessage");
     errorMessage.textContent =
-      "The settlement name must be at least 3 characters long and contain only cyrillic letters";
+      "The settlement name must contain only cyrillic letters";
   }
 });
 
@@ -56,10 +56,10 @@ function fillAuthorStatisticsTable(data) {
   }
 
   const table = document.createElement("table");
-  const columnNames = Object.keys(data[0]);
+  const columnNames = Object.keys(data.rows[0]);
 
   generateTableHead(table, columnNames);
-  generateTable(table, data);
+  generateTable(table, data.rows);
 
   mainContent.appendChild(table);
 }
@@ -99,6 +99,6 @@ function fillStatistics(data) {
 }
 
 function isInputValid(input) {
-  const regex = /^[а-яА-Я]{3,}$/;
+  const regex = /^[а-яА-Я]*$/;
   return regex.test(input);
 }
