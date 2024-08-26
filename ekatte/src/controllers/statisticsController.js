@@ -3,6 +3,8 @@ import { createResponse } from "../util/requestUtilities.js";
 export default class StatisticsController {
   constructor(repository) {
     this.repository = repository;
+    this.getStatistics = this.getStatistics.bind(this);
+    this._handleResult = this._handleResult.bind(this);
   }
 
   async _handleResult(promise, response) {
@@ -19,7 +21,7 @@ export default class StatisticsController {
     }
   }
 
-  async getStatistics(response) {
+  async getStatistics(request, response, params) {
     return this._handleResult(this.repository.getStatistics(), response);
   }
 }
