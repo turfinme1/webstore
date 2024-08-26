@@ -1,18 +1,19 @@
-export const regionSchema = {
+const municipalitiesSchema = {
   type: "object",
-  name: "region",
-  routeName: "regions",
-  views: "region_view",
+  name: "municipality",
+  routeName: "municipalities",
+  views: "municipality_view",
   properties: {
-    region_code: {
+    municipality_code: {
       type: "string",
-      minLength: 3,
+      minLength: 5,
       pattern: "^[a-zA-Z0-9]+$",
-      label: "Region Code",
-      placeholder: "Enter Region Code",
+      label: "Municipality Code",
+      placeholder: "Enter Municipality Code",
       errorMessage: {
-        minLength: "Region code must be at least 3 characters long.",
-        pattern: "Region code must contain only Latin letters and digits.",
+        minLength: "Municipality code must be at least 5 characters long.",
+        pattern:
+          "Municipality code must contain only Latin letters and digits.",
       },
     },
     name_en: {
@@ -39,10 +40,22 @@ export const regionSchema = {
         pattern: "Name must contain only Cyrillic letters and spaces.",
       },
     },
+    region_id: {
+      type: "string",
+      minLength: 1,
+      pattern: "^[0-9]+$",
+      label: "Region",
+      placeholder: "Enter Region",
+      routeName: "regions",
+      errorMessage: {
+        minLength: "Region ID must not be empty.",
+        pattern: "Region ID must contain only digits.",
+      },
+    },
   },
   displayProperties: {
-    region_code: {
-      label: "Region Code",
+    municipality_code: {
+      label: "Municipality Code",
     },
     name_en: {
       label: "Name (EN)",
@@ -50,15 +63,24 @@ export const regionSchema = {
     name: {
       label: "Name",
     },
+    region_name: {
+      label: "Region Name",
+    },
+    region_name_en: {
+      label: "Region Name (EN)",
+    },
   },
-  required: ["region_code", "name_en", "name"],
+  required: ["municipality_code", "name_en", "name", "region_id"],
   additionalProperties: false,
   errorMessage: {
     required: {
-      region_code: "Region code is required.",
+      municipality_code: "Municipality code is required.",
       name_en: "Name (EN) is required.",
       name: "Name is required.",
+      region_id: "Region ID is required.",
     },
     additionalProperties: "No additional properties are allowed.",
   },
 };
+
+export default municipalitiesSchema;

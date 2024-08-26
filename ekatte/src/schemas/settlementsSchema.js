@@ -1,4 +1,4 @@
-export const settlementSchema = {
+ const settlementsSchema = {
   type: "object",
   name: "settlement",
   routeName: "settlements",
@@ -81,3 +81,5 @@ export const settlementSchema = {
     additionalProperties: "No additional properties are allowed.",
   },
 };
+
+export default settlementsSchema;

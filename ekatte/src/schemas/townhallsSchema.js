@@ -1,4 +1,4 @@
-export const townHallSchema = {
+const townhallsSchema = {
   type: "object",
   name: "town_hall",
   routeName: "townhalls",
@@ -81,3 +81,5 @@ export const townHallSchema = {
     additionalProperties: "No additional properties are allowed.",
   },
 };
+
+export default townhallsSchema;
