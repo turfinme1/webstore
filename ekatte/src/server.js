@@ -7,10 +7,9 @@ import config from "./database/dbConfig.js";
 import * as requestUtilities from "./util/requestUtilities.js";
 
 import ServiceContainer from "./serviceContainer.js";
-import statisticsRoutes from "./routes/statisticsRoutes.js";
 import StatisticsController from "./controllers/statisticsController.js";
-import CrudController from "./controllers/crudController1.js";
-import CrudRepository from "./repository/crudRepository1.js";
+import CrudController from "./controllers/crudController.js";
+import CrudRepository from "./repository/crudRepository.js";
 import Repository from "./repository/repository.js";
 import * as serverRoutes from "./routes/routes.js";
 
@@ -29,6 +28,11 @@ container.register("statisticsController", StatisticsController, [
   "statisticsRepository",
 ]);
 
+const controllers = {
+  crudController: await container.get("crudController"),
+  statisticsController: await container.get("statisticsController"),
+};
+
 const server = http.createServer(async (request, response) => {
   try {
     const parsedUrl = new URL(request.url, `http://${request.headers.host}`);
@@ -38,13 +42,6 @@ const server = http.createServer(async (request, response) => {
     request.bodyData = await requestUtilities.getRequestBody(request);
     request.extension = path.extname(parsedUrl.pathname);
 
-    const controllers = {
-      crudController: await container.get("crudController"),
-      statisticsController: await container.get("statisticsController"),
-    };
-    
-    const crudController =await container.get("crudController");
-    const statisticsController = await container.get("statisticsController");
     const matchedRoute = serverRoutes.matchRoute(
       request,
       request.method,
@@ -52,14 +49,20 @@ const server = http.createServer(async (request, response) => {
       serverRoutes.routes(controllers)
     );
 
-    const { route, params } = matchedRoute;
-    const { handler, middlewares } = route;
+    if (matchedRoute.route.middlewares.length > 0) {
+      await serverRoutes.executeMiddlewares(
+        matchedRoute.route.middlewares,
+        request,
+        response,
+        matchedRoute.params
+      );
+    }
 
-    await handler(request, response, params);
+    await matchedRoute.route.handler(request, response, matchedRoute.params);
   } catch (error) {
     console.log(error);
     requestUtilities.createResponse(response, 500, "application/json", {
-      error: "Internal Server Error",
+      errors: error.errors || "Internal Server Error",
     });
   }
 });
