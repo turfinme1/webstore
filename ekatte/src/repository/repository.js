@@ -1,7 +1,6 @@
 class Repository {
-  constructor(pool, tableName) {
+  constructor(pool) {
     this.pool = pool;
-    this.tableName = tableName;
   }
 
   async _query(query, values = []) {
