@@ -14,7 +14,7 @@ form.addEventListener("submit", async (e) => {
     errorMessage.classList.remove("errorMessage");
 
     try {
-      const response = await fetch(`/settlements?searchParam=${searchValue}&page=1&pageSize=10000`);
+      const response = await fetch(`/crud/settlements?searchParam=${searchValue}&page=1&pageSize=10000`);
       if (!response.ok) {
         throw new Error("Error while fetching settlements");
       }

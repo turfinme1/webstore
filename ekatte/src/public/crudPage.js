@@ -127,10 +127,10 @@ async function handleFormSubmission(url, method, data, formId, entityId) {
 
   try {
     if (entityId) {
-      url = `${url}?id=${entityId}`;
+      url = `${url}/${entityId}`;
     }
 
-    const response = await fetch(`${url}`, {
+    const response = await fetch(`/crud/${url}`, {
       method: method,
       headers: {
         "Content-Type": "application/json",
@@ -285,7 +285,7 @@ function createForm(schema, formId, isUpdate = false) {
 
 async function fetchSearchResults(key, query, pageSize = 100) {
   const response = await fetch(
-    `/${key}?searchParam=${encodeURIComponent(query)}&pageSize=${pageSize}`
+    `/crud/${key}?searchParam=${encodeURIComponent(query)}&pageSize=${pageSize}`
   );
   if (response.ok) {
     const data = await response.json();
@@ -295,7 +295,7 @@ async function fetchSearchResults(key, query, pageSize = 100) {
 }
 
 async function fetchReferentialEntity(key, id) {
-  const response = await fetch(`/${key}?id=${id}`);
+  const response = await fetch(`/crud/${key}/${id}`);
   if (response.ok) {
     const data = await response.json();
     return data; // Assuming the response is the entity object
@@ -518,7 +518,7 @@ async function renderTable(
     }).toString();
 
     // Fetch data with pagination and search criteria
-    const response = await fetch(`/${schema.routeName}?${queryParams}`);
+    const response = await fetch(`/crud/${schema.routeName}?${queryParams}`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch the ${schema.name} data.`);
@@ -685,7 +685,7 @@ async function handleEdit(schema, item) {
   console.log("Editing item:", item);
   try {
     // Fetch the latest data for the item from the server
-    const response = await fetch(`/${schema.routeName}?id=${item.id}`);
+    const response = await fetch(`/crud/${schema.routeName}/${item.id}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch the ${schema.name} data.`);
     }
@@ -740,7 +740,7 @@ async function handleDelete(schema, item) {
   if (confirm(`Are you sure you want to delete region: ${item.name}?`)) {
     console.log("Deleting item:", item);
     // Send a DELETE request to the server to remove the item
-    const response = await fetch(`/${schema.routeName}?id=${item.id}`, {
+    const response = await fetch(`/crud/${schema.routeName}/${item.id}`, {
       method: "DELETE",
     });
     if (!response.ok) {
