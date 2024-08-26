@@ -1,40 +1,40 @@
-import { municipalitySchema } from "../schemas/municipalityEntitySchema.js";
-import { regionSchema } from "../schemas/regionEntitySchema.js";
-import { townHallSchema } from "../schemas/townHallEntitySchema.js";
-import { settlementSchema } from "../schemas/settlementEntitySchema.js";
+import municipalitiesSchema from "../schemas/municipalitiesSchema.js";
+import regionsSchema from "../schemas/regionsSchema.js";
+import townhallsSchema from "../schemas/townhallsSchema.js";
+import settlementsSchema from "../schemas/settlementsSchema.js";
 
 const schemas = {
-  "crud-regions": regionSchema,
-  "crud-municipalities": municipalitySchema,
-  "crud-town-halls": townHallSchema,
-  "crud-settlements": settlementSchema,
+  "crud-regions": regionsSchema,
+  "crud-municipalities": municipalitiesSchema,
+  "crud-town-halls": townhallsSchema,
+  "crud-settlements": settlementsSchema,
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-    const schema = getSchemaBasedOnUrl();
-  
-    const formContainer = document.getElementById("form-container");
-  
-    document.getElementById("create-btn").addEventListener("click", () => {
-      formContainer.innerHTML = ""; 
-      const createFormElement = createForm(schema, "create-form");
-      formContainer.appendChild(createFormElement);
-  
-      const event = new Event("formCreated");
-      document.dispatchEvent(event);
-    });
-  
-    document.getElementById("search-btn").addEventListener("click", () => {
-      formContainer.innerHTML = ""; 
-      const searchFormElement = createSearchForm(schema, "search-form");
-      formContainer.appendChild(searchFormElement);
-  
-      const event = new Event("searchFormCreated");
-      document.dispatchEvent(event);
-    });
-  
-    renderTable(schema);
+  const schema = getSchemaBasedOnUrl();
+
+  const formContainer = document.getElementById("form-container");
+
+  document.getElementById("create-btn").addEventListener("click", () => {
+    formContainer.innerHTML = "";
+    const createFormElement = createForm(schema, "create-form");
+    formContainer.appendChild(createFormElement);
+
+    const event = new Event("formCreated");
+    document.dispatchEvent(event);
   });
+
+  document.getElementById("search-btn").addEventListener("click", () => {
+    formContainer.innerHTML = "";
+    const searchFormElement = createSearchForm(schema, "search-form");
+    formContainer.appendChild(searchFormElement);
+
+    const event = new Event("searchFormCreated");
+    document.dispatchEvent(event);
+  });
+
+  renderTable(schema);
+});
 
 function getSchemaBasedOnUrl() {
   const path = window.location.pathname.split("/").pop().replace(".html", "");
@@ -44,7 +44,7 @@ function getSchemaBasedOnUrl() {
 function attachValidationListeners(formId, schema) {
   const form = document.getElementById(formId);
   if (!form) return;
-    
+
   const Ajv = window.Ajv;
 
   const ajv = new Ajv({ allErrors: true, strict: false });
@@ -190,7 +190,7 @@ function createForm(schema, formId, isUpdate = false) {
     let input;
     if (key.endsWith("_id")) {
       const inputButtonContainer = document.createElement("div");
-      inputButtonContainer.className = "input-button-container";  
+      inputButtonContainer.className = "input-button-container";
 
       // Create a text input for search and a button to trigger the search
       input = document.createElement("input");
