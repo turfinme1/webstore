@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD Regions</title>
+    <script defer type="module" src="../js/ajv.js"></script>
+    <script defer type="module" src="../js/crudPage.js"></script>
+    <link rel="stylesheet" href="../css/crudPage.css">
+</head>
+
+<body>
+    <div class="navbar">
+        <button onclick="location.href='/'">Search</button>
+        <button onclick="location.href='crud-settlements.html'">Settlements</button>
+        <button onclick="location.href='crud-town-halls.html'">Town Halls</button>
+        <button onclick="location.href='crud-municipalities.html'">Municipalities</button>
+        <button onclick="location.href='crud-regions.html'">Regions</button>
+    </div>
+    
+    <div id="container">
+        <h1>CRUD Operations - Regions</h1>
+        <div id="buttons-container">
+            <button id="create-btn">Create New Region</button>
+            <button id="search-btn">Search Regions</button>
+        </div>
+        <div id="form-container"></div>
+    </div>
+
+    <div id="table-container"></div>
+    <div id="pagination-container"></div>
+
+</body>
+
+</html>
