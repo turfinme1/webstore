@@ -312,86 +312,52 @@ function createSearchForm(schema, formId) {
   formTitle.innerText = `Search ${entityName}`;
   form.appendChild(formTitle);
 
-  // Create search input field
-  const searchInputWrapper = document.createElement("div");
-  searchInputWrapper.className = "form-group";
+  // Create search inputs for each searchable property
+  Object.entries(schema.displayProperties).forEach(([key, value]) => {
+    if (value.searchable) {
+      const inputContainer = document.createElement("div");
+      inputContainer.className = "form-group";
 
-  const searchInputLabel = document.createElement("label");
-  searchInputLabel.htmlFor = "searchParam";
-  searchInputLabel.innerText = "Search Term";
+      const label = document.createElement("label");
+      label.innerText = value.label || key;
+      label.htmlFor = `${formId}_${key}`;
+      inputContainer.appendChild(label);
 
-  const searchInput = document.createElement("input");
-  searchInput.type = "text";
-  searchInput.id = "searchParam";
-  searchInput.name = "searchParam";
-  searchInput.placeholder = "Enter search term";
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = `${formId}_${key}`;
+      input.name = key;
+      input.placeholder = value.placeholder || '';
+      input.className = "form-control";
+      inputContainer.appendChild(input);
 
-  searchInputWrapper.appendChild(searchInputLabel);
-  searchInputWrapper.appendChild(searchInput);
-  form.appendChild(searchInputWrapper);
-
-  // Create search column select dropdown
-  const searchSelectWrapper = document.createElement("div");
-  searchSelectWrapper.className = "form-group";
-
-  const searchSelectLabel = document.createElement("label");
-  searchSelectLabel.htmlFor = "searchColumn";
-  searchSelectLabel.innerText = "Search by ";
-
-  const searchSelect = document.createElement("select");
-  searchSelect.id = "searchColumn";
-  searchSelect.name = "searchColumn";
-
-  // Add option for searching all columns
-  const optionAll = document.createElement("option");
-  optionAll.value = "all";
-  optionAll.innerText = "All Fields";
-  searchSelect.appendChild(optionAll);
-
-  // Add options for each searchable field
-  for (const key in schema.properties) {
-    if (schema.properties[key].searchable) {
-      const option = document.createElement("option");
-      option.value = key;
-      option.innerText = schema.properties[key].label || key;
-      searchSelect.appendChild(option);
+      form.appendChild(inputContainer);
     }
-  }
+  });
 
-  searchSelectWrapper.appendChild(searchSelectLabel);
-  searchSelectWrapper.appendChild(searchSelect);
-  form.appendChild(searchSelectWrapper);
-
-  const genericErrorMessage = document.createElement("div");
-  genericErrorMessage.className = "generic-error-message";
-  genericErrorMessage.id = `${formId}-generic-error`;
-  form.appendChild(genericErrorMessage);
-
-  // Add submit button
-  const submitButton = document.createElement("input");
+  // Create submit button
+  const submitButton = document.createElement("button");
   submitButton.type = "submit";
-  submitButton.value = "Search";
+  submitButton.innerText = "Search";
+  submitButton.className = "btn btn-primary";
   form.appendChild(submitButton);
 
-  form.addEventListener("submit", async (event) => {
+  // Handle form submission
+  form.addEventListener("submit", function(event) {
     event.preventDefault();
+    const searchParams = {};
 
-    const formData = new FormData(event.target);
-    const searchParam = formData.get("searchParam");
-    const searchColumn = formData.get("searchColumn");
-    const orderType = formData.get("orderType") || "ASC";
-    const orderColumn = formData.get("orderColumn") || "id";
-    const page = 1;
-    const pageSize = formData.get("pageSize") || 10;
-    await renderTable(
-      schema,
-      searchParam,
-      searchColumn,
-      orderColumn,
-      orderType,
-      page,
-      pageSize
-    );
+    // Capture search inputs
+    Object.entries(schema.displayProperties).forEach(([key, value]) => {
+      if (value.searchable) {
+        const input = document.getElementById(`${formId}_${key}`);
+        if (input && input.value.trim()) {
+          searchParams[key] = input.value.trim();
+        }
+      }
+    });
+    
+    renderTable(schema, searchParams)
   });
 
   return form;
@@ -401,12 +367,12 @@ function createTable(
   schema,
   data,
   totalRowCount,
-  searchParam,
-  searchColumn,
+  searchParams,
+  orderParams,
+  page,
+  pageSize,
   orderColumn,
   orderType,
-  page,
-  pageSize
 ) {
   const tableContainer = document.getElementById("table-container");
   tableContainer.innerHTML = "";
@@ -433,13 +399,15 @@ function createTable(
     th.innerText = columnLabel;
     th.className = "sortable"; // Optional: add a class for styling sortable columns
 
+    // key is the column name
     if (key === orderColumn) {
       th.classList.add(orderType.toLowerCase());
     }
 
     // Add a click event listener to handle sorting
+    // TODO: Implement sorting
     th.addEventListener("click", () => {
-      goToPage(searchParam, searchColumn, key, nextOrderType, page, pageSize); // Reset to page 1 on sort
+      goToPage(schema, searchParams, orderParams, page, pageSize);
     });
 
     headerRow.appendChild(th);
@@ -500,23 +468,23 @@ function createTable(
 
 async function renderTable(
   schema,
-  searchParam = "",
+  searchParams = {},
+  orderParams = [],
+  page = 1,
+  pageSize = 10,
   searchColumn = "all",
   orderColumn = "id",
   orderType = "ASC",
-  page = 1,
-  pageSize = 10
 ) {
   try {
     const queryParams = new URLSearchParams({
-      searchParam,
-      orderColumn,
-      orderType,
-      searchColumn,
+      searchParams : JSON.stringify(searchParams),
+      orderParams : JSON.stringify(orderParams),
       page,
       pageSize,
-    }).toString();
+    });
 
+    console.log("Query Params:", queryParams);
     // Fetch data with pagination and search criteria
     const response = await fetch(`/crud/${schema.routeName}?${queryParams}`);
 
@@ -531,10 +499,8 @@ async function renderTable(
       schema,
       rows,
       totalRowCount,
-      searchParam,
-      searchColumn,
-      orderColumn,
-      orderType,
+      searchParams,
+      orderParams,
       page,
       pageSize
     );
@@ -543,13 +509,12 @@ async function renderTable(
     const totalPages = Math.ceil(totalRowCount / pageSize);
     if (totalPages > 0) {
       createPaginationButtons(
-        searchParam,
-        searchColumn,
-        orderColumn,
-        orderType,
-        page,
+        schema,
+        searchParams,
+        orderParams,
         pageSize,
-        totalPages
+        totalPages,
+        page
       );
     } else {
       const paginationContainer = document.getElementById(
@@ -563,13 +528,12 @@ async function renderTable(
 }
 
 function createPaginationButtons(
-  searchParam,
-  searchColumn,
-  orderColumn,
-  orderType,
-  currentPage,
+  schema,
+  searchParams,
+  orderParams,
   pageSize,
-  totalPages
+  totalPages,
+  currentPage,
 ) {
   const container = document.getElementById("pagination-container");
   container.innerHTML = ""; // Clear previous pagination
@@ -581,10 +545,9 @@ function createPaginationButtons(
   prevButton.addEventListener("click", () => {
     if (currentPage > 1) {
       goToPage(
-        searchParam,
-        searchColumn,
-        orderColumn,
-        orderType,
+        schema,
+        searchParams,
+        orderParams,
         currentPage - 1,
         pageSize
       );
@@ -605,10 +568,9 @@ function createPaginationButtons(
   nextButton.addEventListener("click", () => {
     if (currentPage < totalPages) {
       goToPage(
-        searchParam,
-        searchColumn,
-        orderColumn,
-        orderType,
+        schema,
+        searchParams,
+        orderParams,       
         currentPage + 1,
         pageSize
       );
@@ -640,10 +602,9 @@ function createPaginationButtons(
     const targetPage = parseInt(goToPageInput.value);
     if (targetPage >= 1 && targetPage <= totalPages) {
       goToPage(
-        searchParam,
-        searchColumn,
-        orderColumn,
-        orderType,
+        schema,
+        searchParams,
+        orderParams,       
         targetPage,
         pageSize
       );
@@ -661,24 +622,8 @@ function createPaginationButtons(
   }
 }
 
-function goToPage(
-  searchParam,
-  searchColumn,
-  orderColumn,
-  orderType,
-  page,
-  pageSize
-) {
-  const schema = getSchemaBasedOnUrl();
-  renderTable(
-    schema,
-    searchParam,
-    searchColumn,
-    orderColumn,
-    orderType,
-    page,
-    pageSize
-  );
+function goToPage(schema, searchParams, orderParams, page, pageSize) {
+  renderTable(schema, searchParams, orderParams, page, pageSize);
 }
 
 async function handleEdit(schema, item) {
