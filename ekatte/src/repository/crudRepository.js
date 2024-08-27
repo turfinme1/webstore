@@ -1,3 +1,5 @@
+import * as requestUtilities from "../util/requestUtilities.js";
+
 class CrudRepository {
   constructor(pool) {
     this.pool = pool;
@@ -9,12 +11,10 @@ class CrudRepository {
       const { rows } = await client.query(query, values);
       return rows;
     } catch (error) {
-        if (error.code === '23505') {
-          throw { success: false, statusCode: 409, data: null, errors: 'Entity already exists' };
-        } else if (error.code === '23503') {
-          throw { success: false, statusCode: 404, data: null, errors: 'Entity ID not found' };
-        }
-        throw { success: false, statusCode: 500, data: null, errors: "Internal Server Error" };
+      requestUtilities.assert(error.code !== '23505', 409, "Entity already exists");
+      requestUtilities.assert(error.code !== '23503', 404, "Entity ID not found");
+      requestUtilities.assert(error.code !== '22P02', 400, "Invalid data type");
+      requestUtilities.assert(!error, 500, "Internal Server Error");
     } 
     finally {
       client.release();
@@ -102,14 +102,12 @@ class CrudRepository {
 
   async getEntitiesOrderedPaginated(request, params) {
     const schema = params.schema;
-    let {
-      searchParam = "",
-      orderColumn,
-      orderType = "ASC",
-      searchColumn = "all",
-      page = 1,
-      pageSize = 20,
-    } = request.params;
+    let searchParam = request.params.searchParam || "";
+    let orderColumn = request.params.orderColumn;
+    let orderType = request.params.orderType || "ASC";
+    let searchColumn = request.params.searchColumn || "all";
+    let page = request.params.page || 1;
+    let pageSize = request.params.pageSize || 20;
     const viewName = schema.views;
 
     if (!orderColumn) {

@@ -64,13 +64,13 @@ export function matchRoute(request, method, pathname, routes) {
   const requestParams = request.params;
   const routeDefinitions = routes[method];
   let pathParts = pathname.split("/").filter(Boolean);
-  const pathPartsSplitResult = pathname.split(".");
+  const isPublicRoute = pathname === "/" || pathname.includes(".");
 
   if (Object.keys(requestParams).length > 0) {
     pathParts.push("query");
   }
 
-  if (pathname === "/" || pathPartsSplitResult.length > 1) {
+  if (isPublicRoute) {
     return { route: routes["GET"]["/public"], params: {} };
   }
 
@@ -94,6 +94,8 @@ export function matchRoute(request, method, pathname, routes) {
     if (match) {
       if (params.entity) {
         params.schema = entitySchemas.get(params.entity);
+
+        requestUtilities.assert(params.schema, 404, `${params.entity} not found`);
       }
 
       return { route: routeDefinitions[route], params };
