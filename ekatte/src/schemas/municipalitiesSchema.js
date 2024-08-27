@@ -56,18 +56,28 @@ const municipalitiesSchema = {
   displayProperties: {
     municipality_code: {
       label: "Municipality Code",
+      placeholder: "Enter Municipality Code",
+      searchable: true,
     },
     name_en: {
       label: "Name (EN)",
+      placeholder: "Enter Name (EN)",
+      searchable: true,
     },
     name: {
       label: "Name",
+      placeholder: "Enter Name",
+      searchable: true,
     },
     region_name: {
       label: "Region Name",
+      placeholder: "Enter Region Name",
+      searchable: true,
     },
     region_name_en: {
       label: "Region Name (EN)",
+      placeholder: "Enter Region Name (EN)",
+      searchable: true,
     },
   },
   required: ["municipality_code", "name_en", "name", "region_id"],

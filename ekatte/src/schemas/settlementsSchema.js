@@ -55,18 +55,28 @@
   displayProperties: {
     ekatte: {
       label: "Ekatte Code",
+      placeholder: "Enter Ekatte Code",
+      searchable: true,
     },
     name_en: {
       label: "Name (EN)",
+      placeholder: "Enter Name (EN)",
+      searchable: true,
     },
     name: {
       label: "Name",
+      placeholder: "Enter Name",
+      searchable: true,
     },
     town_hall_name: {
       label: "Town Hall Name",
+      placeholder: "Enter Town Hall Name",
+      searchable: true,
     },
     town_hall_name_en: {
       label: "Town Hall Name (EN)",
+      placeholder: "Enter Town Hall Name (EN)",
+      searchable: true,
     },
   },
   required: ["ekatte", "name_en", "name", "town_hall_id"],

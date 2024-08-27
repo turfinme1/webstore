@@ -55,18 +55,28 @@ const townhallsSchema = {
   displayProperties: {
     town_hall_code: {
       label: "Town Hall Code",
+      placeholder: "Enter Town Hall Code",
+      searchable: true,
     },
     name_en: {
       label: "Name (EN)",
+      placeholder: "Enter Name (EN)",
+      searchable: true,
     },
     name: {
       label: "Name",
+      placeholder: "Enter Name",
+      searchable: true,
     },
     municipality_name: {
       label: "Municipality Name",
+      placeholder: "Enter Municipality Name",
+      searchable: true,
     },
     municipality_name_en: {
       label: "Municipality Name (EN)",
+      placeholder: "Enter Municipality Name (EN)",
+      searchable: true,
     },
   },
   required: ["town_hall_code", "name_en", "name", "municipality_id"],

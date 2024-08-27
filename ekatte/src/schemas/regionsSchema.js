@@ -43,12 +43,18 @@ const regionsSchema = {
   displayProperties: {
     region_code: {
       label: "Region Code",
+      placeholder: "Enter Region Code",
+      searchable: true,
     },
     name_en: {
       label: "Name (EN)",
+      placeholder: "Enter Name (EN)",
+      searchable: true,
     },
     name: {
       label: "Name",
+      placeholder: "Enter Name",
+      searchable: true,
     },
   },
   required: ["region_code", "name_en", "name"],
