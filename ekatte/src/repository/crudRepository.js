@@ -135,7 +135,7 @@ class CrudRepository {
     }   
 
     const rows = await this._query(query, [...searchValues, pageSize, offset]);
-    const totalRowCount = await this._query(countQuery);
+    const totalRowCount = await this._query(countQuery, searchValues);
     const count = totalRowCount[0].count;
     return { success: true, data: { rows, totalRowCount: count }, statusCode: 200, };
   }
