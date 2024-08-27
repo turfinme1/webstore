@@ -14,7 +14,7 @@ class CrudRepository {
       requestUtilities.assert(error.code !== '23505', 409, "Entity already exists");
       requestUtilities.assert(error.code !== '23503', 404, "Entity ID not found");
       requestUtilities.assert(error.code !== '22P02', 400, "Invalid data type");
-      requestUtilities.assert(!error, 500, "Internal Server Error");
+      requestUtilities.assert(false, 500, "Internal Server Error");
     } 
     finally {
       client.release();
@@ -102,41 +102,40 @@ class CrudRepository {
 
   async getEntitiesOrderedPaginated(request, params) {
     const schema = params.schema;
-    let searchParam = request.params.searchParam || "";
-    let orderColumn = request.params.orderColumn;
-    let orderType = request.params.orderType || "ASC";
-    let searchColumn = request.params.searchColumn || "all";
+    let searchParams = request.params.searchParams ? JSON.parse(request.params.searchParams) : {};
+    let orderParams = request.params.orderParams ? JSON.parse(request.params.orderParams) : [];
+    let paramsCount = Object.keys(searchParams).length;
     let page = request.params.page || 1;
     let pageSize = request.params.pageSize || 20;
-    const viewName = schema.views;
-
-    if (!orderColumn) {
-      orderColumn = Object.keys(schema.displayProperties)[0];
-    }
-
-    if (searchColumn === "all") {
-      searchColumn = Object.keys(schema.properties).filter(
-        (key) => schema.properties[key].searchable
-      );
-    } else {
-      searchColumn = [searchColumn];
-    }
-
-    let conditions = searchColumn
-      .map((column) => `STRPOS(LOWER(CAST(${column} AS text)), LOWER($1)) > 0`)
-      .join(" OR ");
-
+    const viewName = schema.views;  
     const offset = (page - 1) * pageSize;
-    const query = `SELECT * FROM ${viewName}  
-          WHERE ${conditions}
-          ORDER BY ${orderColumn} ${orderType}
-          LIMIT $2 OFFSET $3`;
-    const countQuery = `
-        SELECT COUNT(*) FROM ${viewName} 
-        WHERE ${conditions}`;
 
-    const rows = await this._query(query, [searchParam, pageSize, offset]);
-    const totalRowCount = await this._query(countQuery, [searchParam]);
+    const searchConditions = Object.entries(searchParams)
+      .map(([column, value], index) => `STRPOS(LOWER(CAST(${column} AS text)), LOWER($${index + 1})) > 0`)
+      .join(" AND ");
+    
+    const orderByClause = orderParams
+      .map(([column, direction]) => `${column} ${direction}`)
+      .join(", ");
+      
+    const searchValues = Object.values(searchParams);
+
+    let query = `SELECT * FROM ${viewName} `;
+    if (paramsCount > 0) {
+      query += `WHERE ${searchConditions} `;
+    }
+    if (orderParams.length > 0) {
+      query += `ORDER BY ${orderByClause} `;
+    }
+    query += `LIMIT $${paramsCount + 1} OFFSET $${paramsCount + 2}`;
+
+    let countQuery = `SELECT COUNT(*) FROM ${viewName} `;
+    if (paramsCount > 0) {
+      countQuery += `WHERE ${searchConditions} `;
+    }   
+
+    const rows = await this._query(query, [...searchValues, pageSize, offset]);
+    const totalRowCount = await this._query(countQuery);
     const count = totalRowCount[0].count;
     return { success: true, data: { rows, totalRowCount: count }, statusCode: 200, };
   }
