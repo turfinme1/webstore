@@ -42,28 +42,16 @@ const server = http.createServer(async (request, response) => {
     request.bodyData = await requestUtilities.getRequestBody(request);
     request.extension = path.extname(parsedUrl.pathname);
 
-    const matchedRoute = serverRoutes.matchRoute(
-      request,
-      request.method,
-      request.pathname,
-      serverRoutes.routes(controllers)
-    );
+    const matchedRoute = serverRoutes.matchRoute(request, request.method, request.pathname, serverRoutes.routes(controllers));
 
     if (matchedRoute.route.middlewares.length > 0) {
-      await serverRoutes.executeMiddlewares(
-        matchedRoute.route.middlewares,
-        request,
-        response,
-        matchedRoute.params
-      );
+      await serverRoutes.executeMiddlewares(matchedRoute.route.middlewares, request, response, matchedRoute.params);
     }
 
     await matchedRoute.route.handler(request, response, matchedRoute.params);
   } catch (error) {
     console.log(error);
-    requestUtilities.createResponse(response, 500, "application/json", {
-      errors: error.errors || "Internal Server Error",
-    });
+    requestUtilities.createResponse(response, error.statusCode || 500, "application/json", { errors: error.errors || "Internal Server Error" });
   }
 });
 
