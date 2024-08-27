@@ -88,3 +88,9 @@ export function createResponse(response, statusCode, contentType, data) {
     contentType === "application/json" ? JSON.stringify(data) : data
   );
 }
+
+export function assert(condition, statusCode, errors) { 
+  if (!condition) {
+    throw { success: false, statusCode, data: null, errors };
+  }
+}
