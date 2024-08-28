@@ -371,8 +371,6 @@ function createTable(
   orderParams,
   page,
   pageSize,
-  orderColumn,
-  orderType,
 ) {
   const tableContainer = document.getElementById("table-container");
   tableContainer.innerHTML = "";
@@ -394,22 +392,39 @@ function createTable(
     const columnLabel = schema.displayProperties[key].label;
 
     // Determine the sort order for the next click
-    let nextOrderType = orderType === "ASC" ? "DESC" : "ASC";
+    const currentSortIndex = orderParams.findIndex(param => param[0] === key);
+    const currentSort = currentSortIndex >= 0 ? orderParams[currentSortIndex][1] : null;
+    let nextOrderType = currentSort === "ASC" ? "DESC" : "ASC";
 
     th.innerText = columnLabel;
     th.className = "sortable"; // Optional: add a class for styling sortable columns
 
-    // key is the column name
-    if (key === orderColumn) {
-      th.classList.add(orderType.toLowerCase());
+    if (currentSort) {
+      th.classList.add(currentSort.toLowerCase());
+      const sortNumber = document.createElement("span");
+      sortNumber.className = "sort-number";
+      sortNumber.innerText = currentSortIndex + 1; // Display the order index
+      th.appendChild(sortNumber);
     }
 
     // Add a click event listener to handle sorting
     // TODO: Implement sorting
     th.addEventListener("click", () => {
+      if (currentSortIndex >= 0) {
+        // If the column is already sorted, update its sort order
+        orderParams[currentSortIndex][1] = nextOrderType;
+        // Move this column to the start of the array
+        const [currentSort] = orderParams.splice(currentSortIndex, 1);
+        orderParams.unshift(currentSort);
+      } else {
+        // If the column is not sorted yet, add it to the start of orderParams
+        orderParams.unshift([key, nextOrderType]);
+      }
+      // Render the table with the updated sort parameters
+      renderTable(schema, searchParams, orderParams, page, pageSize);
       goToPage(schema, searchParams, orderParams, page, pageSize);
     });
-
+    
     headerRow.appendChild(th);
   }
 
@@ -472,9 +487,6 @@ async function renderTable(
   orderParams = [],
   page = 1,
   pageSize = 10,
-  searchColumn = "all",
-  orderColumn = "id",
-  orderType = "ASC",
 ) {
   try {
     const queryParams = new URLSearchParams({

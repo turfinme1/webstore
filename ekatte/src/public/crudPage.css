@@ -228,12 +228,10 @@ tbody tr:hover {
     color: #555;
 }
 
-/* Style for sortable columns */
 .sortable {
     cursor: pointer;
     position: relative;
-    padding-right: 25px;
-    /* Adjust padding for arrow space */
+    padding-right: 35px; /* Adjust padding for arrow and sort number space */
     transition: background-color 0.3s ease;
 }
 
@@ -255,6 +253,23 @@ tbody tr:hover {
 /* Descending arrow */
 .sortable.desc::after {
     border-top-color: #d32f2f;
+}
+
+/* Sort number */
+.sort-number {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    background-color: #0056b3;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Hover effect for sortable columns */
