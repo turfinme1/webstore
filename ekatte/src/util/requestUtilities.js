@@ -89,7 +89,13 @@ export function createResponse(response, statusCode, contentType, data) {
   );
 }
 
-export function assert(condition, statusCode, errors) { 
+export function ASSERT(condition, statusCode, errors) { 
+  if (!condition) {
+    throw { success: false, statusCode, data: null, errors };
+  }
+}
+
+export function ASSERT_USER(condition, statusCode, errors) { 
   if (!condition) {
     throw { success: false, statusCode, data: null, errors };
   }

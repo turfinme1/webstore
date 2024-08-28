@@ -1,5 +1,5 @@
 import { validateSchema } from "../schemas/validateSchema.js";
-import * as requestUtilities from "../util/requestUtilities.js";
+import { ASSERT_USER, serveFile } from "../util/requestUtilities.js";
 
 const entitySchemas = new Map();
 entitySchemas.set("regions");
@@ -24,7 +24,7 @@ export function routes(params) {
       },
       "/crud/:entity/query": {
         handler: crudController.getEntitiesOrderedPaginated,
-        middlewares: [],
+        middlewares: [validateQueryParams],
       },
       "/crud/:entity/:id": {
         handler: crudController.getById,
@@ -35,7 +35,7 @@ export function routes(params) {
         middlewares: [],
       },
       "/public": {
-        handler: requestUtilities.serveFile,
+        handler: serveFile,
         middlewares: [],
       },
     },
@@ -95,14 +95,14 @@ export function matchRoute(request, method, pathname, routes) {
       if (params.entity) {
         params.schema = entitySchemas.get(params.entity);
 
-        requestUtilities.assert(params.schema, 404, `${params.entity} not found`);
+        ASSERT_USER(params.schema, 404, `${params.entity} not found`);
       }
 
       return { route: routeDefinitions[route], params };
     }
   }
 
-  throw new Error("Route not found");
+  ASSERT_USER(false, 404, "Route not found");
 }
 
 export async function executeMiddlewares(middlewares, req, res, params) {
@@ -113,4 +113,31 @@ export async function executeMiddlewares(middlewares, req, res, params) {
 
 function validateEntity(req, res, params) {
   validateSchema(params.schema, req.bodyData);
+}
+
+function validateQueryParams(req, res, params) {
+  const schema = params.schema;
+  const searchParams = req.params.searchParams ? JSON.parse(req.params.searchParams): {};
+  const orderParams = req.params.orderParams ? JSON.parse(req.params.orderParams): [];
+  let errors = {};
+
+  const invalidSearchParams = Object.keys(searchParams).filter(
+    (key) => ! (schema.properties[key]?.searchable || schema.displayProperties[key]?.searchable)
+  );
+
+  const invalidOrderParams = orderParams.filter(
+    ([key]) => ! (schema.properties[key] || schema.displayProperties[key])
+  );
+
+  if (invalidSearchParams.length > 0) {
+    errors.searchParams = `Invalid search parameters: ${invalidSearchParams.join(", ")}`;
+  }
+  
+  if (invalidOrderParams.length > 0) {
+    errors.orderParams = `Invalid order parameters: ${invalidOrderParams
+      .map(([key]) => key)
+      .join(", ")}`;
+  }
+
+  ASSERT_USER(Object.keys(errors).length === 0, 422, errors);
 }

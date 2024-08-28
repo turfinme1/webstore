@@ -102,14 +102,14 @@ class CrudRepository {
 
   async getEntitiesOrderedPaginated(request, params) {
     const schema = params.schema;
+    const viewName = schema.views;  
     let searchParams = request.params.searchParams ? JSON.parse(request.params.searchParams) : {};
     let orderParams = request.params.orderParams ? JSON.parse(request.params.orderParams) : [];
     let paramsCount = Object.keys(searchParams).length;
     let page = request.params.page || 1;
     let pageSize = request.params.pageSize || 20;
-    const viewName = schema.views;  
     const offset = (page - 1) * pageSize;
-
+    
     const searchConditions = Object.entries(searchParams)
       .map(([column, value], index) => `STRPOS(LOWER(CAST(${column} AS text)), LOWER($${index + 1})) > 0`)
       .join(" AND ");
