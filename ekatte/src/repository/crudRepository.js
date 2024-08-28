@@ -1,4 +1,4 @@
-import * as requestUtilities from "../util/requestUtilities.js";
+import { ASSERT, ASSERT_USER } from "../util/requestUtilities.js";
 
 class CrudRepository {
   constructor(pool) {
@@ -11,10 +11,10 @@ class CrudRepository {
       const { rows } = await client.query(query, values);
       return rows;
     } catch (error) {
-      requestUtilities.assert(error.code !== '23505', 409, "Entity already exists");
-      requestUtilities.assert(error.code !== '23503', 404, "Entity ID not found");
-      requestUtilities.assert(error.code !== '22P02', 400, "Invalid data type");
-      requestUtilities.assert(false, 500, "Internal Server Error");
+      ASSERT(error.code !== '23505', 409, "Record already exists");
+      ASSERT(error.code !== '23503', 404, "Record with given ID was not found");
+      ASSERT_USER(error.code !== '22P02', 400, "Invalid data type");
+      ASSERT(false, 500, "Internal Server Error");
     } 
     finally {
       client.release();
