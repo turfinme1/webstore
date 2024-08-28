@@ -1,7 +1,7 @@
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import addErrors from "ajv-errors";
-import * as requestUtilities from "../util/requestUtilities.js";
+import { ASSERT_USER } from "../util/requestUtilities.js";
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
@@ -12,7 +12,6 @@ export function validateSchema(schema, data) {
   const isValid = validate(data);
   let errors = {};
   if (!isValid) {
-
     for (const error of validate.errors) {
       const key = error.instancePath.replace("/", "");
 
@@ -24,5 +23,5 @@ export function validateSchema(schema, data) {
     }
   }
 
-  requestUtilities.assert(isValid, 422, errors);
+  ASSERT_USER(isValid, 422, errors);
 }

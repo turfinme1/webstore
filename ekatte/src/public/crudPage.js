@@ -569,7 +569,7 @@ function createPaginationButtons(
 
   // Current Page Display
   const currentPageDisplay = document.createElement("span");
-  currentPageDisplay.innerText = `Page ${currentPage} of ${totalPages}`;
+  currentPageDisplay.innerText = `Page ${currentPage}`;
   // currentPageDisplay.style.margin = "0 10px";
   container.appendChild(currentPageDisplay);
 
