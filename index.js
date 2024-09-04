@@ -3,10 +3,11 @@ const express = require("express");
 const path = require("path");
 const pool = require("./src/database/dbConfig");
 const CrudController = require("./src/controllers/crudController");
+const entitySchemaCollection = require("./src/schemas/entitySchemaCollection");
 
 const app = express();
 const port = 3000;
-const controller = new CrudController(pool);
+const controller = new CrudController(pool, entitySchemaCollection);
 
 app.use("/public", express.static(path.join(__dirname, "src", "public")));
 app.use(bodyParser.json());

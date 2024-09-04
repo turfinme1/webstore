@@ -1,6 +1,7 @@
 class CrudController {
-  constructor(pool) {
+  constructor(pool, entitySchemaCollection) {
     this.pool = pool;
+    this.entitySchemaCollection = entitySchemaCollection;
     this.deleteEntity = this.deleteEntity.bind(this);
     this.update = this.update.bind(this);
     this.getById = this.getById.bind(this);
@@ -8,39 +9,20 @@ class CrudController {
     this.create = this.create.bind(this);
   }
 
-  async deleteEntity(req, res, next) {
+  async create(req, res, next) {
     try {
+      const schema = this.entitySchemaCollection[req.url.split("/")[2]];
       const connection = await this.pool.connect();
-      const { entity, id } = req.params;
-      const result = await connection.query(
-        `DELETE FROM ${entity} WHERE id = $1 RETURNING *`,
-        [id]
-      );
-      if (result.rows.length) {
-        res.json({ message: "Entity deleted" });
-      } else {
-        res.status(404).json({ error: "Entity not found" });
-      }
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  async update(req, res, next) {
-    try {
-      const connection = await this.pool.connect();
-      const { entity, id } = req.params;
       const data = req.body;
-      const columns = Object.keys(data)
-        .map((key, i) => `${key} = $${i + 1}`)
-        .join(", ");
-      const values = Object.values(data);
-
-      const query = `UPDATE ${entity} SET ${columns} WHERE id = $${
-        values.length + 1
-      } RETURNING *`;
-      const result = await connection.query(query, [...values, id]);
-      res.json(result.rows[0]);
+      const keys = Object.keys(schema.properties);
+      const values = keys.map((key) => data[key]);
+      
+      const query = `INSERT INTO ${schema.name}(${keys.join(",")}) VALUES(${keys
+        .map((_, i) => `$${i + 1}`)
+        .join(",")}) RETURNING *`;
+  
+      const result = await connection.query(query, values);
+      res.status(201).json(result.rows[0]);
     } catch (err) {
       next(err);
     }
@@ -48,10 +30,12 @@ class CrudController {
 
   async getById(req, res, next) {
     try {
+      const schema = this.entitySchemaCollection[req.url.split("/")[2]];
       const connection = await this.pool.connect();
-      const { entity, id } = req.params;
+      const { id } = req.params;
+
       const result = await connection.query(
-        `SELECT * FROM ${entity} WHERE id = $1`,
+        `SELECT * FROM ${schema.views} WHERE id = $1`,
         [id]
       );
       if (result.rows.length) {
@@ -66,27 +50,49 @@ class CrudController {
 
   async getAll(req, res, next) {
     try {
+      const schema = this.entitySchemaCollection[req.url.split("/")[2]];
       const connection = await this.pool.connect();
-      const { entity } = req.params;
-      const result = await connection.query(`SELECT * FROM ${entity}_view`);
+      const result = await connection.query(`SELECT * FROM ${schema.views}`);
       res.json(result.rows);
     } catch (err) {
       next(err);
     }
   }
 
-  async create(req, res, next) {
+  async update(req, res, next) {
     try {
-      const connection = await this.pool.connect();
-      const { entity } = req.params;
+      const schema = this.entitySchemaCollection[req.url.split("/")[2]];
       const data = req.body;
-      const columns = Object.keys(data).join(", ");
-      const values = Object.values(data);
-      const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
+      const { id } = req.params;
+      const connection = await this.pool.connect();
 
-      const query = `INSERT INTO ${entity} (${columns}) VALUES (${placeholders}) RETURNING *`;
-      const result = await connection.query(query, values);
-      res.status(201).json(result.rows[0]);
+      const keys = Object.keys(schema.properties);
+      const values = keys.map((key) => data[key]);
+
+      let query = `UPDATE ${schema.name} SET ${keys.map((key, i) => `${key} = $${i + 1}`).join(", ")}`;
+      query += ` WHERE id = $${keys.length + 1} RETURNING *`;
+
+      const result = await connection.query(query, [...values, id]);
+      res.json(result.rows[0]);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteEntity(req, res, next) {
+    try {
+      const schema = this.entitySchemaCollection[req.url.split("/")[2]];
+      const connection = await this.pool.connect();
+      const { id } = req.params;
+      const result = await connection.query(
+        `DELETE FROM ${schema.name} WHERE id = $1 RETURNING *`,
+        [id]
+      );
+      if (result.rows.length) {
+        res.json({ message: "Entity deleted" });
+      } else {
+        res.status(404).json({ error: "Entity not found" });
+      }
     } catch (err) {
       next(err);
     }
