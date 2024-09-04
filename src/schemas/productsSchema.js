@@ -1,0 +1,82 @@
+const productsSchema = {
+  type: "object",
+  name: "products",
+  routeName: "products",
+  views: "products_view",
+  properties: {
+    name: {
+      type: "string",
+      minLength: 3,
+      pattern: "^[a-zA-Z ]+$",
+      label: "Name",
+      placeholder: "Enter Name",
+      errorMessage: {
+        minLength: "Name must be at least 3 characters long.",
+      },
+    },
+    price: {
+      type: "number",
+      minimum: 1,
+      label: "Price",
+      placeholder: "Enter Price",
+      errorMessage: {
+        minimum: "Price must be a positive number.",
+      },
+    },
+    short_description: {
+      type: "string",
+      minLength: 3,
+      pattern: "^[a-zA-Z ]+$",
+      label: "Short Description",
+      placeholder: "Enter Short Description",
+      errorMessage: {
+        minLength: "Short Description must be at least 3 characters long.",
+      },
+    },
+    long_description: {
+      type: "string",
+      minLength: 3,
+      label: "Long Description",
+      pattern: "^[a-zA-Z ]+$",
+      placeholder: "Enter Long Description",
+      errorMessage: {
+        minLength: "Long Description must be at least 3 characters long.",
+      },
+    },
+  },
+  displayProperties: {
+    name: {
+      label: "Name",
+      placeholder: "Enter Name",
+      searchable: true,
+    },
+    price: {
+      label: "Price",
+      placeholder: "Enter Price",
+      searchable: true,
+    },
+    short_description: {
+      label: "Short Description",
+      placeholder: "Enter Short Description",
+      searchable: true,
+    },
+    long_description: {
+      label: "Long Description",
+      placeholder: "Enter Long Description",
+      searchable: true,
+    },
+  },
+  required: ["name", "price", "short_description", "long_description"],
+  additionalProperties: false,
+  errorMessage: {
+    required: {
+      name: "Name is required.",
+      price: "Price is required.",
+      short_description: "Short Description is required.",
+      long_description: "Long Description is required.",
+    },
+    additionalProperties: "No additional properties are allowed.",
+  },
+};
+
+module.exports = productsSchema;
