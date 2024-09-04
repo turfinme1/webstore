@@ -1,0 +1,15 @@
+{
+  "name": "web-store",
+  "version": "1.0.0",
+  "description": "Web store application",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "Borislav Angelov",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
