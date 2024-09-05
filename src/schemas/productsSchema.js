@@ -53,7 +53,6 @@ const productsSchema = {
     price: {
       label: "Price",
       placeholder: "Enter Price",
-      searchable: true,
     },
     short_description: {
       label: "Short Description",
