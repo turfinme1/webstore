@@ -9,7 +9,7 @@ const app = express();
 const port = 3000;
 const controller = new CrudController(pool, entitySchemaCollection);
 
-app.use("/public", express.static(path.join(__dirname, "src", "public")));
+app.use(express.static(path.join(__dirname, "src", "public")));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
