@@ -7,12 +7,13 @@ const entitySchemaCollection = require("./src/schemas/entitySchemaCollection");
 
 const app = express();
 const port = 3000;
-const controller = new CrudController(pool, entitySchemaCollection);
+const controller = new CrudController(entitySchemaCollection);
 
 app.use(express.static(path.join(__dirname, "src", "public")));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+app.use(dbConnectionMiddleware);
 app.get("/crud/:entity", controller.getAll);
 app.get("/crud/:entity/:id", controller.getById);
 app.post("/crud/:entity", controller.create);
@@ -24,6 +25,22 @@ app.use(errorHandler);
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
+async function dbConnectionMiddleware(req, res, next) {
+  let connection;
+  try {
+    req.pool = pool;
+    connection = await req.pool.connect();
+    req.dbConnection = connection; 
+    await next(); 
+  } catch (err) {
+    next(err); 
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+}
 
 function errorHandler(err, req, res, next) {
   console.error(err.stack);

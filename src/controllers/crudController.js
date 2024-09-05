@@ -1,6 +1,5 @@
 class CrudController {
-  constructor(pool, entitySchemaCollection) {
-    this.pool = pool;
+  constructor(entitySchemaCollection) {
     this.entitySchemaCollection = entitySchemaCollection;
     this.deleteEntity = this.deleteEntity.bind(this);
     this.update = this.update.bind(this);
@@ -12,7 +11,7 @@ class CrudController {
   async create(req, res, next) {
     try {
       const schema = this.entitySchemaCollection[req.url.split("/")[2]];
-      const connection = await this.pool.connect();
+      const connection = req.dbConnection;
       const data = req.body;
       const keys = Object.keys(schema.properties);
       const values = keys.map((key) => data[key]);
@@ -31,7 +30,7 @@ class CrudController {
   async getById(req, res, next) {
     try {
       const schema = this.entitySchemaCollection[req.url.split("/")[2]];
-      const connection = await this.pool.connect();
+      const connection = req.dbConnection;
       const { id } = req.params;
 
       const result = await connection.query(
@@ -51,7 +50,7 @@ class CrudController {
   async getAll(req, res, next) {
     try {
       const schema = this.entitySchemaCollection[req.url.split("/")[2]];
-      const connection = await this.pool.connect();
+      const connection = req.dbConnection;
       const result = await connection.query(`SELECT * FROM ${schema.views}`);
       res.json(result.rows);
     } catch (err) {
@@ -64,7 +63,7 @@ class CrudController {
       const schema = this.entitySchemaCollection[req.url.split("/")[2]];
       const data = req.body;
       const { id } = req.params;
-      const connection = await this.pool.connect();
+      const connection = req.dbConnection;
 
       const keys = Object.keys(schema.properties);
       const values = keys.map((key) => data[key]);
@@ -82,7 +81,7 @@ class CrudController {
   async deleteEntity(req, res, next) {
     try {
       const schema = this.entitySchemaCollection[req.url.split("/")[2]];
-      const connection = await this.pool.connect();
+      const connection = req.dbConnection;
       const { id } = req.params;
       const result = await connection.query(
         `DELETE FROM ${schema.name} WHERE id = $1 RETURNING *`,
