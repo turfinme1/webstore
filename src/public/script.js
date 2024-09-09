@@ -166,24 +166,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const updateSelectedCategories = () => {
-    selectedCategoriesDiv.innerHTML = "";
-
-    selectedCategories.forEach((category) => {
-      const tag = document.createElement("div");
-      tag.classList.add("category-tag");
-      tag.innerText = category;
-
-      tag.addEventListener("click", () => {
-        selectedCategories = selectedCategories.filter(
-          (cat) => cat !== category
-        );
-        document.querySelector(`input[value="${category}"]`).checked = false;
-        updateSelectedCategories();
-        updateProductList();
-      });
-
-      selectedCategoriesDiv.appendChild(tag);
-    });
 
     categoryFilterInput.value =
       selectedCategories.length > 0 ? selectedCategories.join(", ") : "";
