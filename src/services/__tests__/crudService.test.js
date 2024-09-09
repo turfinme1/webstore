@@ -171,12 +171,6 @@ describe("CrudService", () => {
       );
       expect(result).toEqual(expectedResponse);
     });
-
-    // it("should throw an error if the product to update does not exist", async () => {
-    //   mockDbConnection.query.mockResolvedValue({ rows: [] });
-
-    //   await expect(crudService.update(req)).rejects.toThrow();
-    // });
   });
 
   describe("delete", () => {
@@ -199,11 +193,5 @@ describe("CrudService", () => {
       );
       expect(result).toEqual(expectedResponse);
     });
-
-    // it("should throw an error if the product to delete does not exist", async () => {
-    //   mockDbConnection.query.mockResolvedValue({ rows: [] });
-
-    //   await expect(crudService.delete(req)).rejects.toThrow();
-    // });
   });
 });
