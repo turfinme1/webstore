@@ -5,6 +5,7 @@ const bodyParser = require("body-parser");
 
 const pool = require("./src/database/dbConfig");
 const serviceConfiguration = require("./src/serverConfigurations/serviceConfiguration");
+const entitySchemaCollection = require("./src/schemas/entitySchemaCollection");
 
 const port = 3000;
 
@@ -30,6 +31,7 @@ function requestWrapper(handler) {
     try {
       req.pool = pool;
       req.dbConnection = await req.pool.connect();
+      req.entitySchemaCollection = entitySchemaCollection;
       await handler(req, res, next);
     } catch (err) {
       console.error(err.stack);
