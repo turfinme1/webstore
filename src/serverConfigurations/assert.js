@@ -9,3 +9,5 @@ function ASSERT_USER(condition, message, params) {
     throw new Error(message);
   }
 }
+
+module.exports = { ASSERT, ASSERT_USER };
