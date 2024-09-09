@@ -2,12 +2,11 @@ const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
 const ProductService = require("../services/productService");
 const ProductController = require("../controllers/productController");
-const entitySchemaCollection = require("../schemas/entitySchemaCollection");
 const { ASSERT_USER } = require("./assert");
 
-const service = new CrudService(entitySchemaCollection);
+const service = new CrudService();
 const controller = new CrudController(service);
-const productService = new ProductService(entitySchemaCollection);
+const productService = new ProductService();
 const productController = new ProductController(productService, validateQueryParams);
 
 const routeTable = {

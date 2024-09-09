@@ -1,6 +1,5 @@
 class CrudService {
-  constructor(entitySchemaCollection) {
-    this.entitySchemaCollection = entitySchemaCollection;
+  constructor() {
     this.create = this.create.bind(this);
     this.getAll = this.getAll.bind(this);
     this.getById = this.getById.bind(this);
@@ -9,7 +8,7 @@ class CrudService {
   }
 
   async create(req) {
-    const schema = this.entitySchemaCollection[req.params.entity];
+    const schema = req.entitySchemaCollection[req.params.entity];
     const keys = Object.keys(schema.properties);
     const values = keys.map((key) => req.body[key]);
 
@@ -23,19 +22,18 @@ class CrudService {
   }
 
   async getById(req) {
-    const schema = this.entitySchemaCollection[req.params.entity];
-    const { id } = req.params;
+    const schema = req.entitySchemaCollection[req.params.entity];
 
     const result = await req.dbConnection.query(
       `SELECT * FROM ${schema.views} WHERE id = $1`,
-      [id]
+      [req.params.id]
     );
 
     return result.rows[0];
   }
 
   async getAll(req) {
-    const schema = this.entitySchemaCollection[req.params.entity];
+    const schema = req.entitySchemaCollection[req.params.entity];
 
     const result = await req.dbConnection.query(
       `SELECT * FROM ${schema.views}`
@@ -45,8 +43,7 @@ class CrudService {
   }
 
   async update(req) {
-    const schema = this.entitySchemaCollection[req.params.entity];
-    const { id } = req.params;
+    const schema = req.entitySchemaCollection[req.params.entity];
     const keys = Object.keys(schema.properties);
     const values = keys.map((key) => req.body[key]);
     let query = `UPDATE ${schema.name} SET ${keys
@@ -54,18 +51,17 @@ class CrudService {
       .join(", ")}`;
     query += ` WHERE id = $${keys.length + 1} RETURNING *`;
 
-    const result = await req.dbConnection.query(query, [...values, id]);
+    const result = await req.dbConnection.query(query, [...values, req.params.id]);
 
     return result.rows[0];
   }
 
   async delete(req) {
-    const schema = this.entitySchemaCollection[req.params.entity];
-    const { id } = req.params;
+    const schema = req.entitySchemaCollection[req.params.entity];
 
     const result = await req.dbConnection.query(
       `DELETE FROM ${schema.name} WHERE id = $1 RETURNING *`,
-      [id]
+      [ req.params.id]
     );
 
     return result.rows[0];

@@ -6,6 +6,7 @@ const bodyParser = require("body-parser");
 const pool = require("./src/database/dbConfig");
 const serviceConfiguration = require("./src/serverConfigurations/serviceConfiguration");
 const entitySchemaCollection = require("./src/schemas/entitySchemaCollection");
+const { UserError } = require("./src/serverConfigurations/assert");
 
 const port = 3000;
 
@@ -33,9 +34,13 @@ function requestWrapper(handler) {
       req.dbConnection = await req.pool.connect();
       req.entitySchemaCollection = entitySchemaCollection;
       await handler(req, res, next);
-    } catch (err) {
-      console.error(err.stack);
-      res.status(500).json({ error: "Internal Server Error" });
+    } catch (error) {
+      console.error(error.stack);
+      if (error instanceof UserError) {
+        return res.status(400).json({ error: error.message });
+      } else {
+        return res.status(500).json({ error: error.message || "Internal server error" });
+      }
     } finally {
       if (req.dbConnection) {
         req.dbConnection.release();

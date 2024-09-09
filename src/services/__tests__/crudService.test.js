@@ -24,8 +24,6 @@ describe("CrudService", () => {
       },
     };
 
-    crudService = new CrudService(mockEntitySchemaCollection);
-
     req = {
       params: { entity: "testEntity", id: "1" },
       body: {
@@ -35,7 +33,10 @@ describe("CrudService", () => {
         long_description: "Long description",
       },
       dbConnection: mockDbConnection,
+      entitySchemaCollection: mockEntitySchemaCollection,
     };
+
+    crudService = new CrudService();
   });
 
   describe("create", () => {

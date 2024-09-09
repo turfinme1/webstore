@@ -6,8 +6,15 @@ function ASSERT(condition, message) {
 
 function ASSERT_USER(condition, message, params) {
   if (!condition) {
-    throw new Error(message);
+    throw new UserError(message, params);
   }
 }
 
-module.exports = { ASSERT, ASSERT_USER };
+class UserError extends Error {
+  constructor(message, params) {
+    super(message);
+    this.params = params;
+  }
+}
+
+module.exports = { ASSERT, ASSERT_USER, UserError };
