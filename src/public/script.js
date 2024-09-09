@@ -14,31 +14,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let selectedCategories = [];
   let currentPage = 1;
-  const pageSize = 5;
+  const pageSize = 6;
   let sortOption = ""; // Sort option for price (asc or desc)
   let minPrice = null;
   let maxPrice = null;
 
   const fetchProducts = async (searchTerm = "", categories = [], page = 1, minPrice = null, maxPrice = null, sortOption = "") => {
     let searchParams = { keyword: searchTerm };
+    
     if (categories.length > 0) {
       searchParams.categories = categories;
     }
-    if (minPrice !== null) {
-      searchParams.minPrice = minPrice;
+    if (minPrice || maxPrice) {
+      searchParams.price = { min: minPrice, max: maxPrice };
     }
-    if (maxPrice !== null) {
-      searchParams.maxPrice = maxPrice;
+  
+    const queryParams = new URLSearchParams();
+    queryParams.append('searchParams', JSON.stringify(searchParams));
+    
+    if (sortOption) {
+      queryParams.append('orderParams', JSON.stringify([["price", sortOption]]));
     }
-
-    const queryString = `searchParams=${encodeURIComponent(
-      JSON.stringify(searchParams)
-    )}&orderParams=${encodeURIComponent(
-      JSON.stringify([["price", sortOption]])
-    )}&pageSize=${pageSize + 1}&page=${page}`;
-    const response = await fetch(
-      `http://localhost:3000/api/products?${queryString}`
-    );
+    
+    queryParams.append('pageSize', pageSize + 1);
+    queryParams.append('page', page);
+  
+    const response = await fetch(`http://localhost:3000/api/products?${queryParams.toString()}`);
     return await response.json();
   };
 
@@ -189,6 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   searchBtn.addEventListener("click", () => {
+    currentPage = 1;
     updateProductList();
   });
 
