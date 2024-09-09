@@ -65,6 +65,25 @@ const productsSchema = {
       searchable: true,
     },
   },
+  seachParams: {
+    keyword: {
+      type: "string",
+    },
+    price: {
+      type: "object",
+      properties: {
+        min: {
+          type: "number",
+        },
+        max: {
+          type: "number",
+        },
+      },
+    },
+    categories: {
+      type: "array",
+    },
+  },
   required: ["name", "price", "short_description", "long_description"],
   additionalProperties: false,
   errorMessage: {
