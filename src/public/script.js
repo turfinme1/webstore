@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const productList = document.getElementById("product-list");
   const searchInput = document.getElementById("search-input");
   const searchBtn = document.getElementById("search-btn");
+  const sortPriceSelect = document.getElementById("sort-price");
   const categoryFilterInput = document.getElementById("category-filter-input");
   const categoryOptions = document.getElementById("category-options");
   const selectedCategoriesDiv = document.getElementById("selected-categories");
@@ -9,8 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const currentPageDisplay = document.getElementById("current-page-display");
   const minPriceInput = document.getElementById("min-price-input");
   const maxPriceInput = document.getElementById("max-price-input");
-  const sortPriceSelect = document.getElementById("sort-price");
   const applyFiltersBtn = document.getElementById("apply-filters");
+  const priceValidationMessage = document.getElementById("price-validation-message");
 
   let selectedCategories = [];
   let currentPage = 1;
@@ -39,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
     queryParams.append('pageSize', pageSize + 1);
     queryParams.append('page', page);
   
-    const response = await fetch(`http://localhost:3000/api/products?${queryParams.toString()}`);
+    const response = await fetch(`/api/products?${queryParams.toString()}`);
     return await response.json();
   };
 
@@ -138,6 +139,11 @@ document.addEventListener("DOMContentLoaded", () => {
     currentPageDisplay.textContent = `Page ${currentPage}`;
   };
 
+  searchBtn.addEventListener("click", () => {
+    currentPage = 1;
+    updateProductList();
+  });
+
   categoryFilterInput.addEventListener("click", () => {
     categoryOptions.style.display =
       categoryOptions.style.display === "block" ? "none" : "block";
@@ -161,17 +167,12 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedCategories = selectedCategories.filter((cat) => cat !== value);
     }
 
-    updateSelectedCategories();
-    updateProductList();
-  });
-
-  const updateSelectedCategories = () => {
-
     categoryFilterInput.value =
       selectedCategories.length > 0 ? selectedCategories.join(", ") : "";
-  };
+  });
 
-  searchBtn.addEventListener("click", () => {
+  sortPriceSelect.addEventListener("change", (e) => {
+    sortOption = e.target.value;
     currentPage = 1;
     updateProductList();
   });
@@ -179,8 +180,13 @@ document.addEventListener("DOMContentLoaded", () => {
   applyFiltersBtn.addEventListener("click", () => {
     minPrice = minPriceInput.value ? parseFloat(minPriceInput.value) : null;
     maxPrice = maxPriceInput.value ? parseFloat(maxPriceInput.value) : null;
-    sortOption = sortPriceSelect.value;
-    currentPage = 1; // Reset to the first page
+
+    if (minPrice && maxPrice && minPrice > maxPrice) {
+      alert("Min price cannot be greater than max price.");
+      return;
+    }
+
+    currentPage = 1;
     updateProductList();
   });
 
