@@ -5,12 +5,12 @@ class ProductService {
     this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
   }
 
-  async getFilteredPaginated(req, res) {
-    const schema = req.entitySchemaCollection["products"];  
-    const searchParams = req.query.searchParams ? JSON.parse(req.query.searchParams) : {};
-    const orderParams = req.query.orderParams ? JSON.parse(req.query.orderParams) : [];
-    const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
-    const page = req.query.page ? parseInt(req.query.page) : 1;   
+  async getFilteredPaginated(params) {
+    const schema = params.entitySchemaCollection["products"];  
+    const searchParams = params.query.searchParams ? JSON.parse(params.query.searchParams) : {};
+    const orderParams = params.query.orderParams ? JSON.parse(params.query.orderParams) : [];
+    const pageSize = params.query.pageSize ? parseInt(params.query.pageSize) : 10;
+    const page = params.query.page ? parseInt(params.query.page) : 1;   
     const offset = (page - 1) * pageSize;
     
     let searchValues = [];
@@ -69,7 +69,7 @@ class ProductService {
       LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}
     `;
 
-    const result = await req.dbConnection.query(query, [...searchValues, pageSize, offset]);
+    const result = await params.dbConnection.query(query, [...searchValues, pageSize, offset]);
 
     return result.rows;
   }
