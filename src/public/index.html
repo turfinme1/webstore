@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Page</title>
+    <link rel="stylesheet" href="/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+    <script defer src="/bootstrap.bundle.min.js"></script>
+    <script defer src="/script.js"></script>
+</head>
+
+<body>
+    <!-- Navigation Section -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Product Showcase</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Products</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container mt-4">
+        <!-- Search and Sort Section -->
+        <div class="search-sort-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="text" id="search-input" class="form-control" placeholder="Search products...">
+                </div>
+                <div class="col-md-2">
+                    <button id="search-btn" class="btn btn-primary">Search</button>
+                </div>
+                <div class="col-md-4">
+                    <select id="sort-price" class="form-select">
+                        <option value="">Sort by Price</option>
+                        <option value="asc">Price: Low to High</option>
+                        <option value="desc">Price: High to Low</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Filters Section -->
+        <div class="filters-section row mb-4">
+            <div class="col-md-3">
+                <input type="number" id="min-price-input" class="form-control" placeholder="Min Price">
+            </div>
+            <div class="col-md-3">
+                <input type="number" id="max-price-input" class="form-control" placeholder="Max Price">
+            </div>
+            <div class="col-md-4">
+                <div class="custom-multi-select">
+                    <input type="text" id="category-filter-input" placeholder="Select categories..." readonly>
+                    <div id="category-options" class="options-list">
+                        <label><input type="checkbox" value="Electronics"> Electronics</label>
+                        <label><input type="checkbox" value="Computers"> Computers</label>
+                        <label><input type="checkbox" value="Audio"> Audio</label>
+                        <label><input type="checkbox" value="Gaming"> Gaming</label>
+                        <label><input type="checkbox" value="Home Entertainment"> Home Entertainment</label>
+                        <label><input type="checkbox" value="Clothing"> Clothing</label>
+                        <label><input type="checkbox" value="Footwear"> Footwear</label>
+                    </div>
+                    <div id="selected-categories" class="selected-categories"></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button id="apply-filters" class="btn btn-primary">Apply Filters</button>
+            </div>
+        </div>
+
+        <!-- Product Listing Section -->
+        <div class="row" id="product-list">
+            <!-- Products will be dynamically injected here -->
+        </div>
+
+        <!-- Pagination Section -->
+        <div class="row mt-4">
+            <div id="pagination-container" class="col-md-6 d-flex justify-content-center"></div>
+            <div id="current-page-display" class="col-md-6 d-flex justify-content-center"></div>
+        </div>
+    </div>
+</body>
+
+</html>
