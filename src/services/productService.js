@@ -1,3 +1,5 @@
+const { ASSERT_USER } = require("../serverConfigurations/assert");
+
 class ProductService {
   constructor() {
     this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
@@ -28,6 +30,7 @@ class ProductService {
     }
 
     if (searchParams.price) {
+      ASSERT_USER((searchParams.price.min || 0) <= (searchParams.price.max || Infinity), "Invalid price range");
       if (searchParams.price.min) {
         searchValues.push(searchParams.price.min);
         filterConditions.push(`price >= $${searchValues.length}`);
