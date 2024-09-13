@@ -1,8 +1,9 @@
-document.addEventListener("DOMContentLoaded", () => {
+import { createNavigation } from "./navigation.js";
+
+document.addEventListener("DOMContentLoaded",async () => {
   const productList = document.getElementById("product-list");
   const searchInput = document.getElementById("search-input");
   const searchBtn = document.getElementById("search-btn");
-  const sortPriceSelect = document.getElementById("sort-price");
   const categoryFilterInput = document.getElementById("category-filter-input");
   const categoryOptions = document.getElementById("category-options");
   const selectedCategoriesDiv = document.getElementById("selected-categories");
@@ -10,8 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const currentPageDisplay = document.getElementById("current-page-display");
   const minPriceInput = document.getElementById("min-price-input");
   const maxPriceInput = document.getElementById("max-price-input");
+  const sortPriceSelect = document.getElementById("sort-price");
   const applyFiltersBtn = document.getElementById("apply-filters");
-  const priceValidationMessage = document.getElementById("price-validation-message");
 
   let selectedCategories = [];
   let currentPage = 1;
@@ -19,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let sortOption = ""; // Sort option for price (asc or desc)
   let minPrice = null;
   let maxPrice = null;
+  let userStatus = {session_type: "Unauthenticated"};
 
   const fetchProducts = async (searchTerm = "", categories = [], page = 1, minPrice = null, maxPrice = null, sortOption = "") => {
     let searchParams = { keyword: searchTerm };
@@ -105,7 +107,12 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     renderProducts(products);
 
-    renderPagination(products.length > pageSize);
+    if(products.length>0){
+      renderPagination(products.length > pageSize);
+    } else {
+      currentPageDisplay.textContent = "";
+      paginationContainer.innerHTML = "";
+    }
   };
 
   const renderPagination = (hasNextPage) => {
@@ -139,11 +146,6 @@ document.addEventListener("DOMContentLoaded", () => {
     currentPageDisplay.textContent = `Page ${currentPage}`;
   };
 
-  searchBtn.addEventListener("click", () => {
-    currentPage = 1;
-    updateProductList();
-  });
-
   categoryFilterInput.addEventListener("click", () => {
     categoryOptions.style.display =
       categoryOptions.style.display === "block" ? "none" : "block";
@@ -167,8 +169,18 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedCategories = selectedCategories.filter((cat) => cat !== value);
     }
 
+    updateSelectedCategories();
+  });
+
+  const updateSelectedCategories = () => {
+
     categoryFilterInput.value =
       selectedCategories.length > 0 ? selectedCategories.join(", ") : "";
+  };
+
+  searchBtn.addEventListener("click", () => {
+    currentPage = 1;
+    updateProductList();
   });
 
   sortPriceSelect.addEventListener("change", (e) => {
@@ -178,11 +190,19 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   applyFiltersBtn.addEventListener("click", () => {
+    if(minPriceInput.value && isNaN(minPriceInput.value)){
+      alert("Minimum price must be a number.");
+      return;
+    }
+    if(maxPriceInput.value && isNaN(maxPriceInput.value)){
+      alert("Maximum price must be a number.");
+      return;
+    }
     minPrice = minPriceInput.value ? parseFloat(minPriceInput.value) : null;
     maxPrice = maxPriceInput.value ? parseFloat(maxPriceInput.value) : null;
 
-    if (minPrice && maxPrice && minPrice > maxPrice) {
-      alert("Min price cannot be greater than max price.");
+    if (minPrice !== null && maxPrice !== null && (minPrice > maxPrice)) {
+      alert("Minimum price cannot be greater than maximum price.");
       return;
     }
 
@@ -191,4 +211,5 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   updateProductList();
+  createNavigation(userStatus);
 });
