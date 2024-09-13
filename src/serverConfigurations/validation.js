@@ -1,3 +1,4 @@
+const { default: Ajv } = require("ajv");
 const { ASSERT_USER } = require("./assert");
 
 function validateQueryParams(req, schema) {
@@ -19,4 +20,25 @@ function validateQueryParams(req, schema) {
   ASSERT_USER(invalidOrderParams.length === 0, "Invalid order query parameters");
 }
 
-module.exports = { validateQueryParams };
+function validateBody(req, schema) {
+  const ajv = new Ajv({ allErrors: true, strict: false });
+  const validate = ajv.compile(schema);
+  const isValid = validate(req.body);
+  let errors = {};
+
+  if (!isValid) {
+    for (const error of validate.errors) {
+      const key = error.instancePath.replace("/", "");
+
+      if (!errors[key]) {
+        errors[key] = [];
+      }
+
+      errors[key].push(error.message);
+    }
+  }
+  ASSERT_USER(isValid, "Invalid body data");
+  // ASSERT_USER(isValid, JSON.stringify(errors));
+}
+
+module.exports = { validateQueryParams, validateBody };
