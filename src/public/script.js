@@ -1,8 +1,10 @@
-document.addEventListener("DOMContentLoaded", () => {
+import { attachLogoutHandler, getUserStatus } from "./auth.js";
+import { createNavigation } from "./navigation.js";
+
+document.addEventListener("DOMContentLoaded", async () => {
   const productList = document.getElementById("product-list");
   const searchInput = document.getElementById("search-input");
   const searchBtn = document.getElementById("search-btn");
-  const sortPriceSelect = document.getElementById("sort-price");
   const categoryFilterInput = document.getElementById("category-filter-input");
   const categoryOptions = document.getElementById("category-options");
   const selectedCategoriesDiv = document.getElementById("selected-categories");
@@ -10,36 +12,67 @@ document.addEventListener("DOMContentLoaded", () => {
   const currentPageDisplay = document.getElementById("current-page-display");
   const minPriceInput = document.getElementById("min-price-input");
   const maxPriceInput = document.getElementById("max-price-input");
+  const sortPriceSelect = document.getElementById("sort-price");
   const applyFiltersBtn = document.getElementById("apply-filters");
-  const priceValidationMessage = document.getElementById("price-validation-message");
 
   let selectedCategories = [];
   let currentPage = 1;
   const pageSize = 6;
-  let sortOption = ""; // Sort option for price (asc or desc)
+  let sortOption = ""; // Sort option for price ("ASC" or "DESC")
   let minPrice = null;
   let maxPrice = null;
+  let userStatus = await getUserStatus();
 
-  const fetchProducts = async (searchTerm = "", categories = [], page = 1, minPrice = null, maxPrice = null, sortOption = "") => {
-    let searchParams = { keyword: searchTerm };
-    
+  const fetchProducts = async (
+    searchTerm = "",
+    categories = [],
+    page = 1,
+    minPrice = null,
+    maxPrice = null,
+    sortOption = ""
+  ) => {
+    // Build searchParams with only the keyword
+    const searchParams = {};
+    if (searchTerm) {
+      searchParams.keyword = searchTerm;
+    }
+
+    // Build filterParams with categories and price
+    const filterParams = {};
     if (categories.length > 0) {
-      searchParams.categories = categories;
+      filterParams.categories = categories;
     }
-    if (minPrice || maxPrice) {
-      searchParams.price = { min: minPrice, max: maxPrice };
+    if (minPrice !== null || maxPrice !== null) {
+      filterParams.price = {};
+      if (minPrice !== null) {
+        filterParams.price.min = minPrice;
+      }
+      if (maxPrice !== null) {
+        filterParams.price.max = maxPrice;
+      }
     }
-  
-    const queryParams = new URLSearchParams();
-    queryParams.append('searchParams', JSON.stringify(searchParams));
-    
+
+    // Build orderParams
+    const orderParams = [];
     if (sortOption) {
-      queryParams.append('orderParams', JSON.stringify([["price", sortOption]]));
+      orderParams.push(["price", sortOption.toUpperCase()]);
     }
-    
-    queryParams.append('pageSize', pageSize + 1);
-    queryParams.append('page', page);
-  
+
+    // Construct query parameters
+    const queryParams = new URLSearchParams();
+    if (Object.keys(searchParams).length > 0) {
+      queryParams.append("searchParams", JSON.stringify(searchParams));
+    }
+    if (Object.keys(filterParams).length > 0) {
+      queryParams.append("filterParams", JSON.stringify(filterParams));
+    }
+    if (orderParams.length > 0) {
+      queryParams.append("orderParams", JSON.stringify(orderParams));
+    }
+    queryParams.append("pageSize", pageSize.toString());
+    queryParams.append("page", page.toString());
+
+    // Fetch products
     const response = await fetch(`/api/products?${queryParams.toString()}`);
     return await response.json();
   };
@@ -51,50 +84,44 @@ document.addEventListener("DOMContentLoaded", () => {
       productCard.classList.add("col-md-4", "product-card");
       productCard.innerHTML = `
         <div class="card h-100">
-            <div id="carousel-${
-              product.id
-            }" class="carousel slide" data-bs-ride="carousel">
-                <div class="carousel-inner">
-                    ${product.images
-                      .map(
-                        (img, index) => `
-                        <div class="carousel-item ${
-                          index === 0 ? "active" : ""
-                        }">
-                            <img src="${img}" class="d-block w-100" alt="${
-                          product.name
-                        }">
-                        </div>
-                    `
-                      )
-                      .join("")}
+          <div id="carousel-${product.id}" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-inner">
+              ${product.images
+                .map(
+                  (img, index) => `
+                <div class="carousel-item ${index === 0 ? "active" : ""}">
+                  <img src="${img}" class="d-block w-100" alt="${product.name}">
                 </div>
-                <button class="carousel-control-prev" type="button" data-bs-target="#carousel-${
-                  product.id
-                }" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#carousel-${
-                  product.id
-                }" data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
+              `
+                )
+                .join("")}
             </div>
-            <div class="card-body">
-                <h5 class="card-title">${product.name}</h5>
-                <p class="card-text">${product.short_description}</p>
-                <p class="text-muted">$${product.price}</p>
-            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#carousel-${
+              product.id
+            }" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#carousel-${
+              product.id
+            }" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          </div>
+          <div class="card-body">
+            <h5 class="card-title">${product.name}</h5>
+            <p class="card-text">${product.short_description}</p>
+            <p class="text-muted">$${product.price}</p>
+          </div>
         </div>
-    `;
+      `;
       productList.appendChild(productCard);
     });
   };
 
   const updateProductList = async () => {
-    const searchTerm = searchInput.value.toLowerCase();
+    const searchTerm = searchInput.value.trim();
     const products = await fetchProducts(
       searchTerm,
       selectedCategories,
@@ -105,7 +132,12 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     renderProducts(products);
 
-    renderPagination(products.length > pageSize);
+    if (products.length > 0) {
+      renderPagination(products.length >= pageSize);
+    } else {
+      currentPageDisplay.textContent = "";
+      paginationContainer.innerHTML = "";
+    }
   };
 
   const renderPagination = (hasNextPage) => {
@@ -139,11 +171,6 @@ document.addEventListener("DOMContentLoaded", () => {
     currentPageDisplay.textContent = `Page ${currentPage}`;
   };
 
-  searchBtn.addEventListener("click", () => {
-    currentPage = 1;
-    updateProductList();
-  });
-
   categoryFilterInput.addEventListener("click", () => {
     categoryOptions.style.display =
       categoryOptions.style.display === "block" ? "none" : "block";
@@ -167,8 +194,17 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedCategories = selectedCategories.filter((cat) => cat !== value);
     }
 
+    updateSelectedCategories();
+  });
+
+  const updateSelectedCategories = () => {
     categoryFilterInput.value =
       selectedCategories.length > 0 ? selectedCategories.join(", ") : "";
+  };
+
+  searchBtn.addEventListener("click", () => {
+    currentPage = 1;
+    updateProductList();
   });
 
   sortPriceSelect.addEventListener("change", (e) => {
@@ -178,11 +214,23 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   applyFiltersBtn.addEventListener("click", () => {
-    minPrice = minPriceInput.value ? parseFloat(minPriceInput.value) : null;
-    maxPrice = maxPriceInput.value ? parseFloat(maxPriceInput.value) : null;
+    const minPriceValue = minPriceInput.value.trim();
+    const maxPriceValue = maxPriceInput.value.trim();
 
-    if (minPrice && maxPrice && minPrice > maxPrice) {
-      alert("Min price cannot be greater than max price.");
+    if (minPriceValue && isNaN(minPriceValue)) {
+      alert("Minimum price must be a number.");
+      return;
+    }
+    if (maxPriceValue && isNaN(maxPriceValue)) {
+      alert("Maximum price must be a number.");
+      return;
+    }
+
+    minPrice = minPriceValue !== "" ? parseFloat(minPriceValue) : null;
+    maxPrice = maxPriceValue !== "" ? parseFloat(maxPriceValue) : null;
+
+    if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
+      alert("Minimum price cannot be greater than maximum price.");
       return;
     }
 
@@ -191,4 +239,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   updateProductList();
+  createNavigation(userStatus);
+  await attachLogoutHandler();
 });
