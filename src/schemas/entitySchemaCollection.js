@@ -4,9 +4,9 @@ const path = require("path");
 function loadEntitySchemas() {
   const files = fs.readdirSync(path.join(__dirname));
   const schemas = files.reduce((acc, file) => {
-    if (file.endsWith("Schema.js")) {
+    if (file.endsWith("Schema.json")) {
       const schema = require(path.join(__dirname, file));
-      acc[schema.routeName] = schema;
+      acc[schema.name] = schema;
     }
     return acc;
   }, {});
