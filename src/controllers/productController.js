@@ -6,14 +6,14 @@ class ProductController {
     this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
   }
 
-  async getFilteredPaginated(req, res, next) {
+  async getFilteredPaginated(req, res) {
     validateQueryParams(req, req.entitySchemaCollection.productQueryParamsSchema);
-    const params = {
+    const data = {
       query: req.query,
       entitySchemaCollection: req.entitySchemaCollection,
       dbConnection: req.dbConnection,
     };  
-    const result = await this.productService.getFilteredPaginated(params);
+    const result = await this.productService.getFilteredPaginated(data);
     res.status(200).json(result);
   }
 }
