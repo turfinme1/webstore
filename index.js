@@ -1,7 +1,7 @@
 const path = require("path");
 const express = require("express");
-const app = express();
 const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
 
 const pool = require("./src/database/dbConfig");
 const serviceConfiguration = require("./src/serverConfigurations/serviceConfiguration");
@@ -9,8 +9,10 @@ const entitySchemaCollection = require("./src/schemas/entitySchemaCollection");
 const { UserError } = require("./src/serverConfigurations/assert");
 
 const port = 3000;
-
+const app = express();
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "src", "public")));
+app.use(express.static(path.join(__dirname, "src", "schemas")));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 registerRoutes(serviceConfiguration.routeTable);
@@ -39,7 +41,7 @@ function requestWrapper(handler) {
       if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });
       } else {
-        return res.status(500).json({ error: error.message || "Internal server error" });
+        return res.status(500).json({ error: "Internal server error" });
       }
     } finally {
       if (req.dbConnection) {
