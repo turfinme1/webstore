@@ -1,0 +1,38 @@
+{
+    "type": "object",
+    "name": "userLoginSchema",
+    "properties": {
+        "email": {
+            "type": "string",
+            "label": "Email",
+            "placeholder": "Enter Email"
+        },
+        "password": {
+            "type": "string",
+            "label": "Password",
+            "placeholder": "Enter password"
+        },
+        "captcha_answer": {
+            "type": "string",
+            "minLength": 1,
+            "label": "Captcha",
+            "placeholder": "Enter Captcha",
+            "errorMessage": {
+                "minLength": "Captcha is required."
+            }
+        }
+    },
+    "required": [
+        "email",
+        "password",
+        "captcha_answer"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "email": "Email is required.",
+            "password": "Password is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

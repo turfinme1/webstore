@@ -1,15 +1,21 @@
+const { validateQueryParams } = require("../serverConfigurations/validation");
+
 class ProductController {
-  constructor(productService, validateQueryParams) {
+  constructor(productService) {
     this.productService = productService;
-    this.validateQueryParams = validateQueryParams;
     this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
   }
-  
+
   async getFilteredPaginated(req, res, next) {
-    this.validateQueryParams(req, req.entitySchemaCollection["products"]);
-    const result = await this.productService.getFilteredPaginated(req);
+    validateQueryParams(req, req.entitySchemaCollection.productQueryParamsSchema);
+    const params = {
+      query: req.query,
+      entitySchemaCollection: req.entitySchemaCollection,
+      dbConnection: req.dbConnection,
+    };  
+    const result = await this.productService.getFilteredPaginated(params);
     res.status(200).json(result);
   }
 }
 
-module.exports = ProductController;
+module.exports = ProductController; 

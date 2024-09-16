@@ -1,0 +1,311 @@
+// schemaService.js
+async function fetchUserSchema(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Failed to fetch schema");
+  return await response.json();
+}
+
+// formService.js
+async function createForm(schema, formId, formType) {
+  const form = document.createElement("form");
+  form.id = formId;
+  form.className = "needs-validation"; // For Bootstrap styling
+
+  const formTitle = document.createElement("h2");
+  formTitle.innerText = formType === "login" ? "Login" : "Register";
+  form.appendChild(formTitle);
+
+  for (const key in schema.properties) {
+    const field = schema.properties[key];
+    const wrapper = document.createElement("div");
+    wrapper.className = "form-group mb-3";
+
+    const label = document.createElement("label");
+    label.htmlFor = key;
+    label.className = "form-label";
+    label.innerText = field.label;
+
+    if (key === "iso_country_code_id") {
+      const select = document.createElement("select");
+      select.id = key;
+      select.name = key;
+      select.className = "form-select";
+
+      const countries = await fetchCountryCodes(field.fetchFrom);
+      countries.forEach((country) => {
+        const option = document.createElement("option");
+        option.value = country.id;
+        option.innerText = `${country.country_name} (${country.phone_code})`;
+        select.appendChild(option);
+      });
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(select);
+    } else if (key === "gender_id") {
+      const select = document.createElement("select");
+      select.id = key;
+      select.name = key;
+      select.className = "form-select";
+
+      field.enumValues.forEach((genderOption) => {
+        const option = document.createElement("option");
+        option.value = genderOption.value;
+        option.innerText = genderOption.label;
+        select.appendChild(option);
+      });
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(select);
+    } else if (key === "captcha_answer") {
+      const captchaImage = document.createElement("img");
+      captchaImage.id = "captcha-image";
+      captchaImage.alt = "CAPTCHA";
+      captchaImage.className = "captcha-image";
+      captchaImage.style.cursor = "pointer";
+      
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = key;
+      input.name = key;
+      input.placeholder = field.placeholder;
+      input.className = "form-control";
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(captchaImage);
+      wrapper.appendChild(input);
+    }
+    else {
+      const input = document.createElement("input");
+      input.type = key === "password" ? "password" : "text";
+      input.id = key;
+      input.name = key;
+      input.placeholder = field.placeholder;
+      input.className = "form-control";
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(input);
+    }
+
+    const errorMessage = document.createElement("div");
+    errorMessage.className = "invalid-feedback";
+    errorMessage.id = `${key}-error`;
+    wrapper.appendChild(errorMessage);
+
+    form.appendChild(wrapper);
+  }
+
+  // CAPTCHA section
+  // const captchaWrapper = document.createElement("div");
+  // captchaWrapper.className = "form-group mb-3";
+  // const captchaLabel = document.createElement("label");
+  // captchaLabel.htmlFor = "captcha";
+  // captchaLabel.className = "form-label";
+  // captchaLabel.innerText = "CAPTCHA";
+  // const captchaInput = document.createElement("input");
+  // captchaInput.type = "text";
+  // captchaInput.id = "captcha-answer";
+  // captchaInput.name = "captcha-answer";
+  // captchaInput.placeholder = "Enter the result";
+  // captchaInput.className = "form-control";
+  // const captchaImage = document.createElement("img");
+  // captchaImage.id = "captcha-image";
+  // captchaImage.alt = "CAPTCHA";
+  // captchaImage.className = "captcha-image"; // Style as needed
+  // captchaImage.style.cursor = "pointer"; // Indicate refreshable image
+  // captchaWrapper.appendChild(captchaLabel);
+  // captchaWrapper.appendChild(captchaInput);
+  // captchaWrapper.appendChild(captchaImage);
+  // const captchaError = document.createElement("div");
+  // captchaError.className = "invalid-feedback";
+  // captchaError.id = `captcha-error`;
+  // captchaWrapper.appendChild(captchaError);
+  // form.appendChild(captchaWrapper);
+
+  const genericMessage = document.createElement("div");
+  genericMessage.id = `${formId}-generic-message`;
+  genericMessage.className = "text-danger";
+  form.appendChild(genericMessage);
+
+  const submitButton = document.createElement("button");
+  submitButton.type = "submit";
+  submitButton.className = "btn btn-primary w-100 mt-3";
+  submitButton.innerText = formType === "login" ? "Login" : "Register";
+  form.appendChild(submitButton);
+
+  return form;
+}
+
+// Helper function to fetch country codes
+async function fetchCountryCodes(apiUrl) {
+  try {
+    const response = await fetch(apiUrl);
+    if (!response.ok) throw new Error("Failed to fetch country codes");
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching country codes:", error);
+    return [];
+  }
+}
+
+// validationService.js
+function attachValidationListeners(formId, schema, formType) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+
+  const Ajv = window.Ajv;
+  const ajv = new Ajv({ allErrors: true, strict: false });
+  window.ajvErrors(ajv);
+  const validate = ajv.compile(schema);
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const data = castFormDataToSchema(Object.fromEntries(formData), schema);
+
+    document.querySelectorAll(".invalid-feedback").forEach((el) => {
+      el.innerText = "";
+    });
+    document.querySelectorAll(".is-invalid").forEach((el) => {
+      el.classList.remove("is-invalid");
+    });
+
+    const valid = validate(data);
+    if (!valid) {
+      validate.errors.forEach((error) => {
+        const field = error.instancePath.slice(1);
+        const errorMessageEl = document.getElementById(`${field}-error`);
+        if (errorMessageEl) {
+          errorMessageEl.innerText = error.message;
+          document.getElementById(field).classList.add("is-invalid");
+        }
+      });
+    } else {
+      handleFormSubmission(`/auth/${formType}`, "POST", data, formId);
+    }
+  });
+}
+
+function castFormDataToSchema(data, schema) {
+  const castedData = {};
+
+  for (const key in data) {
+    if (schema.properties[key]) {
+      let expectedType = schema.properties[key].type;
+
+      // If type is an array, prioritize casting to the most likely type (integer, null, etc.)
+      if (Array.isArray(expectedType)) {
+        if (expectedType.includes("integer")) {
+          expectedType = "integer";
+        } else if (expectedType.includes("number")) {
+          expectedType = "number";
+        } else if (expectedType.includes("boolean")) {
+          expectedType = "boolean";
+        } else if (expectedType.includes("null")) {
+          expectedType = "null";
+        } else {
+          expectedType = "string"; // Default to string for unhandled types
+        }
+      }
+
+      // Perform type casting based on the resolved type
+      if (expectedType === "integer") {
+        castedData[key] = parseInt(data[key], 10);
+        if (isNaN(castedData[key])) castedData[key] = null; // Handle empty or invalid integer values
+      } else if (expectedType === "number") {
+        castedData[key] = parseFloat(data[key]);
+        if (isNaN(castedData[key])) castedData[key] = null; // Handle empty or invalid number values
+      } else if (expectedType === "boolean") {
+        castedData[key] = data[key] === "true";
+      } else if (expectedType === "null") {
+        castedData[key] = data[key] === "" ? null : data[key]; // Convert empty string to null
+      } else {
+        // For other types like string or unchanged values
+        castedData[key] = data[key];
+      }
+    }
+  }
+
+  return castedData;
+}
+
+// formSubmissionService.js
+async function handleFormSubmission(url, method, data, formId) {
+  const genericMessage = document.getElementById(`${formId}-generic-message`);
+  genericMessage.innerText = "";
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      genericMessage.innerText = error.error || "Submission failed.";
+      genericMessage.className = "text-danger";
+      if (! error.error.includes("Too many failed attempts try again later")) {
+        await loadCaptchaImage();
+      }
+    } else {
+      const result = await response.json();
+      console.log(result);
+      genericMessage.className = "text-success";
+      genericMessage.innerText = `Success! You will be redirected shortly.`;
+
+      setTimeout(() => {
+        if (getFormTypeBasedOnUrl() === "login") {
+          window.location.href = "/index.html";
+        } else {
+          window.location.href = "/verify.html";
+        }
+      }, 2000);
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    genericMessage.innerText = "An error occurred. Please try again later.";
+  }
+}
+
+// utils.js
+function getFormTypeBasedOnUrl() {
+  const url = window.location.pathname;
+  return url.includes("login") ? "login" : "register";
+}
+
+async function getUserStatus() {
+  const response = await fetch("/auth/status");
+  return await response.json();
+}
+
+async function attachLogoutHandler() {
+  const logoutButton = document.querySelector(".logout-btn");
+  logoutButton.addEventListener("click", async (event) => {
+    event.preventDefault();
+    const response = await fetch("/auth/logout");
+    window.location.href = "/index.html";
+  });
+}
+
+async function loadCaptchaImage() {
+  const captchaImage = document.getElementById("captcha-image");
+  captchaImage.src = `/auth/captcha?t=${Date.now()}`; // Add timestamp to avoid caching
+}
+
+// Attach a click listener to refresh the CAPTCHA image
+function attachCaptchaRefreshHandler() {
+  const captchaImage = document.getElementById("captcha-image");
+  captchaImage.addEventListener("click", loadCaptchaImage);
+}
+
+export {
+  fetchUserSchema,
+  createForm,
+  attachValidationListeners,
+  getFormTypeBasedOnUrl,
+  getUserStatus,
+  attachLogoutHandler,
+  loadCaptchaImage,
+  attachCaptchaRefreshHandler,
+};

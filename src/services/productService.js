@@ -3,71 +3,62 @@ class ProductService {
     this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
   }
 
-  async getFilteredPaginated(req, res) {
-    const schema = req.entitySchemaCollection["products"];  
-    const searchParams = req.query.searchParams ? JSON.parse(req.query.searchParams) : {};
-    const orderParams = req.query.orderParams ? JSON.parse(req.query.orderParams) : [];
-    const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
-    const page = req.query.page ? parseInt(req.query.page) : 1;   
-    const offset = (page - 1) * pageSize;
-    
+  async getFilteredPaginated(params) {
+    const schema = params.entitySchemaCollection.products;
+    const offset = (params.query.page - 1) * params.query.pageSize;
     let searchValues = [];
-    let keywordSearchConditions = [];
-    let filterConditions = [];
+    let conditions = [];
 
-    if (searchParams.keyword) {
-      const searchable = Object.keys(schema.displayProperties).filter(
-        (property) => schema.displayProperties[property].searchable
+    if (params.query.searchParams.keyword) {
+      const searchableFields = Object.keys(schema.displayProperties).filter(
+          (property) => schema.displayProperties[property].searchable
       );
-      for (const property of searchable) {
-        searchValues.push(searchParams.keyword);
-        keywordSearchConditions.push(
-          `STRPOS(LOWER(CAST(${property} AS text)), LOWER($${searchValues.length})) > 0`
-        );
-      }
-    }
+      const keywordConditions = searchableFields.map((property, index) => {
+          searchValues.push(params.query.searchParams.keyword);
+          return `STRPOS(LOWER(CAST(${property} AS text)), LOWER($${searchValues.length})) > 0`;
+      }).join(' OR ');
 
-    if (searchParams.price) {
-      if (searchParams.price.min) {
-        searchValues.push(searchParams.price.min);
-        filterConditions.push(`price >= $${searchValues.length}`);
-      }
-      if (searchParams.price.max) {
-        searchValues.push(searchParams.price.max);
-        filterConditions.push(`price <= $${searchValues.length}`);
-      }
-    }
+      conditions.push(`(${keywordConditions})`);
+  }
 
-    if (searchParams.categories && searchParams.categories.length > 0) {
-      const categoryPlaceholders = searchParams.categories
+    if (params.query.filterParams.categories && params.query.filterParams.categories.length > 0) {
+      const categoryPlaceholders = params.query.filterParams.categories
         .map((_, index) => `$${searchValues.length + index + 1}`)
         .join(", ");
-      searchValues.push(...searchParams.categories);
-      filterConditions.push(
+      searchValues.push(...params.query.filterParams.categories);
+      conditions.push(
         `ARRAY(SELECT unnest(categories)) && ARRAY[${categoryPlaceholders}]::text[]`
       );
     }
 
-    const combinedConditions = [
-      ...keywordSearchConditions.length > 0 ? [`(${keywordSearchConditions.join(" OR ")})`] : [],
-      ...filterConditions.length > 0 ? [`${filterConditions.join(" AND ")}`] : []
-    ].join(" AND ");
+    if (params.query.filterParams.price) {
+      if (params.query.filterParams.price.min) {
+        searchValues.push(params.query.filterParams.price.min);
+        conditions.push(`price >= $${searchValues.length}`);
+      }
+      if (params.query.filterParams.price.max) {
+        searchValues.push(params.query.filterParams.price.max);
+        conditions.push(`price <= $${searchValues.length}`);
+      }
+    }
 
-    const searchConditionStr = combinedConditions.length > 0 ? `WHERE ${combinedConditions}` : "";
+    const combinedConditions = conditions.length > 0 
+      ? `WHERE ${conditions.join(" AND ")}` 
+      : "";
 
-    const orderByClause = orderParams.length > 0
-      ? orderParams.map(([column, direction]) => `${column} ${direction}`).join(", ")
-      : "id";
+    const orderByClause = params.query.orderParams.length > 0
+        ? params.query.orderParams
+            .map(([column, direction]) => `${column} ${direction.toUpperCase()}`)
+            .join(", ")
+        : "id ASC";
 
     const query = `
       SELECT * FROM ${schema.views} 
-      ${searchConditionStr} 
+      ${combinedConditions} 
       ORDER BY ${orderByClause} 
-      LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}
-    `;
+      LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}`;
 
-    const result = await req.dbConnection.query(query, [...searchValues, pageSize, offset]);
-
+    const result = await params.dbConnection.query(query, [...searchValues, params.query.pageSize , offset]);
     return result.rows;
   }
 }

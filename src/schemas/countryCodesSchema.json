@@ -1,0 +1,46 @@
+{
+  "type": "object",
+  "name": "iso-country-codes",
+  "routeName": "iso-country-codes",
+  "views": "country_codes_view",
+  "properties": {
+    "country_name": {
+      "type": "string",
+      "label": "Country Name",
+      "placeholder": "Enter Country Name",
+      "errorMessage": {
+        "type": "Country Name must be text."
+      }
+    },
+    "country_code": {
+      "type": "string",
+      "label": "Country Code",
+      "placeholder": "Enter Country Code",
+      "errorMessage": {
+        "type": "Country Code must be text."
+      }
+    },
+    "phone_code": {
+      "type": "string",
+      "label": "Phone Code",
+      "placeholder": "Enter Phone Code",
+      "errorMessage": {
+        "type": "Phone Code must be text."
+      }
+    }
+  },
+  "required": [
+    "country_name",
+    "country_code",
+    "phone_code"
+  ],
+  "additionalProperties": false,
+  "errorMessage": {
+    "required": {
+      "country_name": "Country Name is required.",
+      "country_code": "Country Code is required.",
+      "phone_code": "Phone Code is required."
+    },
+    "additionalProperties": "No additional properties are allowed."
+  }
+}
