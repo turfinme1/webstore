@@ -5,8 +5,10 @@ DROP TABLE IF EXISTS products_categories;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS images;
 DROP TABLE IF EXISTS products;
-
+DROP TABLE IF EXISTS comments;
+DROP TABLE IF EXISTS ratings;
 DROP TABLE IF EXISTS iso_country_codes;
+
 DROP TABLE IF EXISTS email_verifications;
 DROP TABLE IF EXISTS captchas;
 DROP TABLE IF EXISTS failed_attempts;
@@ -20,7 +22,7 @@ DROP TABLE IF EXISTS currencies;
 
 CREATE TABLE products (
     id BIGSERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
+name TEXT NOT NULL,
     price NUMERIC(12, 2) NOT NULL,
     short_description TEXT NOT NULL,
     long_description TEXT NOT NULL
@@ -48,6 +50,22 @@ CREATE TABLE products_categories (
     product_id BIGINT NOT NULL REFERENCES products(id),
     category_id BIGINT NOT NULL REFERENCES categories(id),
     PRIMARY KEY (product_id, category_id)
+);
+
+CREATE TABLE comments (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT NOT NULL REFERENCES products(id),
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    comment TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE ratings (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT NOT NULL REFERENCES products(id),
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    rating BIGINT CHECK (rating BETWEEN 1 AND 5), -- Rating between 1 and 5
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE OR REPLACE VIEW products_view AS
