@@ -1,5 +1,5 @@
 const fetch = require("node-fetch");
-const fs = require("fs");
+const fs = require("fs").promises;
 const path = require("path");
 const crypto = require("crypto");
 const pool = require("./dbConfig");
@@ -11,12 +11,8 @@ async function downloadImage(url, filePath) {
     throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
   }
 
-  const writer = fs.createWriteStream(filePath);
-  return new Promise((resolve, reject) => {
-    response.body.pipe(writer);
-    writer.on("finish", resolve);
-    writer.on("error", reject);
-  });
+  const buffer = await response.buffer();
+  await fs.writeFile(filePath, buffer);
 }
 
 function generateHash() {
@@ -25,12 +21,10 @@ function generateHash() {
 
 async function insertProduct(client, product) {
   try {
-    // Insert the product into the products table
     const productInsertQuery = `
-            INSERT INTO products (name, price, short_description, long_description)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id;
-        `;
+      INSERT INTO products (name, price, short_description, long_description)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id;`;
     const productResult = await client.query(productInsertQuery, [
       product.name,
       product.price,
@@ -39,38 +33,29 @@ async function insertProduct(client, product) {
     ]);
 
     const productId = productResult.rows[0].id;
-
-    // Insert the categories into the products_categories table
-    for (const category of product.category) {
-      const categoryQuery = `
-                INSERT INTO products_categories (product_id, category_id)
-                SELECT $1, id FROM categories WHERE name = $2;
-            `;
+    
+    const categoryQuery = `
+      INSERT INTO products_categories (product_id, category_id)
+      SELECT $1, id FROM categories WHERE name = $2;
+    `;
+    const categoryInsertPromises = product.category.map(async (category) => {
       await client.query(categoryQuery, [productId, category]);
-    }
+    });
+    await Promise.all(categoryInsertPromises);
 
-    // Download images and insert them into the images table
-    for (const imageUrl of product.images) {
+    const imageInsertPromises = product.images.map(async (imageUrl) => {
       const imageHash = generateHash();
       const imagePath = `/images/${imageHash}.jpg`;
-      const fullImagePath = path.join(
-        __dirname,
-        "..",
-        "public",
-        "images",
-        `${imageHash}.jpg`
-      );
+      const fullImagePath = path.join(__dirname, "..", "..", "..", "images", `${imageHash}.jpg`);
 
-      // Download the image
       await downloadImage(imageUrl, fullImagePath);
 
-      // Insert the image record into the images table
       const imageQuery = `
-                INSERT INTO images (product_id, url)
-                VALUES ($1, $2);
-            `;
+        INSERT INTO images (product_id, url)
+        VALUES ($1, $2);`;
       await client.query(imageQuery, [productId, imagePath]);
-    }
+    });
+    await Promise.all(imageInsertPromises);
 
     console.log(`Inserted product ${product.name} with ID: ${productId}`);
   } catch (err) {
@@ -79,24 +64,14 @@ async function insertProduct(client, product) {
 }
 
 async function insertProducts() {
-  // Read products data from JSON file
-  const productsData = fs.readFileSync("products.json", "utf-8");
+  const productsData = await fs.readFile("products.json", "utf-8");
   const products = JSON.parse(productsData);
 
-  // Connect to the database
   const client = await pool.connect();
 
-  // Ensure the images folder exists
-  if (!fs.existsSync(path.join(__dirname, "..", "public", "images"))) {
-    fs.mkdirSync(path.join(__dirname, "images"));
-  }
+  const productInsertPromises = products.map((product) => insertProduct(client, product));
+  await Promise.all(productInsertPromises);
 
-  // Insert each product
-  for (const product of products) {
-    await insertProduct(client, product);
-  }
-
-  // Close the database connection
   client.release();
 }
 
