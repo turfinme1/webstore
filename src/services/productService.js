@@ -67,8 +67,12 @@ class ProductService {
 
   async createComment(data) {
     const result = await data.dbConnection.query(`
-      INSERT INTO comments (product_id, user_id, comment) VALUES ($1, $2, $3) RETURNING *`,
-      [data.query.productId, data.query.userId, data.query.comment]
+      INSERT INTO comments (product_id, user_id, comment) 
+      VALUES ($1, $2, $3) 
+      ON CONFLICT (product_id, user_id)
+      DO UPDATE SET comment = EXCLUDED.comment
+      RETURNING *`,
+      [data.body.product_id, data.session.user_id, data.body.comment]
     );
     
     return result.rows[0];
@@ -81,7 +85,7 @@ class ProductService {
       ON CONFLICT (product_id, user_id) 
       DO UPDATE SET rating = EXCLUDED.rating
       RETURNING *`,
-      [data.productId, data.userId, data.rating]
+      [data.body.product_id, data.session.user_id, data.body.rating]
     );
 
     return result.rows[0];
