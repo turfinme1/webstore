@@ -24,6 +24,9 @@ async function createForm(schema, formId, formType) {
     label.htmlFor = key;
     label.className = "form-label";
     label.innerText = field.label;
+    if(schema.required.includes(key)) {
+      label.innerHTML+=`<span style="color:red;"> *</span>`;
+    }
 
     if (key === "iso_country_code_id") {
       const select = document.createElement("select");
