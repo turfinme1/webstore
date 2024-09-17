@@ -1,5 +1,6 @@
 DROP VIEW IF EXISTS products_view;
 DROP VIEW IF EXISTS country_codes_view;
+DROP VIEW IF EXISTS categories_view;
 
 DROP TABLE IF EXISTS products_categories;
 DROP TABLE IF EXISTS categories;
@@ -45,6 +46,13 @@ CREATE TABLE categories (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL
 );
+
+CREATE OR REPLACE VIEW categories_view AS
+SELECT
+    id,
+    name
+FROM categories
+ORDER BY name;
 
 CREATE TABLE products_categories (
     product_id BIGINT NOT NULL REFERENCES products(id),

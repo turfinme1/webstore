@@ -23,6 +23,57 @@ document.addEventListener("DOMContentLoaded", async () => {
   let maxPrice = null;
   let userStatus = await getUserStatus();
 
+  // Function to fetch categories from the server
+  const fetchCategories = async () => {
+    const response = await fetch("/crud/categories");
+    const categories = await response.json();
+    return categories;
+  };
+
+  // Function to render category checkboxes
+  const renderCategoryOptions = (categories) => {
+    categoryOptions.innerHTML = ""; // Clear existing options
+
+    categories.forEach((category) => {
+
+      const label = document.createElement("label");
+    
+      // Create input element (checkbox)
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = category.name;
+  
+      // Append checkbox and text to label
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(` ${category.name}`));
+  
+      // Append label to the category options container
+      categoryOptions.appendChild(label);
+
+      // Add event listener for category checkbox
+      checkbox.addEventListener("change", (e) => {
+        const value = e.target.value;
+
+        if (e.target.checked) {
+          selectedCategories.push(value);
+        } else {
+          selectedCategories = selectedCategories.filter(
+            (cat) => cat !== value
+          );
+        }
+
+        updateSelectedCategories();
+      });
+    });
+  };
+
+  // Fetch and render categories when the page loads
+  const initializeCategories = async () => {
+    categoryFilterInput.value = "";
+    const categories = await fetchCategories();
+    renderCategoryOptions(categories);
+  };
+
   const fetchProducts = async (
     searchTerm = "",
     categories = [],
@@ -185,18 +236,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  categoryOptions.addEventListener("change", (e) => {
-    const value = e.target.value;
-
-    if (e.target.checked) {
-      selectedCategories.push(value);
-    } else {
-      selectedCategories = selectedCategories.filter((cat) => cat !== value);
-    }
-
-    updateSelectedCategories();
-  });
-
   const updateSelectedCategories = () => {
     categoryFilterInput.value =
       selectedCategories.length > 0 ? selectedCategories.join(", ") : "";
@@ -240,5 +279,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   updateProductList();
   createNavigation(userStatus);
+  await initializeCategories();
   await attachLogoutHandler();
 });
