@@ -18,6 +18,7 @@ class AuthService {
     this.generateCaptcha = this.getCaptcha.bind(this);
     this.generateCaptchaImage = this.generateCaptchaImage.bind(this);
     this.verifyCaptcha = this.verifyCaptcha.bind(this);
+    this.requireAuthorization = this.requireAuthorization.bind(this);
   }
 
   async register(data) {
@@ -287,6 +288,10 @@ class AuthService {
     }
 
     // return captchaResult.rows[0];
+  }
+
+  async requireAuthorization(session) {
+    ASSERT_USER(session?.user_id, "You must be logged in to perform this action");
   }
 }
 
