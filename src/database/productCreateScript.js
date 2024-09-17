@@ -19,9 +19,9 @@ function generateProducts(numProducts) {
         const product = {
             id: i + 1,
             name: faker.commerce.productName(),
-            price: parseFloat(faker.commerce.price(10, 500, 2)),
-            short_description: faker.commerce.productAdjective(),
-            long_description: faker.lorem.paragraphs(2),
+            price: parseFloat(faker.commerce.price({min:10, max:2500,dec:2})),
+            short_description: faker.commerce.productDescription(),
+            long_description: `${faker.commerce.productDescription()}. ${faker.commerce.productDescription()}.`,
             category: getRandomCategories(categories),
             images: [
                 faker.image.url({ width: 640, height: 480, category: 'clothes' }),
@@ -37,7 +37,7 @@ function generateProducts(numProducts) {
 }
 
 // Generate 50,000 products
-const products = generateProducts(20);
+const products = generateProducts(45000);
 
 // Optionally, save the products to a JSON file
 fs.writeFileSync('products.json', JSON.stringify(products, null, 2), 'utf-8');
