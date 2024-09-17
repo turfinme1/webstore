@@ -5,6 +5,7 @@ DROP TABLE IF EXISTS products_categories;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS images;
 DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS currencies;
 
 DROP TABLE IF EXISTS iso_country_codes;
 DROP TABLE IF EXISTS email_verifications;
@@ -24,6 +25,13 @@ CREATE TABLE products (
     price NUMERIC(12, 2) NOT NULL,
     short_description TEXT NOT NULL,
     long_description TEXT NOT NULL
+);
+
+CREATE TABLE currencies (
+    id BIGSERIAL PRIMARY KEY,
+    currency_code TEXT NOT NULL,
+    exchange_rate_to_base NUMERIC(18, 6) NOT NULL, 
+    symbol TEXT NOT NULL,
 );
 
 CREATE TABLE currencies (
