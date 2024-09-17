@@ -13,7 +13,7 @@ class MailService {
   }
 
   async sendVerificationEmail(email, token) {
-    const verificationUrl = `http://localhost:3000/auth/verify-mail?token=${token}`;
+    const verificationUrl = `http://localhost:3601/auth/verify-mail?token=${token}`;
     let mailOptions = {
       from: "no-reply@web-store4eto.com",
       to: email,
