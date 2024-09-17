@@ -8,6 +8,7 @@ const serverConfig = require("./src/serverConfigurations/serverConfiguration");
 const port = 3000;
 const app = express();
 app.use(cookieParser());
+app.use(express.static(path.join(__dirname, "..")));
 app.use(express.static(path.join(__dirname, "src", "public")));
 app.use(express.static(path.join(__dirname, "src", "schemas")));
 app.use(bodyParser.json());
