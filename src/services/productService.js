@@ -60,8 +60,9 @@ class ProductService {
       ORDER BY ${orderByClause} 
       LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}`;
 
+    const totalCount = await data.dbConnection.query(`SELECT COUNT(*) FROM ${schema.views} ${combinedConditions}`, searchValues); 
     const result = await data.dbConnection.query(query, [...searchValues, data.query.pageSize , offset]);
-    return result.rows;
+    return { result: result.rows, count: totalCount.rows[0].count };
   }
 
   async createComment(data) {
