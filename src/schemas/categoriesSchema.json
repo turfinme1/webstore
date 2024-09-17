@@ -1,0 +1,26 @@
+{
+    "type": "object",
+    "name": "categories",
+    "routeName": "categories",
+    "views": "categories_view",
+    "properties": {
+        "name": {
+            "type": "string",
+            "label": "Category Name",
+            "placeholder": "Enter Category Name",
+            "errorMessage": {
+                "type": "Category Name must be text."
+            }
+        }
+    },
+    "required": [
+        "name"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "name": "Category Name is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}
