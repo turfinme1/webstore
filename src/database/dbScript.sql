@@ -65,7 +65,8 @@ CREATE TABLE comments (
     product_id BIGINT NOT NULL REFERENCES products(id),
     user_id BIGINT NOT NULL REFERENCES users(id),
     comment TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(product_id, user_id)
 );
 
 CREATE TABLE ratings (
@@ -73,7 +74,8 @@ CREATE TABLE ratings (
     product_id BIGINT NOT NULL REFERENCES products(id),
     user_id BIGINT NOT NULL REFERENCES users(id),
     rating BIGINT CHECK (rating BETWEEN 1 AND 5), -- Rating between 1 and 5
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(product_id, user_id)
 );
 
 CREATE OR REPLACE VIEW products_view AS
