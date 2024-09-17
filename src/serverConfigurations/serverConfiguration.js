@@ -10,13 +10,13 @@ const AuthService = require("../services/authService");
 const AuthController = require("../controllers/authController");
 const { MailService, transporter } = require("../services/mailService");
 
-const service = new CrudService();
-const controller = new CrudController(service);
-const productService = new ProductService();
-const productController = new ProductController(productService);
 const mailService = new MailService(transporter);
 const authService = new AuthService(mailService);
 const authController = new AuthController(authService);
+const service = new CrudService();
+const controller = new CrudController(service);
+const productService = new ProductService();
+const productController = new ProductController(productService, authService);
 
 const routeTable = {
   get: {
@@ -32,6 +32,8 @@ const routeTable = {
     "/crud/:entity": controller.create,
     "/auth/register": authController.register,
     "/auth/login": authController.login,
+    "/api/products/comments": productController.createComment,
+    "/api/products/ratings": productController.createRating,
   },
   put: {
     "/crud/:entity/:id": controller.update,
