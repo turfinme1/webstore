@@ -1,6 +1,6 @@
 // schemaService.js
-async function fetchUserSchema() {
-  const response = await fetch("/userSchema.json");
+async function fetchUserSchema(url) {
+  const response = await fetch(url);
   if (!response.ok) throw new Error("Failed to fetch schema");
   return await response.json();
 }
@@ -14,13 +14,6 @@ async function createForm(schema, formId, formType) {
   const formTitle = document.createElement("h2");
   formTitle.innerText = formType === "login" ? "Login" : "Register";
   form.appendChild(formTitle);
-
-  // Hidden ID field
-  const hiddenIdField = document.createElement("input");
-  hiddenIdField.type = "hidden";
-  hiddenIdField.id = "id";
-  hiddenIdField.name = "id";
-  form.appendChild(hiddenIdField);
 
   for (const key in schema.properties) {
     const field = schema.properties[key];
@@ -63,7 +56,25 @@ async function createForm(schema, formId, formType) {
 
       wrapper.appendChild(label);
       wrapper.appendChild(select);
-    } else {
+    } else if (key === "captcha_answer") {
+      const captchaImage = document.createElement("img");
+      captchaImage.id = "captcha-image";
+      captchaImage.alt = "CAPTCHA";
+      captchaImage.className = "captcha-image";
+      captchaImage.style.cursor = "pointer";
+      
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = key;
+      input.name = key;
+      input.placeholder = field.placeholder;
+      input.className = "form-control";
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(captchaImage);
+      wrapper.appendChild(input);
+    }
+    else {
       const input = document.createElement("input");
       input.type = key === "password" ? "password" : "text";
       input.id = key;
@@ -82,6 +93,33 @@ async function createForm(schema, formId, formType) {
 
     form.appendChild(wrapper);
   }
+
+  // CAPTCHA section
+  // const captchaWrapper = document.createElement("div");
+  // captchaWrapper.className = "form-group mb-3";
+  // const captchaLabel = document.createElement("label");
+  // captchaLabel.htmlFor = "captcha";
+  // captchaLabel.className = "form-label";
+  // captchaLabel.innerText = "CAPTCHA";
+  // const captchaInput = document.createElement("input");
+  // captchaInput.type = "text";
+  // captchaInput.id = "captcha-answer";
+  // captchaInput.name = "captcha-answer";
+  // captchaInput.placeholder = "Enter the result";
+  // captchaInput.className = "form-control";
+  // const captchaImage = document.createElement("img");
+  // captchaImage.id = "captcha-image";
+  // captchaImage.alt = "CAPTCHA";
+  // captchaImage.className = "captcha-image"; // Style as needed
+  // captchaImage.style.cursor = "pointer"; // Indicate refreshable image
+  // captchaWrapper.appendChild(captchaLabel);
+  // captchaWrapper.appendChild(captchaInput);
+  // captchaWrapper.appendChild(captchaImage);
+  // const captchaError = document.createElement("div");
+  // captchaError.className = "invalid-feedback";
+  // captchaError.id = `captcha-error`;
+  // captchaWrapper.appendChild(captchaError);
+  // form.appendChild(captchaWrapper);
 
   const genericMessage = document.createElement("div");
   genericMessage.id = `${formId}-generic-message`;
@@ -207,6 +245,9 @@ async function handleFormSubmission(url, method, data, formId) {
       const error = await response.json();
       genericMessage.innerText = error.error || "Submission failed.";
       genericMessage.className = "text-danger";
+      if (! error.error.includes("Too many failed attempts try again later")) {
+        await loadCaptchaImage();
+      }
     } else {
       const result = await response.json();
       console.log(result);
@@ -247,6 +288,17 @@ async function attachLogoutHandler() {
   });
 }
 
+async function loadCaptchaImage() {
+  const captchaImage = document.getElementById("captcha-image");
+  captchaImage.src = `/auth/captcha?t=${Date.now()}`; // Add timestamp to avoid caching
+}
+
+// Attach a click listener to refresh the CAPTCHA image
+function attachCaptchaRefreshHandler() {
+  const captchaImage = document.getElementById("captcha-image");
+  captchaImage.addEventListener("click", loadCaptchaImage);
+}
+
 export {
   fetchUserSchema,
   createForm,
@@ -254,4 +306,6 @@ export {
   getFormTypeBasedOnUrl,
   getUserStatus,
   attachLogoutHandler,
+  loadCaptchaImage,
+  attachCaptchaRefreshHandler,
 };
