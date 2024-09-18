@@ -1,9 +1,9 @@
+const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateQueryParams } = require("../serverConfigurations/validation");
 
 class ProductController {
-  constructor(productService, authService) {
+  constructor(productService) {
     this.productService = productService;
-    this.authService = authService;
     this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
     this.createComment = this.createComment.bind(this);
     this.createRating = this.createRating.bind(this);
@@ -21,10 +21,11 @@ class ProductController {
   }
 
   async createComment(req, res) {
-    await this.authService.requireAuthorization(req.session);
+    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action");
 
     const data = {
       body: req.body,
+      params: req.params,
       session: req.session,
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
@@ -34,10 +35,11 @@ class ProductController {
   }
 
   async createRating(req, res) {
-    await this.authService.requireAuthorization(req.session);
+    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action");
 
     const data = {
       body: req.body,
+      params: req.params,
       session: req.session,
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
