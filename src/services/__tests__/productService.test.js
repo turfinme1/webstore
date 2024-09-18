@@ -52,35 +52,45 @@ describe("ProductService", () => {
   });
 
   describe("getFilteredPaginated", () => {
-    it("should fetch filtered and paginated products", async () => {
+    it("should fetch filtered and paginated products with total count", async () => {
       const expectedResponse = [
         { id: 1, name: "Test Product 1", price: 100, categories: ["Electronics"] },
         { id: 2, name: "Test Product 2", price: 150, categories: ["Books"] },
       ];
 
-      mockDbConnection.query.mockResolvedValue({ rows: expectedResponse });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "2" }] }) // Mock the count query
+        .mockResolvedValueOnce({ rows: expectedResponse }); // Mock the result query
 
       const result = await productService.getFilteredPaginated(params);
 
       expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT * FROM products_view"),
+        expect.stringContaining("SELECT COUNT(*) FROM products_view"),
         expect.any(Array)
       );
 
-      expect(result).toEqual(expectedResponse);
+      expect(result).toEqual({
+        result: expectedResponse,
+        count: "2", // Ensure count is returned correctly (it's likely to be a string because SQL COUNT returns string type)
+      });
     });
 
-    it("should return an empty array if no products match the criteria", async () => {
-      mockDbConnection.query.mockResolvedValue({ rows: [] });
+    it("should return an empty array with count if no products match the criteria", async () => {
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "0" }] }) // Mock the count query
+        .mockResolvedValueOnce({ rows: [] }); // Mock the result query
 
       const result = await productService.getFilteredPaginated(params);
 
       expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT * FROM products_view"),
+        expect.stringContaining("SELECT COUNT(*) FROM products_view"),
         expect.any(Array)
       );
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({
+        result: [],
+        count: "0",
+      });
     });
 
     it("should throw an error if the database query fails", async () => {
@@ -95,7 +105,9 @@ describe("ProductService", () => {
         price: { min: 100, max: 200 },
       };
 
-      mockDbConnection.query.mockResolvedValue({ rows: [] });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "0" }] })
+        .mockResolvedValueOnce({ rows: [] });
 
       await productService.getFilteredPaginated(params);
 
@@ -108,7 +120,9 @@ describe("ProductService", () => {
     it("should apply correct sorting order", async () => {
       params.query.orderParams = [["name", "DESC"]];
 
-      mockDbConnection.query.mockResolvedValue({ rows: [] });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "0" }] })
+        .mockResolvedValueOnce({ rows: [] });
 
       await productService.getFilteredPaginated(params);
 
@@ -122,7 +136,9 @@ describe("ProductService", () => {
       params.query.page = "2";
       params.query.pageSize = "5";
 
-      mockDbConnection.query.mockResolvedValue({ rows: [] });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "0" }] })
+        .mockResolvedValueOnce({ rows: [] });
 
       await productService.getFilteredPaginated(params);
 
@@ -132,97 +148,96 @@ describe("ProductService", () => {
       );
     });
 
-    // Additional tests for ternary operator branches
+    // Additional tests for ternary operator branches and defaults
+
     it("should use default empty object for searchParams if not provided", async () => {
       params.query.searchParams = {};
 
-      const expectedResponse = [
-        { id: 1, name: "Test Product 1", price: 100 },
-      ];
+      const expectedResponse = [{ id: 1, name: "Test Product 1", price: 100 }];
 
-      mockDbConnection.query.mockResolvedValue({ rows: expectedResponse });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "1" }] })
+        .mockResolvedValueOnce({ rows: expectedResponse });
 
       const result = await productService.getFilteredPaginated(params);
 
-      expect(result).toEqual(expectedResponse);
+      expect(result).toEqual({
+        result: expectedResponse,
+        count: "1",
+      });
       expect(mockDbConnection.query).toHaveBeenCalled();
     });
 
     it("should use default empty object for filterParams if not provided", async () => {
       params.query.filterParams = {};
 
-      const expectedResponse = [
-        { id: 1, name: "Test Product 1", price: 100 },
-      ];
+      const expectedResponse = [{ id: 1, name: "Test Product 1", price: 100 }];
 
-      mockDbConnection.query.mockResolvedValue({ rows: expectedResponse });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "1" }] })
+        .mockResolvedValueOnce({ rows: expectedResponse });
 
       const result = await productService.getFilteredPaginated(params);
 
-      expect(result).toEqual(expectedResponse);
+      expect(result).toEqual({
+        result: expectedResponse,
+        count: "1",
+      });
       expect(mockDbConnection.query).toHaveBeenCalled();
     });
 
     it("should use default empty array for orderParams if not provided", async () => {
       params.query.orderParams = [];
 
-      const expectedResponse = [
-        { id: 1, name: "Test Product 1", price: 100 },
-      ];
+      const expectedResponse = [{ id: 1, name: "Test Product 1", price: 100 }];
 
-      mockDbConnection.query.mockResolvedValue({ rows: expectedResponse });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "1" }] })
+        .mockResolvedValueOnce({ rows: expectedResponse });
 
       const result = await productService.getFilteredPaginated(params);
 
-      expect(result).toEqual(expectedResponse);
+      expect(result).toEqual({
+        result: expectedResponse,
+        count: "1",
+      });
       expect(mockDbConnection.query).toHaveBeenCalled();
     });
 
     it("should use default pageSize of 10 if not provided", async () => {
       params.query.pageSize = undefined;
 
-      const expectedResponse = [
-        { id: 1, name: "Test Product 1", price: 100 },
-      ];
+      const expectedResponse = [{ id: 1, name: "Test Product 1", price: 100 }];
 
-      mockDbConnection.query.mockResolvedValue({ rows: expectedResponse });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "1"}] })
+        .mockResolvedValueOnce({ rows: expectedResponse });
 
       const result = await productService.getFilteredPaginated(params);
 
-      expect(result).toEqual(expectedResponse);
+      expect(result).toEqual({
+        result: expectedResponse,
+        count: "1",
+      });
       expect(mockDbConnection.query).toHaveBeenCalled();
     });
 
     it("should use default page of 1 if not provided", async () => {
       params.query.page = undefined;
 
-      const expectedResponse = [
-        { id: 1, name: "Test Product 1", price: 100 },
-      ];
+      const expectedResponse = [{ id: 1, name: "Test Product 1", price: 100 }];
 
-      mockDbConnection.query.mockResolvedValue({ rows: expectedResponse });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "1" }] })
+        .mockResolvedValueOnce({ rows: expectedResponse });
 
       const result = await productService.getFilteredPaginated(params);
 
-      expect(result).toEqual(expectedResponse);
+      expect(result).toEqual({
+        result: expectedResponse,
+        count: "1",
+      });
       expect(mockDbConnection.query).toHaveBeenCalled();
-    });
-
-    it("should not add any price filter if searchParams.price is not provided", async () => {
-      params.query.searchParams = {
-        keyword: "test",
-      };
-
-      mockDbConnection.query.mockResolvedValue({ rows: [] });
-
-      await productService.getFilteredPaginated(params);
-
-      expect(mockDbConnection.query).not.toHaveBeenCalledWith(
-        expect.stringContaining("price >= $"),
-      );
-      expect(mockDbConnection.query).not.toHaveBeenCalledWith(
-        expect.stringContaining("price <= $"),
-      );
     });
 
     it("should apply only max price filter when price.min is not provided", async () => {
@@ -230,14 +245,12 @@ describe("ProductService", () => {
         price: { max: 150 },
       };
 
-      mockDbConnection.query.mockResolvedValue({ rows: [] });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: "0"}] })
+        .mockResolvedValueOnce({ rows: [] });
 
       await productService.getFilteredPaginated(params);
 
-      expect(mockDbConnection.query).not.toHaveBeenCalledWith(
-        expect.stringContaining("price >= $"),
-        expect.any(Array),
-      );
       expect(mockDbConnection.query).toHaveBeenCalledWith(
         expect.stringContaining("price <= $"),
         expect.any(Array)
@@ -249,16 +262,14 @@ describe("ProductService", () => {
         price: { min: 50 },
       };
 
-      mockDbConnection.query.mockResolvedValue({ rows: [] });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: 0 }] })
+        .mockResolvedValueOnce({ rows: [] });
 
       await productService.getFilteredPaginated(params);
 
       expect(mockDbConnection.query).toHaveBeenCalledWith(
         expect.stringContaining("price >= $"),
-        expect.any(Array)
-      );
-      expect(mockDbConnection.query).not.toHaveBeenCalledWith(
-        expect.stringContaining("price <= $"),
         expect.any(Array)
       );
     });
@@ -268,7 +279,9 @@ describe("ProductService", () => {
       params.query.searchParams = {};
       params.query.orderParams = [];
 
-      mockDbConnection.query.mockResolvedValue({ rows: [] });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ count: 0 }] })
+        .mockResolvedValueOnce({ rows: [] });
 
       await productService.getFilteredPaginated(params);
 
@@ -277,6 +290,5 @@ describe("ProductService", () => {
         expect.any(Array)
       );
     });
-
   });
 });

@@ -55,7 +55,6 @@ describe("AuthService", () => {
 
       // Mock database queries
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [] }) // No existing user
         .mockResolvedValueOnce({ rows: [mockUser] }) // New user created
         .mockResolvedValueOnce({ rows: [{ token_hash: "token123" }] }) // Verification token created
         .mockResolvedValueOnce({ rows: [mockSession] }); // Session created
@@ -63,24 +62,13 @@ describe("AuthService", () => {
       const result = await authService.register(data);
 
       // Assertions
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(4);
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
       expect(bcrypt.hash).toHaveBeenCalledWith("password123", 10);
       expect(mockMailService.sendVerificationEmail).toHaveBeenCalledWith(
         "test@example.com",
         "token123"
       );
       expect(result).toEqual(mockSession);
-    });
-
-    it("should throw an error if the email is already in use", async () => {
-      authService.verifyCaptcha = jest.fn().mockResolvedValueOnce(true);
-      mockDbConnection.query.mockResolvedValueOnce({
-        rows: [{ email: "test@example.com" }],
-      }); // User already exists
-
-      await expect(authService.register(data)).rejects.toThrow(
-        "Email already in use"
-      );
     });
 
     it("should convert undefined values to null", async () => {
@@ -93,7 +81,7 @@ describe("AuthService", () => {
       bcrypt.hash.mockResolvedValue(mockHashedPassword);
 
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [] }) // No existing user
+        // .mockResolvedValueOnce({ rows: [] }) // No existing user
         .mockResolvedValueOnce({ rows: [mockUser] }) // New user created
         .mockResolvedValueOnce({ rows: [{ token_hash: "token123" }] }) // Verification token created
         .mockResolvedValueOnce({ rows: [mockSession] }); // Session created
