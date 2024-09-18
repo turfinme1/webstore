@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const userStatus = await getUserStatus();
     createNavigation(userStatus);
 
-    const productId = 48000; // Extract product ID from the URL
+    const productId = 1; // Dynamically get the product ID from the URL
 
     if (!productId) {
       console.error("Product ID not found");
@@ -41,6 +41,7 @@ function getProductIdFromURL() {
 // Populate product carousel with images
 function populateCarousel(images) {
   const carouselInner = document.getElementById("carousel-inner");
+  carouselInner.innerHTML = ""; // Clear any existing content
   images.forEach((image, index) => {
     const carouselItem = document.createElement("div");
     carouselItem.className = `carousel-item ${index === 0 ? "active" : ""}`;
@@ -73,9 +74,7 @@ function populateRatingSection(product) {
   const averageRating = product.average_rating || 0;
   const totalRatings = product.total_ratings || 0;
   const ratingHtml = `
-    <h4>Average Rating: ${averageRating.toFixed(
-      1
-    )} / 5 (${totalRatings} ratings)</h4>
+    <h4>Average Rating: ${averageRating.toFixed(1)} / 5 (${totalRatings} ratings)</h4>
     <div id="user-rating">
       <h5>Rate this product:</h5>
       <div class="star-rating">
@@ -107,7 +106,6 @@ function attachRatingHandlers(productId) {
       try {
         await submitRating(productId, selectedRating);
         alert("Rating submitted successfully!");
-        // Optionally refresh average rating
       } catch (error) {
         console.error("Error submitting rating:", error);
         alert("Failed to submit rating.");
@@ -168,72 +166,81 @@ export async function submitRating(productId, rating) {
   }
 }
 
-// Load product comments
+// Load product comments and render form separately
 export async function loadComments(productId) {
   try {
-    const response = await fetch(`/crud/products/${productId}/comments`);
-    if (!response.ok) {
-      throw new Error("Failed to fetch comments");
-    }
-    const comments = await response.json();
-    displayComments(comments);
+    // Render the comment form first
+    renderCommentForm();
+
+    // Fetch the comments from the server (simulated for now)
+    const comments = await fetchProductComments(productId);
+
+    // Display the comments
+    renderComments(comments);
   } catch (error) {
-    console.error(error);
+    console.error("Error loading comments:", error);
   }
 }
 
-// Display comments on the page
-function displayComments(comments) {
+// Fetch comments (this simulates a server call)
+async function fetchProductComments(productId) {
+  // Simulating fetching comments
+  return [
+    { user_name: "John Doe", comment: "Great product!", created_at: new Date() },
+    { user_name: "Jane Smith", comment: "Fast delivery!", created_at: new Date() }
+  ];
+
+  // Uncomment the actual fetch logic when connected to an API
+  // const response = await fetch(`/crud/products/${productId}/comments`);
+  // if (!response.ok) {
+  //   throw new Error("Failed to fetch comments");
+  // }
+  // return await response.json();
+}
+
+// Render the comment form
+function renderCommentForm() {
   const commentsSection = document.getElementById("comments-section");
+  
+  // Clear any previous form
+  commentsSection.innerHTML = `
+    <h5>Add a comment:</h5>
+    <form id="comment-form">
+      <div class="form-group">
+        <textarea class="form-control" id="comment-text" rows="3" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+  `;
+}
+
+// Render comments dynamically after the form
+function renderComments(comments) {
+  const commentsSection = document.getElementById("comments-section");
+
+  if (comments.length === 0) {
+    const noCommentsMessage = "<p>No comments available for this product.</p>";
+    commentsSection.innerHTML += noCommentsMessage;
+    return;
+  }
+
   let commentsHtml = "<h4>Comments:</h4>";
   comments.forEach((comment) => {
     commentsHtml += `
-        <div class="media mb-3">
-          <div class="media-body">
-            <h5 class="mt-0">${
-              comment.user_name
-            } <small class="text-muted">${formatDate(
-      comment.created_at
-    )}</small></h5>
-            ${comment.comment}
-          </div>
+      <div class="media mb-3">
+        <div class="media-body">
+          <h5 class="mt-0">${comment.user_name} <small class="text-muted">${formatDate(comment.created_at)}</small></h5>
+          <p>${comment.comment}</p>
         </div>
-      `;
+      </div>
+    `;
   });
 
-  commentsHtml += `
-      <h5>Add a comment:</h5>
-      <form id="comment-form">
-        <div class="form-group">
-          <textarea class="form-control" id="comment-text" rows="3" required></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
-      </form>
-    `;
-
-  commentsSection.innerHTML = commentsHtml;
+  // Append the comments below the form
+  commentsSection.innerHTML += commentsHtml;
 }
 
-// Submit a new comment
-export async function submitComment(productId, comment) {
-  try {
-    const response = await fetch("/api/products/comment", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ productId, comment }),
-    });
-    if (!response.ok) {
-      throw new Error("Failed to submit comment");
-    }
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-// Helper to format date
+// Helper function to format date
 function formatDate(dateString) {
   const options = { year: "numeric", month: "long", day: "numeric" };
   return new Date(dateString).toLocaleDateString(undefined, options);
