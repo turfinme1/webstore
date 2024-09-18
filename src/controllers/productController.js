@@ -7,7 +7,7 @@ class ProductController {
   }
 
   async getFilteredPaginated(req, res, next) {
-    validateQueryParams(req, req.entitySchemaCollection["products"]);
+    validateQueryParams(req, req.entitySchemaCollection.productQueryParamsSchema);
     const params = {
       query: req.query,
       entitySchemaCollection: req.entitySchemaCollection,
@@ -18,4 +18,4 @@ class ProductController {
   }
 }
 
-module.exports = ProductController;
+module.exports = ProductController; 

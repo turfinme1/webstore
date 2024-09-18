@@ -67,3 +67,9 @@ body {
   background-color: #0056b3;
 }
 
+.captcha-image {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  max-width: 100%;
+}

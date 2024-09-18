@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "name": "users",
+    "name": "userRegisterSchema",
     "routeName": "users",
     "views": "users_view",
     "properties": {
@@ -90,6 +90,15 @@
             "errorMessage": {
                 "type": "Address must be text."
             }
+        },
+        "captcha_answer": {
+            "type": "string",
+            "minLength": 1,
+            "label": "Captcha",
+            "placeholder": "Enter Captcha",
+            "errorMessage": {
+                "minLength": "Captcha is required."
+            }
         }
     },
     "required": [
@@ -97,7 +106,8 @@
         "password",
         "email",
         "phone",
-        "iso_country_code_id"
+        "iso_country_code_id",
+        "captcha_answer"
     ],
     "additionalProperties": false,
     "errorMessage": {
@@ -106,41 +116,9 @@
             "name": "Name is required.",
             "email": "Email is required.",
             "phone": "Phone number is required.",
-            "iso_country_code_id": "Country code is required."
+            "iso_country_code_id": "Country code is required.",
+            "captcha_answer": "Captcha is required."
         },
         "additionalProperties": "No additional properties are allowed."
-    },
-    "loginSchema": {
-        "type": "object",
-        "properties": {
-            "email": {
-                "type": "string",
-                "label": "Email",
-                "placeholder": "Enter Email"
-            },
-            "password": {
-                "type": "string",
-                "label": "Password",
-                "placeholder": "Enter password"
-            },
-            "captcha_answer": {
-                "type": "string",
-                "label": "Captcha",
-                "placeholder": "Enter Captcha"
-            }
-        },
-        "required": [
-            "email",
-            "password",
-            "captcha_answer"
-        ],
-        "additionalProperties": false,
-        "errorMessage": {
-            "required": {
-                "email": "Email is required.",
-                "password": "Password is required."
-            },
-            "additionalProperties": "No additional properties are allowed."
-        }
     }
 }
