@@ -17,7 +17,7 @@ const authController = new AuthController(authService);
 const service = new CrudService();
 const controller = new CrudController(service);
 const productService = new ProductService();
-const productController = new ProductController(productService, authService);
+const productController = new ProductController(productService);
 
 const routeTable = {
   get: {
@@ -28,13 +28,15 @@ const routeTable = {
     "/auth/status": authController.getStatus,
     "/auth/logout": authController.logout,
     "/auth/captcha": authController.getCaptcha,
+    "/api/products/:id/comments": productController.getComments,
+    "/api/products/:id/ratings": productController.getRatings,
   },
   post: {
     "/crud/:entity": controller.create,
     "/auth/register": authController.register,
     "/auth/login": authController.login,
-    "/api/products/comments": productController.createComment,
-    "/api/products/ratings": productController.createRating,
+    "/api/products/:id/comments": productController.createComment,
+    "/api/products/:id/ratings": productController.createRating,
   },
   put: {
     "/crud/:entity/:id": controller.update,
