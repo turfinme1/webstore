@@ -29,12 +29,6 @@ class AuthService {
       key === "password" ? "password_hash" : key
     );
 
-    const userResult = await data.dbConnection.query(`
-      SELECT * FROM users WHERE email = $1`,
-      [data.body.email]
-    );
-    ASSERT_USER(userResult.rows.length === 0, "Email already in use");
-
     const hashedPassword = await bcrypt.hash(data.body.password, 10);
     const values = schemaKeys.map((key) => {
       if (key === "password") {
