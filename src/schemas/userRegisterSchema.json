@@ -32,7 +32,7 @@
             "label": "Password",
             "placeholder": "Enter password",
             "errorMessage": {
-                "minLength": "Password must be at least 8 characters long."
+                "minLength": "Password must be at least 6 characters long."
             }
         },
         "iso_country_code_id": {
