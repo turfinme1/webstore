@@ -72,7 +72,7 @@ class ProductService {
       ON CONFLICT (product_id, user_id)
       DO UPDATE SET comment = EXCLUDED.comment
       RETURNING *`,
-      [data.body.product_id, data.session.user_id, data.body.comment]
+      [data.params.id, data.session.user_id, data.body.comment]
     );
     
     return result.rows[0];
@@ -85,7 +85,7 @@ class ProductService {
       ON CONFLICT (product_id, user_id) 
       DO UPDATE SET rating = EXCLUDED.rating
       RETURNING *`,
-      [data.body.product_id, data.session.user_id, data.body.rating]
+      [data.params.id, data.session.user_id, data.body.rating]
     );
 
     return result.rows[0];
