@@ -9,6 +9,7 @@ const ProductController = require("../controllers/productController");
 const AuthService = require("../services/authService");
 const AuthController = require("../controllers/authController");
 const { MailService, transporter } = require("../services/mailService");
+const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 
 const mailService = new MailService(transporter);
 const authService = new AuthService(mailService);
@@ -55,17 +56,21 @@ function requestMiddleware(handler) {
   return async (req, res, next) => {
     try {
       req.pool = pool;
-      req.dbConnection = await req.pool.connect();
+      req.dbConnection = new DbConnectionWrapper(await req.pool.connect());
       req.entitySchemaCollection = entitySchemaCollection;
+
       req.dbConnection.query("BEGIN");
       await sessionMiddleware(req, res);
       await handler(req, res, next);
       req.dbConnection.query("COMMIT");
+
     } catch (error) {
       console.error(error);
+
       if (req.dbConnection) {
         req.dbConnection.query("ROLLBACK");
       }
+      
       if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });
       } else {
