@@ -134,6 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     products.slice(0, pageSize).forEach((product) => {
       const productCard = document.createElement("div");
       productCard.classList.add("col-md-4", "product-card");
+  
       productCard.innerHTML = `
         <div class="card h-100">
           <div id="carousel-${product.id}" class="carousel slide" data-bs-ride="carousel">
@@ -169,9 +170,23 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </div>
       `;
+  
+      // Attach a click event listener to the card body (excluding carousel buttons)
+      const cardBody = productCard.querySelector('.card-body');
+      cardBody.addEventListener("click", () => {
+        window.location.href = `/product?id=${product.id}`;
+      });
+  
+      // Ensure the carousel controls don't trigger the navigation
+      const carousel = productCard.querySelector(`#carousel-${product.id}`);
+      carousel.addEventListener("click", (e) => {
+        e.stopPropagation(); // Prevent the click event from reaching the card body
+      });
+  
       productList.appendChild(productCard);
     });
   };
+  
 
   const updateProductList = async () => {
     const searchTerm = searchInput.value.trim();

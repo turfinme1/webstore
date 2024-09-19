@@ -287,7 +287,7 @@ async function attachLogoutHandler() {
   logoutButton.addEventListener("click", async (event) => {
     event.preventDefault();
     const response = await fetch("/auth/logout");
-    window.location.href = "/index.html";
+    window.location.href = "/index";
   });
 }
 

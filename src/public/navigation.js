@@ -29,7 +29,7 @@ function createNavigation(userStatus) {
                         <a class="nav-link" href="/profile">${userStatus.name}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link logout-btn" href="/logout.html">Logout</a>
+                        <a class="nav-link logout-btn" href="/logout">Logout</a>
                     </li>
                     `
                         : `
