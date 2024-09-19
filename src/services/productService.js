@@ -3,6 +3,8 @@ class ProductService {
     this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
     this.createComment = this.createComment.bind(this);
     this.createRating = this.createRating.bind(this);
+    this.getComments = this.getComments.bind(this);
+    this.getRatings = this.getRatings.bind(this);
   }
 
   async getFilteredPaginated(data) {
@@ -89,6 +91,26 @@ class ProductService {
     );
 
     return result.rows[0];
+  }
+
+  async getComments(data) {
+    const result = await data.dbConnection.query(`
+      SELECT * FROM comments_view 
+      WHERE product_id = $1`,
+      [data.params.id]
+    );
+
+    return result.rows;
+  }
+
+  async getRatings(data) {
+    const result = await data.dbConnection.query(`
+      SELECT * FROM product_ratings_view
+      WHERE product_id = $1 LIMIT 1`,
+      [data.params.id]
+    );
+
+    return result.rows;
   }
 }
 

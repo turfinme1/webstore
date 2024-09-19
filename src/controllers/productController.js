@@ -7,6 +7,8 @@ class ProductController {
     this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
     this.createComment = this.createComment.bind(this);
     this.createRating = this.createRating.bind(this);
+    this.getComments = this.getComments.bind(this);
+    this.getRatings = this.getRatings.bind(this);
   }
 
   async getFilteredPaginated(req, res) {
@@ -47,6 +49,25 @@ class ProductController {
     const result = await this.productService.createRating(data);
     res.status(200).json(result);
   }
+
+  async getComments(req, res) {
+    const data = {
+      params: req.params,
+      dbConnection: req.dbConnection,
+    };
+    const result = await this.productService.getComments(data);
+    res.status(200).json(result);
+  }
+
+  async getRatings(req, res) {
+    const data = {
+      params: req.params,
+      dbConnection: req.dbConnection,
+    };
+    const result = await this.productService.getRatings(data);
+    res.status(200).json(result);
+  }
+
 }
 
 module.exports = ProductController; 
