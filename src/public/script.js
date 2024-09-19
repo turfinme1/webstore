@@ -107,7 +107,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Build orderParams
     const orderParams = [];
     if (sortOption) {
-      orderParams.push(["price", sortOption.toUpperCase()]);
+      // orderParams.push(["price", sortOption.toUpperCase()]);
+      orderParams.push(sortOption);
     }
 
     // Construct query parameters
@@ -265,7 +266,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   sortPriceSelect.addEventListener("change", (e) => {
-    sortOption = e.target.value;
+    sortOption = e.target.value.split(" ");
     currentPage = 1;
     updateProductList();
   });

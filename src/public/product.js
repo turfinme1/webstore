@@ -27,11 +27,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const commentText = document.getElementById("comment-text").value;
       try {
         await submitComment(productId, commentText);
-        // alert("Comment submitted successfully!");
         await renderCommentSection(productId); // Refresh comments
       } catch (error) {
         console.error("Error submitting comment:", error);
-        alert("Failed to submit comment.");
+        alert(error.message);
       }
     });
   } catch (error) {
@@ -108,7 +107,7 @@ async function renderRatingSection(product) {
         await renderRatingSection(product);
       } catch (error) {
         console.error("Error submitting rating:", error);
-        alert("Failed to submit rating.");
+        alert(error.message);
       }
     });
   });
@@ -169,20 +168,17 @@ async function fetchProductData(productId) {
 }
 
 async function submitRating(productId, rating) {
-  try {
-    const response = await fetch(`/api/products/${productId}/ratings`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ rating }),
-    });
-    if (!response.ok) {
-      throw new Error("Failed to submit rating");
-    }
-  } catch (error) {
-    console.error(error);
-    throw error;
+  const response = await fetch(`/api/products/${productId}/ratings`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ rating }),
+  });
+  const result = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(result.error);
   }
 }
 
@@ -195,9 +191,9 @@ async function submitComment(productId, comment) {
     body: JSON.stringify({ comment }),
   });
   const result = await response.json();
-  console.log(result);
+
   if (!response.ok) {
-    throw new Error("Failed to submit comment");
+    throw new Error(result.error);
   }
 }
 
