@@ -1,6 +1,8 @@
 DROP VIEW IF EXISTS products_view;
 DROP VIEW IF EXISTS country_codes_view;
 DROP VIEW IF EXISTS categories_view;
+DROP VIEW IF EXISTS comments_view;
+DROP VIEW IF EXISTS product_ratings_view;
 
 DROP TABLE IF EXISTS products_categories;
 DROP TABLE IF EXISTS categories;
@@ -19,7 +21,6 @@ DROP TABLE IF EXISTS session_types;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS genders;
 DROP TABLE IF EXISTS currencies;
-
 
 CREATE TABLE products (
     id BIGSERIAL PRIMARY KEY,
@@ -173,6 +174,21 @@ CREATE TABLE email_verifications (
     expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes',
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+CREATE OR REPLACE VIEW comments_view AS
+SELECT
+    comments.*,
+    users.name AS user_name
+FROM comments
+LEFT JOIN users ON comments.user_id = users.id;
+
+CREATE OR REPLACE VIEW product_ratings_view AS
+SELECT
+    r.product_id,
+    AVG(r.rating) AS average_rating,
+    COUNT(r.rating) AS rating_count
+FROM ratings r
+GROUP BY r.product_id;
 
 INSERT INTO genders(type) VALUES ('Male'), ('Female');
 INSERT INTO session_types(type) VALUES ('Anonymous'), ('Authenticated'), ('Email Verification');
