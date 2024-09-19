@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "name": "userRegisterSchema",
+    "name": "userUpdateSchema",
     "routeName": "users",
     "views": "users_view",
     "properties": {
