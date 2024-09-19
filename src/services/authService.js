@@ -19,6 +19,7 @@ class AuthService {
     this.generateCaptchaImage = this.generateCaptchaImage.bind(this);
     this.verifyCaptcha = this.verifyCaptcha.bind(this);
     this.requireAuthorization = this.requireAuthorization.bind(this);
+    this.updateProfile = this.updateProfile.bind(this);
   }
 
   async register(data) {
@@ -166,7 +167,7 @@ class AuthService {
 
   async getStatus(data) {
     const result = await data.dbConnection.query(`
-      SELECT u.email, u.name, u.phone, st.type as session_type
+      SELECT u.name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.address, st.type as session_type
       FROM sessions s
       JOIN session_types st ON s.session_type_id = st.id
       LEFT JOIN users u ON s.user_id = u.id
@@ -286,6 +287,28 @@ class AuthService {
 
   async requireAuthorization(session) {
     ASSERT_USER(session?.user_id, "You must be logged in to perform this action");
+  }
+
+  async updateProfile(data) {
+    const schema = data.entitySchemaCollection["users"];
+    const schemaKeys = Object.keys(schema.properties);
+    const dbColumns = schemaKeys.map((key) =>
+      key === "password" ? "password_hash" : key
+    );
+
+    const hashedPassword = await bcrypt.hash(data.body.password, 10);
+    const values = schemaKeys.map((key) => {
+      if (key === "password") {
+        return hashedPassword;
+      }
+      return data.body[key] === undefined ? null : data.body[key];
+    });
+
+    const query = `UPDATE ${schema.name} SET ${dbColumns.map((key, i) => `${key} = $${i + 1}`).join(",")} WHERE id = $${dbColumns.length + 1} RETURNING *`;
+    const updateUserResult = await data.dbConnection.query(query, [...values, data.session.user_id]);
+    const user = updateUserResult.rows[0];
+
+    return user;
   }
 }
 

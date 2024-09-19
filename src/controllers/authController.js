@@ -9,6 +9,7 @@ class AuthController {
     this.verifyMail = this.verifyMail.bind(this);
     this.getStatus = this.getStatus.bind(this);
     this.getCaptcha = this.getCaptcha.bind(this);
+    this.updateProfile = this.updateProfile.bind(this);
   }
 
   async register(req, res, next) {
@@ -82,6 +83,19 @@ class AuthController {
     const resultStream = await this.authService.getCaptcha(data);
     res.setHeader('Content-Type', 'image/png');
     await resultStream.pipe(res);
+  }
+
+  async updateProfile(req, res, next) {
+    validateBody(req, req.entitySchemaCollection.userUpdateSchema);
+    const data = {
+      body: req.body,
+      params: req.params,
+      session: req.session,
+      dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
+    }; 
+    const result = await this.authService.updateProfile(data);
+    res.status(200).json(result);
   }
 }
 

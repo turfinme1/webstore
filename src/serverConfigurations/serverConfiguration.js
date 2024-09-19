@@ -37,6 +37,7 @@ const routeTable = {
     "/auth/login": authController.login,
     "/api/products/:id/comments": productController.createComment,
     "/api/products/:id/ratings": productController.createRating,
+    "/auth/update": authController.updateProfile,
   },
   put: {
     "/crud/:entity/:id": controller.update,
