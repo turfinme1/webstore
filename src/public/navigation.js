@@ -17,16 +17,13 @@ function createNavigation(userStatus) {
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="/index.html">Home</a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link" href="/index.html">Products</a>
                     </li>
                     ${
                       userStatus.session_type === "Authenticated"
                         ? `
                      <li class="nav-item">
-                        <a class="nav-link" href="/profile">${userStatus.name}</a>
+                        <a class="nav-link" href="/user-profile">${userStatus.name}</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link logout-btn" href="/logout">Logout</a>

@@ -12,7 +12,7 @@ async function createForm(schema, formId, formType) {
   form.className = "needs-validation"; // For Bootstrap styling
 
   const formTitle = document.createElement("h2");
-  formTitle.innerText = formType === "login" ? "Login" : "Register";
+  formTitle.innerText = formType;
   form.appendChild(formTitle);
 
   for (const key in schema.properties) {
@@ -132,7 +132,7 @@ async function createForm(schema, formId, formType) {
   const submitButton = document.createElement("button");
   submitButton.type = "submit";
   submitButton.className = "btn btn-primary w-100 mt-3";
-  submitButton.innerText = formType === "login" ? "Login" : "Register";
+  submitButton.innerText = formType;
   form.appendChild(submitButton);
 
   return form;
@@ -183,7 +183,7 @@ function attachValidationListeners(formId, schema, formType) {
         }
       });
     } else {
-      handleFormSubmission(`/auth/${formType}`, "POST", data, formId);
+      handleFormSubmission(`/auth/${formType.toLowerCase()}`, "POST", data, formId);
     }
   });
 }

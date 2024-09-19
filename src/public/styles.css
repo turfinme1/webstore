@@ -108,3 +108,26 @@ body {
 .star-rating label:hover ~ label {
   color: #f5b301;
 }
+
+.profile-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.profile-sidebar {
+  width: 25%;
+  background-color: #f8f9fa;
+  padding: 20px;
+}
+
+.profile-content {
+  width: 75%;
+  padding: 20px;
+}
+
+.nav-link {
+  cursor: pointer;
+  font-weight: bold;
+  color: #007bff;
+}
+
