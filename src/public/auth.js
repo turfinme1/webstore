@@ -24,8 +24,8 @@ async function createForm(schema, formId, formType) {
     label.htmlFor = key;
     label.className = "form-label";
     label.innerText = field.label;
-    if(schema.required.includes(key)) {
-      label.innerHTML+=`<span style="color:red;"> *</span>`;
+    if (schema.required.includes(key)) {
+      label.innerHTML += `<span style="color:red;"> *</span>`;
     }
 
     if (key === "iso_country_code_id") {
@@ -65,7 +65,7 @@ async function createForm(schema, formId, formType) {
       captchaImage.alt = "CAPTCHA";
       captchaImage.className = "captcha-image";
       captchaImage.style.cursor = "pointer";
-      
+
       const input = document.createElement("input");
       input.type = "text";
       input.id = key;
@@ -76,8 +76,7 @@ async function createForm(schema, formId, formType) {
       wrapper.appendChild(label);
       wrapper.appendChild(captchaImage);
       wrapper.appendChild(input);
-    }
-    else {
+    } else {
       const input = document.createElement("input");
       input.type = key === "password" ? "password" : "text";
       input.id = key;
@@ -183,7 +182,13 @@ function attachValidationListeners(formId, schema, formType) {
         }
       });
     } else {
-      handleFormSubmission(`/auth/${formType.toLowerCase()}`, "POST", data, formId);
+      handleFormSubmission(
+        `/auth/${formType.toLowerCase()}`,
+        "POST",
+        data,
+        formId,
+        formType
+      );
     }
   });
 }
@@ -232,7 +237,7 @@ function castFormDataToSchema(data, schema) {
 }
 
 // formSubmissionService.js
-async function handleFormSubmission(url, method, data, formId) {
+async function handleFormSubmission(url, method, data, formId, formType) {
   const genericMessage = document.getElementById(`${formId}-generic-message`);
   genericMessage.innerText = "";
   try {
@@ -248,7 +253,7 @@ async function handleFormSubmission(url, method, data, formId) {
       const error = await response.json();
       genericMessage.innerText = error.error || "Submission failed.";
       genericMessage.className = "text-danger";
-      if (! error.error.includes("Too many failed attempts try again later")) {
+      if (!error.error.includes("Too many failed attempts try again later")) {
         await loadCaptchaImage();
       }
     } else {
@@ -258,10 +263,12 @@ async function handleFormSubmission(url, method, data, formId) {
       genericMessage.innerText = `Success! You will be redirected shortly.`;
 
       setTimeout(() => {
-        if (getFormTypeBasedOnUrl() === "login") {
+        if (formType === "login") {
           window.location.href = "/index.html";
-        } else {
+        } else if (formType === "register") {
           window.location.href = "/verify.html";
+        } else if (formType === "Update") {
+          window.location.href = "/user-profile";
         }
       }, 2000);
     }

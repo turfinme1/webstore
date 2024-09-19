@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const preferencesLink = document.getElementById("preferences-link");
   const contentArea = document.getElementById("content-area");
 
-  const userStatus = await getUserStatus();
+  let userStatus = await getUserStatus();
   createNavigation(userStatus);
 
   const links = [
@@ -70,7 +70,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       formContainer.id = "form-container";
       formContainer.appendChild(preferencesForm);
       contentArea.appendChild(preferencesForm);
-      populateFormFields("preferences-form", { name: "John Doe", email: "alex@abv.bg", phone: "2830124",iso_country_code_id: "15", gender_id: "2"});
+      userStatus = await getUserStatus();
+      populateFormFields("preferences-form", userStatus);
 
       attachValidationListeners("preferences-form", schema, "Update");
     } catch (error) {
