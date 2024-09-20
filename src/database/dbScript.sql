@@ -87,11 +87,14 @@ SELECT
     p.short_description,
     p.long_description,
     ARRAY_AGG(i.url) AS images,
-    ARRAY_AGG(DISTINCT c.name) AS categories
+    ARRAY_AGG(DISTINCT c.name) AS categories,
+	COALESCE(AVG(r.rating), 0) AS rating,
+    COALESCE(COUNT(r.id), 0) AS rating_count 
 FROM products p
 LEFT JOIN images i ON p.id = i.product_id
 LEFT JOIN products_categories pc ON p.id = pc.product_id
 LEFT JOIN categories c ON pc.category_id = c.id
+LEFT JOIN ratings r ON p.id = r.product_id
 GROUP BY p.id;
 
 CREATE OR REPLACE VIEW country_codes_view AS
