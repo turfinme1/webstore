@@ -26,15 +26,6 @@
                 "pattern": "Email must be a valid email address."
             }
         },
-        "password": {
-            "type": "string",
-            "minLength": 6,
-            "label": "Password",
-            "placeholder": "Enter password",
-            "errorMessage": {
-                "minLength": "Password must be at least 6 characters long."
-            }
-        },
         "iso_country_code_id": {
             "type": "integer",
             "label": "Country Code",
@@ -90,19 +81,26 @@
             "errorMessage": {
                 "type": "Address must be text."
             }
+        },
+        "password": {
+            "type": ["string", "null"],
+            "minLength": 6,
+            "label": "New Password",
+            "placeholder": "Enter New password",
+            "errorMessage": {
+                "minLength": "Password must be at least 6 characters long."
+            }
         }
     },
     "required": [
         "name",
-        "password",
         "email",
-        "phone",
-        "iso_country_code_id"
+        "iso_country_code_id",
+        "phone"
     ],
     "additionalProperties": false,
     "errorMessage": {
         "required": {
-            "password": "Password is required.",
             "name": "Name is required.",
             "email": "Email is required.",
             "phone": "Phone number is required.",
