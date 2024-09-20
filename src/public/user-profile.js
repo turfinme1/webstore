@@ -6,6 +6,7 @@ import {
   getUserStatus,
   loadCaptchaImage,
   attachCaptchaRefreshHandler,
+  attachLogoutHandler,
 } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 
@@ -15,9 +16,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const notificationsLink = document.getElementById("notifications-link");
   const preferencesLink = document.getElementById("preferences-link");
   const contentArea = document.getElementById("content-area");
-
+  
   let userStatus = await getUserStatus();
   createNavigation(userStatus);
+  await attachLogoutHandler();
 
   const links = [
     accountInfoLink,
@@ -62,7 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Create form dynamically based on fetched schema
       const preferencesForm = await createForm(
         schema,
-        "preferences-form",
+        "update-form",
         "Update"
       );
       const formContainer = document.createElement("div");
@@ -71,9 +73,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       formContainer.appendChild(preferencesForm);
       contentArea.appendChild(preferencesForm);
       userStatus = await getUserStatus();
-      populateFormFields("preferences-form", userStatus);
-
-      attachValidationListeners("preferences-form", schema, "Update");
+      populateFormFields("update-form", userStatus);
+      attachValidationListeners("update-form", schema, "/auth/profile",  "PUT");
     } catch (error) {
       console.error("Error rendering preferences form:", error);
       contentArea.innerHTML = `<p class="text-danger">Failed to load preferences. Please try again later.</p>`;
