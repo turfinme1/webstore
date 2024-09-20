@@ -18,7 +18,6 @@ class AuthService {
     this.generateCaptcha = this.getCaptcha.bind(this);
     this.generateCaptchaImage = this.generateCaptchaImage.bind(this);
     this.verifyCaptcha = this.verifyCaptcha.bind(this);
-    this.requireAuthorization = this.requireAuthorization.bind(this);
     this.updateProfile = this.updateProfile.bind(this);
     this.forgotPassword = this.forgotPassword.bind(this);
   }
@@ -286,10 +285,6 @@ class AuthService {
     // return captchaResult.rows[0];
   }
 
-  async requireAuthorization(session) {
-    ASSERT_USER(session?.user_id, "You must be logged in to perform this action");
-  }
-
   async updateProfile(data) {
     const schema = data.entitySchemaCollection["users"];
     const schemaKeys = Object.keys(schema.properties);
@@ -389,7 +384,7 @@ class AuthService {
     );
 
     return { message: "Password successfully reset" };
-  }
+  } 
 }
 
 module.exports = AuthService;

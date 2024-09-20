@@ -46,6 +46,16 @@ describe("ProductService", () => {
         page: "1",
         pageSize: "10",
       },
+      session: {
+        user_id: 1,
+      },
+      params: {
+        id: 1,
+      },
+      body: {
+        comment: "Great product!",
+        rating: 5,
+      },
       dbConnection: mockDbConnection,
       entitySchemaCollection: mockEntitySchemaCollection,
     };
@@ -289,6 +299,119 @@ describe("ProductService", () => {
         expect.stringContaining("WHERE "),
         expect.any(Array)
       );
+    });
+  });
+
+  describe("createComment", () => {
+    it("should create or update a comment and return the inserted/updated comment", async () => {
+      const expectedComment = {
+        product_id: 1,
+        user_id: 1,
+        comment: "Great product!",
+      };
+
+      mockDbConnection.query.mockResolvedValueOnce({
+        rows: [expectedComment],
+      });
+
+      const result = await productService.createComment(params);
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO comments"),
+        [params.params.id, params.session.user_id, params.body.comment]
+      );
+
+      expect(result).toEqual(expectedComment);
+    });
+
+    it("should throw an error if the database query fails", async () => {
+      mockDbConnection.query.mockRejectedValue(new Error("Database error"));
+
+      await expect(productService.createComment(params)).rejects.toThrow("Database error");
+    });
+  });
+
+  describe("createRating", () => {
+    it("should create or update a rating and return the inserted/updated rating", async () => {
+      const expectedRating = {
+        product_id: 1,
+        user_id: 1,
+        rating: 5,
+      };
+
+      mockDbConnection.query.mockResolvedValueOnce({
+        rows: [expectedRating],
+      });
+
+      const result = await productService.createRating(params);
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO ratings"),
+        [params.params.id, params.session.user_id, params.body.rating]
+      );
+
+      expect(result).toEqual(expectedRating);
+    });
+
+    it("should throw an error if the database query fails", async () => {
+      mockDbConnection.query.mockRejectedValue(new Error("Database error"));
+
+      await expect(productService.createRating(params)).rejects.toThrow("Database error");
+    });
+  });
+
+  describe("getComments", () => {
+    it("should return all comments for a product", async () => {
+      const expectedComments = [
+        { id: 1, product_id: 1, comment: "Great product!" },
+        { id: 2, product_id: 1, comment: "Good value for money" },
+      ];
+
+      mockDbConnection.query.mockResolvedValueOnce({
+        rows: expectedComments,
+      });
+
+      const result = await productService.getComments(params);
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("SELECT * FROM comments_view"),
+        [params.params.id]
+      );
+
+      expect(result).toEqual(expectedComments);
+    });
+
+    it("should throw an error if the database query fails", async () => {
+      mockDbConnection.query.mockRejectedValue(new Error("Database error"));
+
+      await expect(productService.getComments(params)).rejects.toThrow("Database error");
+    });
+  });
+
+  describe("getRatings", () => {
+    it("should return the ratings for a product", async () => {
+      const expectedRatings = [
+        { id: 1, product_id: 1, average_rating: 4.5, rating_count: 2 },
+      ];
+
+      mockDbConnection.query.mockResolvedValueOnce({
+        rows: expectedRatings,
+      });
+
+      const result = await productService.getRatings(params);
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("SELECT * FROM product_ratings_view"),
+        [params.params.id]
+      );
+
+      expect(result).toEqual(expectedRatings);
+    });
+
+    it("should throw an error if the database query fails", async () => {
+      mockDbConnection.query.mockRejectedValue(new Error("Database error"));
+
+      await expect(productService.getRatings(params)).rejects.toThrow("Database error");
     });
   });
 });

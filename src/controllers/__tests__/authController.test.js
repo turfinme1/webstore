@@ -14,6 +14,9 @@ describe("AuthController", () => {
       verifyMail: jest.fn(),
       getStatus: jest.fn(),
       getCaptcha: jest.fn(),
+      updateProfile: jest.fn(),
+      forgotPassword: jest.fn(),
+      resetPassword: jest.fn(),
     };
 
     authController = new AuthController(authService);
@@ -186,4 +189,88 @@ describe("AuthController", () => {
       expect(mockStream.pipe).toHaveBeenCalledWith(mockRes);
     });
   });
+
+  describe("updateProfile", () => {
+    it("should validate request body, call authService.updateProfile, and respond with status 200", async () => {
+      const req = {
+        body: { name: "New Name" },
+        entitySchemaCollection: { userUpdateSchema: {} },
+        session: {},
+        dbConnection: {},
+        params: {},
+      };
+      const updateProfileResult = { success: true };
+  
+      authService.updateProfile.mockResolvedValue(updateProfileResult);
+  
+      await authController.updateProfile(req, mockRes, mockNext);
+  
+      expect(authService.updateProfile).toHaveBeenCalledWith({
+        body: req.body,
+        params: req.params,
+        session: req.session,
+        dbConnection: req.dbConnection,
+        entitySchemaCollection: req.entitySchemaCollection,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(updateProfileResult);
+    });
+  });
+  
+  describe("forgotPassword", () => {
+    it("should validate request body, call authService.forgotPassword, and respond with status 200", async () => {
+      const req = {
+        body: { email: "test@example.com" },
+        entitySchemaCollection: { userForgotPasswordSchema: {} },
+        session: {},
+        dbConnection: {},
+        params: {},
+      };
+      const forgotPasswordResult = { message: "Password reset link sent" };
+  
+      authService.forgotPassword.mockResolvedValue(forgotPasswordResult);
+  
+      await authController.forgotPassword(req, mockRes, mockNext);
+  
+      expect(authService.forgotPassword).toHaveBeenCalledWith({
+        body: req.body,
+        params: req.params,
+        session: req.session,
+        dbConnection: req.dbConnection,
+        entitySchemaCollection: req.entitySchemaCollection,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(forgotPasswordResult);
+    });
+  });
+  
+  describe("resetPassword", () => {
+    it("should validate request body, call authService.resetPassword, and respond with status 200", async () => {
+      const req = {
+        body: { newPassword: "newpassword123" },
+        entitySchemaCollection: { userResetPasswordSchema: {} },
+        session: {},
+        dbConnection: {},
+        params: { token: "reset-token" },
+        query: {},
+      };
+      const resetPasswordResult = { message: "Password reset successful" };
+  
+      authService.resetPassword.mockResolvedValue(resetPasswordResult);
+  
+      await authController.resetPassword(req, mockRes, mockNext);
+  
+      expect(authService.resetPassword).toHaveBeenCalledWith({
+        body: req.body,
+        query: req.query,
+        params: req.params,
+        session: req.session,
+        dbConnection: req.dbConnection,
+        entitySchemaCollection: req.entitySchemaCollection,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(resetPasswordResult);
+    });
+  });
+  
 });
