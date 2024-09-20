@@ -35,12 +35,14 @@ const routeTable = {
     "/crud/:entity": controller.create,
     "/auth/register": authController.register,
     "/auth/login": authController.login,
+    "/auth/forgot-password": authController.forgotPassword,
+    "/auth/reset-password": authController.resetPassword,
     "/api/products/:id/comments": productController.createComment,
     "/api/products/:id/ratings": productController.createRating,
-    "/auth/update": authController.updateProfile,
   },
   put: {
     "/crud/:entity/:id": controller.update,
+    "/auth/profile": authController.updateProfile,
   },
   delete: {
     "/crud/:entity/:id": controller.delete,
