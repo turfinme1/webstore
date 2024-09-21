@@ -20,19 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     populateProductData(productData);
     await renderRatingSection(productData);
     await renderCommentSection(productId);
-
-    const commentForm = document.getElementById("comment-form");
-    commentForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const commentText = document.getElementById("comment-text").value;
-      try {
-        await submitComment(productId, commentText);
-        await renderCommentSection(productId); // Refresh comments
-      } catch (error) {
-        console.error("Error submitting comment:", error);
-        alert(error.message);
-      }
-    });
+    
   } catch (error) {
     console.error("Error initializing product page:", error);
   }
@@ -150,8 +138,22 @@ async function renderCommentSection(productId) {
       </div>
     `;
   });
+ 
   // Append the comments below the form
   commentsSection.innerHTML += commentsHtml;
+
+  const commentForm = document.getElementById("comment-form");
+  commentForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const commentText = document.getElementById("comment-text").value;
+    try {
+      await submitComment(productId, commentText);
+      await renderCommentSection(productId); // Refresh comments
+    } catch (error) {
+      console.error("Error submitting comment:", error);
+      alert(error.message);
+    }
+  });
 }
 
 async function fetchProductData(productId) {
