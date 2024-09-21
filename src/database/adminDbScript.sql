@@ -1,10 +1,8 @@
-DROP TABLE IF EXISTS email_verifications;
-DROP TABLE IF EXISTS captchas;
-DROP TABLE IF EXISTS failed_attempts;
-DROP TABLE IF EXISTS attempt_types;
-DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS session_types;
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS admin_captchas;
+DROP TABLE IF EXISTS admin_failed_attempts;
+DROP TABLE IF EXISTS admin_sessions;
+DROP TABLE IF EXISTS admin_session_types;
+DROP TABLE IF EXISTS admin_users;
 
 CREATE TABLE admin_users (
     id BIGSERIAL PRIMARY KEY,
@@ -13,6 +11,7 @@ CREATE TABLE admin_users (
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     phone TEXT NOT NULL,
+    iso_country_code_id BIGINT NOT NULL REFERENCES iso_country_codes(id), 
     gender_id BIGINT NULL REFERENCES genders(id),
     address TEXT NULL,
     is_email_verified BOOLEAN NOT NULL DEFAULT FALSE
