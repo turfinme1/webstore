@@ -4,13 +4,21 @@
     "properties": {
         "email": {
             "type": "string",
+            "minLength": 1,
             "label": "Email",
-            "placeholder": "Enter Email"
+            "placeholder": "Enter Email",
+            "errorMessage": {
+                "minLength": "Email is required."
+            }
         },
         "password": {
             "type": "string",
+            "minLength": 1,
             "label": "Password",
-            "placeholder": "Enter password"
+            "placeholder": "Enter password",
+            "errorMessage": {
+                "minLength": "Password is required."
+            }
         },
         "captcha_answer": {
             "type": "string",
@@ -31,7 +39,8 @@
     "errorMessage": {
         "required": {
             "email": "Email is required.",
-            "password": "Password is required."
+            "password": "Password is required.",
+            "captcha_answer": "Captcha is required."
         },
         "additionalProperties": "No additional properties are allowed."
     }
