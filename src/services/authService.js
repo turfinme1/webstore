@@ -290,8 +290,8 @@ class AuthService {
 
     if(captcha.answer !== data.body.captcha_answer) {
       await data.dbConnection.query(`
-        INSERT INTO ${data.entitySchemaCollection.userManagementSchema.failed_attempts_table} (${data.entitySchemaCollection.userManagementSchema.session_id} , attempt_type_id)
-        VALUES ((SELECT id FROM ${data.entitySchemaCollection.userManagementSchema.session_table}  WHERE session_hash = $1 LIMIT 1),
+        INSERT INTO ${data.entitySchemaCollection.userManagementSchema.failed_attempts_table} (${data.entitySchemaCollection.userManagementSchema.session_id}, attempt_type_id)
+        VALUES ((SELECT id FROM ${data.entitySchemaCollection.userManagementSchema.session_table} WHERE session_hash = $1 LIMIT 1),
         (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1))`,
         [data.session.session_hash]
       );

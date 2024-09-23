@@ -37,7 +37,7 @@ describe("AuthController", () => {
       const req = {
         body: { email: "test@example.com" },
         entitySchemaCollection: { userRegisterSchema: {} },
-        session: {},
+        session: { rate_limited_until: Date.now() - 1000 }, 
         dbConnection: {},
       };
       const registrationResult = {
@@ -67,7 +67,7 @@ describe("AuthController", () => {
       const req = {
         body: { email: "test@example.com" },
         entitySchemaCollection: { userLoginSchema: {} },
-        session: {},
+        session: { rate_limited_until: Date.now() - 1000 },
         dbConnection: {},
       };
       const loginResult = {

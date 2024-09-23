@@ -30,6 +30,14 @@ describe("AuthService", () => {
         name: "Test User",
       },
       entitySchemaCollection: {
+        userManagementSchema: {
+          user_id: "user_id",
+          user_table: "users",
+          session_table: "sessions",
+          captcha_table: "captchas",
+          failed_attempts_table: "failed_attempts",
+          session_id: "session_id",
+        },
         users: {
           name: "users",
           properties: {
@@ -202,6 +210,16 @@ describe("AuthService", () => {
         ipAddress: "127.0.0.1",
         sessionType: "authenticated",
         sessionHash: "session123",
+        entitySchemaCollection: {
+          userManagementSchema: {
+            user_id: "user_id",
+            user_table: "users",
+            session_table: "sessions",
+            captcha_table: "captchas",
+            failed_attempts_table: "failed_attempts",
+            session_id: "session_id",
+          },
+        },
       };
 
       mockDbConnection.query.mockResolvedValueOnce({ rows: [mockSession] });
@@ -431,9 +449,15 @@ describe("AuthService", () => {
   describe("verifyCaptcha", () => {
     beforeEach(() => {
       data.body = { captcha_answer: "8" };
+      data.session = { session_hash: "test-session-hash" }
     });
 
     it("should verify the captcha and deactivate it when the answer is correct", async () => {
+      const mockAppSettings = {
+        request_limit: "5",
+        request_window: "1 hour",
+        request_block_duration: "30 minutes",
+      };
       const mockFailedAttempts = { failed_attempts_count: "2" }; // Under the threshold
       const mockCaptcha = {
         id: 1,
@@ -441,138 +465,185 @@ describe("AuthService", () => {
         is_active: true,
         expires_at: new Date(Date.now() + 60000),
       };
-
-      // Mock queries for failed attempts, captcha, and updating the captcha
+  
+      // Mock queries for app settings, failed attempts, captcha, and updating the captcha
       mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [mockAppSettings] }) // App settings
         .mockResolvedValueOnce({ rows: [mockFailedAttempts] }) // Failed attempts
         .mockResolvedValueOnce({ rows: [mockCaptcha] }) // Captcha found
         .mockResolvedValueOnce({ rows: [] }); // Update captcha to inactive
-
+  
       await authService.verifyCaptcha(data);
-
+  
+      const expectedAppSettingsQuery = `
+        SELECT request_limit, request_window, request_block_duration
+        FROM app_settings LIMIT 1`;
+  
       const expectedFailedAttemptsQuery = `
         SELECT COUNT(*) AS failed_attempts_count
         FROM failed_attempts
         WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1)
         AND attempt_type_id = (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1)
-        AND created_at >= NOW() - INTERVAL '1 hour'`;
-
+        AND created_at >= NOW() - (SELECT request_window FROM app_settings LIMIT 1)`;
+  
       const expectedCaptchaQuery = `
         SELECT * FROM captchas
         WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1) 
         AND is_active = TRUE AND expires_at > NOW()`;
-
+  
       // Assertions for the database queries
       expect(
         containsQueryString(
           mockDbConnection.query.mock.calls[0][0],
-          expectedFailedAttemptsQuery
+          expectedAppSettingsQuery
         )
       ).toBe(true);
       expect(
         containsQueryString(
           mockDbConnection.query.mock.calls[1][0],
-          expectedCaptchaQuery
-        )
-      ).toBe(true);
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
-    });
-
-    it("should throw an error when there are too many failed attempts", async () => {
-      const mockFailedAttempts = { failed_attempts_count: "6" }; // Over the threshold
-
-      // Mock query result for failed attempts
-      mockDbConnection.query.mockResolvedValueOnce({
-        rows: [mockFailedAttempts],
-      });
-
-      await expect(authService.verifyCaptcha(data)).rejects.toThrow(
-        "Too many failed attempts try again later"
-      );
-
-      const expectedFailedAttemptsQuery = `
-        SELECT COUNT(*) AS failed_attempts_count
-        FROM failed_attempts
-        WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1)
-        AND attempt_type_id = (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1)
-        AND created_at >= NOW() - INTERVAL '1 hour'`;
-
-      // Ensure the correct query was made and no further steps were taken
-      expect(
-        containsQueryString(
-          mockDbConnection.query.mock.calls[0][0],
           expectedFailedAttemptsQuery
-        )
-      ).toBe(true);
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(1);
-    });
-
-    it("should throw an error when the captcha answer is incorrect", async () => {
-      const mockFailedAttempts = { failed_attempts_count: "2" }; // Under the threshold
-      const mockCaptcha = {
-        id: 1,
-        answer: "9",
-        is_active: true,
-        expires_at: new Date(Date.now() + 60000),
-      };
-
-      // Mock queries for failed attempts, captcha, and inserting failed attempt
-      mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [mockFailedAttempts] }) // Failed attempts
-        .mockResolvedValueOnce({ rows: [mockCaptcha] }) // Captcha found
-        .mockResolvedValueOnce({ rows: [] }) // Insert failed attempt
-        .mockResolvedValueOnce({ rows: [] }); // Update captcha
-
-      await expect(authService.verifyCaptcha(data)).rejects.toThrow(
-        "Invalid captcha answer"
-      );
-
-      const expectedFailedAttemptsQuery = `
-        SELECT COUNT(*) AS failed_attempts_count
-        FROM failed_attempts
-        WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1)
-        AND attempt_type_id = (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1)
-        AND created_at >= NOW() - INTERVAL '1 hour'`;
-
-      const expectedCaptchaQuery = `
-        SELECT * FROM captchas
-        WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1) 
-        AND is_active = TRUE AND expires_at > NOW()`;
-
-      const expectedCaptchaInvalidationQuery = `
-        UPDATE captchas SET is_active = FALSE WHERE id = $1`;
-
-      const expectedInsertFailedAttemptQuery = `
-        INSERT INTO failed_attempts (session_id, attempt_type_id)
-        VALUES ((SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1),
-        (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1))`;
-
-      expect(
-        containsQueryString(
-          mockDbConnection.query.mock.calls[0][0],
-          expectedFailedAttemptsQuery
-        )
-      ).toBe(true);
-      expect(
-        containsQueryString(
-          mockDbConnection.query.mock.calls[1][0],
-          expectedCaptchaQuery
         )
       ).toBe(true);
       expect(
         containsQueryString(
           mockDbConnection.query.mock.calls[2][0],
-          expectedCaptchaInvalidationQuery
+          expectedCaptchaQuery
+        )
+      ).toBe(true);
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(4); // Including app settings query
+    });
+
+    it("should throw an error when there are too many failed attempts", async () => {
+      const mockAppSettings = {
+        request_limit: "5", // The limit set in app settings
+        request_window: "1 hour",
+        request_block_duration: "30 minutes",
+      };
+      const mockFailedAttempts = { failed_attempts_count: "6" }; // Over the threshold
+    
+      // Mock query results for app settings and failed attempts
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [mockAppSettings] }) // App settings
+        .mockResolvedValueOnce({ rows: [mockFailedAttempts] }); // Failed attempts
+    
+      // Mocking the update for rate limiting
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [] }); // For rate limiting
+    
+      await expect(authService.verifyCaptcha(data)).rejects.toThrow(
+        "Too many failed attempts. Try again later"
+      );
+    
+      const expectedFailedAttemptsQuery = `
+        SELECT COUNT(*) AS failed_attempts_count
+        FROM failed_attempts
+        WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1)
+        AND attempt_type_id = (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1)
+        AND created_at >= NOW() - (SELECT request_window FROM app_settings LIMIT 1)`;
+    
+      const expectedRateLimitUpdateQuery = `
+        UPDATE sessions
+        SET rate_limited_until = NOW() + (SELECT request_block_duration FROM app_settings LIMIT 1)
+        WHERE session_hash = $1`;
+    
+      // Ensure the correct query was made for failed attempts
+      expect(
+        containsQueryString(
+          mockDbConnection.query.mock.calls[1][0],
+          expectedFailedAttemptsQuery
+        )
+      ).toBe(true);
+    
+      // Ensure the rate limiting update query was called
+      expect(
+        containsQueryString(
+          mockDbConnection.query.mock.calls[2][0],
+          expectedRateLimitUpdateQuery
+        )
+      ).toBe(true);
+    
+      // Ensure no further steps were taken after the rate limiting
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(4); 
+    });
+    
+
+    it("should throw an error when the captcha answer is incorrect", async () => {
+      const mockAppSettings = {
+        request_limit: "5", // The limit set in app settings
+        request_window: "1 hour",
+        request_block_duration: "30 minutes",
+      };
+      const mockFailedAttempts = { failed_attempts_count: "2" }; // Under the threshold
+      const mockCaptcha = {
+        id: 1,
+        answer: "9", // Incorrect answer compared to the test input
+        is_active: true,
+        expires_at: new Date(Date.now() + 60000),
+      };
+    
+      // Mock queries for failed attempts, captcha, inserting failed attempt, and invalidating captcha
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [mockAppSettings] }) // App settings
+        .mockResolvedValueOnce({ rows: [mockFailedAttempts] }) // Failed attempts count
+        .mockResolvedValueOnce({ rows: [mockCaptcha] }) // Captcha details
+        .mockResolvedValueOnce({ rows: [] }) // Insert into failed_attempts
+        .mockResolvedValueOnce({ rows: [] }) // Update captcha to inactive
+        .mockResolvedValueOnce({ rows: [] }); // Commit transaction (optional)
+    
+      // The test should reject with an error for invalid captcha
+      await expect(authService.verifyCaptcha(data)).rejects.toThrow(
+        "Invalid captcha answer"
+      );
+    
+      const expectedFailedAttemptsQuery = `
+        SELECT COUNT(*) AS failed_attempts_count
+        FROM failed_attempts
+        WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1)
+        AND attempt_type_id = (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1)
+        AND created_at >= NOW() - (SELECT request_window FROM app_settings LIMIT 1)`;
+    
+      const expectedCaptchaQuery = `
+        SELECT * FROM captchas
+        WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1) 
+        AND is_active = TRUE AND expires_at > NOW()`;
+    
+      const expectedCaptchaInvalidationQuery = `
+        UPDATE captchas SET is_active = FALSE WHERE id = $1`;
+    
+      const expectedInsertFailedAttemptQuery = `
+        INSERT INTO failed_attempts (session_id, attempt_type_id)
+        VALUES ((SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1),
+        (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1))`;
+    
+      // Verify the queries executed
+      expect(
+        containsQueryString(
+          mockDbConnection.query.mock.calls[1][0],
+          expectedFailedAttemptsQuery
+        )
+      ).toBe(true);
+      expect(
+        containsQueryString(
+          mockDbConnection.query.mock.calls[2][0],
+          expectedCaptchaQuery
         )
       ).toBe(true);
       expect(
         containsQueryString(
           mockDbConnection.query.mock.calls[3][0],
+          expectedCaptchaInvalidationQuery
+        )
+      ).toBe(true);
+      expect(
+        containsQueryString(
+          mockDbConnection.query.mock.calls[4][0],
           expectedInsertFailedAttemptQuery
         )
       ).toBe(true);
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(5); // Four queries and the commit
+    
+      // Ensure the number of queries is correct (app settings, failed attempts, captcha, failed attempt insert, captcha invalidation)
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(6); // 5 queries + commit
     });
+    
   });
 
   describe("updateProfile", () => {
