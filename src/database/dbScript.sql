@@ -21,6 +21,14 @@ DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS genders;
 DROP TABLE IF EXISTS currencies;
 DROP TABLE IF EXISTS iso_country_codes;
+DROP TABLE IF EXISTS app_settings;
+
+CREATE TABLE app_settings (
+    id BIGSERIAL PRIMARY KEY,
+    request_limit BIGINT NOT NULL DEFAULT 10,
+    request_window INTERVAL NOT NULL DEFAULT '10 minutes',
+    request_block_duration INTERVAL NOT NULL DEFAULT '1 hour'
+);
 
 CREATE TABLE iso_country_codes (
     id BIGSERIAL PRIMARY KEY,
@@ -60,7 +68,8 @@ CREATE TABLE sessions (
     session_type_id BIGINT NOT NULL REFERENCES session_types(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes',
-    is_active BOOLEAN NOT NULL DEFAULT TRUE
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    rate_limited_until TIMESTAMPTZ NULL
 );
 
 CREATE TABLE captchas (
