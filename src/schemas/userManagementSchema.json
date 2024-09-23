@@ -1,6 +1,7 @@
 { 
   "name": "userManagementSchema",
   "admin": {
+    "user_id": "admin_user_id",
     "user_table": "admin_users",
     "session_table": "admin_sessions",
     "captcha_table": "admin_captchas",
@@ -8,6 +9,7 @@
     "session_id": "admin_session_id"
   },
   "user": {
+    "user_id": "user_id",
     "user_table": "users",
     "session_table": "sessions",
     "captcha_table": "captchas",
