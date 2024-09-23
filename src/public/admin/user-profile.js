@@ -1,118 +1,71 @@
 import {
-  fetchUserSchema,
-  createForm,
-  attachValidationListeners,
-  getFormTypeBasedOnUrl,
   getUserStatus,
-  loadCaptchaImage,
-  attachCaptchaRefreshHandler,
   attachLogoutHandler,
 } from "./auth.js";
 import { createNavigation } from "./navigation.js";
+import {
+  createForm,
+  attachValidationListeners,
+  fetchUserSchema,
+  populateFormFields
+} from "./form-util.js";
 
+// Initial setup
 document.addEventListener("DOMContentLoaded", async () => {
   const settingsLink = document.getElementById("settings-link");
-  const updateProfile = document.getElementById("change-password-link");
   const contentArea = document.getElementById("content-area");
 
-  let userStatus = await getUserStatus();
+  // Initialize user status and navigation
+  const userStatus = await getUserStatus();
   createNavigation(userStatus);
   await attachLogoutHandler();
 
-  const links = [settingsLink, updateProfile];
-
-  // Function to remove 'active' class from all links
+  // Remove active class from all links
   const removeActiveClass = () => {
-    links.forEach((link) => {
-      link.classList.remove("active");
-    });
+    settingsLink.classList.remove("active");
   };
 
-  // Function to render account info
-  const renderSettings = () => {
-    contentArea.innerHTML = `
-            <h5>Account Information</h5>
-            <p>Here you can view and update your account details.</p>
-            <form id="account-info-form">
-                <div class="mb-3">
-                    <label for="name" class="form-label">Name</label>
-                    <input type="text" class="form-control" id="name" value="John Doe">
-                </div>
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" value="john@example.com">
-                </div>
-                <button type="submit" class="btn btn-primary">Update Info</button>
-            </form>
-        `;
-  };
-
-  // Function to render change password form
-  const renderChangePassword = async () => {
-    contentArea.innerHTML = "";
-    try {
-      // Fetch user preferences schema from the server
-      const schema = await fetchUserSchema("/userUpdateSchema.json");
-
-      // Create form dynamically based on fetched schema
-      const preferencesForm = await createForm(schema, "update-form", "Update");
-      const formContainer = document.createElement("div");
-      formContainer.classList.add("p-4", "border", "rounded");
-      formContainer.id = "form-container";
-      formContainer.appendChild(preferencesForm);
-      contentArea.appendChild(preferencesForm);
-      userStatus = await getUserStatus();
-      populateFormFields("update-form", userStatus);
-      attachValidationListeners("update-form", schema, "/auth/profile", "PUT");
-    } catch (error) {
-      console.error("Error rendering preferences form:", error);
-      contentArea.innerHTML = `<p class="text-danger">Failed to load preferences. Please try again later.</p>`;
-    }
-  };
-
-  // Add click event listeners for each sidebar link
-  settingsLink.addEventListener("click", () => {
+  // Event listener for settings link
+  settingsLink.addEventListener("click", async () => {
     removeActiveClass();
     settingsLink.classList.add("active");
-    renderSettings();
+    await renderSettings();
   });
 
-  updateProfile.addEventListener("click", () => {
-    removeActiveClass();
-    updateProfile.classList.add("active");
-    renderChangePassword();
-  });
-
-  // Load the account info section by default
+  // Render settings by default
   renderSettings();
 });
 
-function populateFormFields(formId, userData) {
-  const form = document.getElementById(formId);
-  if (!form || typeof userData !== "object") return;
+// Function to render settings form
+async function renderSettings() {
+  const contentArea = document.getElementById("content-area");
+  contentArea.innerHTML = ""; // Clear previous content
 
-  Object.keys(userData).forEach((key) => {
-    const input = form.querySelector(`[name="${key}"], [id="${key}"]`);
-    if (input) {
-      switch (input.type) {
-        case "checkbox":
-          input.checked = userData[key] ? true : false;
-          break;
-        case "radio":
-          const radio = form.querySelector(
-            `[name="${key}"][value="${userData[key]}"]`
-          );
-          if (radio) radio.checked = true;
-          break;
-        case "select-one":
-          const option = input.querySelector(
-            `option[value="${userData[key]}"]`
-          );
-          if (option) input.value = userData[key];
-          break;
-        default:
-          input.value = userData[key] ?? "";
-      }
-    }
-  });
+  const settingsSchema = await fetchUserSchema("/appSettingsSchema.json");
+
+  try {
+    // Dynamically create form based on settings schema
+    const settingsForm = await createForm(
+      settingsSchema,
+      "settings-form",
+      "Update Settings"
+    );
+    const formContainer = document.createElement("div");
+    formContainer.classList.add("p-4", "border", "rounded");
+    formContainer.appendChild(settingsForm);
+    contentArea.appendChild(formContainer);
+
+    // Attach validation and submission logic
+    attachValidationListeners(
+      "settings-form",
+      settingsSchema,
+      "/app-config/rate-limit-settings",
+      "PUT"
+    );
+
+    await populateFormFields("settings-form", "/app-config/rate-limit-settings");
+  } catch (error) {
+    console.error("Error rendering settings form:", error);
+    contentArea.innerHTML = `<p class="text-danger">Failed to load settings. Please try again later.</p>`;
+  }
 }
