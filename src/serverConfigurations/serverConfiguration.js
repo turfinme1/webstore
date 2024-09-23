@@ -1,6 +1,6 @@
 const pool = require("../database/dbConfig");
-const entitySchemaCollection = require("../schemas/entitySchemaCollection");
 const { UserError } = require("../serverConfigurations/assert");
+const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
 
 const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
@@ -11,6 +11,7 @@ const AuthController = require("../controllers/authController");
 const { MailService, transporter } = require("../services/mailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 
+const entitySchemaCollection = loadEntitySchemas("user");
 const mailService = new MailService(transporter);
 const authService = new AuthService(mailService);
 const authController = new AuthController(authService);
@@ -93,7 +94,7 @@ async function sessionMiddleware(req, res) {
   let sessionId = req.cookies.session_id;
 
   if (sessionId) {
-    const data = { dbConnection: req.dbConnection, sessionHash : sessionId };
+    const data = { entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, sessionHash : sessionId };
     const session = await authService.getSession(data);
 
     if (session && new Date(session.expires_at) > new Date()) {
@@ -109,7 +110,7 @@ async function sessionMiddleware(req, res) {
     }
   }
 
-  const data = { dbConnection: req.dbConnection, userId: null, ipAddress: req.ip, sessionType: 'Anonymous' };
+  const data = {entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, userId: null, ipAddress: req.ip, sessionType: 'Anonymous' };
   const anonymousSession = await authService.createSession(data);
   res.cookie('session_id', anonymousSession.session_hash, {
     expires: anonymousSession.expires_at,

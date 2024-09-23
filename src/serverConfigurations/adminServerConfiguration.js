@@ -10,6 +10,8 @@ const AuthService = require("../services/authService");
 const AuthController = require("../controllers/authController");
 const { MailService, transporter } = require("../services/mailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
+const AppConfigService = require("../services/appConfigService");
+const AppConfigController = require("../controllers/appConfigController");
 
 const entitySchemaCollection = loadEntitySchemas("admin");
 const mailService = new MailService(transporter);
@@ -19,6 +21,8 @@ const service = new CrudService();
 const controller = new CrudController(service);
 const productService = new ProductService();
 const productController = new ProductController(productService);
+const appConfigService = new AppConfigService();
+const appConfigController = new AppConfigController(appConfigService);
 
 const routeTable = {
   get: {
@@ -31,6 +35,7 @@ const routeTable = {
     "/auth/captcha": authController.getCaptcha,
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
+    "/app-config/rate-limit-settings": appConfigController.getRateLimitSettings,
   },
   post: {
     "/crud/:entity": controller.create,
@@ -44,6 +49,7 @@ const routeTable = {
   put: {
     "/crud/:entity/:id": controller.update,
     "/auth/profile": authController.updateProfile,
+    "/app-config/rate-limit-settings": appConfigController.updateRateLimitSettings,
   },
   delete: {
     "/crud/:entity/:id": controller.delete,
