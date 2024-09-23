@@ -221,7 +221,7 @@ async function handleFormSubmission(url, method, data, formId) {
       genericMessage.innerText = error.error || "Submission failed.";
       genericMessage.className = "text-danger";
       if (
-        !error.error.includes("Too many failed attempts try again later") &&
+        !error.error.includes("Too many failed attempts. Try again later") &&
         method === "POST" &&
         (formId.includes("login" || formId.includes("register")))
       ) {
