@@ -52,7 +52,9 @@ export function createLabel(key, field, requiredFields) {
 }
 
 export async function createInputField(key, field) {
-  if (key === "iso_country_code_id") {
+  if (field.type === "boolean") {
+    return createCheckboxField(key, field);
+  } else if (key === "iso_country_code_id") {
     return createSelectField(
       key,
       field,
@@ -111,6 +113,27 @@ export function createCaptchaField(key) {
 
   wrapper.appendChild(captchaImage);
   wrapper.appendChild(input);
+
+  return wrapper;
+}
+
+export function createCheckboxField(key, field) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "form-check";
+
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.id = key;
+  input.name = key;
+  input.className = "form-check-input";
+
+  const label = document.createElement("label");
+  label.htmlFor = key;
+  label.className = "form-check-label";
+  label.innerText = field.placeholder || key.charAt(0).toUpperCase() + key.slice(1);
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(label);
 
   return wrapper;
 }
@@ -269,7 +292,7 @@ export function castFormDataToSchema(data, schema) {
         castedData[key] = parseFloat(data[key]);
         if (isNaN(castedData[key])) castedData[key] = null; // Handle empty or invalid number values
       } else if (expectedType === "boolean") {
-        castedData[key] = data[key] === "true";
+        castedData[key] = data[key] === "on";
       } else if (expectedType === "null") {
         castedData[key] = data[key] === "" ? null : data[key]; // Convert empty string to null
       } else {
