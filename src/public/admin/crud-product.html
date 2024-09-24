@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Page</title>
+    <link rel="stylesheet" href="/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+    <script defer type="module" src="/ajv.js"></script>
+    <script defer src="/bootstrap.bundle.min.js"></script>
+    <script defer type="module" src="/crud-product.js"></script>
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="container mt-4">
+        <!-- Search and Create Section -->
+        <div class="search-create-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="text" id="search-input" class="form-control" placeholder="Search products...">
+                </div>
+                <div class="col-md-2">
+                    <button id="search-btn" class="btn btn-primary">Search</button>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button id="create-product-btn" class="btn btn-success">Create Product</button>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Form Container -->
+        <div class="row mb-4" id="form-container" style="display: none;">
+            <!-- Form will be dynamically injected here -->
+        </div>
+
+        <hr>
+
+        <!-- Product Listing Section -->
+        <div class="row">
+            <table class="table table-striped" id="product-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Price</th>
+                        <th>Category</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="product-list">
+                    <!-- Products will be dynamically injected here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Section -->
+        <div class="row mt-4">
+            <div id="pagination-container" class="col-md-6 d-flex justify-content-center mt-4"></div>
+            <div id="current-page-display" class="col-md-6 d-flex justify-content-center mt-4"></div>
+        </div>
+    </div>
+</body>
+</html>

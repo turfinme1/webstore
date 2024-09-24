@@ -64,9 +64,50 @@ export async function createInputField(key, field) {
     return createSelectField(key, field, field.enumValues);
   } else if (key === "captcha_answer") {
     return createCaptchaField(key);
+  } else if (key === "categories") {
+    return createMultiSelectField(
+      key,
+      field,
+      await fetchCategories(field.fetchFrom)
+    );
+  } else if (field.fileInput) {
+    return createFileInputField(key, field);
   } else {
     return createTextField(key, field);
   }
+}
+
+export async function fetchCategories(apiUrl) {
+  try {
+    const response = await fetch(apiUrl);
+    if (!response.ok) throw new Error("Failed to fetch categories");
+    return await response.json();
+  } catch (error) {
+    console.error("Failed to fetch categories:", error);
+    return [];
+  }
+}
+
+async function fetchCountryCodes(apiUrl) {
+  try {
+    const response = await fetch(apiUrl);
+    if (!response.ok) throw new Error("Failed to fetch country codes");
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching country codes:", error);
+    return [];
+  }
+}
+
+export function createFileInputField(key, field) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.id = key;
+  input.name = key;
+  input.multiple = true;
+  input.className = "form-control";
+  input.accept = "image/*";
+  return input;
 }
 
 export function createTextField(key, field) {
@@ -89,11 +130,72 @@ export function createSelectField(key, field, options) {
     const optionEl = document.createElement("option");
     optionEl.value = option.value || option.id;
     optionEl.innerText =
-      option.label || `${option.country_name} (${option.phone_code})`;
+      option.label ||
+      option.name ||
+      `${option.country_name} (${option.phone_code})`;
     select.appendChild(optionEl);
   });
 
   return select;
+}
+
+export function createMultiSelectField(key, field, options) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "custom-multi-select";
+  const input = document.createElement("input");
+  input.placeholder = `Select ${key}`;
+  input.className = "form-control";
+  const div = document.createElement("div");
+  div.id = key;
+  div.name = key;
+  div.className = "options-list";
+
+  options.forEach((option) => {
+    const label = document.createElement("label");
+    label.classList.add("d-block"); // Optionally add Bootstrap or custom classes
+
+    // Create input element (checkbox)
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = option.id;
+    checkbox.name = key;
+
+    // Append checkbox and text to label
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(` ${option.name}`));
+
+    // Append label to the category options container
+    div.appendChild(label);
+  });
+
+  input.addEventListener("click", () => {
+    div.style.display = div.style.display === "block" ? "none" : "block";
+  });
+
+  document.addEventListener("click", (e) => {
+    if (
+      !input.contains(e.target) &&
+      !div.contains(e.target)
+    ) {
+      div.style.display = "none";
+    }
+  });
+
+  // Optional: Attach event listeners for each checkbox for tracking selections
+  div.querySelectorAll("input[type='checkbox']").forEach((checkbox) => {
+    checkbox.addEventListener("change", (e) => {
+      const selectedValues = Array.from(
+        div.querySelectorAll("input[type='checkbox']:checked")
+      ).map((input) => input.value);
+
+      console.log("Selected values:", selectedValues);
+      // You can update the UI or state based on the selected values
+    });
+  });
+  console.log(div);
+  wrapper.appendChild(input);
+  wrapper.appendChild(div);
+  return wrapper;
 }
 
 export function createCaptchaField(key) {
@@ -130,7 +232,8 @@ export function createCheckboxField(key, field) {
   const label = document.createElement("label");
   label.htmlFor = key;
   label.className = "form-check-label";
-  label.innerText = field.placeholder || key.charAt(0).toUpperCase() + key.slice(1);
+  label.innerText =
+    field.placeholder || key.charAt(0).toUpperCase() + key.slice(1);
 
   wrapper.appendChild(input);
   wrapper.appendChild(label);
