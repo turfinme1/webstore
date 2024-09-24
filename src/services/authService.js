@@ -167,7 +167,7 @@ class AuthService {
 
   async getStatus(data) {
     const result = await data.dbConnection.query(`
-      SELECT u.name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.address, st.type as session_type
+      SELECT u.first_name, u.last_name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.country_id, u.address, u.has_first_login, st.type as session_type
       FROM ${data.entitySchemaCollection.userManagementSchema.session_table} s
       JOIN session_types st ON s.session_type_id = st.id
       LEFT JOIN ${data.entitySchemaCollection.userManagementSchema.user_table} u ON s.${data.entitySchemaCollection.userManagementSchema.user_id} = u.id
@@ -175,6 +175,15 @@ class AuthService {
       [data.session.session_hash]
     );
     ASSERT(result.rows.length === 1, "Invalid session");
+
+    if(result.rows[0].has_first_login === false){
+      await data.dbConnection.query(`
+        UPDATE ${data.entitySchemaCollection.userManagementSchema.user_table} u
+        SET has_first_login = TRUE
+        WHERE u.id = $1`,
+        [data.session.user_id]
+      );
+    }
 
     return result.rows[0];
   }

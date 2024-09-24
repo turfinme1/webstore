@@ -6,7 +6,7 @@ function createNavigation(userStatus) {
     "navbar-light",
     "bg-light"
   );
-
+  
   navBar.innerHTML = `
         <div class="container-fluid">
             <a class="navbar-brand" href="/index.html">Product Showcase</a>
@@ -23,7 +23,11 @@ function createNavigation(userStatus) {
                       userStatus.session_type === "Authenticated"
                         ? `
                      <li class="nav-item">
-                        <a class="nav-link" href="/user-profile">${userStatus.name}</a>
+                        <a class="nav-link" href="/user-profile">${
+                          userStatus.has_first_login
+                            ? userStatus.first_name
+                            : `Welcome ${userStatus.first_name}`
+                        }</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link logout-btn" href="/logout">Logout</a>
