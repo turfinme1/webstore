@@ -117,12 +117,6 @@ async function renderCommentSection(productId) {
 
   const comments = await fetchProductComments(productId);
 
-  if (comments.length === 0) {
-    const noCommentsMessage = "<p>No comments available for this product.</p>";
-    commentsSection.innerHTML += noCommentsMessage;
-    return;
-  }
-
   let commentsHtml = "<h4>Comments:</h4>";
   comments.forEach((comment) => {
     commentsHtml += `
