@@ -12,7 +12,7 @@ async function createForm(schema, formId, formType) {
   form.className = "needs-validation"; // For Bootstrap styling
 
   const formTitle = document.createElement("h2");
-  formTitle.innerText = formType === "login" ? "Login" : "Register";
+  formTitle.innerText = formType;
   form.appendChild(formTitle);
 
   for (const key in schema.properties) {
@@ -24,6 +24,9 @@ async function createForm(schema, formId, formType) {
     label.htmlFor = key;
     label.className = "form-label";
     label.innerText = field.label;
+    if (schema.required.includes(key)) {
+      label.innerHTML += `<span style="color:red;"> *</span>`;
+    }
 
     if (key === "iso_country_code_id") {
       const select = document.createElement("select");
@@ -62,7 +65,7 @@ async function createForm(schema, formId, formType) {
       captchaImage.alt = "CAPTCHA";
       captchaImage.className = "captcha-image";
       captchaImage.style.cursor = "pointer";
-      
+
       const input = document.createElement("input");
       input.type = "text";
       input.id = key;
@@ -73,8 +76,7 @@ async function createForm(schema, formId, formType) {
       wrapper.appendChild(label);
       wrapper.appendChild(captchaImage);
       wrapper.appendChild(input);
-    }
-    else {
+    } else {
       const input = document.createElement("input");
       input.type = key === "password" ? "password" : "text";
       input.id = key;
@@ -94,33 +96,6 @@ async function createForm(schema, formId, formType) {
     form.appendChild(wrapper);
   }
 
-  // CAPTCHA section
-  // const captchaWrapper = document.createElement("div");
-  // captchaWrapper.className = "form-group mb-3";
-  // const captchaLabel = document.createElement("label");
-  // captchaLabel.htmlFor = "captcha";
-  // captchaLabel.className = "form-label";
-  // captchaLabel.innerText = "CAPTCHA";
-  // const captchaInput = document.createElement("input");
-  // captchaInput.type = "text";
-  // captchaInput.id = "captcha-answer";
-  // captchaInput.name = "captcha-answer";
-  // captchaInput.placeholder = "Enter the result";
-  // captchaInput.className = "form-control";
-  // const captchaImage = document.createElement("img");
-  // captchaImage.id = "captcha-image";
-  // captchaImage.alt = "CAPTCHA";
-  // captchaImage.className = "captcha-image"; // Style as needed
-  // captchaImage.style.cursor = "pointer"; // Indicate refreshable image
-  // captchaWrapper.appendChild(captchaLabel);
-  // captchaWrapper.appendChild(captchaInput);
-  // captchaWrapper.appendChild(captchaImage);
-  // const captchaError = document.createElement("div");
-  // captchaError.className = "invalid-feedback";
-  // captchaError.id = `captcha-error`;
-  // captchaWrapper.appendChild(captchaError);
-  // form.appendChild(captchaWrapper);
-
   const genericMessage = document.createElement("div");
   genericMessage.id = `${formId}-generic-message`;
   genericMessage.className = "text-danger";
@@ -129,7 +104,7 @@ async function createForm(schema, formId, formType) {
   const submitButton = document.createElement("button");
   submitButton.type = "submit";
   submitButton.className = "btn btn-primary w-100 mt-3";
-  submitButton.innerText = formType === "login" ? "Login" : "Register";
+  submitButton.innerText = formType;
   form.appendChild(submitButton);
 
   return form;
@@ -148,7 +123,7 @@ async function fetchCountryCodes(apiUrl) {
 }
 
 // validationService.js
-function attachValidationListeners(formId, schema, formType) {
+function attachValidationListeners(formId, schema, url, method) {
   const form = document.getElementById(formId);
   if (!form) return;
 
@@ -180,7 +155,7 @@ function attachValidationListeners(formId, schema, formType) {
         }
       });
     } else {
-      handleFormSubmission(`/auth/${formType}`, "POST", data, formId);
+      handleFormSubmission(url, method, data, formId);
     }
   });
 }
@@ -245,7 +220,11 @@ async function handleFormSubmission(url, method, data, formId) {
       const error = await response.json();
       genericMessage.innerText = error.error || "Submission failed.";
       genericMessage.className = "text-danger";
-      if (! error.error.includes("Too many failed attempts try again later")) {
+      if (
+        !error.error.includes("Too many failed attempts try again later") &&
+        method === "POST" &&
+        (formId.includes("login" || formId.includes("register")))
+      ) {
         await loadCaptchaImage();
       }
     } else {
@@ -254,17 +233,34 @@ async function handleFormSubmission(url, method, data, formId) {
       genericMessage.className = "text-success";
       genericMessage.innerText = `Success! You will be redirected shortly.`;
 
+      if (formId.includes("login")) {
+        genericMessage.innerText = `Success! You will be redirected shortly.`;
+      } else if (formId.includes("register")) {
+        genericMessage.innerText = `Success! You will be redirected shortly.`;
+      } else if (formId.includes("update")) {
+        genericMessage.innerText = `Success! You will be redirected shortly.`;
+      } else if (formId.includes("forgot-password")) {
+        genericMessage.innerText = `If the email exists, a password reset link is sent.`;
+      } else if (formId.includes("reset-password")) {
+        genericMessage.innerText = `Password reset successful. Redirecting to login page.`;
+      }
+
       setTimeout(() => {
-        if (getFormTypeBasedOnUrl() === "login") {
+        if (formId.includes("login")) {
           window.location.href = "/index.html";
-        } else {
+        } else if (formId.includes("register")) {
           window.location.href = "/verify.html";
+        } else if (formId.includes("update")) {
+          window.location.href = "/user-profile";
+        } else if (formId.includes("reset-password")) {
+          window.location.href = "/login.html";
         }
       }, 2000);
     }
   } catch (error) {
     console.error("Error:", error);
-    genericMessage.innerText = "An error occurred. Please try again later.";
+    genericMessage.innerText =
+      error.message || "An error occurred. Please try again later.";
   }
 }
 
@@ -284,7 +280,7 @@ async function attachLogoutHandler() {
   logoutButton.addEventListener("click", async (event) => {
     event.preventDefault();
     const response = await fetch("/auth/logout");
-    window.location.href = "/index.html";
+    window.location.href = "/index";
   });
 }
 

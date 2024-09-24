@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const maxPriceInput = document.getElementById("max-price-input");
   const sortPriceSelect = document.getElementById("sort-price");
   const applyFiltersBtn = document.getElementById("apply-filters");
+  const resultCountDisplay = document.getElementById("result-count");
 
   let selectedCategories = [];
   let currentPage = 1;
@@ -106,7 +107,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Build orderParams
     const orderParams = [];
     if (sortOption) {
-      orderParams.push(["price", sortOption.toUpperCase()]);
+      // orderParams.push(["price", sortOption.toUpperCase()]);
+      orderParams.push(sortOption);
     }
 
     // Construct query parameters
@@ -133,6 +135,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     products.slice(0, pageSize).forEach((product) => {
       const productCard = document.createElement("div");
       productCard.classList.add("col-md-4", "product-card");
+  
       productCard.innerHTML = `
         <div class="card h-100">
           <div id="carousel-${product.id}" class="carousel slide" data-bs-ride="carousel">
@@ -163,17 +166,32 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="card-body">
             <h5 class="card-title">${product.name}</h5>
             <p class="card-text">${product.short_description}</p>
+            <p class="text-muted"><b>Categories</b>: ${product.categories.join(", ")}</p>
             <p class="text-muted">$${product.price}</p>
           </div>
         </div>
       `;
+  
+      // Attach a click event listener to the card body (excluding carousel buttons)
+      const cardBody = productCard.querySelector('.card-body');
+      cardBody.addEventListener("click", () => {
+        window.location.href = `/product?id=${product.id}`;
+      });
+  
+      // Ensure the carousel controls don't trigger the navigation
+      const carousel = productCard.querySelector(`#carousel-${product.id}`);
+      carousel.addEventListener("click", (e) => {
+        e.stopPropagation(); // Prevent the click event from reaching the card body
+      });
+  
       productList.appendChild(productCard);
     });
   };
+  
 
   const updateProductList = async () => {
     const searchTerm = searchInput.value.trim();
-    const products = await fetchProducts(
+    const resultObject = await fetchProducts(
       searchTerm,
       selectedCategories,
       currentPage,
@@ -181,10 +199,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       maxPrice,
       sortOption
     );
-    renderProducts(products);
+    renderProducts(resultObject.result);
+    resultCountDisplay.textContent = `Found ${resultObject.count} results`;
 
-    if (products.length > 0) {
-      renderPagination(products.length >= pageSize);
+    if (resultObject.result.length > 0) {
+      renderPagination(resultObject.result.length >= pageSize);
     } else {
       currentPageDisplay.textContent = "";
       paginationContainer.innerHTML = "";
@@ -247,7 +266,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   sortPriceSelect.addEventListener("change", (e) => {
-    sortOption = e.target.value;
+    sortOption = e.target.value.split(" ");
     currentPage = 1;
     updateProductList();
   });

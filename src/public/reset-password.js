@@ -2,10 +2,7 @@ import {
   fetchUserSchema,
   createForm,
   attachValidationListeners,
-  getFormTypeBasedOnUrl,
   getUserStatus,
-  loadCaptchaImage,
-  attachCaptchaRefreshHandler
 } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 
@@ -13,20 +10,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const userStatus = await getUserStatus();
     createNavigation(userStatus);
-    const schema = await fetchUserSchema("/userRegisterSchema.json");
+
+    const schema = await fetchUserSchema("/userResetPasswordSchema.json");
     if (!schema) {
       console.error("Schema not found");
       return;
     }
 
-    const formType = getFormTypeBasedOnUrl();
     const formContainer = document.getElementById("form-container");
-    const formElement = await createForm(schema, `register-form`, "Register");
+    const formElement = await createForm(
+      schema,
+      `reset-password-form`,
+      "Reset"
+    );
     formContainer.appendChild(formElement);
 
-    await loadCaptchaImage();
-    attachCaptchaRefreshHandler();
-    attachValidationListeners(`register-form`, schema,"/auth/register", "POST");
+    attachValidationListeners(
+      `reset-password-form`,
+      schema,
+      "/auth/reset-password?token=" + new URLSearchParams(window.location.search).get("token"),
+      "POST"
+    );
   } catch (error) {
     console.error("Error initializing the form:", error);
   }
