@@ -41,13 +41,6 @@ CREATE TABLE iso_country_codes (
     phone_code TEXT NOT NULL                   
 );
 
-CREATE TABLE countries (
-    id BIGSERIAL PRIMARY KEY,
-    country_name TEXT UNIQUE NOT NULL,
-    country_code TEXT UNIQUE NOT NULL,
-    phone_code TEXT NOT NULL
-);
-
 CREATE TABLE genders (
     id BIGSERIAL PRIMARY KEY,
     type TEXT UNIQUE NOT NULL
@@ -204,7 +197,7 @@ ORDER BY name;
 CREATE OR REPLACE VIEW comments_view AS
 SELECT
     comments.*,
-    users.name AS user_name
+    users.first_name AS user_name
 FROM comments
 LEFT JOIN users ON comments.user_id = users.id;
 

@@ -8,13 +8,16 @@ CREATE TABLE admin_users (
     id BIGSERIAL PRIMARY KEY,
     user_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
     password_hash TEXT NOT NULL,
-    name TEXT NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     phone TEXT NOT NULL,
-    iso_country_code_id BIGINT NOT NULL REFERENCES iso_country_codes(id), 
+    iso_country_code_id BIGINT NOT NULL REFERENCES iso_country_codes(id),
+    country_id BIGINT NULL REFERENCES iso_country_codes(id), 
     gender_id BIGINT NULL REFERENCES genders(id),
     address TEXT NULL,
-    is_email_verified BOOLEAN NOT NULL DEFAULT FALSE
+    is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    has_first_login BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE admin_sessions (
