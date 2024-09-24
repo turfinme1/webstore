@@ -1,13 +1,17 @@
 DROP VIEW IF EXISTS products_view;
 DROP VIEW IF EXISTS country_codes_view;
+DROP VIEW IF EXISTS categories_view;
+DROP VIEW IF EXISTS comments_view;
+DROP VIEW IF EXISTS product_ratings_view;
 
 DROP TABLE IF EXISTS products_categories;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS images;
 DROP TABLE IF EXISTS products;
-DROP TABLE IF EXISTS currencies;
-
+DROP TABLE IF EXISTS comments;
+DROP TABLE IF EXISTS ratings;
 DROP TABLE IF EXISTS iso_country_codes;
+
 DROP TABLE IF EXISTS email_verifications;
 DROP TABLE IF EXISTS captchas;
 DROP TABLE IF EXISTS failed_attempts;
@@ -18,20 +22,12 @@ DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS genders;
 DROP TABLE IF EXISTS currencies;
 
-
 CREATE TABLE products (
     id BIGSERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
+name TEXT NOT NULL,
     price NUMERIC(12, 2) NOT NULL,
     short_description TEXT NOT NULL,
     long_description TEXT NOT NULL
-);
-
-CREATE TABLE currencies (
-    id BIGSERIAL PRIMARY KEY,
-    currency_code TEXT NOT NULL,
-    exchange_rate_to_base NUMERIC(18, 6) NOT NULL, 
-    symbol TEXT NOT NULL,
 );
 
 CREATE TABLE currencies (
@@ -52,10 +48,35 @@ CREATE TABLE categories (
     name TEXT NOT NULL
 );
 
+CREATE OR REPLACE VIEW categories_view AS
+SELECT
+    id,
+    name
+FROM categories
+ORDER BY name;
+
 CREATE TABLE products_categories (
     product_id BIGINT NOT NULL REFERENCES products(id),
     category_id BIGINT NOT NULL REFERENCES categories(id),
     PRIMARY KEY (product_id, category_id)
+);
+
+CREATE TABLE comments (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT NOT NULL REFERENCES products(id),
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    comment TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(product_id, user_id)
+);
+
+CREATE TABLE ratings (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT NOT NULL REFERENCES products(id),
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    rating BIGINT CHECK (rating BETWEEN 1 AND 5), -- Rating between 1 and 5
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(product_id, user_id)
 );
 
 CREATE OR REPLACE VIEW products_view AS
@@ -153,6 +174,21 @@ CREATE TABLE email_verifications (
     expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes',
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+CREATE OR REPLACE VIEW comments_view AS
+SELECT
+    comments.*,
+    users.name AS user_name
+FROM comments
+LEFT JOIN users ON comments.user_id = users.id;
+
+CREATE OR REPLACE VIEW product_ratings_view AS
+SELECT
+    r.product_id,
+    AVG(r.rating) AS average_rating,
+    COUNT(r.rating) AS rating_count
+FROM ratings r
+GROUP BY r.product_id;
 
 INSERT INTO genders(type) VALUES ('Male'), ('Female');
 INSERT INTO session_types(type) VALUES ('Anonymous'), ('Authenticated'), ('Email Verification');
