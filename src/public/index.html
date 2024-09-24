@@ -25,9 +25,10 @@
                 </div>
                 <div class="col-md-4">
                     <select id="sort-price" class="form-select">
-                        <option value="">Sort by Price</option>
-                        <option value="asc">Price: Low to High</option>
-                        <option value="desc">Price: High to Low</option>
+                        <option value="">Sort Products</option>
+                        <option value="price asc">Price: Low to High</option>
+                        <option value="price desc">Price: High to Low</option>
+                        <option value="rating desc">Rating: High to Low</option>
                     </select>
                 </div>
             </div>
@@ -47,7 +48,7 @@
                 <div class="custom-multi-select">
                     <input type="text" id="category-filter-input" placeholder="Select categories..." readonly>
                     <div id="category-options" class="options-list">
-                        
+                       
                     </div>
                     <div id="selected-categories" class="selected-categories"></div>
                 </div>
@@ -56,6 +57,14 @@
                 <button id="apply-filters" class="btn btn-primary">Apply Filters</button>
             </div>
         </div>
+
+        <hr>
+
+        <div class="row mb-2 ">
+            <div id="result-count" class="col-md-12 text-center"></div> <!-- Result count here -->
+        </div>
+
+        <hr>
 
         <!-- Product Listing Section -->
         <div class="row" id="product-list">

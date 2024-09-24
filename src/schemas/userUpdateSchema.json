@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "name": "userRegisterSchema",
+    "name": "userUpdateSchema",
     "routeName": "users",
     "views": "users_view",
     "properties": {
@@ -24,15 +24,6 @@
             "errorMessage": {
                 "minLength": "Email must be at least 6 characters long.",
                 "pattern": "Email must be a valid email address."
-            }
-        },
-        "password": {
-            "type": "string",
-            "minLength": 6,
-            "label": "Password",
-            "placeholder": "Enter password",
-            "errorMessage": {
-                "minLength": "Password must be at least 6 characters long."
             }
         },
         "iso_country_code_id": {
@@ -91,33 +82,29 @@
                 "type": "Address must be text."
             }
         },
-        "captcha_answer": {
-            "type": "string",
-            "minLength": 1,
-            "label": "Captcha",
-            "placeholder": "Enter Captcha",
+        "password": {
+            "type": ["string", "null"],
+            "minLength": 6,
+            "label": "New Password",
+            "placeholder": "Enter New password",
             "errorMessage": {
-                "minLength": "Captcha is required."
+                "minLength": "Password must be at least 6 characters long."
             }
         }
     },
     "required": [
         "name",
-        "password",
         "email",
-        "phone",
         "iso_country_code_id",
-        "captcha_answer"
+        "phone"
     ],
     "additionalProperties": false,
     "errorMessage": {
         "required": {
-            "password": "Password is required.",
             "name": "Name is required.",
             "email": "Email is required.",
             "phone": "Phone number is required.",
-            "iso_country_code_id": "Country code is required.",
-            "captcha_answer": "Captcha is required."
+            "iso_country_code_id": "Country code is required."
         },
         "additionalProperties": "No additional properties are allowed."
     }

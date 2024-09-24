@@ -2,7 +2,6 @@ import {
   fetchUserSchema,
   createForm,
   attachValidationListeners,
-  getFormTypeBasedOnUrl,
   getUserStatus,
   loadCaptchaImage,
   attachCaptchaRefreshHandler
@@ -19,14 +18,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const formType = getFormTypeBasedOnUrl();
     const formContainer = document.getElementById("form-container");
-    const formElement = await createForm(schema, `${formType}-form`, formType);
+    const formElement = await createForm(schema, `login-form`, "Login");
     formContainer.appendChild(formElement);
 
     await loadCaptchaImage();
     attachCaptchaRefreshHandler();
-    attachValidationListeners(`${formType}-form`, schema, formType);
+    attachValidationListeners(`login-form`, schema,"/auth/login", "POST");
   } catch (error) {
     console.error("Error initializing the form:", error);
   }

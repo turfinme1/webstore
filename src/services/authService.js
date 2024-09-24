@@ -18,6 +18,8 @@ class AuthService {
     this.generateCaptcha = this.getCaptcha.bind(this);
     this.generateCaptchaImage = this.generateCaptchaImage.bind(this);
     this.verifyCaptcha = this.verifyCaptcha.bind(this);
+    this.updateProfile = this.updateProfile.bind(this);
+    this.forgotPassword = this.forgotPassword.bind(this);
   }
 
   async register(data) {
@@ -27,12 +29,6 @@ class AuthService {
     const dbColumns = schemaKeys.map((key) =>
       key === "password" ? "password_hash" : key
     );
-
-    const userResult = await data.dbConnection.query(`
-      SELECT * FROM users WHERE email = $1`,
-      [data.body.email]
-    );
-    ASSERT_USER(userResult.rows.length === 0, "Email already in use");
 
     const hashedPassword = await bcrypt.hash(data.body.password, 10);
     const values = schemaKeys.map((key) => {
@@ -171,7 +167,7 @@ class AuthService {
 
   async getStatus(data) {
     const result = await data.dbConnection.query(`
-      SELECT u.email, u.name, u.phone, st.type as session_type
+      SELECT u.name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.address, st.type as session_type
       FROM sessions s
       JOIN session_types st ON s.session_type_id = st.id
       LEFT JOIN users u ON s.user_id = u.id
@@ -288,6 +284,107 @@ class AuthService {
 
     // return captchaResult.rows[0];
   }
+
+  async updateProfile(data) {
+    const schema = data.entitySchemaCollection["users"];
+    const schemaKeys = Object.keys(schema.properties);
+    const dbColumns = [];
+    const values = [];
+
+    let hashedPassword;
+    if(data.body.password){
+      hashedPassword = await bcrypt.hash(data.body.password, 10);
+    }
+
+    schemaKeys.forEach((key) => {
+      if (key === "password" && data.body.password) {
+        dbColumns.push("password_hash");
+        values.push(hashedPassword);
+      } else if (key !== "password" && data.body[key] !== undefined) {
+        dbColumns.push(key);
+        values.push(data.body[key]);
+      }
+    });  
+
+    const query = `
+      UPDATE ${schema.name}
+      SET ${dbColumns.map((col, i) => `${col} = $${i + 1}`).join(", ")}
+      WHERE id = $${dbColumns.length + 1}
+      RETURNING *`;
+    const updateUserResult = await data.dbConnection.query(query, [...values, data.session.user_id]);
+    const user = updateUserResult.rows[0];
+
+    return user;
+  }
+
+  async forgotPassword(data) {
+    const userResult = await data.dbConnection.query(`
+      SELECT * FROM users WHERE email = $1`,
+      [data.body.email]
+    );
+    const user = userResult.rows[0];
+    
+    if(!user){
+      return { message: "If the email exists, a password reset link will be sent"};
+    }
+
+    const emailVerificationResult = await data.dbConnection.query(`
+      SELECT * FROM email_verifications 
+      WHERE user_id = $1 
+        AND created_at > NOW() - INTERVAL '5 minutes'
+        AND is_active = TRUE`,
+      [user.id]
+    );
+    ASSERT_USER(emailVerificationResult.rows.length === 0, "Please wait a few minutes before requesting another password reset");
+
+    await data.dbConnection.query(`
+      UPDATE email_verifications
+      SET is_active = FALSE
+      WHERE user_id = $1 AND is_active = TRUE`,
+      [user.id]
+    );
+
+    const createResetTokenResult = await data.dbConnection.query(`
+      INSERT INTO email_verifications (user_id) 
+      VALUES ($1) RETURNING *`,
+      [user.id]
+    );
+
+    await this.mailService.sendResetPasswordEmail(user.email, createResetTokenResult.rows[0].token_hash);
+
+    return { message: "If the email exists, a password reset link will be sent"};
+  }
+
+  async resetPassword(data) {
+    ASSERT_USER(data.query.token, "Invalid reset token");
+
+    const userVerificationResult = await data.dbConnection.query(`
+      SELECT ev.user_id, ev.expires_at
+      FROM email_verifications ev
+      WHERE ev.token_hash = $1 AND ev.is_active = TRUE`,
+      [data.query.token]
+    );
+    const userVerificationInfo = userVerificationResult.rows[0];
+
+    ASSERT_USER(userVerificationResult.rows.length === 1, "Invalid or expired token");
+    ASSERT_USER(new Date() < userVerificationInfo.expires_at, "Invalid or expired token");
+
+    const hashedPassword = await bcrypt.hash(data.body.password, 10);
+    await data.dbConnection.query(`
+      UPDATE users
+      SET password_hash = $1
+      WHERE id = $2`,
+      [hashedPassword, userVerificationInfo.user_id]
+    );
+    await data.dbConnection.query(`
+      UPDATE email_verifications
+      SET is_active = FALSE
+      WHERE token_hash = $1`,
+      [data.query.token]
+    );
+
+    return { message: "Password successfully reset" };
+  } 
 }
 
 module.exports = AuthService;

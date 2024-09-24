@@ -12,6 +12,7 @@ describe("AuthService", () => {
     // Mock dependencies
     mockMailService = {
       sendVerificationEmail: jest.fn(),
+      sendResetPasswordEmail: jest.fn(),
     };
 
     mockDbConnection = {
@@ -55,7 +56,6 @@ describe("AuthService", () => {
 
       // Mock database queries
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [] }) // No existing user
         .mockResolvedValueOnce({ rows: [mockUser] }) // New user created
         .mockResolvedValueOnce({ rows: [{ token_hash: "token123" }] }) // Verification token created
         .mockResolvedValueOnce({ rows: [mockSession] }); // Session created
@@ -63,24 +63,13 @@ describe("AuthService", () => {
       const result = await authService.register(data);
 
       // Assertions
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(4);
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
       expect(bcrypt.hash).toHaveBeenCalledWith("password123", 10);
       expect(mockMailService.sendVerificationEmail).toHaveBeenCalledWith(
         "test@example.com",
         "token123"
       );
       expect(result).toEqual(mockSession);
-    });
-
-    it("should throw an error if the email is already in use", async () => {
-      authService.verifyCaptcha = jest.fn().mockResolvedValueOnce(true);
-      mockDbConnection.query.mockResolvedValueOnce({
-        rows: [{ email: "test@example.com" }],
-      }); // User already exists
-
-      await expect(authService.register(data)).rejects.toThrow(
-        "Email already in use"
-      );
     });
 
     it("should convert undefined values to null", async () => {
@@ -93,7 +82,7 @@ describe("AuthService", () => {
       bcrypt.hash.mockResolvedValue(mockHashedPassword);
 
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [] }) // No existing user
+        // .mockResolvedValueOnce({ rows: [] }) // No existing user
         .mockResolvedValueOnce({ rows: [mockUser] }) // New user created
         .mockResolvedValueOnce({ rows: [{ token_hash: "token123" }] }) // Verification token created
         .mockResolvedValueOnce({ rows: [mockSession] }); // Session created
@@ -308,7 +297,7 @@ describe("AuthService", () => {
 
       // Expected query
       const expectedQuery = `
-        SELECT u.email, u.name, u.phone, st.type as session_type
+        SELECT u.name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.address, st.type as session_type
         FROM sessions s
         JOIN session_types st ON s.session_type_id = st.id
         LEFT JOIN users u ON s.user_id = u.id
@@ -332,7 +321,7 @@ describe("AuthService", () => {
 
       // Ensure the query was still called
       const expectedQuery = `
-        SELECT u.email, u.name, u.phone, st.type as session_type
+        SELECT u.name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.address, st.type as session_type
         FROM sessions s
         JOIN session_types st ON s.session_type_id = st.id
         LEFT JOIN users u ON s.user_id = u.id
@@ -583,6 +572,96 @@ describe("AuthService", () => {
         )
       ).toBe(true);
       expect(mockDbConnection.query).toHaveBeenCalledTimes(5); // Four queries and the commit
+    });
+  });
+
+  describe("updateProfile", () => {
+    it("should update user profile and return the updated user", async () => {
+      const mockUser = { id: 1, email: "test@example.com", name: "Updated User", password_hash: "hashedPassword" };
+      authService.verifyCaptcha = jest.fn().mockResolvedValueOnce(true);
+
+      // Mock bcrypt hashing
+      jest.spyOn(bcrypt, "hash").mockResolvedValue("newHashedPassword");
+
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] }); // User updated
+
+      const result = await authService.updateProfile(data);
+
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(1);
+      expect(bcrypt.hash).toHaveBeenCalledWith("password123", 10);
+      expect(result).toEqual(mockUser);
+    });
+
+    it("should handle updating profile without a password", async () => {
+      data.body.password = undefined; // No new password provided
+      const mockUser = { id: 1, email: "test@example.com", name: "Updated User" };
+
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] }); // User updated
+
+      const result = await authService.updateProfile(data);
+
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(mockUser);
+    });
+  });
+
+  describe("forgotPassword", () => {
+    it("should send a password reset email if the email exists", async () => {
+      const mockUser = { id: 1, email: "test@example.com" };
+      const mockResetToken = { token_hash: "resetToken123" };
+
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [mockUser] }) // User found
+        .mockResolvedValueOnce({ rows: [] }) // No active verification
+        .mockResolvedValueOnce({ rows: [] }) //Email verification created
+        .mockResolvedValueOnce({ rows: [mockResetToken] }); // Reset token created
+
+      const result = await authService.forgotPassword(data);
+
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(4);
+      expect(mockMailService.sendResetPasswordEmail).toHaveBeenCalledWith(
+        "test@example.com",
+        "resetToken123"
+      );
+      expect(result.message).toBe("If the email exists, a password reset link will be sent");
+    });
+
+    it("should return a message if the email does not exist", async () => {
+      data.body.email = "nonexistent@example.com";
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [] }); // No user found
+
+      const result = await authService.forgotPassword(data);
+
+      expect(result.message).toBe("If the email exists, a password reset link will be sent");
+    });
+  });
+
+  describe("resetPassword", () => {
+    it("should reset the user's password if the reset token is valid", async () => {
+      const mockUser = { id: 1, expires_at: new Date(Date.now() + 10000) }; // Token is valid
+      jest.spyOn(bcrypt, "hash").mockResolvedValue("newHashedPassword");
+
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [mockUser] }) // Valid token found
+        
+
+      const result = await authService.resetPassword({
+        ...data,
+        query: { token: "validToken123" },
+      });
+
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
+      expect(bcrypt.hash).toHaveBeenCalledWith("password123", 10);
+      expect(result.message).toBe("Password successfully reset");
+    });
+
+    it("should throw an error for an invalid or expired token", async () => {
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [] }); // Invalid token
+
+      await expect(authService.resetPassword({
+        ...data,
+        query: { token: "invalidToken" },
+      })).rejects.toThrow("Invalid or expired token");
     });
   });
 });
