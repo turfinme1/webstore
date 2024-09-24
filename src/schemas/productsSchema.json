@@ -42,6 +42,29 @@
       "errorMessage": {
         "minLength": "Long Description must be at least 3 characters long."
       }
+    },
+    "categories": {
+      "type": "array",
+      "label": "Categories",
+      "placeholder": "Select Categories",
+      "items": {
+        "type": "integer"
+      },
+      "fetchFrom": "/crud/categories",
+      "multiselect": true,
+      "errorMessage": {
+        "type": "At least one category must be selected."
+      }
+    },
+    "images": {
+      "type": "array",
+      "label": "Product Images",
+      "items": {
+        "type": "string",
+        "format": "binary"
+      },
+      "fileInput": true,
+      "maxFiles": 3
     }
   },
   "displayProperties": {
@@ -65,12 +88,7 @@
       "searchable": true
     }
   },
-  "required": [
-    "name",
-    "price",
-    "short_description",
-    "long_description"
-  ],
+  "required": ["name", "price", "short_description", "long_description"],
   "additionalProperties": false,
   "errorMessage": {
     "required": {
