@@ -9,14 +9,15 @@ const ProductController = require("../controllers/productController");
 const AuthService = require("../services/authService");
 const AuthController = require("../controllers/authController");
 const { MailService, transporter } = require("../services/mailService");
+const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 
+const mailService = new MailService(transporter);
+const authService = new AuthService(mailService);
+const authController = new AuthController(authService);
 const service = new CrudService();
 const controller = new CrudController(service);
 const productService = new ProductService();
 const productController = new ProductController(productService);
-const mailService = new MailService(transporter);
-const authService = new AuthService(mailService);
-const authController = new AuthController(authService);
 
 const routeTable = {
   get: {
@@ -27,14 +28,21 @@ const routeTable = {
     "/auth/status": authController.getStatus,
     "/auth/logout": authController.logout,
     "/auth/captcha": authController.getCaptcha,
+    "/api/products/:id/comments": productController.getComments,
+    "/api/products/:id/ratings": productController.getRatings,
   },
   post: {
     "/crud/:entity": controller.create,
     "/auth/register": authController.register,
     "/auth/login": authController.login,
+    "/auth/forgot-password": authController.forgotPassword,
+    "/auth/reset-password": authController.resetPassword,
+    "/api/products/:id/comments": productController.createComment,
+    "/api/products/:id/ratings": productController.createRating,
   },
   put: {
     "/crud/:entity/:id": controller.update,
+    "/auth/profile": authController.updateProfile,
   },
   delete: {
     "/crud/:entity/:id": controller.delete,
@@ -53,17 +61,21 @@ function requestMiddleware(handler) {
   return async (req, res, next) => {
     try {
       req.pool = pool;
-      req.dbConnection = await req.pool.connect();
+      req.dbConnection = new DbConnectionWrapper(await req.pool.connect());
       req.entitySchemaCollection = entitySchemaCollection;
+
       req.dbConnection.query("BEGIN");
       await sessionMiddleware(req, res);
       await handler(req, res, next);
       req.dbConnection.query("COMMIT");
+
     } catch (error) {
       console.error(error);
+
       if (req.dbConnection) {
         req.dbConnection.query("ROLLBACK");
       }
+      
       if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });
       } else {
