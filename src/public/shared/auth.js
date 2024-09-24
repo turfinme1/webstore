@@ -44,6 +44,27 @@ async function createForm(schema, formId, formType) {
 
       wrapper.appendChild(label);
       wrapper.appendChild(select);
+    } else if (key === "country_id") {
+      const select = document.createElement("select");
+      select.id = key;
+      select.name = key;
+      select.className = "form-select";
+
+      const option = document.createElement("option");
+      option.value = null;
+      option.innerText = `Select a country`;
+      select.appendChild(option);
+
+      const countries = await fetchCountryCodes(field.fetchFrom);
+      countries.forEach((country) => {
+        const option = document.createElement("option");
+        option.value = country.id;
+        option.innerText = `${country.country_name}`;
+        select.appendChild(option);
+      });
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(select);
     } else if (key === "gender_id") {
       const select = document.createElement("select");
       select.id = key;
@@ -223,7 +244,7 @@ async function handleFormSubmission(url, method, data, formId) {
       if (
         !error.error.includes("Too many failed attempts. Try again later") &&
         method === "POST" &&
-        (formId.includes("login" || formId.includes("register")))
+        formId.includes("login" || formId.includes("register"))
       ) {
         await loadCaptchaImage();
       }
