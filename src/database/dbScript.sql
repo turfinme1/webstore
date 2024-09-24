@@ -27,7 +27,11 @@ CREATE TABLE app_settings (
     id BIGSERIAL PRIMARY KEY,
     request_limit BIGINT NOT NULL DEFAULT 10,
     request_window INTERVAL NOT NULL DEFAULT '10 minutes',
-    request_block_duration INTERVAL NOT NULL DEFAULT '1 hour'
+    request_block_duration INTERVAL NOT NULL DEFAULT '1 hour',
+    password_require_digit BOOLEAN NOT NULL DEFAULT FALSE,
+    password_require_lowercase BOOLEAN NOT NULL DEFAULT FALSE,
+    password_require_uppercase BOOLEAN NOT NULL DEFAULT FALSE,
+    password_require_special BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE iso_country_codes (
@@ -35,6 +39,13 @@ CREATE TABLE iso_country_codes (
     country_name TEXT UNIQUE NOT NULL,                
     country_code TEXT UNIQUE NOT NULL,      
     phone_code TEXT NOT NULL                   
+);
+
+CREATE TABLE countries (
+    id BIGSERIAL PRIMARY KEY,
+    country_name TEXT UNIQUE NOT NULL,
+    country_code TEXT UNIQUE NOT NULL,
+    phone_code TEXT NOT NULL
 );
 
 CREATE TABLE genders (
@@ -46,13 +57,16 @@ CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
     user_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
     password_hash TEXT NOT NULL,
-    name TEXT NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     phone TEXT NOT NULL,
     iso_country_code_id BIGINT NOT NULL REFERENCES iso_country_codes(id), 
+	country_id BIGINT NULL REFERENCES iso_country_codes(id),
     gender_id BIGINT NULL REFERENCES genders(id),
     address TEXT NULL,
-    is_email_verified BOOLEAN NOT NULL DEFAULT FALSE
+    is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+	has_first_login BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE session_types (
