@@ -1,4 +1,7 @@
 const ProductController = require("../productController");
+const { ASSERT_USER } = require("../../serverConfigurations/assert");
+
+jest.mock("../../serverConfigurations/assert");
 
 describe("ProductController", () => {
   let productController;
@@ -11,6 +14,10 @@ describe("ProductController", () => {
   beforeEach(() => {
     productService = {
       getFilteredPaginated: jest.fn(),
+      createComment: jest.fn(),
+      createRating: jest.fn(),
+      getComments: jest.fn(),
+      getRatings: jest.fn(),
     };
 
     mockDbConnection = {
@@ -70,6 +77,7 @@ describe("ProductController", () => {
           },
         },
       },
+      session: { user_id: "1" },
     };
 
     productController = new ProductController(productService);
@@ -114,6 +122,78 @@ describe("ProductController", () => {
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith([]);
+    });
+  });
+
+  describe("createComment", () => {
+    it("should call ASSERT_USER and productService.createComment, then respond with status 200", async () => {
+      const expectedResult = { message: "Comment added successfully" };
+      productService.createComment.mockResolvedValue(expectedResult);
+
+      await productController.createComment(mockReq, mockRes, mockNext);
+
+      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action");
+      expect(productService.createComment).toHaveBeenCalledWith({
+        body: mockReq.body,
+        params: mockReq.params,
+        session: mockReq.session,
+        dbConnection: mockReq.dbConnection,
+        entitySchemaCollection: mockReq.entitySchemaCollection,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(expectedResult);
+    });
+  });
+
+  describe("createRating", () => {
+    it("should call ASSERT_USER and productService.createRating, then respond with status 200", async () => {
+      const expectedResult = { message: "Rating added successfully" };
+      productService.createRating.mockResolvedValue(expectedResult);
+
+      await productController.createRating(mockReq, mockRes, mockNext);
+
+      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action");
+      expect(productService.createRating).toHaveBeenCalledWith({
+        body: mockReq.body,
+        params: mockReq.params,
+        session: mockReq.session,
+        dbConnection: mockReq.dbConnection,
+        entitySchemaCollection: mockReq.entitySchemaCollection,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(expectedResult);
+    });
+  });
+
+  describe("getComments", () => {
+    it("should call productService.getComments and respond with status 200", async () => {
+      const expectedResult = [{ id: 1, comment: "Great product!" }];
+      productService.getComments.mockResolvedValue(expectedResult);
+
+      await productController.getComments(mockReq, mockRes, mockNext);
+
+      expect(productService.getComments).toHaveBeenCalledWith({
+        params: mockReq.params,
+        dbConnection: mockReq.dbConnection,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(expectedResult);
+    });
+  });
+
+  describe("getRatings", () => {
+    it("should call productService.getRatings and respond with status 200", async () => {
+      const expectedResult = [{ id: 1, rating: 5 }];
+      productService.getRatings.mockResolvedValue(expectedResult);
+
+      await productController.getRatings(mockReq, mockRes, mockNext);
+
+      expect(productService.getRatings).toHaveBeenCalledWith({
+        params: mockReq.params,
+        dbConnection: mockReq.dbConnection,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(expectedResult);
     });
   });
 });
