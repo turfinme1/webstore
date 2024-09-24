@@ -20,12 +20,13 @@ CREATE TABLE admin_users (
 CREATE TABLE admin_sessions (
     id BIGSERIAL PRIMARY KEY,
     session_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-    user_id BIGINT NULL REFERENCES users(id),
+    admin_user_id BIGINT NULL REFERENCES admin_users(id),
     ip_address TEXT NULL,
     session_type_id BIGINT NOT NULL REFERENCES session_types(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes',
-    is_active BOOLEAN NOT NULL DEFAULT TRUE
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    rate_limited_until TIMESTAMPTZ NULL
 );
 
 CREATE TABLE admin_captchas (
