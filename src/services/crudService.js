@@ -1,3 +1,8 @@
+const fs = require('fs');
+const path = require('path');
+const busboy = require('busboy');
+const crypto = require('crypto');
+
 class CrudService {
   constructor() {
     this.create = this.create.bind(this);
@@ -10,15 +15,31 @@ class CrudService {
   async create(data) {
     const schema = data.entitySchemaCollection[data.params.entity];
     const keys = Object.keys(schema.properties);
-    const values = keys.map((key) => data.body[key]);
 
+    const filePaths = await this.handleFileUploads(data.req);
+    const values = keys.map((key) => data.body[key]);
+    const categories = JSON.parse(data.body.categories);
     const query = `INSERT INTO ${schema.name}(${keys.join(",")}) VALUES(${keys
       .map((_, i) => `$${i + 1}`)
       .join(",")}) RETURNING *`;
 
-    const result = await data.dbConnection.query(query, values);
+    const productResult = await data.dbConnection.query(query, values);
+    
+    for (const category of categories) {
+      const result = await data.dbConnection.query(
+        `INSERT INTO products_categories(product_id, category_id) VALUES($1, $2)`,
+        [productResult.rows[0].id, category]
+      );
+    }
 
-    return result.rows;
+    for (const filePath of filePaths) {
+      const result = await data.dbConnection.query(
+        `INSERT INTO images(product_id, url) VALUES($1, $2)`,
+        [productResult.rows[0].id, filePath]
+      );
+    }
+
+    return productResult.rows[0];
   }
 
   async getById(data) {
@@ -65,6 +86,42 @@ class CrudService {
     );
 
     return result.rows[0];
+  }
+
+  async handleFileUploads(req) {
+    const filePaths = [];
+
+    return new Promise((resolve, reject) => {
+      const bb = busboy({ headers: req.headers });
+
+      bb.on('field', (fieldname, value) => {
+        req.body[fieldname] = value;
+      });
+
+      bb.on('file', (fieldname, file, filename, encoding, mimetype) => {
+        console.log(filename);
+      
+        const imageName = crypto.randomBytes(20).toString('hex');
+        const saveTo = path.join(__dirname, '..', '..','..', "images", `${imageName}.${filename.mimeType.split('/')[1]}`); // Adjust the path as necessary
+        filePaths.push('/images/' + imageName + '.' + filename.mimeType.split('/')[1]);
+        const writeStream = fs.createWriteStream(saveTo);
+
+        file.pipe(writeStream);
+
+        writeStream.on('finish', () => {
+        });
+
+        writeStream.on('error', (err) => {
+          reject(err);
+        });
+      });
+
+      bb.on('finish', () => {
+        resolve(filePaths);
+      });
+
+      req.pipe(bb);
+    });
   }
 }
 
