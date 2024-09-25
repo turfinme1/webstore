@@ -20,7 +20,8 @@
       "label": "Price",
       "placeholder": "Enter Price",
       "errorMessage": {
-        "minimum": "Price must be a positive number."
+        "minimum": "Price must be a positive number.",
+        "type": "Price must be a number."
       }
     },
     "short_description": {
@@ -42,29 +43,6 @@
       "errorMessage": {
         "minLength": "Long Description must be at least 3 characters long."
       }
-    },
-    "categories": {
-      "type": "array",
-      "label": "Categories",
-      "placeholder": "Select Categories",
-      "items": {
-        "type": "integer"
-      },
-      "fetchFrom": "/crud/categories",
-      "multiselect": true,
-      "errorMessage": {
-        "type": "At least one category must be selected."
-      }
-    },
-    "images": {
-      "type": "array",
-      "label": "Product Images",
-      "items": {
-        "type": "string",
-        "format": "binary"
-      },
-      "fileInput": true,
-      "maxFiles": 3
     }
   },
   "displayProperties": {
@@ -88,7 +66,14 @@
       "searchable": true
     }
   },
-  "required": ["name", "price", "short_description", "long_description"],
+  "required": [
+    "name",
+    "price",
+    "short_description",
+    "long_description",
+    "categories",
+    "images"
+  ],
   "additionalProperties": false,
   "errorMessage": {
     "required": {
