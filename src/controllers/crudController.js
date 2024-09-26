@@ -45,6 +45,7 @@ class CrudController {
   async update(req, res, next) {
     const data = {
       body: req.body,
+      req: req,
       params: req.params,
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,

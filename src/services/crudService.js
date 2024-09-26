@@ -65,6 +65,10 @@ class CrudService {
 
   async update(data) {
     const schema = data.entitySchemaCollection[data.params.entity];
+    const filePaths = await this.handleFileUploads(data.req);
+    const categories = JSON.parse(data.body.categories);
+    const imagesToDelete = JSON.parse(data.body.imagesToDelete);
+
     const keys = Object.keys(schema.properties);
     const values = keys.map((key) => data.body[key]);
     let query = `UPDATE ${schema.name} SET ${keys
@@ -72,14 +76,48 @@ class CrudService {
       .join(", ")}`;
     query += ` WHERE id = $${keys.length + 1} RETURNING *`;
 
-    const result = await data.dbConnection.query(query, [...values, data.params.id]);
+    const productResult = await data.dbConnection.query(query, [...values, data.params.id]);
 
-    return result.rows[0];
+    await data.dbConnection.query(
+      `DELETE FROM products_categories WHERE product_id = $1`,
+      [productResult.rows[0].id]
+    );
+
+    for (const image of imagesToDelete) {
+      const result = await data.dbConnection.query(
+        `DELETE FROM images WHERE url = $1`,
+        [image]
+      );
+    }
+
+    for (const category of categories) {
+      const result = await data.dbConnection.query(`
+        INSERT INTO products_categories(product_id, category_id) VALUES($1, $2)`,
+        [productResult.rows[0].id, category]
+      );
+    }
+
+    for (const filePath of filePaths) {
+      const result = await data.dbConnection.query(
+        `INSERT INTO images(product_id, url) VALUES($1, $2)`,
+        [productResult.rows[0].id, filePath]
+      );
+    }
+
+    return productResult.rows[0];
   }
 
   async delete(data) {
     const schema = data.entitySchemaCollection[data.params.entity];
 
+    if (schema.relationships) {
+      for (const relationship of Object.values(schema.relationships)) {
+        await data.dbConnection.query(`
+          DELETE FROM ${relationship.table} WHERE ${relationship.foreign_key} = $1`,
+          [data.params.id]
+        );
+      }
+    }
     const result = await data.dbConnection.query(
       `DELETE FROM ${schema.name} WHERE id = $1 RETURNING *`,
       [data.params.id]
@@ -100,7 +138,11 @@ class CrudService {
 
       bb.on('file', (fieldname, file, filename, encoding, mimetype) => {
         console.log(filename);
-      
+        if(! filename.filename) {
+          file.resume();
+          return;
+        }
+
         const imageName = crypto.randomBytes(20).toString('hex');
         const saveTo = path.join(__dirname, '..', '..','..', "images", `${imageName}.${filename.mimeType.split('/')[1]}`); // Adjust the path as necessary
         filePaths.push('/images/' + imageName + '.' + filename.mimeType.split('/')[1]);
