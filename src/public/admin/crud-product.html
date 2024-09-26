@@ -40,44 +40,55 @@
                 <!-- Product Name -->
                 <div class="mb-3">
                     <label for="product-name" class="form-label">Name</label>
-                    <input type="text" class="form-control" id="product-name" name="name" placeholder="Enter Name" required minlength="3" pattern="^[a-zA-Z0-9 ]+$">
-                    <div class="invalid-feedback">Name must be at least 3 characters long and contain only letters.</div>
+                    <input type="text" class="form-control" id="product-name" name="name" placeholder="Enter Name"
+                        required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!]+$">
+                    <div class="invalid-feedback">Name must be at least 3 characters long and contain only letters.
+                    </div>
                 </div>
 
                 <!-- Price -->
                 <div class="mb-3">
                     <label for="product-price" class="form-label">Price</label>
-                    <input type="number" class="form-control" id="product-price" name="price" placeholder="Enter Price" required min="1">
+                    <input type="number" step=".01" class="form-control" id="product-price" name="price" placeholder="Enter Price"
+                        required min="1">
                     <div class="invalid-feedback">Price must be a positive number.</div>
                 </div>
 
                 <!-- Short Description -->
                 <div class="mb-3">
                     <label for="product-short-description" class="form-label">Short Description</label>
-                    <input type="text" class="form-control" id="product-short-description" name="short_description" placeholder="Enter Short Description" required minlength="3" pattern="^[a-zA-Z ]+$">
-                    <div class="invalid-feedback">Short Description must be at least 3 characters long and contain only letters.</div>
+                    <input type="text" class="form-control" id="product-short-description" name="short_description"
+                        placeholder="Enter Short Description" required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!]+$">
+                    <div class="invalid-feedback">Short Description must be at least 3 characters long and contain only
+                        letters.</div>
                 </div>
 
                 <!-- Long Description -->
                 <div class="mb-3">
                     <label for="product-long-description" class="form-label">Long Description</label>
-                    <textarea class="form-control" id="product-long-description" name="long_description" placeholder="Enter Long Description" rows="3" required minlength="3" pattern="^[a-zA-Z ]+$"></textarea>
-                    <div class="invalid-feedback">Long Description must be at least 3 characters long and contain only letters.</div>
+                    <textarea class="form-control" id="product-long-description" name="long_description"
+                        placeholder="Enter Long Description" rows="3" required minlength="3"
+                        pattern="^[a-zA-Z0-9 ?.,:;!]+$"></textarea>
+                    <div class="invalid-feedback">Long Description must be at least 3 characters long and contain only
+                        letters.</div>
                 </div>
 
                 <!-- Categories Multi-select -->
                 <div class="mb-3">
                     <label for="product-category" class="form-label">Categories</label>
-                    <select id="product-category" class="form-select" name="categories" multiple placeholder="Choose Categories">
+                    <select id="product-category" class="form-select" name="categories" multiple
+                        placeholder="Choose Categories">
                         <!-- Categories will be populated here -->
                     </select>
-                    <div class="invalid-feedback" id="category-error-message">At least one category must be selected.</div>
+                    <div class="invalid-feedback" id="category-error-message">At least one category must be selected.
+                    </div>
                 </div>
 
                 <!-- Image 1 -->
                 <div class="mb-3">
                     <label for="product-image1" class="form-label">Image 1</label>
-                    <input type="file" class="form-control" id="product-image1" name="file1" accept="image/*" required multiple>
+                    <input type="file" class="form-control" id="product-image1" name="file1" accept="image/*" required
+                        multiple>
                 </div>
 
                 <!-- Image 2 -->
@@ -98,8 +109,91 @@
             </form>
         </div>
 
-        <hr>
+        <div class="row mb-4" id="form-update-container" style="display: none;">
+            <form id="product-update-form">
+                <!-- Product Name -->
+                <div class="mb-3">
+                    <label for="product-name" class="form-label">Name</label>
+                    <input type="text" class="form-control" id="product-name" name="name" placeholder="Enter Name"
+                        required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!]+$">
+                    <div class="invalid-feedback">Name must be at least 3 characters long and contain only letters.
+                    </div>
+                </div>
 
+                <!-- Price -->
+                <div class="mb-3">
+                    <label for="product-price" class="form-label">Price</label>
+                    <input type="number" step=".01" class="form-control" id="product-price" name="price" placeholder="Enter Price"
+                        required min="1">
+                    <div class="invalid-feedback">Price must be a positive number.</div>
+                </div>
+
+                <!-- Short Description -->
+                <div class="mb-3">
+                    <label for="product-short-description" class="form-label">Short Description</label>
+                    <input type="text" class="form-control" id="product-short-description" name="short_description"
+                        placeholder="Enter Short Description" required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!]+$">
+                    <div class="invalid-feedback">Short Description must be at least 3 characters long and contain only
+                        letters.</div>
+                </div>
+
+                <!-- Long Description -->
+                <div class="mb-3">
+                    <label for="product-long-description" class="form-label">Long Description</label>
+                    <textarea class="form-control" id="product-long-description" name="long_description"
+                        placeholder="Enter Long Description" rows="3" required minlength="3"
+                        pattern="^[a-zA-Z0-9 ?.,:;!]+$"></textarea>
+                    <div class="invalid-feedback">Long Description must be at least 3 characters long and contain only
+                        letters.</div>
+                </div>
+
+                <!-- Categories Multi-select -->
+                <div class="mb-3">
+                    <label for="product-category" class="form-label">Categories</label>
+                    <select id="product-update-category" class="form-select" name="categories" multiple
+                        placeholder="Choose Categories">
+                        <!-- Categories will be populated here -->
+                    </select>
+                    <div class="invalid-feedback" id="category-error-message">At least one category must be selected.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="existing-images" class="form-label">Existing Images (click to delete)</label>
+                    <div id="existing-images" class="d-flex flex-wrap">
+                      <!-- Existing images will be populated here -->
+                    </div>
+                  </div>
+
+                <!-- Image 1 -->
+                <div class="mb-3">
+                    <label for="product-image1" class="form-label">Image 1</label>
+                    <input type="file" class="form-control" id="product-update-image1" name="file1" accept="image/*">
+                </div>
+
+                <!-- Image 2 -->
+                <div class="mb-3">
+                    <label for="product-image2" class="form-label">Image 2</label>
+                    <input type="file" class="form-control" id="product-update-image2" name="file2" accept="image/*">
+                </div>
+
+                <!-- Image 3 -->
+                <div class="mb-3">
+                    <label for="product-image3" class="form-label">Image 3</label>
+                    <input type="file" class="form-control" id="product-update-image3" name="file3" accept="image/*">
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-primary">Update</button>
+                <button type="button" id="cancel-update-btn" class="btn btn-danger">Cancel</button>
+            </form>
+        </div>
+
+        <hr>
+        <div class="row mb-2 ">
+            <div id="result-count" class="col-md-12 text-center"></div> <!-- Result count here -->
+        </div>
+        <hr>
         <!-- Product Listing Section -->
         <div class="row">
             <table class="table table-bordered" id="product-table">
