@@ -112,7 +112,7 @@ CREATE TABLE email_verifications (
 
 CREATE TABLE products (
     id BIGSERIAL PRIMARY KEY,
-name TEXT NOT NULL,
+    name TEXT NOT NULL,
     price NUMERIC(12, 2) NOT NULL,
     short_description TEXT NOT NULL,
     long_description TEXT NOT NULL
@@ -167,7 +167,7 @@ SELECT
     p.price,
     p.short_description,
     p.long_description,
-    ARRAY_AGG(i.url) AS images,
+    ARRAY_AGG(DISTINCT i.url) AS images,
     ARRAY_AGG(DISTINCT c.name) AS categories,
 	COALESCE(AVG(r.rating), 0) AS rating,
     COALESCE(COUNT(r.id), 0) AS rating_count 
