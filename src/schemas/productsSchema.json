@@ -45,25 +45,24 @@
       }
     }
   },
-  "displayProperties": {
-    "name": {
-      "label": "Name",
-      "placeholder": "Enter Name",
-      "searchable": true
+  "relationships": {
+    "categories": {
+      "table" : "products_categories",
+      "foreign_key": "product_id",
+      "related_key": "category_id"
     },
-    "price": {
-      "label": "Price",
-      "placeholder": "Enter Price"
+    "images": {
+      "table" : "images",
+      "foreign_key": "product_id",
+      "related_key": "url"
     },
-    "short_description": {
-      "label": "Short Description",
-      "placeholder": "Enter Short Description",
-      "searchable": true
+    "comments": {
+      "table" : "comments",
+      "foreign_key": "product_id"
     },
-    "long_description": {
-      "label": "Long Description",
-      "placeholder": "Enter Long Description",
-      "searchable": true
+    "ratings": {
+      "table" : "ratings",
+      "foreign_key": "product_id"
     }
   },
   "required": [
