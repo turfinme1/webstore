@@ -10,6 +10,7 @@ class CrudService {
     this.getById = this.getById.bind(this);
     this.update = this.update.bind(this);
     this.delete = this.delete.bind(this);
+    this.handleFileUploads = this.handleFileUploads.bind(this);
   }
 
   async create(data) {
@@ -25,15 +26,16 @@ class CrudService {
 
     const productResult = await data.dbConnection.query(query, values);
     
-    for (const category of categories) {
-      const result = await data.dbConnection.query(
-        `INSERT INTO products_categories(product_id, category_id) VALUES($1, $2)`,
-        [productResult.rows[0].id, category]
-      );
+    if (categories.length > 0) {
+      const categoryValues = categories
+        .map((category, index) => `($1, $${index + 2})`)
+        .join(",");
+      const categoryQuery = `INSERT INTO products_categories(product_id, category_id) VALUES ${categoryValues}`;
+      await data.dbConnection.query(categoryQuery, [productResult.rows[0].id, ...categories]);
     }
 
     for (const filePath of filePaths) {
-      const result = await data.dbConnection.query(
+      await data.dbConnection.query(
         `INSERT INTO images(product_id, url) VALUES($1, $2)`,
         [productResult.rows[0].id, filePath]
       );
@@ -77,30 +79,39 @@ class CrudService {
     query += ` WHERE id = $${keys.length + 1} RETURNING *`;
 
     const productResult = await data.dbConnection.query(query, [...values, data.params.id]);
-
-    await data.dbConnection.query(
-      `DELETE FROM products_categories WHERE product_id = $1`,
-      [productResult.rows[0].id]
-    );
-
+    
     for (const image of imagesToDelete) {
-      const result = await data.dbConnection.query(
+      const imageName = image.split('/').pop().split('.')[0];
+      const imagePath = path.join(__dirname, '..', '..', '..', 'images', `${imageName}.${image.split('.').pop()}`);
+      await fs.promises.unlink(imagePath);
+      await data.dbConnection.query(
         `DELETE FROM images WHERE url = $1`,
         [image]
       );
     }
 
-    for (const category of categories) {
-      const result = await data.dbConnection.query(`
-        INSERT INTO products_categories(product_id, category_id) VALUES($1, $2)`,
-        [productResult.rows[0].id, category]
+    if (filePaths.length > 0) {
+      const imageValues = filePaths
+        .map((filePath, index) => `($1, $${index + 2})`)
+        .join(",");
+      await data.dbConnection.query(`
+        INSERT INTO images(product_id, url) VALUES ${imageValues}`, 
+        [productResult.rows[0].id, ...filePaths]
       );
     }
 
-    for (const filePath of filePaths) {
-      const result = await data.dbConnection.query(
-        `INSERT INTO images(product_id, url) VALUES($1, $2)`,
-        [productResult.rows[0].id, filePath]
+    await data.dbConnection.query(`
+      DELETE FROM products_categories WHERE product_id = $1`,
+      [productResult.rows[0].id]
+    );
+
+    if (categories.length > 0) {
+      const categoryValues = categories
+        .map((category, index) => `($1, $${index + 2})`)
+        .join(",");
+      await data.dbConnection.query(`
+        INSERT INTO products_categories(product_id, category_id) VALUES ${categoryValues}`,
+        [productResult.rows[0].id, ...categories]
       );
     }
 
@@ -144,7 +155,7 @@ class CrudService {
         }
 
         const imageName = crypto.randomBytes(20).toString('hex');
-        const saveTo = path.join(__dirname, '..', '..','..', "images", `${imageName}.${filename.mimeType.split('/')[1]}`); // Adjust the path as necessary
+        const saveTo = path.join(__dirname, '..', '..','..', "images", `${imageName}.${filename.mimeType.split('/')[1]}`);
         filePaths.push('/images/' + imageName + '.' + filename.mimeType.split('/')[1]);
         const writeStream = fs.createWriteStream(saveTo);
 
