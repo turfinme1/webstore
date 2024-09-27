@@ -5,7 +5,6 @@ const crypto = require('crypto');
 
 class CrudService {
   constructor() {
-    this.create = this.create.bind(this);
     this.getAll = this.getAll.bind(this);
     this.getById = this.getById.bind(this);
     this.update = this.update.bind(this);
