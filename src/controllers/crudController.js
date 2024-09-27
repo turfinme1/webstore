@@ -1,3 +1,5 @@
+const { ASSERT_USER } = require("../serverConfigurations/assert");
+
 class CrudController {
   constructor(crudService) {
     this.crudService = crudService;
@@ -9,6 +11,7 @@ class CrudController {
   }
 
   async create(req, res, next) {
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action");
     const data = {
       body: req.body,
       req: req,
@@ -43,6 +46,7 @@ class CrudController {
   }
 
   async update(req, res, next) {
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action");
     const data = {
       body: req.body,
       req: req,
@@ -55,6 +59,7 @@ class CrudController {
   }
 
   async delete(req, res, next) {
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action");
     const data = {
       body: req.body,
       params: req.params,
