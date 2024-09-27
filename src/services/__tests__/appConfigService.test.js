@@ -21,6 +21,10 @@ describe("AppConfigService", () => {
           request_limit: 1000,
           request_window: 60,
           request_block_duration: 15,
+          password_require_digit: true,
+          password_require_lowercase: false,
+          password_require_uppercase: false,
+          password_require_special: false,
         },
         dbConnection: mockDbConnection,
       };
@@ -32,6 +36,10 @@ describe("AppConfigService", () => {
             request_limit: 1000,
             request_window: 60,
             request_block_duration: 15,
+            password_require_digit: true,
+            password_require_lowercase: false,
+            password_require_uppercase: false,
+            password_require_special: false,
           },
         ],
       });
@@ -40,7 +48,7 @@ describe("AppConfigService", () => {
 
       const expectedQuery = `
         UPDATE app_settings 
-        SET request_limit = $1, request_window = $2, request_block_duration = $3
+        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7
         WHERE id = 1 RETURNING *`;
 
       expect(
@@ -59,6 +67,10 @@ describe("AppConfigService", () => {
           request_limit: 1000,
           request_window: 60,
           request_block_duration: 15,
+          password_require_digit: true,
+          password_require_lowercase: false,
+          password_require_uppercase: false,
+          password_require_special: false,
         },
         dbConnection: mockDbConnection,
       };
@@ -72,7 +84,7 @@ describe("AppConfigService", () => {
 
       const expectedQuery = `
         UPDATE app_settings 
-        SET request_limit = $1, request_window = $2, request_block_duration = $3
+        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7
         WHERE id = 1 RETURNING *`;
 
       expect(

@@ -315,7 +315,7 @@ describe("AuthService", () => {
 
       // Expected query
       const expectedQuery = `
-        SELECT u.name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.address, st.type as session_type
+        SELECT u.first_name, u.last_name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.country_id, u.address, u.has_first_login, st.type as session_type
         FROM sessions s
         JOIN session_types st ON s.session_type_id = st.id
         LEFT JOIN users u ON s.user_id = u.id
@@ -339,7 +339,7 @@ describe("AuthService", () => {
 
       // Ensure the query was still called
       const expectedQuery = `
-        SELECT u.name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.address, st.type as session_type
+        SELECT u.first_name, u.last_name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.country_id, u.address, u.has_first_login, st.type as session_type
         FROM sessions s
         JOIN session_types st ON s.session_type_id = st.id
         LEFT JOIN users u ON s.user_id = u.id
