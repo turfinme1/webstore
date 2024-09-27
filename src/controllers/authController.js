@@ -1,3 +1,4 @@
+const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateBody } = require("../serverConfigurations/validation");
 
 class AuthController {
@@ -15,6 +16,7 @@ class AuthController {
   }
 
   async register(req, res, next) {
+    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later");
     validateBody(req, req.entitySchemaCollection.userRegisterSchema);
     const data = {
       body: req.body,
@@ -30,6 +32,7 @@ class AuthController {
   }
 
   async login(req, res, next) {
+    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later");
     validateBody(req, req.entitySchemaCollection.userLoginSchema);
     const data = {
       body: req.body,
@@ -62,6 +65,7 @@ class AuthController {
       params: req.params,
       session: req.session,
       dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
     }; 
     const result = await this.authService.verifyMail(data);
     res.status(200).json(result);
@@ -72,6 +76,7 @@ class AuthController {
       cookies: req.cookies,
       session: req.session,
       dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
     }; 
     const result = await this.authService.getStatus(data);
     res.status(200).json(result);
@@ -81,6 +86,7 @@ class AuthController {
     const data = {
       session: req.session,
       dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
     }; 
     const resultStream = await this.authService.getCaptcha(data);
     res.setHeader('Content-Type', 'image/png');

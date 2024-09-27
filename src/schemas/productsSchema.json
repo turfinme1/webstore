@@ -20,7 +20,8 @@
       "label": "Price",
       "placeholder": "Enter Price",
       "errorMessage": {
-        "minimum": "Price must be a positive number."
+        "minimum": "Price must be a positive number.",
+        "type": "Price must be a number."
       }
     },
     "short_description": {
@@ -65,11 +66,33 @@
       "searchable": true
     }
   },
+  "relationships": {
+    "categories": {
+      "table" : "products_categories",
+      "foreign_key": "product_id",
+      "related_key": "category_id"
+    },
+    "images": {
+      "table" : "images",
+      "foreign_key": "product_id",
+      "related_key": "url"
+    },
+    "comments": {
+      "table" : "comments",
+      "foreign_key": "product_id"
+    },
+    "ratings": {
+      "table" : "ratings",
+      "foreign_key": "product_id"
+    }
+  },
   "required": [
     "name",
     "price",
     "short_description",
-    "long_description"
+    "long_description",
+    "categories",
+    "images"
   ],
   "additionalProperties": false,
   "errorMessage": {

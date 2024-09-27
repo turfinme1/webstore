@@ -50,7 +50,7 @@ class AuthService {
       [user.id]
     );
     
-    const requestData = { dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Email Verification", userId: user.id };
+    const requestData = { entitySchemaCollection: data.entitySchemaCollection, dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Email Verification", userId: user.id };
     const session = await this.changeSessionType(requestData);
     
     await this.mailService.sendVerificationEmail(user.email, createVerifyTokenResult.rows[0].token_hash);
@@ -62,7 +62,7 @@ class AuthService {
     await this.verifyCaptcha(data);
 
     const userResult = await data.dbConnection.query(`
-      SELECT * FROM users WHERE email = $1`,
+      SELECT * FROM ${data.entitySchemaCollection.userManagementSchema.user_table} WHERE email = $1`,
       [data.body.email]
     );
     ASSERT_USER(userResult.rows.length === 1, "Invalid login");
@@ -72,7 +72,7 @@ class AuthService {
     const isPasswordCorrect = await bcrypt.compare(data.body.password, user.password_hash);
     ASSERT_USER(isPasswordCorrect, "Invalid login");
 
-    const requestData = { dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Authenticated", userId: user.id };
+    const requestData = { entitySchemaCollection: data.entitySchemaCollection, dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Authenticated", userId: user.id };
     const session = await this.changeSessionType(requestData);
 
     return session;
@@ -119,7 +119,7 @@ class AuthService {
       [token]
     );
 
-    const requestData = { dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Authenticated", userId: userVerificationInfo.user_id };
+    const requestData = { entitySchemaCollection: data.entitySchemaCollection, dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Authenticated", userId: userVerificationInfo.user_id };
     await this.changeSessionType(requestData);
 
     return { message: "Email successfully verified" };
@@ -127,7 +127,7 @@ class AuthService {
 
   async createSession(data) {
     const session = await await data.dbConnection.query(`
-      INSERT INTO sessions (user_id,ip_address,session_type_id) VALUES ($1, $2, (SELECT id FROM session_types WHERE type = $3 LIMIT 1)) RETURNING *`,
+      INSERT INTO ${data.entitySchemaCollection.userManagementSchema.session_table} (${data.entitySchemaCollection.userManagementSchema.user_id},ip_address,session_type_id) VALUES ($1, $2, (SELECT id FROM session_types WHERE type = $3 LIMIT 1)) RETURNING *`,
       [data.userId, data.ipAddress, data.sessionType]
     );
 
@@ -136,7 +136,7 @@ class AuthService {
 
   async getSession(data) {
     const result = await data.dbConnection.query(`
-      SELECT * FROM sessions WHERE session_hash = $1 AND is_active = TRUE`,
+      SELECT * FROM ${data.entitySchemaCollection.userManagementSchema.session_table} WHERE session_hash = $1 AND is_active = TRUE`,
       [data.sessionHash]
     );
 
@@ -145,7 +145,7 @@ class AuthService {
 
   async refreshSessionExpiry(data) {
     const result = await data.dbConnection.query(`
-      UPDATE sessions SET expires_at = NOW() + INTERVAL '10 minutes' WHERE session_hash = $1 RETURNING *`,
+      UPDATE ${data.entitySchemaCollection.userManagementSchema.session_table} SET expires_at = NOW() + INTERVAL '10 minutes' WHERE session_hash = $1 RETURNING *`,
       [data.sessionHash]
     );
     ASSERT_USER(result.rows.length === 1, "Invalid session");
@@ -155,8 +155,8 @@ class AuthService {
 
   async changeSessionType(data) {
     const result = await data.dbConnection.query(`
-      UPDATE sessions 
-      SET session_type_id = (SELECT id FROM session_types WHERE type = $2 LIMIT 1), user_id = COALESCE($3, user_id) 
+      UPDATE ${data.entitySchemaCollection.userManagementSchema.session_table} 
+      SET session_type_id = (SELECT id FROM session_types WHERE type = $2 LIMIT 1), ${data.entitySchemaCollection.userManagementSchema.user_id} = COALESCE($3, ${data.entitySchemaCollection.userManagementSchema.user_id}) 
       WHERE session_hash = $1 RETURNING *`,
       [data.sessionHash, data.sessionType, data.userId]
     );
@@ -167,14 +167,23 @@ class AuthService {
 
   async getStatus(data) {
     const result = await data.dbConnection.query(`
-      SELECT u.name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.address, st.type as session_type
-      FROM sessions s
+      SELECT u.first_name, u.last_name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.country_id, u.address, u.has_first_login, st.type as session_type
+      FROM ${data.entitySchemaCollection.userManagementSchema.session_table} s
       JOIN session_types st ON s.session_type_id = st.id
-      LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN ${data.entitySchemaCollection.userManagementSchema.user_table} u ON s.${data.entitySchemaCollection.userManagementSchema.user_id} = u.id
       WHERE s.session_hash = $1`,
       [data.session.session_hash]
     );
     ASSERT(result.rows.length === 1, "Invalid session");
+
+    if(result.rows[0].has_first_login === false){
+      await data.dbConnection.query(`
+        UPDATE ${data.entitySchemaCollection.userManagementSchema.user_table} u
+        SET has_first_login = TRUE
+        WHERE u.id = $1`,
+        [data.session.user_id]
+      );
+    }
 
     return result.rows[0];
   }
@@ -187,12 +196,15 @@ class AuthService {
     const captchaAnswer = operator === "+" ? number1 + number2 : number1 - number2;
     
     await data.dbConnection.query(`
-      UPDATE captchas SET is_active = FALSE WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1) RETURNING *`,
+      UPDATE ${data.entitySchemaCollection.userManagementSchema.captcha_table} 
+      SET is_active = FALSE WHERE ${data.entitySchemaCollection.userManagementSchema.session_id} = (SELECT id FROM ${data.entitySchemaCollection.userManagementSchema.session_table}
+      WHERE session_hash = $1 LIMIT 1) RETURNING *`,
       [data.session.session_hash]
     );
     await data.dbConnection.query(`
-      INSERT INTO captchas (session_id, equation, answer) 
-      VALUES ((SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1), $2, $3) RETURNING *`,
+      INSERT INTO ${data.entitySchemaCollection.userManagementSchema.captcha_table} (${data.entitySchemaCollection.userManagementSchema.session_id}, equation, answer) 
+      VALUES ((SELECT id FROM ${data.entitySchemaCollection.userManagementSchema.session_table} 
+      WHERE session_hash = $1 LIMIT 1), $2, $3) RETURNING *`,
       [data.session.session_hash, equation, captchaAnswer]
     );
     
@@ -243,37 +255,52 @@ class AuthService {
   }
 
   async verifyCaptcha(data) {
+    const appSettingsResult = await data.dbConnection.query(`
+      SELECT request_limit, request_window, request_block_duration
+      FROM app_settings LIMIT 1
+    `);
+    const appSettings = appSettingsResult.rows[0];
+    const requestLimit = parseInt(appSettings.request_limit, 10);
+
     const failedAttemptsResult = await data.dbConnection.query(`
       SELECT COUNT(*) AS failed_attempts_count
-      FROM failed_attempts
-      WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1)
+      FROM ${data.entitySchemaCollection.userManagementSchema.failed_attempts_table}
+      WHERE ${data.entitySchemaCollection.userManagementSchema.session_id} = (SELECT id FROM ${data.entitySchemaCollection.userManagementSchema.session_table} WHERE session_hash = $1 LIMIT 1)
       AND attempt_type_id = (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1)
-      AND created_at >= NOW() - INTERVAL '1 hour'`,
+      AND created_at >= NOW() - (SELECT request_window FROM app_settings LIMIT 1)`,
       [data.session.session_hash]
     );
+
     const failedAttemptsCount = parseInt(failedAttemptsResult.rows[0].failed_attempts_count, 10);
-    const maxFailedAttempts = 5; 
-    ASSERT_USER(failedAttemptsCount < maxFailedAttempts, "Too many failed attempts try again later");
+    if (failedAttemptsCount >= requestLimit) {
+      await data.dbConnection.query(`
+        UPDATE ${data.entitySchemaCollection.userManagementSchema.session_table}
+        SET rate_limited_until = NOW() + (SELECT request_block_duration FROM app_settings LIMIT 1)
+        WHERE session_hash = $1`,
+        [data.session.session_hash]
+      );
+      data.dbConnection.query(`COMMIT`);
+      ASSERT_USER(false, "Too many failed attempts. Try again later");
+    }
 
     const captchaResult = await data.dbConnection.query(`
-      SELECT * FROM captchas
-      WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1) 
+      SELECT * FROM ${data.entitySchemaCollection.userManagementSchema.captcha_table}
+      WHERE ${data.entitySchemaCollection.userManagementSchema.session_id} = (SELECT id FROM ${data.entitySchemaCollection.userManagementSchema.session_table} WHERE session_hash = $1 LIMIT 1) 
       AND is_active = TRUE AND expires_at > NOW()`,
       [data.session.session_hash]
     );
-    // ASSERT(captchaResult.rows.length === 1, "Invalid captcha answer");
 
     const captcha = captchaResult.rows[0];
     await data.dbConnection.query(`
-      UPDATE captchas SET is_active = FALSE WHERE id = $1`,
+      UPDATE ${data.entitySchemaCollection.userManagementSchema.captcha_table} 
+      SET is_active = FALSE WHERE id = $1`,
       [captcha.id]
     );
 
     if(captcha.answer !== data.body.captcha_answer) {
-      await data.dbConnection.query(
-        `
-        INSERT INTO failed_attempts (session_id, attempt_type_id)
-        VALUES ((SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1),
+      await data.dbConnection.query(`
+        INSERT INTO ${data.entitySchemaCollection.userManagementSchema.failed_attempts_table} (${data.entitySchemaCollection.userManagementSchema.session_id}, attempt_type_id)
+        VALUES ((SELECT id FROM ${data.entitySchemaCollection.userManagementSchema.session_table} WHERE session_hash = $1 LIMIT 1),
         (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1))`,
         [data.session.session_hash]
       );
@@ -281,8 +308,6 @@ class AuthService {
       data.dbConnection.query(`COMMIT`);
       ASSERT_USER(false, "Invalid captcha answer");
     }
-
-    // return captchaResult.rows[0];
   }
 
   async updateProfile(data) {

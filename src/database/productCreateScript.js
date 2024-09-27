@@ -36,10 +36,8 @@ function generateProducts(numProducts) {
     return products;
 }
 
-// Generate 50,000 products
-const products = generateProducts(45000);
+const products = generateProducts(5000);
 
-// Optionally, save the products to a JSON file
 fs.writeFileSync('products.json', JSON.stringify(products, null, 2), 'utf-8');
 
 console.log('Generated 50,000 products and saved to products.json');

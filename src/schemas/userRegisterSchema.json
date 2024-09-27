@@ -4,12 +4,23 @@
     "routeName": "users",
     "views": "users_view",
     "properties": {
-        "name": {
+        "first_name": {
             "type": "string",
             "minLength": 3,
-            "pattern": "^[a-zA-Z ]+$",
-            "label": "Name",
-            "placeholder": "Enter Name",
+            "pattern": "^[a-zA-Z]+$",
+            "label": "First Name",
+            "placeholder": "Enter First Name",
+            "errorMessage": {
+                "minLength": "Name must be at least 3 characters long.",
+                "pattern": "Name can only contain letters and spaces."
+            }
+        },
+        "last_name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z]+$",
+            "label": "Last Name",
+            "placeholder": "Enter Last Name",
             "errorMessage": {
                 "minLength": "Name must be at least 3 characters long.",
                 "pattern": "Name can only contain letters and spaces."
@@ -80,6 +91,15 @@
                 "type": "Invalid value for gender."
             }
         },
+        "country_id": {
+            "type": ["integer", "null"],
+            "label": "Country",
+            "placeholder": "Enter Country",
+            "fetchFrom": "/crud/iso-country-codes",
+            "errorMessage": {
+                "type": "Invalid country code ID."
+            }
+        },
         "address": {
             "type": [
                 "string",
@@ -102,7 +122,8 @@
         }
     },
     "required": [
-        "name",
+        "first_name",
+        "last_name",
         "password",
         "email",
         "phone",
@@ -113,7 +134,8 @@
     "errorMessage": {
         "required": {
             "password": "Password is required.",
-            "name": "Name is required.",
+            "first_name": "First Name is required.",
+            "last_name": "Last Name is required.",
             "email": "Email is required.",
             "phone": "Phone number is required.",
             "iso_country_code_id": "Country code is required.",

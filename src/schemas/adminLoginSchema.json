@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "name": "userLoginSchema",
+    "name": "adminLoginSchema",
     "properties": {
         "email": {
             "type": "string",

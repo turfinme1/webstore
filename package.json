@@ -5,13 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "start": "nodemon index.js"
+    "start": "nodemon server.js",
+    "admin": "nodemon adminServer.js"
   },
   "author": "Borislav Angelov",
   "license": "ISC",
   "dependencies": {
     "ajv": "^8.17.1",
     "bcrypt": "^5.1.1",
+    "busboy": "^1.6.0",
     "canvas": "^2.11.2",
     "cookie-parser": "^1.4.6",
     "express": "^4.19.2",

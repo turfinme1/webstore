@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let selectedCategories = [];
   let currentPage = 1;
   const pageSize = 6;
-  let sortOption = ""; // Sort option for price ("ASC" or "DESC")
+  let sortOption = []; // [field, order]
   let minPrice = null;
   let maxPrice = null;
   let userStatus = await getUserStatus();
@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     page = 1,
     minPrice = null,
     maxPrice = null,
-    sortOption = ""
+    sortOption = []
   ) => {
     // Build searchParams with only the keyword
     const searchParams = {};
@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Build orderParams
     const orderParams = [];
-    if (sortOption) {
+    if (sortOption.length === 2) {
       // orderParams.push(["price", sortOption.toUpperCase()]);
       orderParams.push(sortOption);
     }

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Page</title>
+    <link rel="stylesheet" href="/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bbbootstrap/libraries@main/choices.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/bbbootstrap/libraries@main/choices.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script defer type="module" src="/crud-product.js"></script>
+</head>
+
+<body>
+    <!-- Main Container -->
+    <div class="container mt-4">
+        <!-- Search and Create Section -->
+        <div class="search-create-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="text" id="search-input" class="form-control" placeholder="Search products...">
+                </div>
+                <div class="col-md-2">
+                    <button id="search-btn" class="btn btn-primary">Search</button>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button id="create-product-btn" class="btn btn-success">Create Product</button>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Filters Section -->
+        <div class="filters-section row mb-4">
+            <div class="col-md-3">
+                <input type="text" id="min-price-input" class="form-control" placeholder="Min Price">
+            </div>
+            <div class="col-md-3">
+                <input type="text" id="max-price-input" class="form-control" placeholder="Max Price">
+            </div>
+            <div class="col-md-4">
+                <div class="custom-multi-select">
+                    <input type="text" id="category-filter-input" placeholder="Filter by categories" readonly>
+                    <div id="category-options" class="options-list">
+                       
+                    </div>
+                    <div id="selected-categories" class="selected-categories"></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button id="apply-filters" class="btn btn-primary">Apply Filters</button>
+            </div>
+        </div>
+
+        <!-- Form Container -->
+        <div class="row mb-4" id="form-container" style="display: none;">
+            <form id="product-form">
+                <!-- Product Name -->
+                <div class="mb-3">
+                    <label for="product-name" class="form-label">Name</label>
+                    <input type="text" class="form-control" id="product-name" name="name" placeholder="Enter Name"
+                        required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!\\-]+$">
+                    <div class="invalid-feedback">Name must be at least 3 characters long and contain only letters.
+                    </div>
+                </div>
+
+                <!-- Price -->
+                <div class="mb-3">
+                    <label for="product-price" class="form-label">Price</label>
+                    <input type="number" step=".01" class="form-control" id="product-price" name="price"
+                        placeholder="Enter Price" required min="1">
+                    <div class="invalid-feedback">Price must be a positive number.</div>
+                </div>
+
+                <!-- Short Description -->
+                <div class="mb-3">
+                    <label for="product-short-description" class="form-label">Short Description</label>
+                    <input type="text" class="form-control" id="product-short-description" name="short_description"
+                        placeholder="Enter Short Description" required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!\\-]+$">
+                    <div class="invalid-feedback">Short Description must be at least 3 characters long and contain only
+                        letters.</div>
+                </div>
+
+                <!-- Long Description -->
+                <div class="mb-3">
+                    <label for="product-long-description" class="form-label">Long Description</label>
+                    <textarea class="form-control" id="product-long-description" name="long_description"
+                        placeholder="Enter Long Description" rows="3" required minlength="3"
+                        pattern="^[a-zA-Z0-9 ?.,:;!\\-]+$"></textarea>
+                    <div class="invalid-feedback">Long Description must be at least 3 characters long and contain only
+                        letters.</div>
+                </div>
+
+                <!-- Categories Multi-select -->
+                <div class="mb-3">
+                    <label for="product-category" class="form-label">Categories</label>
+                    <select id="product-category" class="form-select" name="categories" multiple
+                        placeholder="Choose Categories">
+                        <!-- Categories will be populated here -->
+                    </select>
+                    <div class="invalid-feedback" id="category-error-message">At least one category must be selected.
+                    </div>
+                </div>
+
+                <!-- Image 1 -->
+                <div class="mb-3">
+                    <label for="product-image1" class="form-label">Image 1</label>
+                    <input type="file" class="form-control" id="product-image1" name="file1" accept="image/*" required
+                        multiple>
+                </div>
+
+                <!-- Image 2 -->
+                <div class="mb-3">
+                    <label for="product-image2" class="form-label">Image 2</label>
+                    <input type="file" class="form-control" id="product-image2" name="file2" accept="image/*" required>
+                </div>
+
+                <!-- Image 3 -->
+                <div class="mb-3">
+                    <label for="product-image3" class="form-label">Image 3</label>
+                    <input type="file" class="form-control" id="product-image3" name="file3" accept="image/*" required>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-primary">Submit</button>
+                <button type="button" id="cancel-btn" class="btn btn-danger">Cancel</button>
+            </form>
+        </div>
+
+        <div class="row mb-4" id="form-update-container" style="display: none;">
+            <form id="product-update-form">
+                <!-- Product Name -->
+                <div class="mb-3">
+                    <label for="product-name" class="form-label">Name</label>
+                    <input type="text" class="form-control" id="product-name" name="name" placeholder="Enter Name"
+                        required minlength="3" pattern="^[a-zA-Z0-9\s\?\.,:;!\-]+$" >
+                    <div class="invalid-feedback">Name must be at least 3 characters long and contain only letters.
+                    </div>
+                </div>
+
+                <!-- Price -->
+                <div class="mb-3">
+                    <label for="product-price" class="form-label">Price</label>
+                    <input type="number" step=".01" class="form-control" id="product-price" name="price"
+                        placeholder="Enter Price" required min="1">
+                    <div class="invalid-feedback">Price must be a positive number.</div>
+                </div>
+
+                <!-- Short Description -->
+                <div class="mb-3">
+                    <label for="product-short-description" class="form-label">Short Description</label>
+                    <input type="text" class="form-control" id="product-short-description" name="short_description"
+                        placeholder="Enter Short Description" required minlength="3"
+                        pattern="^[a-zA-Z0-9\s\?\.,:;!\-]+$"    >
+                    <div class="invalid-feedback">Short Description must be at least 3 characters long and contain only
+                        letters.</div>
+                </div>
+
+                <!-- Long Description -->
+                <div class="mb-3">
+                    <label for="product-long-description" class="form-label">Long Description</label>
+                    <textarea class="form-control" id="product-long-description" name="long_description"
+                        placeholder="Enter Long Description" rows="3" required minlength="3"
+                        pattern="^[a-zA-Z0-9\s\?\.,:;!\-]+$"    ></textarea>
+                    <div class="invalid-feedback">Long Description must be at least 3 characters long and contain only
+                        letters.</div>
+                </div>
+
+                <!-- Categories Multi-select -->
+                <div class="mb-3">
+                    <label for="product-category" class="form-label">Categories</label>
+                    <select id="product-update-category" class="form-select" name="categories" multiple
+                        placeholder="Choose Categories">
+                        <!-- Categories will be populated here -->
+                    </select>
+                    <div class="invalid-feedback" id="category-error-message">At least one category must be selected.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="existing-images" class="form-label">Existing Images (click to delete)</label>
+                    <div id="existing-images" class="d-flex flex-wrap">
+                        <!-- Existing images will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Image 1 -->
+                <div class="mb-3">
+                    <label for="product-image1" class="form-label">Image 1</label>
+                    <input type="file" class="form-control" id="product-update-image1" name="file1" accept="image/*">
+                </div>
+
+                <!-- Image 2 -->
+                <div class="mb-3">
+                    <label for="product-image2" class="form-label">Image 2</label>
+                    <input type="file" class="form-control" id="product-update-image2" name="file2" accept="image/*">
+                </div>
+
+                <!-- Image 3 -->
+                <div class="mb-3">
+                    <label for="product-image3" class="form-label">Image 3</label>
+                    <input type="file" class="form-control" id="product-update-image3" name="file3" accept="image/*">
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-primary">Update</button>
+                <button type="button" id="cancel-update-btn" class="btn btn-danger">Cancel</button>
+            </form>
+        </div>
+
+        <hr>
+        <div class="row mb-2 ">
+            <div id="result-count" class="col-md-12 text-center"></div> <!-- Result count here -->
+        </div>
+        <hr>
+        <!-- Product Listing Section -->
+        <div class="row">
+            <table class="table table-bordered" id="product-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Price</th>
+                        <th>Short Description</th>
+                        <th>Long Description</th>
+                        <th>Categories</th>
+                        <th>Images</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="product-list">
+                    <!-- Products will be dynamically injected here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Section -->
+        <div class="row mt-4">
+            <div id="pagination-container" class="col-md-6 d-flex justify-content-center mt-4"></div>
+            <div id="current-page-display" class="col-md-6 d-flex justify-content-center mt-4"></div>
+        </div>
+    </div>
+</body>
+
+</html>
