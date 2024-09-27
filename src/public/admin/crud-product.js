@@ -22,11 +22,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   const searchButton = document.getElementById("search-btn");
   const resultCountDisplay = document.getElementById("result-count");
 
+  const categoryOptions = document.getElementById("category-options");
+  const applyFiltersBtn = document.getElementById("apply-filters");
+  const minPriceInput = document.getElementById("min-price-input");
+  const maxPriceInput = document.getElementById("max-price-input");
+  const categoryFilterInput = document.getElementById("category-filter-input");
+  const searchInput = document.getElementById("search-input");
+
+  let categories;
   let categoryChoices;
   let categoryUpdateChoices;
   let currentPage = 1;
   const pageSize = 10;
   let searchParams = {};
+  let selectedCategories = [];
+  let minPrice = null;
+  let maxPrice = null;
 
   productForm.reset();
   const userStatus = await getUserStatus();
@@ -49,6 +60,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadProducts(currentPage);
   });
 
+  document.addEventListener("click", (e) => {
+    if (
+      !categoryFilterInput.contains(e.target) &&
+      !categoryOptions.contains(e.target)
+    ) {
+      categoryOptions.style.display = "none";
+    }
+  });
+
   // Load and render the form on clicking "Create Product"
   createProductButton.addEventListener("click", () => {
     formContainer.style.display = "block";
@@ -60,7 +80,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Fetch categories from the backend and populate the multi-select
   try {
     const response = await fetch("/crud/categories");
-    const categories = await response.json();
+    categories = await response.json();
 
     categories.forEach((category) => {
       const option = document.createElement("option");
@@ -120,11 +140,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (response.ok) {
         alert("Product created successfully!");
         productForm.reset();
+        loadProducts(currentPage);
         formContainer.style.display = "none";
       } else {
-        const errorData = await response.json();
-        console.error("Error:", errorData);
-        alert("Failed to create product.");
+        const error = await response.json();
+        console.error("Error:", error);
+        alert(`Failed to create product: ${error.error}`);
       }
     } catch (error) {
       console.error("Error submitting the form:", error);
@@ -134,9 +155,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function loadProducts(currentPage) {
     try {
+      
+      const filterParams = {};
+      if (selectedCategories.length > 0) {
+        filterParams.categories = selectedCategories;
+      }
+      if (minPrice !== null || maxPrice !== null) {
+        filterParams.price = {};
+        if (minPrice !== null) {
+          filterParams.price.min = minPrice;
+        }
+        if (maxPrice !== null) {
+          filterParams.price.max = maxPrice;
+        }
+      }
       const queryParams = new URLSearchParams();
       if (Object.keys(searchParams).length > 0) {
         queryParams.append("searchParams", JSON.stringify(searchParams));
+      }
+      if (Object.keys(filterParams).length > 0) {
+        queryParams.append("filterParams", JSON.stringify(filterParams));
       }
       queryParams.append("pageSize", pageSize.toString());
       queryParams.append("page", currentPage.toString());
@@ -181,7 +219,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const imageCell = document.createElement("td");
         if (product.images && product.images.length > 0) {
           product.images.forEach((image, index) => {
-            if(!image) {
+            if (!image) {
               return;
             }
             if (index < 10) {
@@ -324,7 +362,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             : ""; // Visual feedback
         });
       });
-
+      
       productUpdateForm.addEventListener("submit", async (event) => {
         event.preventDefault();
 
@@ -349,11 +387,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (response.ok) {
             alert("Product updated successfully!");
             productUpdateForm.reset();
+            loadProducts(currentPage);
             formUpdateContainer.style.display = "none";
           } else {
-            const errorData = await response.json();
-            console.error("Error:", errorData);
-            alert("Failed to update product.");
+            const error = await response.json();
+            console.error("Error:", error);
+            alert(`Failed to update product: ${error.error}`);
           }
         } catch (error) {
           console.error("Error submitting the form:", error);
@@ -374,9 +413,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         if (response.ok) {
           alert("Product deleted successfully!");
+          window.location.reload();
           loadProducts(currentPage); // Reload the product list after deletion
         } else {
-          alert("Failed to delete product.");
+          const error = await response.json();
+          alert(`Failed to delete product: ${error.error}`);
         }
       } catch (error) {
         console.error("Error deleting product:", error);
@@ -385,5 +426,78 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  const renderCategoryOptions = (categories) => {
+    categoryOptions.innerHTML = ""; // Clear existing options
+
+    categories.forEach((category) => {
+      const label = document.createElement("label");
+
+      // Create input element (checkbox)
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = category.name;
+
+      // Append checkbox and text to label
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(` ${category.name}`));
+
+      // Append label to the category options container
+      categoryOptions.appendChild(label);
+
+      // Add event listener for category checkbox
+      checkbox.addEventListener("change", (e) => {
+        const value = e.target.value;
+
+        if (e.target.checked) {
+          selectedCategories.push(value);
+        } else {
+          selectedCategories = selectedCategories.filter(
+            (cat) => cat !== value
+          );
+        }
+
+        updateSelectedCategories();
+      });
+    });
+  };
+
+  const updateSelectedCategories = () => {
+    categoryFilterInput.value =
+      selectedCategories.length > 0 ? selectedCategories.join(", ") : "";
+  };
+
+  categoryFilterInput.addEventListener("click", () => {
+    categoryOptions.style.display =
+      categoryOptions.style.display === "block" ? "none" : "block";
+  });
+
+  applyFiltersBtn.addEventListener("click", () => {
+    const minPriceValue = minPriceInput.value.trim();
+    const maxPriceValue = maxPriceInput.value.trim();
+
+    if (minPriceValue && isNaN(minPriceValue)) {
+      alert("Minimum price must be a number.");
+      return;
+    }
+    if (maxPriceValue && isNaN(maxPriceValue)) {
+      alert("Maximum price must be a number.");
+      return;
+    }
+
+    minPrice = minPriceValue !== "" ? parseFloat(minPriceValue) : null;
+    maxPrice = maxPriceValue !== "" ? parseFloat(maxPriceValue) : null;
+
+    if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
+      alert("Minimum price cannot be greater than maximum price.");
+      return;
+    }
+
+    currentPage = 1;
+    loadProducts(currentPage);
+  });
+
   loadProducts(currentPage);
+  renderCategoryOptions(categories);
 });
+
+///
