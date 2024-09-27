@@ -41,7 +41,7 @@
                 <div class="mb-3">
                     <label for="product-name" class="form-label">Name</label>
                     <input type="text" class="form-control" id="product-name" name="name" placeholder="Enter Name"
-                        required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!]+$">
+                        required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!\\-]+$">
                     <div class="invalid-feedback">Name must be at least 3 characters long and contain only letters.
                     </div>
                 </div>
@@ -49,8 +49,8 @@
                 <!-- Price -->
                 <div class="mb-3">
                     <label for="product-price" class="form-label">Price</label>
-                    <input type="number" step=".01" class="form-control" id="product-price" name="price" placeholder="Enter Price"
-                        required min="1">
+                    <input type="number" step=".01" class="form-control" id="product-price" name="price"
+                        placeholder="Enter Price" required min="1">
                     <div class="invalid-feedback">Price must be a positive number.</div>
                 </div>
 
@@ -58,7 +58,7 @@
                 <div class="mb-3">
                     <label for="product-short-description" class="form-label">Short Description</label>
                     <input type="text" class="form-control" id="product-short-description" name="short_description"
-                        placeholder="Enter Short Description" required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!]+$">
+                        placeholder="Enter Short Description" required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!\\-]+$">
                     <div class="invalid-feedback">Short Description must be at least 3 characters long and contain only
                         letters.</div>
                 </div>
@@ -68,7 +68,7 @@
                     <label for="product-long-description" class="form-label">Long Description</label>
                     <textarea class="form-control" id="product-long-description" name="long_description"
                         placeholder="Enter Long Description" rows="3" required minlength="3"
-                        pattern="^[a-zA-Z0-9 ?.,:;!]+$"></textarea>
+                        pattern="^[a-zA-Z0-9 ?.,:;!\\-]+$"></textarea>
                     <div class="invalid-feedback">Long Description must be at least 3 characters long and contain only
                         letters.</div>
                 </div>
@@ -115,7 +115,7 @@
                 <div class="mb-3">
                     <label for="product-name" class="form-label">Name</label>
                     <input type="text" class="form-control" id="product-name" name="name" placeholder="Enter Name"
-                        required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!]+$">
+                        required minlength="3" pattern="^[a-zA-Z0-9\s\?\.,:;!\-]+$">
                     <div class="invalid-feedback">Name must be at least 3 characters long and contain only letters.
                     </div>
                 </div>
@@ -123,8 +123,8 @@
                 <!-- Price -->
                 <div class="mb-3">
                     <label for="product-price" class="form-label">Price</label>
-                    <input type="number" step=".01" class="form-control" id="product-price" name="price" placeholder="Enter Price"
-                        required min="1">
+                    <input type="number" step=".01" class="form-control" id="product-price" name="price"
+                        placeholder="Enter Price" required min="1">
                     <div class="invalid-feedback">Price must be a positive number.</div>
                 </div>
 
@@ -132,7 +132,8 @@
                 <div class="mb-3">
                     <label for="product-short-description" class="form-label">Short Description</label>
                     <input type="text" class="form-control" id="product-short-description" name="short_description"
-                        placeholder="Enter Short Description" required minlength="3" pattern="^[a-zA-Z0-9 ?.,:;!]+$">
+                        placeholder="Enter Short Description" required minlength="3"
+                        pattern="^[a-zA-Z0-9\s\?\.,:;!\-]+$">
                     <div class="invalid-feedback">Short Description must be at least 3 characters long and contain only
                         letters.</div>
                 </div>
@@ -142,7 +143,7 @@
                     <label for="product-long-description" class="form-label">Long Description</label>
                     <textarea class="form-control" id="product-long-description" name="long_description"
                         placeholder="Enter Long Description" rows="3" required minlength="3"
-                        pattern="^[a-zA-Z0-9 ?.,:;!]+$"></textarea>
+                        pattern="^[a-zA-Z0-9\s\?\.,:;!\-]+$"></textarea>
                     <div class="invalid-feedback">Long Description must be at least 3 characters long and contain only
                         letters.</div>
                 </div>
@@ -161,9 +162,9 @@
                 <div class="mb-3">
                     <label for="existing-images" class="form-label">Existing Images (click to delete)</label>
                     <div id="existing-images" class="d-flex flex-wrap">
-                      <!-- Existing images will be populated here -->
+                        <!-- Existing images will be populated here -->
                     </div>
-                  </div>
+                </div>
 
                 <!-- Image 1 -->
                 <div class="mb-3">
