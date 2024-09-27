@@ -45,6 +45,27 @@
       }
     }
   },
+  "displayProperties": {
+    "name": {
+      "label": "Name",
+      "placeholder": "Enter Name",
+      "searchable": true
+    },
+    "price": {
+      "label": "Price",
+      "placeholder": "Enter Price"
+    },
+    "short_description": {
+      "label": "Short Description",
+      "placeholder": "Enter Short Description",
+      "searchable": true
+    },
+    "long_description": {
+      "label": "Long Description",
+      "placeholder": "Enter Long Description",
+      "searchable": true
+    }
+  },
   "relationships": {
     "categories": {
       "table" : "products_categories",
