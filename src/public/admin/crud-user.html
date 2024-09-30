@@ -85,8 +85,8 @@
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label for="gender" class="form-label">Gender</label>
-                    <select class="form-control" id="gender" name="gender">
+                    <label for="gender_id" class="form-label">Gender</label>
+                    <select class="form-control" id="gender_id" name="gender_id">
                         <option value="null">Not Specified</option>
                         <option value="1">Male</option>
                         <option value="2">Female</option>
@@ -97,15 +97,15 @@
                     <input type="text" class="form-control" id="address" name="address">
                 </div>
                 <div class="mb-3">
-                    <label class="form-check-label" for="email_verified">Email Verified</label>
-                    <select class="form-control" id="email_verified" name="email_verified">
+                    <label class="form-check-label" for="is_email_verified">Email Verified</label>
+                    <select class="form-control" id="is_email_verified" name="is_email_verified">
                         <option value="false">No</option>
                         <option value="true">Yes</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password">
+                    <label for="password_hash" class="form-label">Password </label>
+                    <input type="password_hash" class="form-control" id="password_hash" name="password_hash">
                 </div>
     
                 <button type="submit" class="btn btn-primary">Submit</button>
@@ -121,25 +121,55 @@
             <h5 class="card-title">Update User</h5>
             <form id="user-update-form">
                 <div class="mb-3">
-                    <label for="update_first_name" class="form-label">First Name</label>
-                    <input type="text" class="form-control" id="update_first_name" name="first_name" required>
+                    <label for="first_name" class="form-label">First Name</label>
+                    <input type="text" class="form-control" id="first_name" name="first_name" required>
                 </div>
                 <div class="mb-3">
-                    <label for="update_last_name" class="form-label">Last Name</label>
-                    <input type="text" class="form-control" id="update_last_name" name="last_name" required>
+                    <label for="last_name" class="form-label">Last Name</label>
+                    <input type="text" class="form-control" id="last_name" name="last_name" required>
                 </div>
                 <div class="mb-3">
-                    <label for="update_email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="update_email" name="email" required>
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" required>
                 </div>
                 <div class="mb-3">
-                    <label for="update_phone" class="form-label">Phone</label>
-                    <input type="text" class="form-control" id="update_phone" name="phone" required>
+                    <label for="iso_country_code_id_update" class="form-label">Phone Code</label>
+                    <select class="form-control" id="iso_country_code_id_update" name="iso_country_code_id" required>
+                    </select>
                 </div>
                 <div class="mb-3">
-                    <label for="update_country" class="form-label">Country</label>
-                    <input type="text" class="form-control" id="update_country" name="country" required>
+                    <label for="phone" class="form-label">Phone</label>
+                    <input type="text" class="form-control" id="phone" name="phone" required>
                 </div>
+                <div class="mb-3">
+                    <label for="country_id_update" class="form-label">Country</label>
+                    <select class="form-control" id="country_id_update" name="country_id">
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="gender_id" class="form-label">Gender</label>
+                    <select class="form-control" id="gender_id" name="gender_id">
+                        <option value="null">Not Specified</option>
+                        <option value="1">Male</option>
+                        <option value="2">Female</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="address" class="form-label">Address</label>
+                    <input type="text" class="form-control" id="address" name="address">
+                </div>
+                <div class="mb-3">
+                    <label class="form-check-label" for="is_email_verified">Email Verified</label>
+                    <select class="form-control" id="is_email_verified" name="is_email_verified">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="password_hash" class="form-label">Password </label>
+                    <input type="password_hash" class="form-control" id="password_hash" name="password_hash">
+                </div>
+
                 <button type="submit" class="btn btn-primary">Update</button>
                 <button type="button" class="btn btn-secondary" id="cancel-update-btn">Cancel</button>
             </form>

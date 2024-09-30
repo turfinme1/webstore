@@ -7,6 +7,7 @@ const state = {
   pageSize: 10,
   searchParams: {},
   countries: [],
+  userToUpdateId: null,
 };
 
 // DOM elements
@@ -26,6 +27,8 @@ const elements = {
   showFormButton: document.getElementById("show-form-btn"),
   countryCodeSelect: document.getElementById("iso_country_code_id"),
   countrySelect: document.getElementById("country_id"),
+  countryCodeUpdateSelect: document.getElementById("iso_country_code_id_update"),
+  countryUpdateSelect: document.getElementById("country_id_update"),
 };
 
 // Initialize page and attach event listeners
@@ -85,11 +88,13 @@ async function loadCountryCodes() {
       phoneOption.value = country.id;
       phoneOption.innerText = `${country.country_name} (${country.phone_code})`;
       elements.countryCodeSelect.appendChild(phoneOption);
+      elements.countryCodeUpdateSelect.appendChild(phoneOption.cloneNode(true));
       
       const countryOption = document.createElement("option");
       countryOption.value = country.id;
       countryOption.innerText = `${country.country_name}`;
       elements.countrySelect.appendChild(countryOption);
+      elements.countryUpdateSelect.appendChild(countryOption.cloneNode(true));
     });
   } catch (error) {
     console.error("Error fetching country codes:", error);
@@ -139,7 +144,7 @@ function renderUserList(users) {
     const actionCell = createTableCell("");
     actionCell.appendChild(
       createActionButton("Update", "btn-warning", () =>
-        handleUpdateUser(user.id)
+        displayUpdateForm(user.id)
       )
     );
     actionCell.appendChild(
@@ -202,11 +207,12 @@ function createPaginationButton(text, enabled, onClick) {
 async function handleCreateUser(event) {
   event.preventDefault();
   const formData = new FormData(elements.userForm);
-  console.log(formData);
+  console.log(JSON.stringify(formData));
   try {
     const response = await fetch("/crud/users", {
       method: "POST",
-      body: formData,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.fromEntries(formData)),
     });
     if (response.ok) {
       alert("User created successfully!");
@@ -222,13 +228,37 @@ async function handleCreateUser(event) {
   }
 }
 
-// Handle user update
-async function handleUpdateUser(userId) {
+async function handleUpdateUser(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.userUpdateForm);
+  console.log(JSON.stringify(formData));
+  try {
+    const response = await fetch(`/crud/users/${state.userToUpdateId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.fromEntries(formData)),
+    });
+    if (response.ok) {
+      alert("User updated successfully!");
+      elements.userUpdateForm.reset();
+      hideUpdateForm();
+      loadUsers(state.currentPage);
+    } else {
+      const error = await response.json();
+      alert(`Failed to update user: ${error.error}`);
+    }
+  } catch (error) {
+    console.error("Error updating user:", error);
+  }
+}
+
+async function displayUpdateForm(userId) {
   try {
     const userResponse = await fetch(`/crud/users/${userId}`);
     const user = await userResponse.json();
     showUpdateForm();
     populateUpdateForm(user);
+    state.userToUpdateId = userId;
   } catch (error) {
     console.error("Error loading user for update:", error);
   }
@@ -239,8 +269,12 @@ function populateUpdateForm(user) {
   elements.userUpdateForm["first_name"].value = user.first_name;
   elements.userUpdateForm["last_name"].value = user.last_name;
   elements.userUpdateForm["email"].value = user.email;
+  elements.userUpdateForm["iso_country_code_id"].value = user.iso_country_code_id;
   elements.userUpdateForm["phone"].value = user.phone;
-  elements.userUpdateForm["country"].value = user.country;
+  elements.userUpdateForm["country_id"].value = user.country_id;
+  elements.userUpdateForm["gender_id"].value = user.gender_id;
+  elements.userUpdateForm["address"].value = user.address;
+  elements.userUpdateForm["is_email_verified"].value = user.is_email_verified;
 }
 
 // Handle user deletion
