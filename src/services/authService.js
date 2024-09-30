@@ -24,7 +24,7 @@ class AuthService {
 
   async register(data) {
     await this.verifyCaptcha(data);
-    const schema = data.entitySchemaCollection["users"];
+    const schema = data.entitySchemaCollection["userAuthSchema"];
     const schemaKeys = Object.keys(schema.properties);
     const dbColumns = schemaKeys.map((key) =>
       key === "password" ? "password_hash" : key
@@ -38,7 +38,7 @@ class AuthService {
       return data.body[key] === undefined ? null : data.body[key];
     });
 
-    const query = `INSERT INTO ${schema.name}(${dbColumns.join(",")}) VALUES(${dbColumns
+    const query = `INSERT INTO ${schema.routeName}(${dbColumns.join(",")}) VALUES(${dbColumns
       .map((_, i) => `$${i + 1}`)
       .join(",")}) RETURNING *`;
     const createUserResult = await data.dbConnection.query(query, values);
@@ -311,7 +311,7 @@ class AuthService {
   }
 
   async updateProfile(data) {
-    const schema = data.entitySchemaCollection["users"];
+    const schema = data.entitySchemaCollection["userAuthSchema"];
     const schemaKeys = Object.keys(schema.properties);
     const dbColumns = [];
     const values = [];
@@ -322,7 +322,7 @@ class AuthService {
     }
 
     const userToUpdateResult = await data.dbConnection.query(`
-      SELECT * FROM ${schema.name} WHERE id = $1`,
+      SELECT * FROM ${schema.routeName} WHERE id = $1`,
       [data.session.user_id]
     );
 
@@ -349,7 +349,7 @@ class AuthService {
     ASSERT_USER(doUpdateHaveChanges, "No changes to update");
 
     const query = `
-      UPDATE ${schema.name}
+      UPDATE ${schema.routeName}
       SET ${dbColumns.map((col, i) => `${col} = $${i + 1}`).join(", ")}
       WHERE id = $${dbColumns.length + 1}
       RETURNING *`;
