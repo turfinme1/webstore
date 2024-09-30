@@ -102,6 +102,15 @@
                 "type": "Address must be text."
             }
         },
+        "old_password": {
+            "type": "string",
+            "minLength": 6,
+            "label": "Old Password",
+            "placeholder": "Enter Old password",
+            "errorMessage": {
+                "minLength": "Password must be at least 6 characters long."
+            }
+        },
         "password": {
             "type": ["string", "null"],
             "minLength": 6,
@@ -117,7 +126,8 @@
         "last_name",
         "email",
         "iso_country_code_id",
-        "phone"
+        "phone",
+        "old_password"
     ],
     "additionalProperties": false,
     "errorMessage": {
@@ -126,7 +136,8 @@
             "last_name": "Last Name is required.",
             "email": "Email is required.",
             "phone": "Phone number is required.",
-            "iso_country_code_id": "Country code is required."
+            "iso_country_code_id": "Country code is required.",
+            "old_password": "Old password is required."
         },
         "additionalProperties": "No additional properties are allowed."
     }

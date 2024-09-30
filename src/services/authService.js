@@ -321,6 +321,14 @@ class AuthService {
       hashedPassword = await bcrypt.hash(data.body.password, 10);
     }
 
+    const userToUpdateResult = await data.dbConnection.query(`
+      SELECT * FROM ${schema.name} WHERE id = $1`,
+      [data.session.user_id]
+    );
+
+    const isPasswordValid = await bcrypt.compare(data.body.old_password, userToUpdateResult.rows[0].password_hash);
+    ASSERT_USER(isPasswordValid, "Old password is incorrect");
+
     schemaKeys.forEach((key) => {
       if (key === "password" && data.body.password) {
         dbColumns.push("password_hash");
@@ -329,7 +337,16 @@ class AuthService {
         dbColumns.push(key);
         values.push(data.body[key]);
       }
-    });  
+    });
+
+    const doUpdateHaveChanges = dbColumns.some((key, i) => {
+      if(key === "password_hash"){
+        return userToUpdateResult.rows[0][key] != hashedPassword;
+      }
+
+      return userToUpdateResult.rows[0][key] != values[i];
+    });
+    ASSERT_USER(doUpdateHaveChanges, "No changes to update");
 
     const query = `
       UPDATE ${schema.name}
