@@ -387,7 +387,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (response.ok) {
             alert("Product updated successfully!");
             productUpdateForm.reset();
-            loadProducts(currentPage);
+            window.location.reload();
+            // loadProducts(currentPage);
             formUpdateContainer.style.display = "none";
           } else {
             const error = await response.json();
