@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "name": "users",
+    "name": "userAuthSchema",
     "routeName": "users",
     "views": "users_view",
     "properties": {
@@ -43,7 +43,7 @@
             "label": "Password",
             "placeholder": "Enter password",
             "errorMessage": {
-                "minLength": "Password must be at least 6 characters long."
+                "minLength": "Password must be at least 8 characters long."
             }
         },
         "iso_country_code_id": {
@@ -72,16 +72,27 @@
                 "null"
             ],
             "label": "Gender",
+            "enumValues": [
+                {
+                    "label": "Not Specified",
+                    "value": null
+                },
+                {
+                    "label": "Male",
+                    "value": 1
+                },
+                {
+                    "label": "Female",
+                    "value": 2
+                }
+            ],
             "placeholder": "Select Gender",
             "errorMessage": {
                 "type": "Invalid value for gender."
             }
         },
         "country_id": {
-            "type": [
-                "integer",
-                "null"
-            ],
+            "type": ["integer", "null"],
             "label": "Country",
             "placeholder": "Enter Country",
             "fetchFrom": "/crud/iso-country-codes",
@@ -98,14 +109,6 @@
             "placeholder": "Enter Address",
             "errorMessage": {
                 "type": "Address must be text."
-            }
-        },
-        "is_email_verified": {
-            "type": "boolean",
-            "label": "Email Verified",
-            "placeholder": "Email Verified",
-            "errorMessage": {
-                "type": "Invalid value for email verification."
             }
         }
     },
@@ -125,9 +128,41 @@
             "last_name": "Last Name is required.",
             "email": "Email is required.",
             "phone": "Phone number is required.",
-            "iso_country_code_id": "Country code is required.",
-            "captcha_answer": "Captcha is required."
+            "iso_country_code_id": "Country code is required."
         },
         "additionalProperties": "No additional properties are allowed."
+    },
+    "loginSchema": {
+        "type": "object",
+        "properties": {
+            "email": {
+                "type": "string",
+                "label": "Email",
+                "placeholder": "Enter Email"
+            },
+            "password": {
+                "type": "string",
+                "label": "Password",
+                "placeholder": "Enter password"
+            },
+            "captcha_answer": {
+                "type": "string",
+                "label": "Captcha",
+                "placeholder": "Enter Captcha"
+            }
+        },
+        "required": [
+            "email",
+            "password",
+            "captcha_answer"
+        ],
+        "additionalProperties": false,
+        "errorMessage": {
+            "required": {
+                "email": "Email is required.",
+                "password": "Password is required."
+            },
+            "additionalProperties": "No additional properties are allowed."
+        }
     }
 }
