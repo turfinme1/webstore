@@ -27,6 +27,7 @@ const appConfigController = new AppConfigController(appConfigService);
 const routeTable = {
   get: {
     "/crud/:entity": controller.getAll,
+    "/crud/:entity/filtered": controller.getFilteredPaginated,
     "/crud/:entity/:id": controller.getById,
     "/api/products" : productController.getFilteredPaginated,
     "/auth/verify-mail": authController.verifyMail,
@@ -39,6 +40,7 @@ const routeTable = {
   },
   post: {
     "/crud/:entity": controller.create,
+    "/api/products": productController.create,
     "/auth/register": authController.register,
     "/auth/login": authController.login,
     "/auth/forgot-password": authController.forgotPassword,
@@ -48,11 +50,13 @@ const routeTable = {
   },
   put: {
     "/crud/:entity/:id": controller.update,
+    "/api/products/:id": productController.update,
     "/auth/profile": authController.updateProfile,
     "/app-config/rate-limit-settings": appConfigController.updateRateLimitSettings,
   },
   delete: {
     "/crud/:entity/:id": controller.delete,
+    "/api/products/:id": productController.delete,
   },
 };
 
