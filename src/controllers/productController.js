@@ -9,6 +9,9 @@ class ProductController {
     this.createRating = this.createRating.bind(this);
     this.getComments = this.getComments.bind(this);
     this.getRatings = this.getRatings.bind(this);
+    this.create = this.create.bind(this);
+    this.update = this.update.bind(this);
+    this.delete = this.delete.bind(this);
   }
 
   async getFilteredPaginated(req, res) {
@@ -68,6 +71,43 @@ class ProductController {
     res.status(200).json(result);
   }
 
+  async create(req, res, next) {
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action");
+    const data = {
+      body: req.body,
+      req: req,
+      params: req.params,
+      dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
+    };  
+    const result = await this.productService.create(data);
+    res.status(201).json(result);
+  } 
+
+  async update(req, res, next) {
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action");
+    const data = {
+      body: req.body,
+      req: req,
+      params: req.params,
+      dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
+    };  
+    const result = await this.productService.update(data);
+    res.status(200).json(result);
+  }
+
+  async delete(req, res, next) {
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action");
+    const data = {
+      body: req.body,
+      params: req.params,
+      dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
+    };  
+    const result = await this.productService.delete(data);
+    res.status(200).json(result);
+  } 
 }
 
 module.exports = ProductController; 
