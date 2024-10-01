@@ -1,4 +1,5 @@
 const { ASSERT_USER } = require("../serverConfigurations/assert");
+const { validateQueryParams } = require("../serverConfigurations/validation");
 
 class CrudController {
   constructor(crudService) {
@@ -8,6 +9,7 @@ class CrudController {
     this.getById = this.getById.bind(this);
     this.update = this.update.bind(this);
     this.delete= this.delete.bind(this);
+    this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
   }
 
   async create(req, res, next) {
@@ -31,6 +33,18 @@ class CrudController {
       entitySchemaCollection: req.entitySchemaCollection,
     };  
     const result = await this.crudService.getById(data);
+    res.status(200).json(result);
+  }
+
+  async getFilteredPaginated(req, res) {
+    validateQueryParams(req, req.entitySchemaCollection.userQueryParamsSchema);
+    const data = {
+      query: req.query,
+      params: req.params,
+      entitySchemaCollection: req.entitySchemaCollection,
+      dbConnection: req.dbConnection,
+    };  
+    const result = await this.crudService.getFilteredPaginated(data);
     res.status(200).json(result);
   }
 

@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     formData.set("categories", JSON.stringify(categories)); // Add selected categories to the form data
     console.log(formData);
     try {
-      const response = await fetch("/crud/products", {
+      const response = await fetch("/api/products", {
         method: "POST",
         body: formData,
       });
@@ -379,7 +379,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         formData.set("imagesToDelete", JSON.stringify(imagesToDelete));
 
         try {
-          const response = await fetch(`/crud/products/${productId}`, {
+          const response = await fetch(`/api/products/${productId}`, {
             method: "PUT",
             body: formData,
           });
@@ -408,7 +408,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function handleDeleteProduct(productId) {
     if (confirm("Are you sure you want to delete this product?")) {
       try {
-        const response = await fetch(`/crud/products/${productId}`, {
+        const response = await fetch(`/api/products/${productId}`, {
           method: "DELETE",
         });
         if (response.ok) {

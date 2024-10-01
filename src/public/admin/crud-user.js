@@ -6,6 +6,7 @@ const state = {
   currentPage: 1,
   pageSize: 10,
   searchParams: {},
+  filterParams: {},
   countries: [],
   userToUpdateId: null,
 };
@@ -20,7 +21,6 @@ const elements = {
   resultCountDisplay: document.getElementById("result-count"),
   userForm: document.getElementById("user-form"),
   userUpdateForm: document.getElementById("user-update-form"),
-  searchButton: document.getElementById("search-btn"),
   cancelButton: document.getElementById("cancel-btn"),
   cancelUpdateButton: document.getElementById("cancel-update-btn"),
   searchInput: document.getElementById("search-input"),
@@ -29,6 +29,11 @@ const elements = {
   countrySelect: document.getElementById("country_id"),
   countryCodeUpdateSelect: document.getElementById("iso_country_code_id_update"),
   countryUpdateSelect: document.getElementById("country_id_update"),
+  showFilterButton: document.getElementById("show-filter-btn"),
+  cancelFilterButton: document.getElementById("cancel-filter-btn"),
+  filterContainer: document.getElementById("filter-container"),
+  countryFilterSelect: document.getElementById("country_id_filter"),
+  filterForm: document.getElementById("filter-form"),
 };
 
 // Initialize page and attach event listeners
@@ -43,19 +48,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 // Attach event listeners
 function attachEventListeners() {
   elements.cancelButton.addEventListener("click", hideForm);
-  elements.cancelUpdateButton.addEventListener("click", hideUpdateForm);
   elements.showFormButton.addEventListener("click", showForm);
-
-  elements.searchButton.addEventListener("click", () => {
-    state.searchParams.keyword = elements.searchInput.value.trim();
-    state.currentPage = 1;
-    hideForm();
-    hideUpdateForm();
-    loadUsers(state.currentPage);
-  });
+  elements.cancelUpdateButton.addEventListener("click", hideUpdateForm);
+  elements.showFilterButton.addEventListener("click", showFilterForm);
+  elements.cancelFilterButton.addEventListener("click", hideFilterForm);
 
   elements.userForm.addEventListener("submit", handleCreateUser);
   elements.userUpdateForm.addEventListener("submit", handleUpdateUser);
+  elements.filterForm.addEventListener("submit", handleFilterUsers); 
 }
 
 // Show and hide functions
@@ -70,11 +70,23 @@ function hideUpdateForm() {
 function showForm() {
   elements.formContainer.style.display = "block";
   elements.formUpdateContainer.style.display = "none";
+  elements.filterContainer.style.display = "none";
 }
 
 function showUpdateForm() {
   elements.formUpdateContainer.style.display = "block";
   elements.formContainer.style.display = "none";
+  elements.filterContainer.style.display = "none";
+}
+
+function showFilterForm() {
+  elements.filterContainer.style.display = "block";
+  elements.formContainer.style.display = "none";
+  elements.formUpdateContainer.style.display = "none";
+}
+
+function hideFilterForm() {
+  elements.filterContainer.style.display = "none";
 }
 
 // Fetch countries
@@ -83,6 +95,12 @@ async function loadCountryCodes() {
     const response = await fetch("/crud/iso-country-codes");
     if (!response.ok) throw new Error("Failed to fetch country codes");
     state.countries = await response.json();
+
+    const allCountriesOption = document.createElement("option");
+    allCountriesOption.value = "";
+    allCountriesOption.innerText = "All Countries";
+    elements.countryFilterSelect.appendChild(allCountriesOption);
+
     state.countries.forEach((country) => {
       const phoneOption = document.createElement("option");
       phoneOption.value = country.id;
@@ -95,6 +113,7 @@ async function loadCountryCodes() {
       countryOption.innerText = `${country.country_name}`;
       elements.countrySelect.appendChild(countryOption);
       elements.countryUpdateSelect.appendChild(countryOption.cloneNode(true));
+      elements.countryFilterSelect.appendChild(countryOption.cloneNode(true));
     });
   } catch (error) {
     console.error("Error fetching country codes:", error);
@@ -105,16 +124,15 @@ async function loadCountryCodes() {
 async function loadUsers(page) {
   try {
     const queryParams = new URLSearchParams({
-      searchParams: JSON.stringify(state.searchParams),
+      filterParams: JSON.stringify(state.filterParams),
       pageSize: state.pageSize.toString(),
       page: page.toString(),
     });
 
-    const response = await fetch(`/crud/users?${queryParams.toString()}`);
-    const users = await response.json();
-    const totalUsers = 5;
-    renderUserList(users);
-    updatePagination(totalUsers, page);
+    const response = await fetch(`/crud/users/filtered?${queryParams.toString()}`);
+    const { result, count } = await response.json();
+    renderUserList(result);
+    updatePagination(count, page);
   } catch (error) {
     console.error("Error loading users:", error);
   }
@@ -181,7 +199,10 @@ function updatePagination(totalUsers, page) {
   elements.currentPageDisplay.innerHTML = `Page ${page} of ${totalPages}`;
   elements.resultCountDisplay.textContent = `Found ${totalUsers} results`;
 
-  if (totalUsers === 0) return;
+  if (totalUsers == 0) {
+    elements.currentPageDisplay.innerHTML = "";
+    return;
+  }
 
   elements.paginationContainer.appendChild(
     createPaginationButton("Previous", page > 1, () => loadUsers(page - 1))
@@ -241,6 +262,8 @@ async function handleUpdateUser(event) {
     if (response.ok) {
       alert("User updated successfully!");
       elements.userUpdateForm.reset();
+      state.filterParams = {};
+      state.currentPage = 1;
       hideUpdateForm();
       loadUsers(state.currentPage);
     } else {
@@ -294,4 +317,18 @@ async function handleDeleteUser(userId) {
   } catch (error) {
     console.error("Error deleting user:", error);
   }
+}
+
+async function handleFilterUsers(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.filterForm);
+  const filterParams = Object.fromEntries(formData);
+
+  // Update state with filter parameters
+  state.filterParams = filterParams;
+
+  // Reload users with the new filters
+  state.currentPage = 1;
+  loadUsers(state.currentPage);
+  hideFilterForm();
 }
