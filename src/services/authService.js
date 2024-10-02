@@ -24,7 +24,7 @@ class AuthService {
 
   async register(data) {
     await this.verifyCaptcha(data);
-    const schema = data.entitySchemaCollection["users"];
+    const schema = data.entitySchemaCollection["userAuthSchema"];
     const schemaKeys = Object.keys(schema.properties);
     const dbColumns = schemaKeys.map((key) =>
       key === "password" ? "password_hash" : key
@@ -38,7 +38,7 @@ class AuthService {
       return data.body[key] === undefined ? null : data.body[key];
     });
 
-    const query = `INSERT INTO ${schema.name}(${dbColumns.join(",")}) VALUES(${dbColumns
+    const query = `INSERT INTO ${schema.routeName}(${dbColumns.join(",")}) VALUES(${dbColumns
       .map((_, i) => `$${i + 1}`)
       .join(",")}) RETURNING *`;
     const createUserResult = await data.dbConnection.query(query, values);
@@ -311,7 +311,7 @@ class AuthService {
   }
 
   async updateProfile(data) {
-    const schema = data.entitySchemaCollection["users"];
+    const schema = data.entitySchemaCollection["userAuthSchema"];
     const schemaKeys = Object.keys(schema.properties);
     const dbColumns = [];
     const values = [];
@@ -321,6 +321,14 @@ class AuthService {
       hashedPassword = await bcrypt.hash(data.body.password, 10);
     }
 
+    const userToUpdateResult = await data.dbConnection.query(`
+      SELECT * FROM ${schema.routeName} WHERE id = $1`,
+      [data.session.user_id]
+    );
+
+    const isPasswordValid = await bcrypt.compare(data.body.old_password, userToUpdateResult.rows[0].password_hash);
+    ASSERT_USER(isPasswordValid, "Old password is incorrect");
+
     schemaKeys.forEach((key) => {
       if (key === "password" && data.body.password) {
         dbColumns.push("password_hash");
@@ -329,10 +337,19 @@ class AuthService {
         dbColumns.push(key);
         values.push(data.body[key]);
       }
-    });  
+    });
+
+    const doUpdateHaveChanges = dbColumns.some((key, i) => {
+      if(key === "password_hash"){
+        return userToUpdateResult.rows[0][key] != hashedPassword;
+      }
+
+      return userToUpdateResult.rows[0][key] != values[i];
+    });
+    ASSERT_USER(doUpdateHaveChanges, "No changes to update");
 
     const query = `
-      UPDATE ${schema.name}
+      UPDATE ${schema.routeName}
       SET ${dbColumns.map((col, i) => `${col} = $${i + 1}`).join(", ")}
       WHERE id = $${dbColumns.length + 1}
       RETURNING *`;

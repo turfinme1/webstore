@@ -38,8 +38,8 @@ describe("AuthService", () => {
           failed_attempts_table: "failed_attempts",
           session_id: "session_id",
         },
-        users: {
-          name: "users",
+        userAuthSchema: {
+          routeName: "users",
           properties: {
             email: {},
             password: {},
@@ -51,6 +51,10 @@ describe("AuthService", () => {
         session_hash: "session123",
       },
     };
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe("register", () => {
@@ -647,32 +651,131 @@ describe("AuthService", () => {
   });
 
   describe("updateProfile", () => {
-    it("should update user profile and return the updated user", async () => {
-      const mockUser = { id: 1, email: "test@example.com", name: "Updated User", password_hash: "hashedPassword" };
-      authService.verifyCaptcha = jest.fn().mockResolvedValueOnce(true);
+    it("should update the user profile and return the updated user", async () => {
+      const mockUser = { 
+        id: 1, 
+        email: "test@example.com", 
+        name: "Test User", 
+        password_hash: "oldHashedPassword"  // Old password hash
+      };
+      data.body.old_password = "oldPassword123";  // Old password
 
-      // Mock bcrypt hashing
+      // Mock fetching the user
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] });
+
+      // Mock bcrypt comparison for old password validation
+      jest.spyOn(bcrypt, "compare").mockResolvedValue(true);
+
+      // Mock bcrypt hashing for new password
       jest.spyOn(bcrypt, "hash").mockResolvedValue("newHashedPassword");
 
-      mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] }); // User updated
+      // Mock the query for updating the user profile
+      const updatedUser = {
+        id: 1,
+        email: "test@example.com",
+        name: "Updated User",
+        password_hash: "newHashedPassword"
+      };
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [updatedUser] });
 
+      // Call the updateProfile method
       const result = await authService.updateProfile(data);
 
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(1);
+      // Verify the calls
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(2);  // One for SELECT, one for UPDATE
+      expect(bcrypt.compare).toHaveBeenCalledWith("oldPassword123", "oldHashedPassword");
       expect(bcrypt.hash).toHaveBeenCalledWith("password123", 10);
-      expect(result).toEqual(mockUser);
+
+      // Verify the result
+      expect(result).toEqual(updatedUser);
     });
 
-    it("should handle updating profile without a password", async () => {
-      data.body.password = undefined; // No new password provided
-      const mockUser = { id: 1, email: "test@example.com", name: "Updated User" };
+    it("should not update if no changes are detected", async () => {
+      const mockUser = { 
+        id: 1, 
+        email: "test@example.com", 
+        name: "Test User", 
+        password_hash: "oldHashedPassword" 
+      };
+      data.body.old_password = "oldPassword123";  // Old password
 
-      mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] }); // User updated
+      // Mock fetching the user
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] });
 
+      // Mock bcrypt comparison for old password validation
+      jest.spyOn(bcrypt, "compare").mockResolvedValue(true);
+
+      // No password change in this case
+      data.body.password = undefined;  // No new password provided
+      data.body.name = "Test User";  // No name change either
+
+      // Call the updateProfile method
+      await expect(authService.updateProfile(data)).rejects.toThrow("No changes to update");
+
+      // Verify only the SELECT query was called
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(1);
+      expect(bcrypt.compare).toHaveBeenCalledWith("oldPassword123", "oldHashedPassword");
+    });
+
+    it("should throw an error if the old password is incorrect", async () => {
+      const mockUser = { 
+        id: 1, 
+        email: "test@example.com", 
+        name: "Test User", 
+        password_hash: "oldHashedPassword" 
+      };
+      data.body.old_password = "oldPassword123";  // Old password
+
+      // Mock fetching the user
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] });
+
+      // Mock bcrypt comparison for old password validation (incorrect password)
+      jest.spyOn(bcrypt, "compare").mockResolvedValue(false);
+
+      // Call the updateProfile method and expect it to throw an error
+      await expect(authService.updateProfile(data)).rejects.toThrow("Old password is incorrect");
+
+      // Verify only the SELECT query was called
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(1);
+      expect(bcrypt.compare).toHaveBeenCalledWith("oldPassword123", "oldHashedPassword");
+    });
+
+    it("should update the profile without changing the password", async () => {
+      const mockUser = { 
+        id: 1, 
+        email: "test@example.com", 
+        name: "Test User", 
+        password_hash: "oldHashedPassword" 
+      };
+
+      // Mock fetching the user
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] });
+
+      // Mock bcrypt comparison for old password validation
+      jest.spyOn(bcrypt, "compare").mockResolvedValue(true);
+
+      // No password change in this case
+      data.body.old_password = "oldPassword123";  // No new password provided
+      data.body.name = "Updated User";  // Name is changing
+
+      // Mock the query for updating the user profile
+      const updatedUser = {
+        id: 1,
+        email: "test@example.com",
+        name: "Updated User",
+        password_hash: "oldHashedPassword"  // Password remains unchanged
+      };
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [updatedUser] });
+
+      // Call the updateProfile method
       const result = await authService.updateProfile(data);
 
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(1);
-      expect(result).toEqual(mockUser);
+      // Verify the calls
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(2);  // One for SELECT, one for UPDATE
+      expect(bcrypt.compare).toHaveBeenCalledWith("oldPassword123", "oldHashedPassword");
+
+      // Verify the result
+      expect(result).toEqual(updatedUser);
     });
   });
 

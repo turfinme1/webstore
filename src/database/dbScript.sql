@@ -209,6 +209,27 @@ SELECT
 FROM ratings r
 GROUP BY r.product_id;
 
+CREATE OR REPLACE VIEW users_view AS
+SELECT
+    users.id,
+    users.first_name,
+    users.last_name,
+    users.email,
+    users.phone,
+    icc.phone_code AS phone_code,
+    users.iso_country_code_id,
+    cc.country_name AS country_name,
+	users.country_id,
+    genders.type AS gender,
+    users.gender_id,
+    users.address,
+    users.is_email_verified,
+    users.has_first_login
+FROM users
+LEFT JOIN iso_country_codes icc ON users.iso_country_code_id = icc.id
+LEFT JOIN iso_country_codes cc ON users.country_id = cc.id
+LEFT JOIN genders ON users.gender_id = genders.id;
+
 INSERT INTO genders(type) VALUES ('Male'), ('Female');
 INSERT INTO session_types(type) VALUES ('Anonymous'), ('Authenticated'), ('Email Verification');
 INSERT INTO attempt_types(type) VALUES ('Login'), ('Captcha');

@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "name": "userUpdateSchema",
+    "name": "userAuthSchema",
     "routeName": "users",
     "views": "users_view",
     "properties": {
@@ -35,6 +35,15 @@
             "errorMessage": {
                 "minLength": "Email must be at least 6 characters long.",
                 "pattern": "Email must be a valid email address."
+            }
+        },
+        "password": {
+            "type": "string",
+            "minLength": 6,
+            "label": "Password",
+            "placeholder": "Enter password",
+            "errorMessage": {
+                "minLength": "Password must be at least 8 characters long."
             }
         },
         "iso_country_code_id": {
@@ -101,44 +110,59 @@
             "errorMessage": {
                 "type": "Address must be text."
             }
-        },
-        "old_password": {
-            "type": "string",
-            "minLength": 6,
-            "label": "Old Password",
-            "placeholder": "Enter Old password",
-            "errorMessage": {
-                "minLength": "Password must be at least 6 characters long."
-            }
-        },
-        "password": {
-            "type": ["string", "null"],
-            "minLength": 6,
-            "label": "New Password",
-            "placeholder": "Enter New password",
-            "errorMessage": {
-                "minLength": "Password must be at least 6 characters long."
-            }
         }
     },
     "required": [
         "first_name",
         "last_name",
+        "password",
         "email",
-        "iso_country_code_id",
         "phone",
-        "old_password"
+        "iso_country_code_id"
     ],
     "additionalProperties": false,
     "errorMessage": {
         "required": {
+            "password": "Password is required.",
             "first_name": "First Name is required.",
             "last_name": "Last Name is required.",
             "email": "Email is required.",
             "phone": "Phone number is required.",
-            "iso_country_code_id": "Country code is required.",
-            "old_password": "Old password is required."
+            "iso_country_code_id": "Country code is required."
         },
         "additionalProperties": "No additional properties are allowed."
+    },
+    "loginSchema": {
+        "type": "object",
+        "properties": {
+            "email": {
+                "type": "string",
+                "label": "Email",
+                "placeholder": "Enter Email"
+            },
+            "password": {
+                "type": "string",
+                "label": "Password",
+                "placeholder": "Enter password"
+            },
+            "captcha_answer": {
+                "type": "string",
+                "label": "Captcha",
+                "placeholder": "Enter Captcha"
+            }
+        },
+        "required": [
+            "email",
+            "password",
+            "captcha_answer"
+        ],
+        "additionalProperties": false,
+        "errorMessage": {
+            "required": {
+                "email": "Email is required.",
+                "password": "Password is required."
+            },
+            "additionalProperties": "No additional properties are allowed."
+        }
     }
 }

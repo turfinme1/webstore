@@ -5,6 +5,7 @@ describe("ProductService", () => {
   let mockDbConnection;
   let mockEntitySchemaCollection;
   let params;
+  let req;
 
   beforeEach(() => {
     mockDbConnection = {
@@ -59,6 +60,26 @@ describe("ProductService", () => {
       dbConnection: mockDbConnection,
       entitySchemaCollection: mockEntitySchemaCollection,
     };
+
+    req = {
+      params: { entity: "testEntity", id: "1" },
+      body: {
+        name: "Test Product",
+        price: 100.5,
+        short_description: "Short description",
+        long_description: "Long description",
+        categories: JSON.stringify([1, 2]),
+        imagesToDelete: JSON.stringify([]), // Add empty array as default
+      },
+      dbConnection: mockDbConnection,
+      entitySchemaCollection: mockEntitySchemaCollection,
+    };
+
+    jest.spyOn(productService, 'handleFileUploads').mockResolvedValue(['/images/dummy.jpg']);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe("getFilteredPaginated", () => {
@@ -412,6 +433,114 @@ describe("ProductService", () => {
       mockDbConnection.query.mockRejectedValue(new Error("Database error"));
 
       await expect(productService.getRatings(params)).rejects.toThrow("Database error");
+    });
+  });
+
+  describe("create", () => {
+    it("should create a new product and return the result", async () => {
+      const expectedResponse = {
+        id: 1,
+        name: "Test Product",
+        price: 100.5,
+        short_description: "Short description",
+        long_description: "Long description",
+      };
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [expectedResponse] });
+
+      const result = await productService.create(req);
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        "INSERT INTO products(name,price,short_description,long_description) VALUES($1,$2,$3,$4) RETURNING *",
+        ["Test Product", 100.5, "Short description", "Long description"]
+      );
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO products_categories"), 
+        [1, 1, 2]
+      );
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO images"), 
+        [1, '/images/dummy.jpg']
+      );
+
+      expect(result).toEqual(expectedResponse);
+    });
+
+    it("should throw an error if required fields are missing", async () => {
+      req.body = { price: 50.0 }; // Missing required fields: name, short_description, long_description
+
+      await expect(productService.create(req)).rejects.toThrow();
+    });
+  });
+
+  describe("update", () => {
+    it("should update the product and return the updated result", async () => {
+      const expectedResponse = {
+        id: 1,
+        name: "Updated Product",
+        price: 150.0,
+        short_description: "Updated short description",
+        long_description: "Updated long description",
+      };
+
+      req.body = {
+        name: "Updated Product",
+        price: 150.0,
+        short_description: "Updated short description",
+        long_description: "Updated long description",
+        categories: JSON.stringify([1, 2]),
+        imagesToDelete: JSON.stringify([]),
+      };
+
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [expectedResponse] });
+
+      const result = await productService.update(req);
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        "UPDATE products SET name = $1, price = $2, short_description = $3, long_description = $4 WHERE id = $5 RETURNING *",
+        [
+          "Updated Product",
+          150.0,
+          "Updated short description",
+          "Updated long description",
+          "1",
+        ]
+      );
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO products_categories"), 
+        [1, 1, 2]
+      );
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO images"), 
+        [1, '/images/dummy.jpg']
+      );
+
+      expect(result).toEqual(expectedResponse);
+    });
+  });
+
+  describe("delete", () => {
+    it("should delete the product and return the deleted entity", async () => {
+      const expectedResponse = {
+        id: 1,
+        name: "Test Product",
+        price: 100.5,
+        short_description: "Short description",
+        long_description: "Long description",
+      };
+
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [expectedResponse] });
+
+      const result = await productService.delete(req);
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        "DELETE FROM products WHERE id = $1 RETURNING *",
+        ["1"]
+      );
+      expect(result).toEqual(expectedResponse);
     });
   });
 });
