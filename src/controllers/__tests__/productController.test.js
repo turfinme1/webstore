@@ -10,6 +10,7 @@ describe("ProductController", () => {
   let mockReq;
   let mockNext;
   let mockDbConnection;
+  let ERROR_CODES = 2;
 
   beforeEach(() => {
     productService = {
@@ -18,6 +19,9 @@ describe("ProductController", () => {
       createRating: jest.fn(),
       getComments: jest.fn(),
       getRatings: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     };
 
     mockDbConnection = {
@@ -90,6 +94,10 @@ describe("ProductController", () => {
     mockNext = jest.fn();
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe("getFilteredPaginated", () => {
     it("should call validateQueryParams and productService.getFilteredPaginated, then respond with status 200", async () => {
       const expectedResult = [
@@ -132,7 +140,7 @@ describe("ProductController", () => {
 
       await productController.createComment(mockReq, mockRes, mockNext);
 
-      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action");
+      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action", ERROR_CODES);
       expect(productService.createComment).toHaveBeenCalledWith({
         body: mockReq.body,
         params: mockReq.params,
@@ -152,7 +160,7 @@ describe("ProductController", () => {
 
       await productController.createRating(mockReq, mockRes, mockNext);
 
-      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action");
+      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action", ERROR_CODES);
       expect(productService.createRating).toHaveBeenCalledWith({
         body: mockReq.body,
         params: mockReq.params,
@@ -194,6 +202,59 @@ describe("ProductController", () => {
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(expectedResult);
+    });
+  });
+
+  describe('create', () => {
+    it('should call productService.create and respond with status 201', async () => {
+      const req = { body: { name: 'Test Product' }, params: { entity: 'testEntity' }, session: { admin_user_id: 1 } };
+      const requestObject = { body: req.body, req, params: req.params, dbConnection: req.dbConnection, entitySchemaCollection: req.entitySchemaCollection };
+      const createdProduct = { id: 1, name: 'Test Product' };
+
+      productService.create.mockResolvedValue([createdProduct]);
+
+      await productController.create(req, mockRes, mockNext);
+
+      expect(productService.create).toHaveBeenCalledWith(requestObject);
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+      expect(mockRes.json).toHaveBeenCalledWith([createdProduct]);
+    });
+  });
+
+  describe('update', () => {
+    it('should call productService.update and respond with status 200', async () => {
+      const req = {
+        params: { entity: 'testEntity', id: 1 },
+        body: { name: 'Updated Product' },
+        session: { admin_user_id: 1 } 
+      };
+      const requestObject = { body: req.body, req, params: req.params, dbConnection: req.dbConnection, entitySchemaCollection: req.entitySchemaCollection };
+
+      const updatedProduct = { id: 1, name: 'Updated Product' };
+
+      productService.update.mockResolvedValue(updatedProduct);
+
+      await productController.update(req, mockRes, mockNext);
+
+      expect(productService.update).toHaveBeenCalledWith(requestObject);
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(updatedProduct);
+    });
+  });
+
+  describe('delete', () => {
+    it('should call crudService.delete and respond with status 200', async () => {
+      const req = { params: { entity: 'testEntity', id: 1 },  session: { admin_user_id: 1 }  };
+      const expectedCallObject = { params: { entity: 'testEntity', id: 1 }};
+      const deletedProduct = { id: 1, name: 'Deleted Product' };
+
+      productService.delete.mockResolvedValue(deletedProduct);
+
+      await productController.delete(req, mockRes, mockNext);
+
+      expect(productService.delete).toHaveBeenCalledWith(expectedCallObject);
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(deletedProduct);
     });
   });
 });
