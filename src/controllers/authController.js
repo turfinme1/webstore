@@ -1,3 +1,4 @@
+const ERROR_CODES = require("../serverConfigurations/constants");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateBody } = require("../serverConfigurations/validation");
 
@@ -16,7 +17,7 @@ class AuthController {
   }
 
   async register(req, res, next) {
-    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later");
+    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", ERROR_CODES.RATE_LIMITED);
     validateBody(req, req.entitySchemaCollection.userRegisterSchema);
     const data = {
       body: req.body,
@@ -32,7 +33,7 @@ class AuthController {
   }
 
   async login(req, res, next) {
-    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later");
+    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", ERROR_CODES.RATE_LIMITED);
     validateBody(req, req.entitySchemaCollection.userLoginSchema);
     const data = {
       body: req.body,
