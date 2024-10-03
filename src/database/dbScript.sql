@@ -175,8 +175,20 @@ CREATE TABLE carts (
     user_id BIGINT NULL REFERENCES users(id),
     session_id BIGINT NULL REFERENCES sessions(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT unique_cart_per_user_or_session UNIQUE (user_id, session_id)
+	is_active BOOLEAN NOT NULL DEFAULT TRUE,
+	CONSTRAINT user_or_session_must_be_set CHECK (
+        (user_id IS NOT NULL AND session_id IS NULL) OR 
+        (user_id IS NULL AND session_id IS NOT NULL)
+    )
 );
+CREATE UNIQUE INDEX unique_active_cart_per_user_or_session 
+ON carts (
+    COALESCE(
+        'user_' || user_id::TEXT, 
+        'session_' || session_id::TEXT
+    )
+)
+WHERE is_active = true;
 
 CREATE TABLE cart_items (
     id BIGSERIAL PRIMARY KEY,
