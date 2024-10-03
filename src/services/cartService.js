@@ -10,16 +10,35 @@ class CartService {
   async getCart(data) {
     const { user_id } = data.session;
     const session_id = data.session.id;
-    const result = await data.dbConnection.query(`
-      SELECT ci.*, p.name AS product_name 
-      FROM cart_items ci
-      JOIN products p ON ci.product_id = p.id
-      JOIN carts c ON ci.cart_id = c.id
+
+    const cartItemsResult = await data.dbConnection.query(`
+      SELECT ci.*, p.name AS product_name, c.id AS cart_id
+      FROM carts c
+      LEFT JOIN cart_items ci ON c.id = ci.cart_id
+      LEFT JOIN products p ON ci.product_id = p.id
       WHERE c.user_id = $1 OR c.session_id = $2`,
       [user_id, session_id]
     );
+    
+    if (cartItemsResult.rows.length > 0) {
+      return {
+        cart_id: cartItemsResult.rows[0].cart_id,
+        items: cartItemsResult.rows,
+      };
+    }
 
-    return result.rows;
+    const createCartResult = await data.dbConnection.query(`
+      INSERT INTO carts (user_id, session_id) 
+      VALUES ($1, $2) 
+      RETURNING *`,
+      [user_id, session_id]
+    );
+    const newCartId = createCartResult.rows[0].id;
+
+    return {
+        cart_id: newCartId,
+        items: [],
+    };
   }
 
   async addItem(data) {
