@@ -1,139 +1,200 @@
 import { getUserStatus, attachLogoutHandler } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 
-// Centralized state object
+// Centralized state for the cart
 const state = {
-  cartItems: [],
+  items: [],
+  total: 0,
 };
 
 // DOM elements
 const elements = {
-  cartItemsContainer: document.getElementById("cart-items-container"),
-  totalAmountDisplay: document.getElementById("total-amount"),
-  checkoutButton: document.getElementById("checkout-btn"),
-  clearCartButton: document.getElementById("clear-cart-btn"),
+  cartContainer: document.getElementById('cart-container'),
+  checkoutButton: document.getElementById('checkout-btn'),
+  totalDisplay: document.getElementById('total-display'),
+  cartCount: document.getElementById('cart-count'),
 };
 
-// Initialize page and attach event listeners
-document.addEventListener("DOMContentLoaded", async () => {
+// Initialize cart page and attach event listeners
+document.addEventListener('DOMContentLoaded', async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
+  state.items = await getCartItems();
+  updateCartDisplay(state);
   attachEventListeners();
-  loadCartItems();
 });
 
 // Attach event listeners
 function attachEventListeners() {
-  elements.checkoutButton.addEventListener("click", handleCheckout);
-//   elements.clearCartButton.addEventListener("click", handleClearCart);
+  elements.cartContainer.addEventListener('click', handleCartItemActions);
+  elements.checkoutButton.addEventListener('click', handleCheckout);
 }
 
-// Load cart items from local storage or cookie
-function loadCartItems() {
-  const storedCart = JSON.parse(localStorage.getItem("cart")) || [];
-  state.cartItems = storedCart;
-  renderCartItems(storedCart);
-  updateTotalAmount(calculateTotalAmount(storedCart));
-}
-
-// Render cart items
-function renderCartItems(items) {
-  elements.cartItemsContainer.innerHTML = ""; // Clear previous list
-  items.forEach((item) => {
-    const cartRow = document.createElement("tr");
-
-    // Create cells for cart item details
-    cartRow.appendChild(createTableCell(item.product_name));
-    cartRow.appendChild(createTableCell(item.price));
-    cartRow.appendChild(createQuantityInput(item));
-    cartRow.appendChild(createTableCell(item.subtotal));
-
-    // Actions (Remove)
-    const actionCell = createTableCell("");
-    actionCell.appendChild(
-      createActionButton("Remove", "btn-danger", () =>
-        handleRemoveCartItem(item.id)
-      )
-    );
-    cartRow.appendChild(actionCell);
-
-    elements.cartItemsContainer.appendChild(cartRow);
-  });
-}
-
-// Create table cell
-function createTableCell(text) {
-  const cell = document.createElement("td");
-  cell.textContent = text;
-  return cell;
-}
-
-// Create quantity input with change event
-function createQuantityInput(item) {
-  const inputCell = document.createElement("td");
-  const quantityInput = document.createElement("input");
-  quantityInput.type = "number";
-  quantityInput.value = item.quantity;
-  quantityInput.min = 1;
-  quantityInput.addEventListener("change", () =>
-    handleUpdateQuantity(item.id, quantityInput.value)
-  );
-
-  inputCell.appendChild(quantityInput);
-  return inputCell;
+// Handle item actions (update quantity, remove item)
+function handleCartItemActions(event) {
+  const target = event.target;
+  
+  if (target.classList.contains('update-quantity')) {
+    const itemId = target.dataset.itemId;
+    const newQuantity = target.closest('.cart-item').querySelector('.quantity-input').value;
+    updateCartItemQuantity(itemId, newQuantity);
+  } else if (target.classList.contains('remove-item')) {
+    const itemId = target.dataset.itemId;
+    removeItemFromCart(itemId);
+  }
 }
 
 // Update cart item quantity
-function handleUpdateQuantity(itemId, newQuantity) {
-  const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
-  const itemIndex = cartItems.findIndex(item => item.id === itemId);
-  
-  if (itemIndex !== -1) {
-    cartItems[itemIndex].quantity = newQuantity;
-    cartItems[itemIndex].subtotal = (cartItems[itemIndex].price * newQuantity).toFixed(2);
-    localStorage.setItem("cart", JSON.stringify(cartItems));
-    loadCartItems(); // Refresh the cart items
+async function updateCartItemQuantity(itemId, newQuantity) {
+  try {
+    await updateCartItem(itemId, newQuantity);
+    state.items = await getCartItems();
+    updateCartDisplay(state);
+  } catch (error) {
+    console.error('Error updating cart item:', error);
   }
 }
 
-// Handle cart item removal
-function handleRemoveCartItem(itemId) {
-  const cartItems = JSON.parse(localStorage.getItem("cart")) || [];
-  const updatedCartItems = cartItems.filter(item => item.id !== itemId);
-  
-  localStorage.setItem("cart", JSON.stringify(updatedCartItems));
-  loadCartItems(); // Refresh the cart items
-}
-
-// Calculate total amount
-function calculateTotalAmount(items) {
-  return items.reduce((total, item) => total + parseFloat(item.subtotal), 0).toFixed(2);
-}
-
-// Update total amount display
-function updateTotalAmount(totalAmount) {
-  elements.totalAmountDisplay.textContent = `Total: $${totalAmount}`;
+// Remove item from cart
+async function removeItemFromCart(itemId) {
+  try {
+    await removeCartItem(itemId);
+    state.items = await getCartItems();
+    updateCartDisplay(state);
+  } catch (error) {
+    console.error('Error removing cart item:', error);
+  }
 }
 
 // Handle checkout
-function handleCheckout() {
-  alert("Proceeding to checkout...");
-  // Logic for proceeding to checkout can be added here
-}
-
-// Handle clearing the cart
-function handleClearCart() {
-  if (confirm("Are you sure you want to clear the cart?")) {
-    localStorage.removeItem("cart");
-    loadCartItems(); // Refresh the cart items
+async function handleCheckout() {
+  try {
+    await checkout();
+    alert('Checkout successful!');
+    state.items = []; // Empty cart after successful checkout
+    updateCartDisplay(state);
+  } catch (error) {
+    console.error('Error during checkout:', error);
   }
 }
 
-// Create action button
-function createActionButton(text, className, onClick) {
-  const button = document.createElement("button");
-  button.textContent = text;
-  button.classList.add("btn", className);
-  button.addEventListener("click", onClick);
-  return button;
+// cartService.js
+
+async function getCartItems() {
+  const response = await fetch('/api/cart');
+  if (!response.ok) throw new Error('Failed to fetch cart items');
+  return [{
+    productName: 'Product ' + Math.floor(Math.random() * 100),
+    quantity: Math.floor(Math.random() * 10),
+    price: Math.floor(Math.random() * 100),
+    id: Math.floor(Math.random() * 100),
+  },
+  {
+    productName: 'Product ' + Math.floor(Math.random() * 100),
+    quantity: Math.floor(Math.random() * 10),
+    price: Math.floor(Math.random() * 100),
+    id: Math.floor(Math.random() * 100),
+  },
+  {
+    productName: 'Product ' + Math.floor(Math.random() * 100),
+    quantity: Math.floor(Math.random() * 10),
+    price: Math.floor(Math.random() * 100),
+    id: Math.floor(Math.random() * 100),
+  },
+  {
+    productName: 'Product ' + Math.floor(Math.random() * 100),
+    quantity: Math.floor(Math.random() * 10),
+    price: Math.floor(Math.random() * 100),
+    id: Math.floor(Math.random() * 100),
+  },
+  {
+    productName: 'Product ' + Math.floor(Math.random() * 100),
+    quantity: Math.floor(Math.random() * 10),
+    price: Math.floor(Math.random() * 100),
+    id: Math.floor(Math.random() * 100),
+  },
+  {
+    productName: 'Product ' + Math.floor(Math.random() * 100),
+    quantity: Math.floor(Math.random() * 10),
+    price: Math.floor(Math.random() * 100),
+    id: Math.floor(Math.random() * 100),
+  },
+  {
+    productName: 'Product ' + Math.floor(Math.random() * 100),
+    quantity: Math.floor(Math.random() * 10),
+    price: Math.floor(Math.random() * 100),
+    id: Math.floor(Math.random() * 100),
+  },
+  {
+    productName: 'Product ' + Math.floor(Math.random() * 100),
+    quantity: Math.floor(Math.random() * 10),
+    price: Math.floor(Math.random() * 100),
+    id: Math.floor(Math.random() * 100),
+  },
+  {
+    productName: 'Product ' + Math.floor(Math.random() * 100),
+    quantity: Math.floor(Math.random() * 10),
+    price: Math.floor(Math.random() * 100),
+    id: Math.floor(Math.random() * 100),
+  }
+  ];
+  // return await response.json();
+}
+
+async function updateCartItem(itemId, quantity) {
+  const response = await fetch(`/cart/${itemId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quantity }),
+  });
+  if (!response.ok) throw new Error('Failed to update cart item');
+}
+
+async function removeCartItem(itemId) {
+  const response = await fetch(`/cart/${itemId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to remove cart item');
+}
+
+async function checkout() {
+  const response = await fetch('/cart/checkout', {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Checkout failed');
+}
+
+
+// cartUI.js
+
+function renderCartItem(item) {
+  const itemRow = document.createElement('tr');
+  itemRow.classList.add('cart-item');
+  itemRow.innerHTML = `
+    <td style="vertical-align: middle;">
+      <img src="/images/tv.webp" alt="${item.productName}" class="img-fluid" style="width: 100px; height: auto; margin-right: 10px;" />
+      ${item.productName}
+    </td>
+    <td style="vertical-align: middle;">
+      <input type="number" class="quantity-input form-control" value="${item.quantity}" style="width: 70px; display: inline-block;" />
+      <button class="update-quantity btn btn-sm btn-outline-primary" data-item-id="${item.id}">Update</button>
+    </td>
+    <td style="vertical-align: middle;">$${item.price.toFixed(2)}</td>
+    <td style="vertical-align: middle;">$${(item.price * item.quantity).toFixed(2)}</td>
+    <td style="vertical-align: middle;"><button class="remove-item btn btn-sm btn-danger" data-item-id="${item.id}">Remove</button></td>
+  `;
+  return itemRow;
+}
+
+function updateCartDisplay(state) {
+  const cartContainer = document.getElementById('cart-container');
+  cartContainer.innerHTML = '';
+  
+  state.items.forEach((item) => {
+    cartContainer.appendChild(renderCartItem(item));
+  });
+
+  const total = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  document.getElementById('cart-total').textContent = total.toFixed(2);
+  // document.getElementById('cart-count').textContent = `Items in Cart: ${state.items.length}`;
 }
