@@ -60,12 +60,12 @@ function populateProductData(product) {
 
 async function addToCart(productId) {
   try {
-    const response = await fetch(`/api/cart/add`, {
+    const response = await fetch(`/api/cart`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ productId, quantity: 1 }),
+      body: JSON.stringify({ product_id: productId, quantity: 1 }),
     });
 
     if (!response.ok) {

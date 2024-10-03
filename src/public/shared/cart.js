@@ -3,6 +3,7 @@ import { createNavigation } from "./navigation.js";
 
 // Centralized state for the cart
 const state = {
+  cart_id: null,
   items: [],
   total: 0,
 };
@@ -19,7 +20,9 @@ const elements = {
 document.addEventListener('DOMContentLoaded', async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
-  state.items = await getCartItems();
+  const cart = await getCartItems();
+  state.items = cart.items;
+  state.cart_id = cart.cart_id;
   updateCartDisplay(state);
   attachEventListeners();
 });
@@ -28,6 +31,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 function attachEventListeners() {
   elements.cartContainer.addEventListener('click', handleCartItemActions);
   elements.checkoutButton.addEventListener('click', handleCheckout);
+
+  for (const item of state.items) {
+    document.getElementById(`quantity-decrease-${item.id}`).addEventListener('click', () => {
+      updateCartItemQuantity(item.id, parseInt(item.quantity) - 1);
+    });
+    document.getElementById(`quantity-increase-${item.id}`).addEventListener('click', () => {
+      updateCartItemQuantity(item.id, parseInt(item.quantity) + 1);
+    });
+  }
 }
 
 // Handle item actions (update quantity, remove item)
@@ -48,7 +60,10 @@ function handleCartItemActions(event) {
 async function updateCartItemQuantity(itemId, newQuantity) {
   try {
     await updateCartItem(itemId, newQuantity);
-    state.items = await getCartItems();
+    
+    const cart = await getCartItems();
+    state.items = cart.items;
+    state.cart_id = cart.cart_id;
     updateCartDisplay(state);
   } catch (error) {
     console.error('Error updating cart item:', error);
@@ -59,7 +74,9 @@ async function updateCartItemQuantity(itemId, newQuantity) {
 async function removeItemFromCart(itemId) {
   try {
     await removeCartItem(itemId);
-    state.items = await getCartItems();
+    const cart = await getCartItems();
+    state.items = cart.items;
+    state.cart_id = cart.cart_id;
     updateCartDisplay(state);
   } catch (error) {
     console.error('Error removing cart item:', error);
@@ -83,66 +100,11 @@ async function handleCheckout() {
 async function getCartItems() {
   const response = await fetch('/api/cart');
   if (!response.ok) throw new Error('Failed to fetch cart items');
-  return [{
-    productName: 'Product ' + Math.floor(Math.random() * 100),
-    quantity: Math.floor(Math.random() * 10),
-    price: Math.floor(Math.random() * 100),
-    id: Math.floor(Math.random() * 100),
-  },
-  {
-    productName: 'Product ' + Math.floor(Math.random() * 100),
-    quantity: Math.floor(Math.random() * 10),
-    price: Math.floor(Math.random() * 100),
-    id: Math.floor(Math.random() * 100),
-  },
-  {
-    productName: 'Product ' + Math.floor(Math.random() * 100),
-    quantity: Math.floor(Math.random() * 10),
-    price: Math.floor(Math.random() * 100),
-    id: Math.floor(Math.random() * 100),
-  },
-  {
-    productName: 'Product ' + Math.floor(Math.random() * 100),
-    quantity: Math.floor(Math.random() * 10),
-    price: Math.floor(Math.random() * 100),
-    id: Math.floor(Math.random() * 100),
-  },
-  {
-    productName: 'Product ' + Math.floor(Math.random() * 100),
-    quantity: Math.floor(Math.random() * 10),
-    price: Math.floor(Math.random() * 100),
-    id: Math.floor(Math.random() * 100),
-  },
-  {
-    productName: 'Product ' + Math.floor(Math.random() * 100),
-    quantity: Math.floor(Math.random() * 10),
-    price: Math.floor(Math.random() * 100),
-    id: Math.floor(Math.random() * 100),
-  },
-  {
-    productName: 'Product ' + Math.floor(Math.random() * 100),
-    quantity: Math.floor(Math.random() * 10),
-    price: Math.floor(Math.random() * 100),
-    id: Math.floor(Math.random() * 100),
-  },
-  {
-    productName: 'Product ' + Math.floor(Math.random() * 100),
-    quantity: Math.floor(Math.random() * 10),
-    price: Math.floor(Math.random() * 100),
-    id: Math.floor(Math.random() * 100),
-  },
-  {
-    productName: 'Product ' + Math.floor(Math.random() * 100),
-    quantity: Math.floor(Math.random() * 10),
-    price: Math.floor(Math.random() * 100),
-    id: Math.floor(Math.random() * 100),
-  }
-  ];
-  // return await response.json();
+  return await response.json();
 }
 
 async function updateCartItem(itemId, quantity) {
-  const response = await fetch(`/cart/${itemId}`, {
+  const response = await fetch(`/api/cart/${itemId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quantity }),
@@ -167,21 +129,26 @@ async function checkout() {
 
 // cartUI.js
 
-function renderCartItem(item) {
+function renderCartItem(item) { 
   const itemRow = document.createElement('tr');
   itemRow.classList.add('cart-item');
   itemRow.innerHTML = `
     <td style="vertical-align: middle;">
-      <img src="/images/tv.webp" alt="${item.productName}" class="img-fluid" style="width: 100px; height: auto; margin-right: 10px;" />
-      ${item.productName}
+      <img src="${item.product_image}" alt="${item.product_name}" class="img-fluid" style="width: 100px; height: auto; margin-right: 10px;" />
+      ${item.product_name}
     </td>
     <td style="vertical-align: middle;">
-      <input type="number" class="quantity-input form-control" value="${item.quantity}" style="width: 70px; display: inline-block;" />
-      <button class="update-quantity btn btn-sm btn-outline-primary" data-item-id="${item.id}">Update</button>
+      <div class="input-group quantity-group" style="width: 120px;">
+        <button class="btn btn-outline-secondary quantity-decrease" id="quantity-decrease-${item.id}" type="button" data-item-id="${item.id}">-</button>
+        <input type="number" class="quantity-input form-control text-center" value="${item.quantity}" min="1" style="width: 50px;" readonly />
+        <button class="btn btn-outline-secondary quantity-increase" id="quantity-increase-${item.id}" type="button" data-item-id="${item.id}">+</button>
+      </div>
     </td>
-    <td style="vertical-align: middle;">$${item.price.toFixed(2)}</td>
-    <td style="vertical-align: middle;">$${(item.price * item.quantity).toFixed(2)}</td>
-    <td style="vertical-align: middle;"><button class="remove-item btn btn-sm btn-danger" data-item-id="${item.id}">Remove</button></td>
+    <td style="vertical-align: middle;">$${item.unit_price}</td>
+    <td style="vertical-align: middle;">$${item.total_price}</td>
+    <td style="vertical-align: middle;">
+      <button class="remove-item btn btn-sm btn-danger" data-item-id="${item.id}">Remove</button>
+    </td>
   `;
   return itemRow;
 }
@@ -194,7 +161,7 @@ function updateCartDisplay(state) {
     cartContainer.appendChild(renderCartItem(item));
   });
 
-  const total = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = state.items.reduce((sum, item) => sum + parseFloat(item.total_price), 0);
   document.getElementById('cart-total').textContent = total.toFixed(2);
   // document.getElementById('cart-count').textContent = `Items in Cart: ${state.items.length}`;
 }
