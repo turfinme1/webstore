@@ -46,11 +46,10 @@ const routeTable = {
     "/auth/reset-password": authController.resetPassword,
     "/api/products/:id/comments": productController.createComment,
     "/api/products/:id/ratings": productController.createRating,
-    "/api/cart": cartController.addItem,
+    "/api/cart": cartController.updateItem,
   },
   put: {
     "/auth/profile": authController.updateProfile,
-    "/api/cart/:itemId": cartController.updateItem,
   },
   delete: {
     "/api/cart/:itemId": cartController.deleteItem,

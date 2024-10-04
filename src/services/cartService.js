@@ -1,21 +1,18 @@
 class CartService {
   constructor() {
     this.getCart = this.getCart.bind(this);
-    this.addItem = this.addItem.bind(this);
     this.updateItem = this.updateItem.bind(this);
     this.deleteItem = this.deleteItem.bind(this);
     this.clearCart = this.clearCart.bind(this);
   }
 
   async getCart(data) {
-    const { user_id } = data.session;
-    const session_id = data.session.id;
     let cart;
-    const cartResult = await data.  dbConnection.query(`
+    const cartResult = await data.dbConnection.query(`
       SELECT * 
       FROM carts 
       WHERE (user_id = $1 OR session_id = $2) AND is_active = TRUE`,
-      [user_id, session_id]
+      [data.session.user_id, data.session.id]
     );
   
     if (cartResult.rows.length > 0) {
@@ -24,8 +21,9 @@ class CartService {
       const createCartResult = await data.dbConnection.query(`
         INSERT INTO carts (user_id, session_id) 
         VALUES ($1, $2) RETURNING *`,
-        [user_id, session_id]
+        [data.session.user_id, data.session.id]
       );
+
       cart = createCartResult.rows[0]; 
     }
 
@@ -42,88 +40,51 @@ class CartService {
     return { cart: cart, items: cartItemsResult.rows };
   }
 
-  async addItem(data) {
-    const { user_id } = data.session;
-    const session_id = data.session.id;
-    const { product_id, quantity } = data.body;
-
-    // Check if cart exists
+  async updateItem(data) {
     let cart = await data.dbConnection.query(`
-      SELECT id FROM carts WHERE user_id = $1 OR session_id = $2`,
-      [user_id, session_id]
+      SELECT id FROM carts WHERE (user_id = $1 OR session_id = $2) AND is_active = TRUE`,
+      [data.session.user_id, data.session.id]
     );
 
     if (cart.rows.length === 0) {
-      // Create a new cart
       const cartResult = await data.dbConnection.query(`
         INSERT INTO carts (user_id, session_id) VALUES ($1, $2) RETURNING id`,
-        [user_id, session_id]
+        [data.session.user_id, data.session.id]
       );
       cart = cartResult.rows[0];
     } else {
       cart = cart.rows[0];
     }
 
-    // Insert or update cart item
     const result = await data.dbConnection.query(`
       INSERT INTO cart_items (cart_id, product_id, quantity, unit_price) 
       VALUES ($1, $2, $3, (SELECT price FROM products WHERE id = $2))
       ON CONFLICT (cart_id, product_id) 
       DO UPDATE SET quantity = $3
       RETURNING *`,
-      [cart.id, product_id, quantity]
-    );
-
-    return result.rows[0];
-  }
-
-  async updateItem(data) {
-    const { user_id } = data.session;
-    const session_id = data.session.id;
-    const { itemId } = data.params;
-    const { quantity } = data.body;
-
-    const result = await data.dbConnection.query(`
-      UPDATE cart_items 
-      SET quantity = $1, 
-        unit_price = (SELECT price FROM products WHERE id = (SELECT product_id FROM cart_items WHERE id = $2))
-      WHERE cart_id = (
-        SELECT id FROM carts 
-        WHERE (user_id = $3 OR session_id = $4) 
-        AND is_active = TRUE
-      ) 
-      AND product_id = $2
-      RETURNING *`,
-      [quantity, itemId, user_id, session_id]
+      [cart.id, data.body.product_id, data.body.quantity]
     );
 
     return result.rows[0];
   }
 
   async deleteItem(data) {
-    const { user_id } = data.session;
-    const session_id = data.session.id;
-    const { itemId } = data.params;
-
     const result = await data.dbConnection.query(`
       DELETE FROM cart_items 
       WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1 OR session_id = $2 AND is_active = TRUE) 
       AND id = $3
       RETURNING *`,
-      [user_id, session_id, itemId]
+      [data.session.user_id, data.session.id, data.params.itemId]
     );
 
     return result.rows[0];
   }
 
   async clearCart(data) {
-    const { user_id } = data.session;
-    const session_id = data.session.id;
-
     await data.dbConnection.query(`
       DELETE FROM cart_items 
       WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1 OR session_id = $2)`,
-      [user_id, session_id]
+      [data.session.user_id, data.session.id]
     );
 
     return { message: "Cart cleared successfully." };
