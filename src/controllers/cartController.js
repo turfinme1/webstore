@@ -1,6 +1,3 @@
-const ERROR_CODES = require("../serverConfigurations/constants");
-const { ASSERT_USER } = require("../serverConfigurations/assert");
-
 class CartController {
   constructor(cartService) {
     this.cartService = cartService;
@@ -20,7 +17,6 @@ class CartController {
   }
 
   async updateItem(req, res) {
-    ASSERT_USER(req.session.user_id || req.session.id, "You must have a session to add items", ERROR_CODES.UNAUTHORIZED);
     const data = {
       body: req.body,
       session: req.session,
@@ -31,7 +27,6 @@ class CartController {
   }
 
   async deleteItem(req, res) {
-    ASSERT_USER(req.session.user_id || req.session.id, "You must have a session to delete items", ERROR_CODES.UNAUTHORIZED);
     const data = {
       params: req.params,
       session: req.session,
@@ -42,7 +37,6 @@ class CartController {
   }
         
   async clearCart(req, res) {
-    ASSERT_USER(req.session.user_id || req.session.id, "You must have a session to clear the cart", ERROR_CODES.UNAUTHORIZED);
     const data = {
       session: req.session,
       dbConnection: req.dbConnection,
