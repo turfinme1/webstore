@@ -11,6 +11,7 @@ describe('CrudController', () => {
 
   beforeEach(() => {
     crudService = {
+      getFilteredPaginated: jest.fn(),
       create: jest.fn(),
       getById: jest.fn(),
       getAll: jest.fn(),
@@ -27,6 +28,75 @@ describe('CrudController', () => {
     mockNext = jest.fn();
   });
 
+  describe('getFilteredPaginated', () => {
+    it('should call crudService.getFilteredPaginated and respond with status 200', async () => {
+        const req = {
+            query: {
+                page: 1,
+                pageSize: 10,
+                filterParams: JSON.stringify({ categories: ['category1'], price: { min: 10, max: 100 } }),
+                searchParams: JSON.stringify({ keyword: 'Test' }),
+            },
+            params: { entity: 'testEntity' },
+            session: { admin_user_id: 1 },
+            dbConnection: { /* Mock DB connection if needed */ },
+            entitySchemaCollection: {
+                userQueryParamsSchema: {
+                  searchParams: {
+                    type: "object",
+                    properties: {
+                      keyword: { type: "string" },
+                      categories: { type: "array" },
+                    },
+                  },
+                  filterParams: {
+                    type: "object",
+                    properties: {
+                      categories: { type: "array" },
+                      price: {
+                        type: "object",
+                        properties: {
+                          min: { type: "number" },
+                          max: { type: "number" },
+                        },
+                      },
+                    },
+                  },
+                  pageSize: {
+                    type: "number",
+                    minimum: 1,
+                    maximum: 100,
+                  },
+                  page: {
+                    type: "number",
+                    minimum: 1,
+                  },
+                } 
+            },
+        };
+
+        const expectedCallObject = {
+            query: req.query,
+            params: req.params,
+            entitySchemaCollection: req.entitySchemaCollection,
+            dbConnection: req.dbConnection,
+        };
+
+        const paginatedResult = {
+            result: [{ id: 1, name: 'Test Product' }],
+            count: 1,
+        };
+
+        crudService.getFilteredPaginated = jest.fn().mockResolvedValue(paginatedResult);
+
+        await crudController.getFilteredPaginated(req, mockRes);
+
+        expect(crudService.getFilteredPaginated).toHaveBeenCalledWith(expectedCallObject);
+        expect(mockRes.status).toHaveBeenCalledWith(200);
+        expect(mockRes.json).toHaveBeenCalledWith(paginatedResult);
+    });
+  });
+  
   describe('create', () => {
     it('should call crudService.create and respond with status 201', async () => {
       const req = { body: { name: 'Test Product' }, params: { entity: 'testEntity' }, session: { admin_user_id: 1 } };

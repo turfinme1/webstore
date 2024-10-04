@@ -4,6 +4,9 @@ DROP TABLE IF EXISTS admin_sessions;
 DROP TABLE IF EXISTS admin_session_types;
 DROP TABLE IF EXISTS admin_users;
 
+DROP TABLE IF EXISTS logs;
+DROP TABLE IF EXISTS error_codes;
+
 CREATE TABLE admin_users (
     id BIGSERIAL PRIMARY KEY,
     user_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -48,3 +51,36 @@ CREATE TABLE admin_failed_attempts (
     attempt_type_id BIGINT NOT NULL REFERENCES attempt_types(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE error_codes (
+    id BIGSERIAL PRIMARY KEY,
+    code BIGINT UNIQUE NOT NULL,
+    error_message TEXT NOT NULL 
+);
+
+CREATE TABLE logs (
+    id BIGSERIAL PRIMARY KEY,
+    admin_user_id BIGINT NULL REFERENCES admin_users(id),
+    user_id BIGINT NULL REFERENCES users(id),
+    error_code_id BIGINT NOT NULL REFERENCES error_codes(id),
+    timestamp TIMESTAMPTZ NOT NULL,
+    log_level TEXT NOT NULL,
+    short_description TEXT NOT NULL,
+    long_description TEXT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO error_codes (code, error_message) VALUES
+(1, 'Internal Server Error'),
+(2, 'Unauthorized'),
+(3, 'Invalid Session'),
+(4, 'Invalid Login'),
+(5, 'Invalid Token'),
+(6, 'Invalid Input'),
+(7, 'Invalid Body'),
+(8, 'Invalid Query Params'),
+(9, 'Wrong Password'),
+(10, 'Rate Limited'),
+(11, 'No Changes'),
+(12, 'Duplicate'),
+(13, 'Not Found');

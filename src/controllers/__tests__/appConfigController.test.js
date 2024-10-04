@@ -10,6 +10,7 @@ describe("AppConfigController", () => {
   let appConfigService;
   let mockRes;
   let mockNext;
+  let ERROR_CODE = 2;
 
   beforeEach(() => {
     // Mock the service layer
@@ -51,7 +52,7 @@ describe("AppConfigController", () => {
 
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
-        "You must be logged in to perform this action"
+        "You must be logged in to perform this action", ERROR_CODE
       );
       expect(validateBody).toHaveBeenCalledWith(
         req,
@@ -83,7 +84,7 @@ describe("AppConfigController", () => {
 
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
-        "You must be logged in to perform this action"
+        "You must be logged in to perform this action" , ERROR_CODE
       );
       expect(appConfigService.getRateLimitSettings).toHaveBeenCalledWith({
         dbConnection: req.dbConnection,

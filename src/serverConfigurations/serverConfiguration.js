@@ -10,6 +10,7 @@ const AuthService = require("../services/authService");
 const AuthController = require("../controllers/authController");
 const { MailService, transporter } = require("../services/mailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
+const Logger = require("./logger");
 
 const entitySchemaCollection = loadEntitySchemas("user");
 const mailService = new MailService(transporter);
@@ -33,7 +34,7 @@ const routeTable = {
     "/api/products/:id/ratings": productController.getRatings,
   },
   post: {
-    "/crud/:entity": controller.create,
+    
     "/auth/register": authController.register,
     "/auth/login": authController.login,
     "/auth/forgot-password": authController.forgotPassword,
@@ -42,11 +43,9 @@ const routeTable = {
     "/api/products/:id/ratings": productController.createRating,
   },
   put: {
-    "/crud/:entity/:id": controller.update,
     "/auth/profile": authController.updateProfile,
   },
   delete: {
-    "/crud/:entity/:id": controller.delete,
   },
 };
 
@@ -64,7 +63,8 @@ function requestMiddleware(handler) {
       req.pool = pool;
       req.dbConnection = new DbConnectionWrapper(await req.pool.connect());
       req.entitySchemaCollection = entitySchemaCollection;
-
+      req.logger = new Logger(req);
+      
       req.dbConnection.query("BEGIN");
       await sessionMiddleware(req, res);
       await handler(req, res, next);
@@ -72,6 +72,16 @@ function requestMiddleware(handler) {
 
     } catch (error) {
       console.error(error);
+
+      const errorObject = {
+        admin_user_id: req.session.admin_user_id || null,
+        user_id: req.session.user_id || null,
+        code: error.params || 1,
+        timestamp: new Date().toISOString(),
+        shortDescription: error.message,
+        longDescription: error.stack || null,
+      };
+      await req.logger.error(errorObject);
 
       if (req.dbConnection) {
         req.dbConnection.query("ROLLBACK");

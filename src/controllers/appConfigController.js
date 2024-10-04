@@ -1,3 +1,4 @@
+const ERROR_CODES = require("../serverConfigurations/constants");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateBody } = require("../serverConfigurations/validation");
 
@@ -9,7 +10,7 @@ class AppConfigController {
   }
 
   async updateRateLimitSettings(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action");
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", ERROR_CODES.UNAUTHORIZED);
     validateBody(req, req.entitySchemaCollection.appSettingsSchema);
     
     const data = {
@@ -23,7 +24,7 @@ class AppConfigController {
   }
 
   async getRateLimitSettings(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action");
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", ERROR_CODES.UNAUTHORIZED);
     const data = {
       dbConnection: req.dbConnection,
     };

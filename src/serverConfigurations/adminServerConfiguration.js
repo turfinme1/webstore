@@ -12,6 +12,7 @@ const { MailService, transporter } = require("../services/mailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const AppConfigService = require("../services/appConfigService");
 const AppConfigController = require("../controllers/appConfigController");
+const Logger = require("./logger");
 
 const entitySchemaCollection = loadEntitySchemas("admin");
 const mailService = new MailService(transporter);
@@ -74,7 +75,8 @@ function requestMiddleware(handler) {
       req.pool = pool;
       req.dbConnection = new DbConnectionWrapper(await req.pool.connect());
       req.entitySchemaCollection = entitySchemaCollection;
-
+      req.logger = new Logger(req);
+      
       req.dbConnection.query("BEGIN");
       await sessionMiddleware(req, res);
       await handler(req, res, next);
@@ -82,6 +84,16 @@ function requestMiddleware(handler) {
 
     } catch (error) {
       console.error(error);
+
+      const errorObject = {
+        admin_user_id: req.session.admin_user_id || null,
+        user_id: req.session.user_id || null,
+        code: error.params || 1,
+        timestamp: new Date().toISOString(),
+        shortDescription: error.message,
+        longDescription: error.stack || null,
+      };
+      await req.logger.error(errorObject);
 
       if (req.dbConnection) {
         req.dbConnection.query("ROLLBACK");
@@ -126,7 +138,7 @@ async function sessionMiddleware(req, res) {
     expires: anonymousSession.expires_at,
     secure: true,
     httpOnly: true
-  });
+  });   
 
   req.session = anonymousSession;
 }
