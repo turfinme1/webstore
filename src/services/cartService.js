@@ -10,35 +10,36 @@ class CartService {
   async getCart(data) {
     const { user_id } = data.session;
     const session_id = data.session.id;
-
-    const cartItemsResult = await data.dbConnection.query(`
-      SELECT ci.*, p.name AS product_name, (SELECT url FROM images i WHERE i.product_id = p.id LIMIT 1) AS product_image
-      FROM carts c
-      LEFT JOIN cart_items ci ON c.id = ci.cart_id
-      LEFT JOIN products p ON ci.product_id = p.id
-      WHERE c.user_id = $1 OR c.session_id = $2 AND is_active = TRUE`,
+    let cart;
+    const cartResult = await data.  dbConnection.query(`
+      SELECT * 
+      FROM carts 
+      WHERE (user_id = $1 OR session_id = $2) AND is_active = TRUE`,
       [user_id, session_id]
     );
-    
-    if (cartItemsResult.rows.length > 0) {
-      return {
-        cart_id: cartItemsResult.rows[0].cart_id,
-        items: cartItemsResult.rows,
-      };
+  
+    if (cartResult.rows.length > 0) {
+      cart = cartResult.rows[0];
+    } else {
+      const createCartResult = await data.dbConnection.query(`
+        INSERT INTO carts (user_id, session_id) 
+        VALUES ($1, $2) RETURNING *`,
+        [user_id, session_id]
+      );
+      cart = createCartResult.rows[0]; 
     }
 
-    const createCartResult = await data.dbConnection.query(`
-      INSERT INTO carts (user_id, session_id) 
-      VALUES ($1, $2) 
-      RETURNING *`,
-      [user_id, session_id]
+    const cartItemsResult = await data.dbConnection.query(`
+      SELECT ci.*, p.name AS product_name, 
+        (SELECT url FROM images i WHERE i.product_id = p.id LIMIT 1) AS product_image
+      FROM cart_items ci
+      LEFT JOIN products p ON ci.product_id = p.id
+      WHERE ci.cart_id = $1
+      ORDER BY ci.created_at`,
+      [cart.id]
     );
-    const newCartId = createCartResult.rows[0].id;
 
-    return {
-        cart_id: newCartId,
-        items: [],
-    };
+    return { cart: cart, items: cartItemsResult.rows };
   }
 
   async addItem(data) {
@@ -68,7 +69,7 @@ class CartService {
       INSERT INTO cart_items (cart_id, product_id, quantity, unit_price) 
       VALUES ($1, $2, $3, (SELECT price FROM products WHERE id = $2))
       ON CONFLICT (cart_id, product_id) 
-      DO UPDATE SET quantity = cart_items.quantity + $3
+      DO UPDATE SET quantity = $3
       RETURNING *`,
       [cart.id, product_id, quantity]
     );
@@ -87,9 +88,9 @@ class CartService {
       SET quantity = $1, 
         unit_price = (SELECT price FROM products WHERE id = (SELECT product_id FROM cart_items WHERE id = $2))
       WHERE cart_id = (
-          SELECT id FROM carts 
-          WHERE (user_id = $3 OR session_id = $4) 
-          AND is_active = TRUE
+        SELECT id FROM carts 
+        WHERE (user_id = $3 OR session_id = $4) 
+        AND is_active = TRUE
       ) 
       AND product_id = $2
       RETURNING *`,
@@ -98,7 +99,7 @@ class CartService {
 
     return result.rows[0];
   }
-    
+
   async deleteItem(data) {
     const { user_id } = data.session;
     const session_id = data.session.id;
@@ -107,9 +108,9 @@ class CartService {
     const result = await data.dbConnection.query(`
       DELETE FROM cart_items 
       WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1 OR session_id = $2 AND is_active = TRUE) 
-      AND product_id = $3
+      AND id = $3
       RETURNING *`,
-      [user_id, session_id, product_id]
+      [user_id, session_id, itemId]
     );
 
     return result.rows[0];

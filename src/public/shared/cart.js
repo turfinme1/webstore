@@ -32,14 +32,14 @@ function attachEventListeners() {
   elements.cartContainer.addEventListener('click', handleCartItemActions);
   elements.checkoutButton.addEventListener('click', handleCheckout);
 
-  for (const item of state.items) {
-    document.getElementById(`quantity-decrease-${item.id}`).addEventListener('click', () => {
-      updateCartItemQuantity(item.id, parseInt(item.quantity) - 1);
-    });
-    document.getElementById(`quantity-increase-${item.id}`).addEventListener('click', () => {
-      updateCartItemQuantity(item.id, parseInt(item.quantity) + 1);
-    });
-  }
+  // for (const item of state.items) {
+  //   document.getElementById(`quantity-decrease-${item.id}`).addEventListener('click', () => {
+  //     updateCartItemQuantity(item.product_id, parseInt(item.quantity) - 1);
+  //   });
+  //   document.getElementById(`quantity-increase-${item.id}`).addEventListener('click', () => {
+  //     updateCartItemQuantity(item.product_id, parseInt(item.quantity) + 1);
+  //   });
+  // }
 }
 
 // Handle item actions (update quantity, remove item)
@@ -57,9 +57,9 @@ function handleCartItemActions(event) {
 }
 
 // Update cart item quantity
-async function updateCartItemQuantity(itemId, newQuantity) {
+async function updateCartItemQuantity(productId, newQuantity) {
   try {
-    await updateCartItem(itemId, newQuantity);
+    await updateCartItem(productId, newQuantity);
     
     const cart = await getCartItems();
     state.items = cart.items;
@@ -103,24 +103,26 @@ async function getCartItems() {
   return await response.json();
 }
 
-async function updateCartItem(itemId, quantity) {
-  const response = await fetch(`/api/cart/${itemId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ quantity }),
-  });
+async function updateCartItem(productId, quantity) {
+  const response = await fetch(`/api/cart`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ product_id: productId, quantity }),
+    });
   if (!response.ok) throw new Error('Failed to update cart item');
 }
 
 async function removeCartItem(itemId) {
-  const response = await fetch(`/cart/${itemId}`, {
+  const response = await fetch(`/api/cart/${itemId}`, {
     method: 'DELETE',
   });
   if (!response.ok) throw new Error('Failed to remove cart item');
 }
 
 async function checkout() {
-  const response = await fetch('/cart/checkout', {
+  const response = await fetch('/api/cart/checkout', {
     method: 'POST',
   });
   if (!response.ok) throw new Error('Checkout failed');
@@ -128,7 +130,6 @@ async function checkout() {
 
 
 // cartUI.js
-
 function renderCartItem(item) { 
   const itemRow = document.createElement('tr');
   itemRow.classList.add('cart-item');
@@ -156,12 +157,23 @@ function renderCartItem(item) {
 function updateCartDisplay(state) {
   const cartContainer = document.getElementById('cart-container');
   cartContainer.innerHTML = '';
-  
+
   state.items.forEach((item) => {
     cartContainer.appendChild(renderCartItem(item));
   });
 
+  for (const item of state.items) {
+    document.getElementById(`quantity-decrease-${item.id}`).addEventListener('click', () => {
+      if (parseInt(item.quantity) > 1) {
+      updateCartItemQuantity(item.product_id, parseInt(item.quantity) - 1);
+      } else {
+        document.getElementById(`quantity-decrease-${item.id}`).disabled = true;
+      }
+    });
+    document.getElementById(`quantity-increase-${item.id}`).addEventListener('click', () => {
+      updateCartItemQuantity(item.product_id, parseInt(item.quantity) + 1);
+    });
+  }
   const total = state.items.reduce((sum, item) => sum + parseFloat(item.total_price), 0);
   document.getElementById('cart-total').textContent = total.toFixed(2);
-  // document.getElementById('cart-count').textContent = `Items in Cart: ${state.items.length}`;
 }
