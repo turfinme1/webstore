@@ -163,12 +163,13 @@ function updateCartDisplay(state) {
   });
 
   for (const item of state.items) {
+    if (parseInt(item.quantity) === 1) {
+      document.getElementById(`quantity-decrease-${item.id}`).disabled = true;
+    }
     document.getElementById(`quantity-decrease-${item.id}`).addEventListener('click', () => {
       if (parseInt(item.quantity) > 1) {
       updateCartItemQuantity(item.product_id, parseInt(item.quantity) - 1);
-      } else {
-        document.getElementById(`quantity-decrease-${item.id}`).disabled = true;
-      }
+      } 
     });
     document.getElementById(`quantity-increase-${item.id}`).addEventListener('click', () => {
       updateCartItemQuantity(item.product_id, parseInt(item.quantity) + 1);
