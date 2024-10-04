@@ -49,8 +49,34 @@ function populateProductData(product) {
   <h4 class="text-muted">$${product.price}</h4>
   <p>${product.long_description}</p>
   <p>Categories: ${product.categories.join(", ")}</p>
+  <button id="add-to-cart-btn" class="btn btn-primary">Add to Cart</button>
 `;
   productInfo.innerHTML = productInfoHtml;
+
+  // Attach event listener to "Add to Cart" button
+  const addToCartBtn = document.getElementById("add-to-cart-btn");
+  addToCartBtn.addEventListener("click", () => addToCart(product.id));
+}
+
+async function addToCart(productId) {
+  try {
+    const response = await fetch(`/api/cart`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ product_id: productId, quantity: 1 }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to add product to cart");
+    }
+
+    alert("Product added to cart!");
+  } catch (error) {
+    console.error("Error adding to cart:", error);
+    alert("Failed to add product to cart.");
+  }
 }
 
 async function renderRatingSection(product) {

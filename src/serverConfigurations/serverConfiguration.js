@@ -8,6 +8,8 @@ const ProductService = require("../services/productService");
 const ProductController = require("../controllers/productController");
 const AuthService = require("../services/authService");
 const AuthController = require("../controllers/authController");
+const CartController = require("../controllers/cartController");
+const CartService = require("../services/cartService");
 const { MailService, transporter } = require("../services/mailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const Logger = require("./logger");
@@ -20,6 +22,8 @@ const service = new CrudService();
 const controller = new CrudController(service);
 const productService = new ProductService();
 const productController = new ProductController(productService);
+const cartService = new CartService();
+const cartController = new CartController(cartService);
 
 const routeTable = {
   get: {
@@ -32,20 +36,23 @@ const routeTable = {
     "/auth/captcha": authController.getCaptcha,
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
+    "/api/cart": cartController.getCart,
+    "/api/cart/checkout": cartController.checkout,
   },
   post: {
-    
     "/auth/register": authController.register,
     "/auth/login": authController.login,
     "/auth/forgot-password": authController.forgotPassword,
     "/auth/reset-password": authController.resetPassword,
     "/api/products/:id/comments": productController.createComment,
     "/api/products/:id/ratings": productController.createRating,
+    "/api/cart": cartController.updateItem,
   },
   put: {
     "/auth/profile": authController.updateProfile,
   },
   delete: {
+    "/api/cart/:itemId": cartController.deleteItem,
   },
 };
 

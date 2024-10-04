@@ -23,6 +23,10 @@ DROP TABLE IF EXISTS currencies;
 DROP TABLE IF EXISTS iso_country_codes;
 DROP TABLE IF EXISTS app_settings;
 
+DROP TABLE IF EXISTS inventories;
+DROP TABLE IF EXISTS cart_items;
+DROP TABLE IF EXISTS carts;
+
 CREATE TABLE app_settings (
     id BIGSERIAL PRIMARY KEY,
     request_limit BIGINT NOT NULL DEFAULT 10,
@@ -158,6 +162,43 @@ CREATE TABLE ratings (
     rating BIGINT CHECK (rating BETWEEN 1 AND 5), -- Rating between 1 and 5
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(product_id, user_id)
+);
+
+CREATE TABLE inventories (
+    id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT NOT NULL REFERENCES products(id),
+    quantity BIGINT NOT NULL
+);
+
+CREATE TABLE carts (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NULL REFERENCES users(id),
+    session_id BIGINT NULL REFERENCES sessions(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	is_active BOOLEAN NOT NULL DEFAULT TRUE,
+	CONSTRAINT user_or_session_must_be_set CHECK (
+        (user_id IS NOT NULL AND session_id IS NULL) OR 
+        (user_id IS NULL AND session_id IS NOT NULL)
+    )
+);
+CREATE UNIQUE INDEX unique_active_cart_per_user_or_session 
+ON carts (
+    COALESCE(
+        'user_' || user_id::TEXT, 
+        'session_' || session_id::TEXT
+    )
+)
+WHERE is_active = true;
+
+CREATE TABLE cart_items (
+    id BIGSERIAL PRIMARY KEY,
+    cart_id BIGINT NOT NULL REFERENCES carts(id),
+    product_id BIGINT NOT NULL REFERENCES products(id),
+    quantity BIGINT NOT NULL CHECK (quantity > 0),
+    unit_price NUMERIC(12, 2) NOT NULL, 
+    total_price NUMERIC(12, 2) GENERATED ALWAYS AS (unit_price * quantity) STORED,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT unique_cart_product UNIQUE (cart_id, product_id) 
 );
 
 CREATE OR REPLACE VIEW products_view AS

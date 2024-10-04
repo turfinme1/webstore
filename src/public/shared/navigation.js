@@ -19,6 +19,9 @@ function createNavigation(userStatus) {
                     <li class="nav-item">
                         <a class="nav-link" href="/index.html">Products</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/cart">My Cart</a>
+                    </li>
                     ${
                       userStatus.session_type === "Authenticated"
                         ? `
