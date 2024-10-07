@@ -1,4 +1,4 @@
-const ERROR_CODES = require("../serverConfigurations/constants");
+const STATUS_CODES = require("../serverConfigurations/constants");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateQueryParams } = require("../serverConfigurations/validation");
 
@@ -14,7 +14,7 @@ class CrudController {
   }
 
   async create(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", ERROR_CODES.UNAUTHORIZED);
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", STATUS_CODES.UNAUTHORIZED);
     const data = {
       body: req.body,
       req: req,
@@ -24,6 +24,8 @@ class CrudController {
     };  
     const result = await this.crudService.create(data);
     res.status(201).json(result);
+
+    await req.logger.info({ error_code: STATUS_CODES.CREATE_SUCCESS, short_description: `Created ${data.params.entity}` });
   } 
 
   async getById(req, res, next) {
@@ -61,7 +63,7 @@ class CrudController {
   }
 
   async update(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", ERROR_CODES.UNAUTHORIZED);
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", STATUS_CODES.UNAUTHORIZED);
     const data = {
       body: req.body,
       req: req,
@@ -71,10 +73,12 @@ class CrudController {
     };  
     const result = await this.crudService.update(data);
     res.status(200).json(result);
+
+    await req.logger.info({ error_code: STATUS_CODES.UPDATE_SUCCESS, short_description: `Updated ${data.params.entity}` });
   }
 
   async delete(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", ERROR_CODES.UNAUTHORIZED);
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", STATUS_CODES.UNAUTHORIZED);
     const data = {
       body: req.body,
       params: req.params,
@@ -83,6 +87,8 @@ class CrudController {
     };  
     const result = await this.crudService.delete(data);
     res.status(200).json(result);
+
+    await req.logger.info({ error_code: STATUS_CODES.DELETE_SUCCESS, short_description: `Deleted ${data.params.entity}` });
   }  
 }
 

@@ -10,7 +10,7 @@ describe("ProductController", () => {
   let mockReq;
   let mockNext;
   let mockDbConnection;
-  let ERROR_CODES = 2;
+  let STATUS_CODES = 2;
 
   beforeEach(() => {
     productService = {
@@ -140,7 +140,7 @@ describe("ProductController", () => {
 
       await productController.createComment(mockReq, mockRes, mockNext);
 
-      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action", ERROR_CODES);
+      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action", STATUS_CODES);
       expect(productService.createComment).toHaveBeenCalledWith({
         body: mockReq.body,
         params: mockReq.params,
@@ -160,7 +160,7 @@ describe("ProductController", () => {
 
       await productController.createRating(mockReq, mockRes, mockNext);
 
-      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action", ERROR_CODES);
+      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action", STATUS_CODES);
       expect(productService.createRating).toHaveBeenCalledWith({
         body: mockReq.body,
         params: mockReq.params,
