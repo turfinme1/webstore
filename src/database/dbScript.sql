@@ -116,6 +116,7 @@ CREATE TABLE email_verifications (
 
 CREATE TABLE products (
     id BIGSERIAL PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL DEFAULT substring(uuid_generate_v4()::text, 1, 8),
     name TEXT NOT NULL,
     price NUMERIC(12, 2) NOT NULL,
     short_description TEXT NOT NULL,
@@ -201,9 +202,54 @@ CREATE TABLE cart_items (
     CONSTRAINT unique_cart_product UNIQUE (cart_id, product_id) 
 );
 
+
+-- Addresses Table (Normalized Shipping/Billing Address)
+CREATE TABLE addresses (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(id),
+    street TEXT NOT NULL,
+    city TEXT NOT NULL,
+    country_id BIGINT NOT NULL REFERENCES iso_country_codes(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Payment Methods Table (Normalized Payment Method)
+CREATE TABLE payment_methods (
+    id BIGSERIAL PRIMARY KEY,
+    method TEXT UNIQUE NOT NULL
+);
+
+-- Orders Table
+CREATE TABLE orders (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    status TEXT NOT NULL CHECK (status IN ('Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled')),
+    total_price NUMERIC(12, 2) NOT NULL CHECK (total_price >= 0),
+    payment_method_id BIGINT NOT NULL REFERENCES payment_methods(id),
+    shipping_address_id BIGINT NOT NULL REFERENCES addresses(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_active BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE order_items (
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL REFERENCES orders(id),
+    product_id BIGINT NOT NULL REFERENCES products(id),
+    quantity BIGINT NOT NULL CHECK (quantity > 0),
+    unit_price NUMERIC(12, 2) NOT NULL, 
+    total_price NUMERIC(12, 2) NOT NULL GENERATED ALWAYS AS (unit_price * quantity) STORED CHECK (total_price >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Optional: Insert Predefined Payment Methods
+INSERT INTO payment_methods(method) VALUES ('Credit Card'), ('Cash on Delivery');
+
+
+
 CREATE OR REPLACE VIEW products_view AS
 SELECT
     p.id,
+    p.code,
     p.name,
     p.price,
     p.short_description,

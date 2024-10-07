@@ -36,7 +36,7 @@ class CartService {
     }
 
     const cartItemsResult = await data.dbConnection.query(`
-      SELECT ci.*, p.name AS product_name, 
+      SELECT ci.*, p.name AS product_name, p.code AS product_code, 
         (SELECT url FROM images i WHERE i.product_id = p.id LIMIT 1) AS product_image
       FROM cart_items ci
       LEFT JOIN products p ON ci.product_id = p.id

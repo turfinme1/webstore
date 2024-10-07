@@ -139,6 +139,7 @@ function renderCartItem(item) {
       <img src="${item.product_image}" alt="${item.product_name}" class="img-fluid" style="width: 100px; height: auto; margin-right: 10px;" />
       ${item.product_name}
     </td>
+    <td style="vertical-align: middle;">${item.product_code}</td>
     <td style="vertical-align: middle;">
       <div class="input-group quantity-group" style="width: 120px;">
         <button class="btn btn-outline-secondary quantity-decrease" id="quantity-decrease-${item.id}" type="button" data-item-id="${item.id}">-</button>
@@ -146,9 +147,9 @@ function renderCartItem(item) {
         <button class="btn btn-outline-secondary quantity-increase" id="quantity-increase-${item.id}" type="button" data-item-id="${item.id}">+</button>
       </div>
     </td>
-    <td style="vertical-align: middle;">$${item.unit_price}</td>
-    <td style="vertical-align: middle;">$${item.total_price}</td>
-    <td style="vertical-align: middle;">
+    <td style="vertical-align: middle; text-align: right">$${item.unit_price}</td>
+    <td style="vertical-align: middle; text-align: right">$${item.total_price}</td>
+    <td style="vertical-align: middle; text-align: center">
       <button class="remove-item btn btn-sm btn-danger" data-item-id="${item.id}">Remove</button>
     </td>
   `;
