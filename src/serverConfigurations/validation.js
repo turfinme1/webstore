@@ -43,6 +43,10 @@ function validateQueryParams(req, schema) {
         ASSERT_USER(min <= max, "min price should be less than or equal to max price", ERROR_CODES.INVALID_QUERY_PARAMS);
       }
     }
+
+    if(key === "country_id"){
+      filterParams[key] = paramValue.split(",");
+    }
   });
   
   const validDirections = ["ASC", "DESC"];
