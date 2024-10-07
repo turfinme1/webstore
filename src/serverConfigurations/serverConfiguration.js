@@ -118,8 +118,7 @@ async function sessionMiddleware(req, res) {
       const refreshedSession = await authService.refreshSessionExpiry(data);
       res.cookie('session_id', refreshedSession.session_hash, {
         expires: refreshedSession.expires_at,
-        secure: true,
-        httpOnly: true
+        secure: false, httpOnly: false
       });
       req.session = session;
 
@@ -131,8 +130,7 @@ async function sessionMiddleware(req, res) {
   const anonymousSession = await authService.createSession(data);
   res.cookie('session_id', anonymousSession.session_hash, {
     expires: anonymousSession.expires_at,
-    secure: true,
-    httpOnly: true
+    secure: false, httpOnly: false
   });
 
   req.session = anonymousSession;

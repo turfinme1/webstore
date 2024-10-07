@@ -28,7 +28,7 @@ class AuthController {
     }; 
     const result = await this.authService.register(data);
     res.status(200)
-      .cookie("session_id", result.session_hash, { expires: result.expires_at, secure: true, httpOnly: true})
+      .cookie("session_id", result.session_hash, { expires: result.expires_at, secure: false, httpOnly: false})
       .json({message: "Registration successful"});
   }
 
@@ -44,7 +44,7 @@ class AuthController {
     }; 
     const result = await this.authService.login(data);
     res.status(200)
-      .cookie("session_id", result.session_hash, { expires: result.expires_at, secure: true, httpOnly: true})
+      .cookie("session_id", result.session_hash, { expires: result.expires_at, secure: false, httpOnly: false})
       .json({message: "Login successful"});
   }
 
@@ -56,7 +56,7 @@ class AuthController {
     }; 
     const result = await this.authService.logout(data);
     res.status(200)
-      .clearCookie("session_id", { expires: result.expires_at, secure: true, httpOnly: true})
+      .clearCookie("session_id", { expires: result.expires_at, secure: false, httpOnly: false})
       .json({message: "Logout successful"});
   }
 
