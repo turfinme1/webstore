@@ -19,6 +19,7 @@ describe('CartService', () => {
       const mockCart = { id: 'cart123', user_id: 'user123' };
       dbConnection.query
         .mockResolvedValueOnce({ rows: [mockCart] })  // Cart exists
+        .mockResolvedValueOnce({ rows: [] })  // Set cart to user
         .mockResolvedValueOnce({ rows: [{ id: 'item1', product_name: 'Product 1' }] });  // Cart items
 
       const data = {
@@ -28,7 +29,7 @@ describe('CartService', () => {
 
       const result = await cartService.getCart(data);
 
-      expect(dbConnection.query).toHaveBeenCalledTimes(2);
+      expect(dbConnection.query).toHaveBeenCalledTimes(3);
       expect(result.cart).toEqual(mockCart);
       expect(result.items).toEqual([{ id: 'item1', product_name: 'Product 1' }]);
     });

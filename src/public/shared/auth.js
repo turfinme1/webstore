@@ -298,6 +298,7 @@ async function getUserStatus() {
 
 async function attachLogoutHandler() {
   const logoutButton = document.querySelector(".logout-btn");
+  if (!logoutButton) return;
   logoutButton.addEventListener("click", async (event) => {
     event.preventDefault();
     const response = await fetch("/auth/logout");

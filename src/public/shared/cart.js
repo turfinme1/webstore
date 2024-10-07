@@ -20,6 +20,7 @@ const elements = {
 document.addEventListener('DOMContentLoaded', async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
+  await attachLogoutHandler();
   const cart = await getCartItems();
   state.items = cart.items;
   state.cart_id = cart.cart_id;
