@@ -17,6 +17,14 @@ class CartService {
   
     if (cartResult.rows.length > 0) {
       cart = cartResult.rows[0];
+      if(data.session.user_id) {
+        await data.dbConnection.query(`
+          UPDATE carts
+          SET (user_id, session_id) = ($1, null)
+          WHERE id = $2`,
+          [data.session.user_id, cart.id]
+        );
+      }
     } else {
       const createCartResult = await data.dbConnection.query(`
         INSERT INTO carts (user_id, session_id) 
