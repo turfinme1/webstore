@@ -80,7 +80,7 @@ async function removeItemFromCart(itemId) {
 async function handleCheckout() {
   try {
     console.log(state.userStatus);
-    if (!state.userStatus.session_type === "Authenticated") {
+    if (state.userStatus.session_type !== "Authenticated") {
       // If the user is not authenticated, redirect them to login page
       window.location.href = '/login';
       return;
@@ -92,14 +92,14 @@ async function handleCheckout() {
     });
 
     if (response.ok) {
-      // Checkout successful, redirect to order page
-      window.location.href = '/order'; // Redirect to the order page
+      window.location.href = '/order'; 
     } else {
-      throw new Error('Checkout failed');
+      const data = await response.json();
+      alert(`Checkout failed: ${data.error}`);
     }
   } catch (error) {
-    console.error('Error during checkout:', error);
-    alert('Checkout failed, please try again.');
+    console.log(error);
+    alert(`Checkout failed`);
   }
 }
 
