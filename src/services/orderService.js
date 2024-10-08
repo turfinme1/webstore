@@ -5,9 +5,9 @@ class OrderService {
   constructor() {
     this.createOrder = this.createOrder.bind(this);
     this.getOrder = this.getOrder.bind(this);
-    this.updateOrderStatus = this.updateOrderStatus.bind(this);
+    this.completeOrder = this.completeOrder.bind(this);
   }
-
+  
   async createOrder(data) {
     const orderResult = await data.dbConnection.query(
       `
@@ -104,16 +104,54 @@ class OrderService {
     return { order, items: orderItemsResult.rows };
   }
 
-  async updateOrderStatus(data) {
-    const result = await data.dbConnection.query(
+  async completeOrder(data) {
+    // Create or insert address for the order
+    const addressResult = await data.dbConnection.query(
       `
-      UPDATE orders 
-      SET status = $1 
-      WHERE id = $2
-      RETURNING *`,
-      [data.body.status, data.params.orderId]
+    INSERT INTO addresses (user_id, street, city, country_id) 
+    VALUES ($1, $2, $3, $4) 
+    RETURNING id`,
+      [
+        data.session.user_id,
+        data.body.address.street,
+        data.body.address.city,
+        data.body.address.country_id,
+      ]
     );
-    return result.rows[0];
+    const shippingAddressId = addressResult.rows[0].id;
+
+    // Update the order with the shipping address
+    await data.dbConnection.query(
+      `
+    UPDATE orders 
+    SET shipping_address_id = $1 
+    WHERE user_id = $2 AND status = 'Pending'`,
+      [shippingAddressId, data.session.user_id]
+    );
+
+    // Check if order exists
+    const orderResult = await data.dbConnection.query(
+      `
+    SELECT * 
+    FROM orders 
+    WHERE user_id = $1 AND status = 'Pending'`,
+      [data.session.user_id]
+    );
+    ASSERT_USER(orderResult.rows.length > 0, "Order not found", STATUS_CODES.NOT_FOUND);
+
+    // Update the order status to 'Complete'
+    await data.dbConnection.query(
+      `
+    UPDATE orders 
+    SET status = 'Processing' 
+    WHERE user_id = $1 AND status = 'Pending'`,
+      [data.session.user_id]
+    );
+
+    // Commit transaction
+    await data.dbConnection.query("COMMIT");
+
+    return { message: "Order completed successfully" };
   }
 }
 

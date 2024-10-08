@@ -53,6 +53,7 @@ const routeTable = {
     "/api/products/:id/ratings": productController.createRating,
     "/api/cart": cartController.updateItem,
     "/api/orders": orderController.createOrder,
+    "/api/orders/complete": orderController.completeOrder,
   },
   put: {
     "/auth/profile": authController.updateProfile,
