@@ -26,13 +26,21 @@ class CartService {
         );
       }
     } else {
-      const createCartResult = await data.dbConnection.query(`
-        INSERT INTO carts (user_id, session_id) 
-        VALUES ($1, $2) RETURNING *`,
-        [data.session.user_id, data.session.id]
-      );
-
-      cart = createCartResult.rows[0]; 
+      if(data.session.user_id) {
+        const createCartResult = await data.dbConnection.query(`
+          INSERT INTO carts (user_id) 
+          VALUES ($1) RETURNING *`,
+          [data.session.user_id]
+        );
+        cart = createCartResult.rows[0];
+      } else {
+        const createCartResult = await data.dbConnection.query(`
+          INSERT INTO carts (session_id) 
+          VALUES ($1) RETURNING *`,
+          [data.session.id]
+        );
+        cart = createCartResult.rows[0];
+      }
     }
 
     const cartItemsResult = await data.dbConnection.query(`
