@@ -167,8 +167,8 @@ CREATE TABLE ratings (
 
 CREATE TABLE inventories (
     id BIGSERIAL PRIMARY KEY,
-    product_id BIGINT NOT NULL REFERENCES products(id),
-    quantity BIGINT NOT NULL
+    product_id BIGINT UNIQUE NOT NULL REFERENCES products(id),
+    quantity BIGINT NOT NULL CHECK (quantity >= 0)
 );
 
 CREATE TABLE carts (
@@ -222,13 +222,14 @@ CREATE TABLE payment_methods (
 -- Orders Table
 CREATE TABLE orders (
     id BIGSERIAL PRIMARY KEY,
+    order_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
     user_id BIGINT NOT NULL REFERENCES users(id),
-    status TEXT NOT NULL CHECK (status IN ('Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled')),
+    status TEXT NOT NULL CHECK (status IN ('Pending', 'Processing', 'Delivered', 'Cancelled')),
     total_price NUMERIC(12, 2) NOT NULL CHECK (total_price >= 0),
-    payment_method_id BIGINT NOT NULL REFERENCES payment_methods(id),
-    shipping_address_id BIGINT NOT NULL REFERENCES addresses(id),
+    payment_method_id BIGINT NULL REFERENCES payment_methods(id),
+    shipping_address_id BIGINT NULL REFERENCES addresses(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    is_active BOOLEAN NOT NULL DEFAULT FALSE
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE order_items (
@@ -243,8 +244,6 @@ CREATE TABLE order_items (
 
 -- Optional: Insert Predefined Payment Methods
 INSERT INTO payment_methods(method) VALUES ('Credit Card'), ('Cash on Delivery');
-
-
 
 CREATE OR REPLACE VIEW products_view AS
 SELECT
@@ -324,3 +323,6 @@ INSERT INTO categories(name) VALUES
 ('T-shirts'), ('Jackets'), ('Pants'), ('Shoes'), ('Hats'), ('Accessories'), ('Dresses'),
 ('Sunglasses'), ('Watches'), ('Belts'), ('Socks'), ('Underwear'), ('Scarves'), ('Gloves'),
 ('Bags'), ('Wallets'), ('Jewelry'), ('Ties'), ('Boots'), ('Sneakers');
+
+INSERT INTO inventories(product_id, quantity) 
+VALUES (1, 5), (2, 10), (3, 3), (4, 12), (5, 7), (6, 13), (7, 5), (8, 2), (9, 3), (10, 4), (11, 5), (12, 50), (13, 75), (14, 200), (15, 150), (16, 100), (17, 50), (18, 75), (19, 200), (20, 150);
