@@ -1,3 +1,6 @@
+const { ASSERT_USER } = require("../serverConfigurations/assert");
+const STATUS_CODES = require("../serverConfigurations/constants");
+
 class OrderService {
   constructor() {
     this.createOrder = this.createOrder.bind(this);
@@ -6,80 +9,66 @@ class OrderService {
   }
 
   async createOrder(data) {
-    const client = await data.dbConnection.connect();
-
-    // Fetch cart items and calculate total price in SQL
-    const cartResult = await client.query(`
-        SELECT ci.product_id, ci.quantity, p.price, p.stock 
-        FROM cart_items ci 
-        LEFT JOIN products p ON ci.product_id = p.id
-        WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE)`,
-        [data.session.user_id]
-    );
-
-    if (cartResult.rows.length === 0) {
-      throw new Error("Cart is empty");
-    }
-
-    const cartItems = cartResult.rows;
-    let totalPrice = 0;
-
-    for (const item of cartItems) {
-      if (item.quantity > item.stock) {
-        throw new Error(`Not enough stock for product ID ${item.product_id}`);
-      }
-      totalPrice += item.quantity * item.price; // We can still check stock and set totalPrice here
-    }
-
-    // Create the order and calculate the total in SQL
-    const orderResult = await client.query(
+    const orderResult = await data.dbConnection.query(
       `
-        INSERT INTO orders (user_id, status, total_price, payment_method_id, shipping_address_id) 
-        VALUES ($1, 'Pending', 
-            (SELECT SUM(ci.quantity * p.price) 
-                FROM cart_items ci 
-                JOIN products p ON ci.product_id = p.id 
-                WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE)), 
-            $2, $3) 
-        RETURNING *`,
-      [
-        data.session.user_id,
-        data.body.payment_method_id,
-        data.body.shipping_address_id,
-      ]
+      INSERT INTO orders (user_id, status, total_price) 
+      VALUES ($1, 'Pending', 
+          (SELECT SUM(ci.quantity * p.price) 
+              FROM cart_items ci 
+              JOIN products p ON ci.product_id = p.id 
+              WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE))) 
+      RETURNING *`,
+      [data.session.user_id]
     );
-
     const order = orderResult.rows[0];
 
-    // Insert order items and update stock
-    const orderItemsQueries = cartItems.map(async (item) => {
-      await client.query(
+    const cartResult = await data.dbConnection.query(
+      `
+      SELECT ci.*, p.name
+      FROM cart_items ci
+      JOIN products p ON ci.product_id = p.id 
+      WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE)`,
+      [data.session.user_id]
+    );
+    const cartItems = cartResult.rows;
+
+    ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", STATUS_CODES.INVALID_INPUT);
+
+    for (const item of cartItems) {
+      const inventoryResult = await data.dbConnection.query(
         `
-        INSERT INTO order_items (order_id, product_id, quantity, unit_price) 
-        VALUES ($1, $2, $3, $4)`,
-        [order.id, item.product_id, item.quantity, item.price]
+      SELECT quantity 
+      FROM inventories 
+      WHERE product_id = $1`,
+        [item.product_id]
+      );
+      ASSERT_USER(inventoryResult.rows.length > 0, `Not enough stock for product ${item.name}`, STATUS_CODES.INVALID_INPUT);
+      ASSERT_USER(parseInt(item.quantity) <= parseInt(inventoryResult.rows[0].quantity), `Not enough stock for product ${item.name}`, STATUS_CODES.INVALID_INPUT);
+
+      await data.dbConnection.query(
+        `
+          INSERT INTO order_items (order_id, product_id, quantity, unit_price) 
+          VALUES ($1, $2, $3, $4)`,
+        [order.id, item.product_id, item.quantity, item.unit_price]
       );
 
-      // Update the product stock
-      await client.query(
+      await data.dbConnection.query(
         `
-        UPDATE products 
-        SET stock = stock - $1 
-        WHERE id = $2`,
+          UPDATE inventories
+          SET quantity = quantity - $1
+          WHERE product_id = $2`,
         [item.quantity, item.product_id]
       );
-    });
+    }
 
-    await Promise.all(orderItemsQueries);
-
-    // Clear cart
-    await client.query(
+    await data.dbConnection.query(
       `
-        DELETE FROM cart_items WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE)`,
+      UPDATE carts SET is_active = FALSE
+      WHERE user_id = $1`,
       [data.session.user_id]
     );
 
-    await client.query("COMMIT");
+    await data.dbConnection.query("COMMIT");
     return { order, message: "Order placed successfully" };
   }
 
