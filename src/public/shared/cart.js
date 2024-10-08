@@ -6,6 +6,7 @@ const state = {
   cart_id: null,
   items: [],
   total: 0,
+  userStatus: null,
 };
 
 // DOM elements
@@ -18,8 +19,8 @@ const elements = {
 
 // Initialize cart page and attach event listeners
 document.addEventListener('DOMContentLoaded', async () => {
-  const userStatus = await getUserStatus();
-  createNavigation(userStatus);
+  state.userStatus = await getUserStatus();
+  createNavigation(state.userStatus);
   await attachLogoutHandler();
   const cart = await getCartItems();
   state.items = cart.items;
@@ -32,15 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 function attachEventListeners() {
   elements.cartContainer.addEventListener('click', handleCartItemActions);
   elements.checkoutButton.addEventListener('click', handleCheckout);
-
-  // for (const item of state.items) {
-  //   document.getElementById(`quantity-decrease-${item.id}`).addEventListener('click', () => {
-  //     updateCartItemQuantity(item.product_id, parseInt(item.quantity) - 1);
-  //   });
-  //   document.getElementById(`quantity-increase-${item.id}`).addEventListener('click', () => {
-  //     updateCartItemQuantity(item.product_id, parseInt(item.quantity) + 1);
-  //   });
-  // }
 }
 
 // Handle item actions (update quantity, remove item)
@@ -87,12 +79,27 @@ async function removeItemFromCart(itemId) {
 // Handle checkout
 async function handleCheckout() {
   try {
-    await checkout();
-    alert('Checkout successful!');
-    state.items = []; // Empty cart after successful checkout
-    updateCartDisplay(state);
+    console.log(state.userStatus);
+    if (!state.userStatus.session_type === "Authenticated") {
+      // If the user is not authenticated, redirect them to login page
+      window.location.href = '/login';
+      return;
+    }
+
+    // Proceed with checkout if authenticated
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+    });
+
+    if (response.ok) {
+      // Checkout successful, redirect to order page
+      window.location.href = '/order'; // Redirect to the order page
+    } else {
+      throw new Error('Checkout failed');
+    }
   } catch (error) {
     console.error('Error during checkout:', error);
+    alert('Checkout failed, please try again.');
   }
 }
 
@@ -121,14 +128,6 @@ async function removeCartItem(itemId) {
   });
   if (!response.ok) throw new Error('Failed to remove cart item');
 }
-
-async function checkout() {
-  const response = await fetch('/api/cart/checkout', {
-    method: 'POST',
-  });
-  if (!response.ok) throw new Error('Checkout failed');
-}
-
 
 // cartUI.js
 function renderCartItem(item) { 
