@@ -70,6 +70,18 @@ CREATE TABLE logs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE OR REPLACE VIEW logs_view AS
+SELECT
+    logs.*,
+    sc.code AS status_code
+FROM logs
+LEFT JOIN status_codes sc ON logs.status_code_id = sc.id;
+
+CREATE OR REPLACE VIEW status_codes_view AS
+SELECT
+    sc.*
+FROM status_codes sc;
+
 INSERT INTO status_codes (code, message) VALUES
 (1, 'Internal Server Error'),
 (2, 'Unauthorized'),
