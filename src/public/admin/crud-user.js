@@ -322,6 +322,9 @@ async function handleDeleteUser(userId) {
 async function handleFilterUsers(event) {
   event.preventDefault();
   const formData = new FormData(elements.filterForm);
+  if(formData.get("country_id") === "") {
+    formData.delete("country_id");
+  }
   const filterParams = Object.fromEntries(formData);
 
   // Update state with filter parameters
