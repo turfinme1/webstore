@@ -1,0 +1,120 @@
+{
+    "type": "object",
+    "name": "logs",
+    "routeName": "logs",
+    "views": "logs_view",
+    "queryValidationSchema": "logQueryParamsSchema",
+    "properties": {
+        "admin_user_id": {
+            "type": [
+                "integer",
+                "null"
+            ],
+            "label": "Admin User",
+            "placeholder": "Select Admin User",
+            "fetchFrom": "/crud/admin-users",
+            "errorMessage": {
+                "type": "Invalid admin user ID."
+            }
+        },
+        "user_id": {
+            "type": [
+                "integer",
+                "null"
+            ],
+            "label": "User",
+            "placeholder": "Select User",
+            "fetchFrom": "/crud/users",
+            "errorMessage": {
+                "type": "Invalid user ID."
+            }
+        },
+        "status_code_id": {
+            "type": "integer",
+            "label": "Status Code",
+            "placeholder": "Select Status Code",
+            "fetchFrom": "/crud/status-codes",
+            "errorMessage": {
+                "type": "Invalid status code ID."
+            }
+        },
+        "log_level": {
+            "type": "string",
+            "enum": [
+                "INFO",
+                "ERROR"
+            ],
+            "label": "Log Level",
+            "placeholder": "Select Log Level",
+            "errorMessage": {
+                "enum": "Invalid log level. Allowed values are INFO, WARNING, ERROR, or DEBUG."
+            }
+        },
+        "short_description": {
+            "type": "string",
+            "minLength": 5,
+            "label": "Short Description",
+            "placeholder": "Enter a short description",
+            "errorMessage": {
+                "minLength": "Short description must be at least 5 characters long."
+            }
+        },
+        "long_description": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "label": "Long Description",
+            "placeholder": "Enter detailed description",
+            "errorMessage": {
+                "type": "Long description must be text."
+            }
+        },
+        "debug_info": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "label": "Debug Info",
+            "placeholder": "Enter any debug info",
+            "errorMessage": {
+                "type": "Debug info must be text."
+            }
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "label": "Created At",
+            "placeholder": "Automatically set at creation",
+            "readOnly": true
+        }
+    },
+    "relationships": {
+        "admin_users": {
+            "table": "admin_users",
+            "foreign_key": "admin_user_id"
+        },
+        "users": {
+            "table": "users",
+            "foreign_key": "user_id"
+        },
+        "status_codes": {
+            "table": "status_codes",
+            "foreign_key": "status_code_id"
+        }
+    },
+    "required": [
+        "status_code_id",
+        "log_level",
+        "short_description"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "status_code_id": "Status code is required.",
+            "log_level": "Log level is required.",
+            "short_description": "Short description is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}
