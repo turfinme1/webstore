@@ -1,4 +1,4 @@
-const ERROR_CODES = require("../serverConfigurations/constants");
+const STATUS_CODES = require("../serverConfigurations/constants");
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
 
 class DbConnectionWrapper {
@@ -19,10 +19,10 @@ class DbConnectionWrapper {
     } catch (error) {
       console.error("Database query error:", error);
 
-      ASSERT_USER(error.code !== "23505", "Record already exists", ERROR_CODES.INVALID_INPUT);
-      ASSERT_USER(error.code !== "23503", "Invalid foreign key", ERROR_CODES.INVALID_INPUT);
-      ASSERT_USER(error.code !== "23514", "Check constraint failed", ERROR_CODES.INVALID_INPUT);
-      ASSERT_USER(error.code !== "22001", "Data too long for column" , ERROR_CODES.INVALID_INPUT);
+      ASSERT_USER(error.code !== "23505", "Record already exists", STATUS_CODES.INVALID_INPUT);
+      ASSERT_USER(error.code !== "23503", "Invalid foreign key", STATUS_CODES.INVALID_INPUT);
+      ASSERT_USER(error.code !== "23514", "Check constraint failed", STATUS_CODES.INVALID_INPUT);
+      ASSERT_USER(error.code !== "22001", "Data too long for column" , STATUS_CODES.INVALID_INPUT);
       ASSERT(false, "Internal server error");
     }
   }

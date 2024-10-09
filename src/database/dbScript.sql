@@ -116,6 +116,7 @@ CREATE TABLE email_verifications (
 
 CREATE TABLE products (
     id BIGSERIAL PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL DEFAULT substring(uuid_generate_v4()::text, 1, 8),
     name TEXT NOT NULL,
     price NUMERIC(12, 2) NOT NULL,
     short_description TEXT NOT NULL,
@@ -166,8 +167,8 @@ CREATE TABLE ratings (
 
 CREATE TABLE inventories (
     id BIGSERIAL PRIMARY KEY,
-    product_id BIGINT NOT NULL REFERENCES products(id),
-    quantity BIGINT NOT NULL
+    product_id BIGINT UNIQUE NOT NULL REFERENCES products(id),
+    quantity BIGINT NOT NULL CHECK (quantity >= 0)
 );
 
 CREATE TABLE carts (
@@ -201,9 +202,53 @@ CREATE TABLE cart_items (
     CONSTRAINT unique_cart_product UNIQUE (cart_id, product_id) 
 );
 
+
+-- Addresses Table (Normalized Shipping/Billing Address)
+CREATE TABLE addresses (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(id),
+    street TEXT NOT NULL,
+    city TEXT NOT NULL,
+    country_id BIGINT NOT NULL REFERENCES iso_country_codes(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Payment Methods Table (Normalized Payment Method)
+CREATE TABLE payment_methods (
+    id BIGSERIAL PRIMARY KEY,
+    method TEXT UNIQUE NOT NULL
+);
+
+-- Orders Table
+CREATE TABLE orders (
+    id BIGSERIAL PRIMARY KEY,
+    order_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    status TEXT NOT NULL CHECK (status IN ('Pending', 'Processing', 'Delivered', 'Cancelled')),
+    total_price NUMERIC(12, 2) NOT NULL CHECK (total_price >= 0),
+    payment_method_id BIGINT NULL REFERENCES payment_methods(id),
+    shipping_address_id BIGINT NULL REFERENCES addresses(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE order_items (
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL REFERENCES orders(id),
+    product_id BIGINT NOT NULL REFERENCES products(id),
+    quantity BIGINT NOT NULL CHECK (quantity > 0),
+    unit_price NUMERIC(12, 2) NOT NULL, 
+    total_price NUMERIC(12, 2) NOT NULL GENERATED ALWAYS AS (unit_price * quantity) STORED CHECK (total_price >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Optional: Insert Predefined Payment Methods
+INSERT INTO payment_methods(method) VALUES ('Credit Card'), ('Cash on Delivery');
+
 CREATE OR REPLACE VIEW products_view AS
 SELECT
     p.id,
+    p.code,
     p.name,
     p.price,
     p.short_description,
@@ -278,3 +323,6 @@ INSERT INTO categories(name) VALUES
 ('T-shirts'), ('Jackets'), ('Pants'), ('Shoes'), ('Hats'), ('Accessories'), ('Dresses'),
 ('Sunglasses'), ('Watches'), ('Belts'), ('Socks'), ('Underwear'), ('Scarves'), ('Gloves'),
 ('Bags'), ('Wallets'), ('Jewelry'), ('Ties'), ('Boots'), ('Sneakers');
+
+INSERT INTO inventories(product_id, quantity) 
+VALUES (1, 5), (2, 10), (3, 3), (4, 12), (5, 7), (6, 13), (7, 5), (8, 2), (9, 3), (10, 4), (11, 5), (12, 50), (13, 75), (14, 200), (15, 150), (16, 100), (17, 50), (18, 75), (19, 200), (20, 150);

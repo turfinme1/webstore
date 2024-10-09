@@ -8,12 +8,23 @@ class CartService {
 
   async getCart(data) {
     let cart;
-    const cartResult = await data.dbConnection.query(`
+    let cartResult;
+
+    cartResult = await data.dbConnection.query(`
       SELECT * 
       FROM carts 
-      WHERE (user_id = $1 OR session_id = $2) AND is_active = TRUE`,
-      [data.session.user_id, data.session.id]
+      WHERE user_id = $1 AND is_active = TRUE`,
+      [data.session.user_id]
     );
+
+    if(cartResult.rows.length === 0) {
+      cartResult = await data.dbConnection.query(`
+        SELECT * 
+        FROM carts 
+        WHERE session_id = $1 AND is_active = TRUE`,
+        [data.session.id]
+      );
+    }
   
     if (cartResult.rows.length > 0) {
       cart = cartResult.rows[0];
@@ -26,17 +37,25 @@ class CartService {
         );
       }
     } else {
-      const createCartResult = await data.dbConnection.query(`
-        INSERT INTO carts (user_id, session_id) 
-        VALUES ($1, $2) RETURNING *`,
-        [data.session.user_id, data.session.id]
-      );
-
-      cart = createCartResult.rows[0]; 
+      if(data.session.user_id) {
+        const createCartResult = await data.dbConnection.query(`
+          INSERT INTO carts (user_id) 
+          VALUES ($1) RETURNING *`,
+          [data.session.user_id]
+        );
+        cart = createCartResult.rows[0];
+      } else {
+        const createCartResult = await data.dbConnection.query(`
+          INSERT INTO carts (session_id) 
+          VALUES ($1) RETURNING *`,
+          [data.session.id]
+        );
+        cart = createCartResult.rows[0];
+      }
     }
 
     const cartItemsResult = await data.dbConnection.query(`
-      SELECT ci.*, p.name AS product_name, 
+      SELECT ci.*, p.name AS product_name, p.code AS product_code, 
         (SELECT url FROM images i WHERE i.product_id = p.id LIMIT 1) AS product_image
       FROM cart_items ci
       LEFT JOIN products p ON ci.product_id = p.id
@@ -49,17 +68,32 @@ class CartService {
   }
 
   async updateItem(data) {
-    let cart = await data.dbConnection.query(`
-      SELECT id FROM carts WHERE (user_id = $1 OR session_id = $2) AND is_active = TRUE`,
-      [data.session.user_id, data.session.id]
+    let cart;
+    cart = await data.dbConnection.query(`
+      SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE`,
+      [data.session.user_id]
     );
+    if(cart.rows.length === 0) {
+      cart = await data.dbConnection.query(`
+      SELECT id FROM carts WHERE  session_id = $1 AND is_active = TRUE`,
+      [data.session.id]
+      );
+    }
 
     if (cart.rows.length === 0) {
-      const cartResult = await data.dbConnection.query(`
-        INSERT INTO carts (user_id, session_id) VALUES ($1, $2) RETURNING id`,
-        [data.session.user_id, data.session.id]
-      );
-      cart = cartResult.rows[0];
+      if(data.session.user_id) {
+        const cartResult = await data.dbConnection.query(`
+          INSERT INTO carts (user_id) VALUES ($1) RETURNING id`,
+          [data.session.user_id]
+        );
+        cart = cartResult.rows[0];
+      } else {
+        const cartResult = await data.dbConnection.query(`
+          INSERT INTO carts (session_id) VALUES ($1) RETURNING id`,
+          [data.session.id]
+        );
+        cart = cartResult.rows[0];
+      }
     } else {
       cart = cart.rows[0];
     }
@@ -77,15 +111,25 @@ class CartService {
   }
 
   async deleteItem(data) {
-    const result = await data.dbConnection.query(`
-      DELETE FROM cart_items 
-      WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1 OR session_id = $2 AND is_active = TRUE) 
-      AND id = $3
-      RETURNING *`,
-      [data.session.user_id, data.session.id, data.params.itemId]
-    );
-
-    return result.rows[0];
+    if(data.session.user_id){
+      const result = await data.dbConnection.query(`
+        DELETE FROM cart_items 
+        WHERE cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE) 
+        AND id = $2
+        RETURNING *`,
+        [data.session.user_id, data.params.itemId]
+      );
+      return result.rows[0];
+    } else {
+      const result = await data.dbConnection.query(`
+        DELETE FROM cart_items 
+        WHERE cart_id = (SELECT id FROM carts WHERE session_id = $1 AND is_active = TRUE) 
+        AND id = $3
+        RETURNING *`,
+        [data.session.id, data.params.itemId]
+      );
+      return result.rows[0];
+    }
   }
 
   async clearCart(data) {

@@ -1,6 +1,6 @@
-const ERROR_CODES = require("../serverConfigurations/constants");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateBody } = require("../serverConfigurations/validation");
+const STATUS_CODES = require("../serverConfigurations/constants");
 
 class AuthController {
   constructor(authService) {
@@ -17,7 +17,7 @@ class AuthController {
   }
 
   async register(req, res, next) {
-    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", ERROR_CODES.RATE_LIMITED);
+    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", STATUS_CODES.RATE_LIMITED);
     validateBody(req, req.entitySchemaCollection.userRegisterSchema);
     const data = {
       body: req.body,
@@ -30,10 +30,12 @@ class AuthController {
     res.status(200)
       .cookie("session_id", result.session_hash, { expires: result.expires_at, secure: false, httpOnly: false})
       .json({message: "Registration successful"});
+
+    await req.logger.info({ error_code: STATUS_CODES.REGISTRATION_SUCCESS, short_description: "Registration successful" });
   }
 
   async login(req, res, next) {
-    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", ERROR_CODES.RATE_LIMITED);
+    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", STATUS_CODES.RATE_LIMITED);
     validateBody(req, req.entitySchemaCollection.userLoginSchema);
     const data = {
       body: req.body,
@@ -46,6 +48,8 @@ class AuthController {
     res.status(200)
       .cookie("session_id", result.session_hash, { expires: result.expires_at, secure: false, httpOnly: false})
       .json({message: "Login successful"});
+    
+    await req.logger.info({ error_code: STATUS_CODES.LOGIN_SUCCESS, short_description: "Login successful" });
   }
 
   async logout(req, res, next) {
@@ -53,6 +57,7 @@ class AuthController {
       params: req.params,
       session: req.session,
       dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
     }; 
     const result = await this.authService.logout(data);
     res.status(200)
@@ -105,6 +110,8 @@ class AuthController {
     }; 
     const result = await this.authService.updateProfile(data);
     res.status(200).json(result);
+
+    await req.logger.info({ error_code: STATUS_CODES.PROFILE_UPDATE_SUCCESS, short_description: "User profile update successful" });
   }
 
   async forgotPassword(req, res, next) {
@@ -132,6 +139,8 @@ class AuthController {
     }; 
     const result = await this.authService.resetPassword(data);
     res.status(200).json(result);
+
+    await req.logger.info({ error_code: STATUS_CODES.PASSWORD_RESET_SUCCESS, short_description: "User password reset successful" });
   }
 }
 

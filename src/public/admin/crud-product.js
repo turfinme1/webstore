@@ -190,6 +190,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       products.forEach((product) => {
         const productRow = document.createElement("tr");
 
+        // Code Column
+        const codeCell = document.createElement("td");
+        codeCell.textContent = product.code;
+        productRow.appendChild(codeCell);
+        
         // Name Column
         const nameCell = document.createElement("td");
         nameCell.textContent = product.name;
@@ -197,8 +202,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Price Column
         const priceCell = document.createElement("td");
-        priceCell.textContent = product.price;
+        priceCell.textContent = `$${product.price}`;
+        priceCell.style.textAlign = "right";
         productRow.appendChild(priceCell);
+
 
         // Short Description Column
         const shortDescCell = document.createElement("td");

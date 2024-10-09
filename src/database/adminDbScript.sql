@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS admin_session_types;
 DROP TABLE IF EXISTS admin_users;
 
 DROP TABLE IF EXISTS logs;
-DROP TABLE IF EXISTS error_codes;
+DROP TABLE IF EXISTS status_codes;
 
 CREATE TABLE admin_users (
     id BIGSERIAL PRIMARY KEY,
@@ -52,25 +52,25 @@ CREATE TABLE admin_failed_attempts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE error_codes (
+CREATE TABLE status_codes (
     id BIGSERIAL PRIMARY KEY,
     code BIGINT UNIQUE NOT NULL,
-    error_message TEXT NOT NULL 
+    message TEXT NOT NULL 
 );
 
 CREATE TABLE logs (
     id BIGSERIAL PRIMARY KEY,
     admin_user_id BIGINT NULL REFERENCES admin_users(id),
     user_id BIGINT NULL REFERENCES users(id),
-    error_code_id BIGINT NOT NULL REFERENCES error_codes(id),
-    timestamp TIMESTAMPTZ NOT NULL,
+    status_code_id BIGINT NOT NULL REFERENCES status_codes(id),
     log_level TEXT NOT NULL,
     short_description TEXT NOT NULL,
-    long_description TEXT NULL,
+    long_description JSONB NULL,
+    debug_info TEXT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-INSERT INTO error_codes (code, error_message) VALUES
+INSERT INTO status_codes (code, message) VALUES
 (1, 'Internal Server Error'),
 (2, 'Unauthorized'),
 (3, 'Invalid Session'),
@@ -83,4 +83,11 @@ INSERT INTO error_codes (code, error_message) VALUES
 (10, 'Rate Limited'),
 (11, 'No Changes'),
 (12, 'Duplicate'),
-(13, 'Not Found');
+(13, 'Not Found'),
+(14, 'Registration Success'),
+(15, 'Login Success'),
+(16, 'Profile Update Success'),
+(17, 'Password Reset Success'),
+(18, 'Update Success'),
+(19, 'Delete Success'),
+(20, 'Create Success');

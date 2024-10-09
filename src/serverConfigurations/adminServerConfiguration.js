@@ -84,16 +84,7 @@ function requestMiddleware(handler) {
 
     } catch (error) {
       console.error(error);
-
-      const errorObject = {
-        admin_user_id: req.session.admin_user_id || null,
-        user_id: req.session.user_id || null,
-        code: error.params || 1,
-        timestamp: new Date().toISOString(),
-        shortDescription: error.message,
-        longDescription: error.stack || null,
-      };
-      await req.logger.error(errorObject);
+      await req.logger.error(error);
 
       if (req.dbConnection) {
         req.dbConnection.query("ROLLBACK");

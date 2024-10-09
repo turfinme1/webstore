@@ -6,6 +6,7 @@ const state = {
   cart_id: null,
   items: [],
   total: 0,
+  userStatus: null,
 };
 
 // DOM elements
@@ -18,8 +19,8 @@ const elements = {
 
 // Initialize cart page and attach event listeners
 document.addEventListener('DOMContentLoaded', async () => {
-  const userStatus = await getUserStatus();
-  createNavigation(userStatus);
+  state.userStatus = await getUserStatus();
+  createNavigation(state.userStatus);
   await attachLogoutHandler();
   const cart = await getCartItems();
   state.items = cart.items;
@@ -32,15 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 function attachEventListeners() {
   elements.cartContainer.addEventListener('click', handleCartItemActions);
   elements.checkoutButton.addEventListener('click', handleCheckout);
-
-  // for (const item of state.items) {
-  //   document.getElementById(`quantity-decrease-${item.id}`).addEventListener('click', () => {
-  //     updateCartItemQuantity(item.product_id, parseInt(item.quantity) - 1);
-  //   });
-  //   document.getElementById(`quantity-increase-${item.id}`).addEventListener('click', () => {
-  //     updateCartItemQuantity(item.product_id, parseInt(item.quantity) + 1);
-  //   });
-  // }
 }
 
 // Handle item actions (update quantity, remove item)
@@ -87,12 +79,27 @@ async function removeItemFromCart(itemId) {
 // Handle checkout
 async function handleCheckout() {
   try {
-    await checkout();
-    alert('Checkout successful!');
-    state.items = []; // Empty cart after successful checkout
-    updateCartDisplay(state);
+    console.log(state.userStatus);
+    if (state.userStatus.session_type !== "Authenticated") {
+      // If the user is not authenticated, redirect them to login page
+      window.location.href = '/login';
+      return;
+    }
+
+    // Proceed with checkout if authenticated
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+    });
+
+    if (response.ok) {
+      window.location.href = '/order'; 
+    } else {
+      const data = await response.json();
+      alert(`Checkout failed: ${data.error}`);
+    }
   } catch (error) {
-    console.error('Error during checkout:', error);
+    console.log(error);
+    alert(`Checkout failed`);
   }
 }
 
@@ -122,14 +129,6 @@ async function removeCartItem(itemId) {
   if (!response.ok) throw new Error('Failed to remove cart item');
 }
 
-async function checkout() {
-  const response = await fetch('/api/cart/checkout', {
-    method: 'POST',
-  });
-  if (!response.ok) throw new Error('Checkout failed');
-}
-
-
 // cartUI.js
 function renderCartItem(item) { 
   const itemRow = document.createElement('tr');
@@ -139,6 +138,7 @@ function renderCartItem(item) {
       <img src="${item.product_image}" alt="${item.product_name}" class="img-fluid" style="width: 100px; height: auto; margin-right: 10px;" />
       ${item.product_name}
     </td>
+    <td style="vertical-align: middle;">${item.product_code}</td>
     <td style="vertical-align: middle;">
       <div class="input-group quantity-group" style="width: 120px;">
         <button class="btn btn-outline-secondary quantity-decrease" id="quantity-decrease-${item.id}" type="button" data-item-id="${item.id}">-</button>
@@ -146,9 +146,9 @@ function renderCartItem(item) {
         <button class="btn btn-outline-secondary quantity-increase" id="quantity-increase-${item.id}" type="button" data-item-id="${item.id}">+</button>
       </div>
     </td>
-    <td style="vertical-align: middle;">$${item.unit_price}</td>
-    <td style="vertical-align: middle;">$${item.total_price}</td>
-    <td style="vertical-align: middle;">
+    <td style="vertical-align: middle; text-align: right">$${item.unit_price}</td>
+    <td style="vertical-align: middle; text-align: right">$${item.total_price}</td>
+    <td style="vertical-align: middle; text-align: center">
       <button class="remove-item btn btn-sm btn-danger" data-item-id="${item.id}">Remove</button>
     </td>
   `;

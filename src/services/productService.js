@@ -226,6 +226,7 @@ class ProductService {
   }
 
   async handleFileUploads(req) {
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     const filePaths = [];
 
     return new Promise((resolve, reject) => {
@@ -246,6 +247,16 @@ class ProductService {
         const saveTo = path.join(__dirname, '..', '..','..', "images", `${imageName}.${filename.mimeType.split('/')[1]}`);
         filePaths.push('/images/' + imageName + '.' + filename.mimeType.split('/')[1]);
         const writeStream = fs.createWriteStream(saveTo);
+
+        let fileSize = 0;
+        file.on('data', async (chunk) => {
+        fileSize += chunk.length;
+        if (fileSize > MAX_FILE_SIZE) {
+          file.unpipe(writeStream); // Stop writing to the file
+          writeStream.end(); // End the stream
+          await fs.promises.unlink(saveTo);
+          return reject(new UserError(`${filename.filename} exceeds the limit of 5 MB`,  7,));
+        }});
 
         file.pipe(writeStream);
 

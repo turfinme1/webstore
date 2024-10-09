@@ -10,6 +10,8 @@ const AuthService = require("../services/authService");
 const AuthController = require("../controllers/authController");
 const CartController = require("../controllers/cartController");
 const CartService = require("../services/cartService");
+const OrderService = require("../services/orderService");
+const OrderController = require("../controllers/orderController");
 const { MailService, transporter } = require("../services/mailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const Logger = require("./logger");
@@ -24,6 +26,8 @@ const productService = new ProductService();
 const productController = new ProductController(productService);
 const cartService = new CartService();
 const cartController = new CartController(cartService);
+const orderService = new OrderService();
+const orderController = new OrderController(orderService);
 
 const routeTable = {
   get: {
@@ -37,7 +41,8 @@ const routeTable = {
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
     "/api/cart": cartController.getCart,
-    "/api/cart/checkout": cartController.checkout,
+    "/api/orders": orderController.getOrders,
+    "/api/orders/:orderId": orderController.getOrder,
   },
   post: {
     "/auth/register": authController.register,
@@ -47,6 +52,8 @@ const routeTable = {
     "/api/products/:id/comments": productController.createComment,
     "/api/products/:id/ratings": productController.createRating,
     "/api/cart": cartController.updateItem,
+    "/api/orders": orderController.createOrder,
+    "/api/orders/complete": orderController.completeOrder,
   },
   put: {
     "/auth/profile": authController.updateProfile,
@@ -80,15 +87,7 @@ function requestMiddleware(handler) {
     } catch (error) {
       console.error(error);
 
-      const errorObject = {
-        admin_user_id: req.session.admin_user_id || null,
-        user_id: req.session.user_id || null,
-        code: error.params || 1,
-        timestamp: new Date().toISOString(),
-        shortDescription: error.message,
-        longDescription: error.stack || null,
-      };
-      await req.logger.error(errorObject);
+      await req.logger.error(error);
 
       if (req.dbConnection) {
         req.dbConnection.query("ROLLBACK");
