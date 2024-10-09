@@ -1,3 +1,4 @@
+const STATUS_CODES = require("../../serverConfigurations/constants");
 const AuthController = require("../authController");
 
 describe("AuthController", () => {
@@ -39,6 +40,7 @@ describe("AuthController", () => {
         entitySchemaCollection: { userRegisterSchema: {} },
         session: { rate_limited_until: Date.now() - 1000 }, 
         dbConnection: {},
+        logger: { info: jest.fn() },
       };
       const registrationResult = {
         session_hash: "hash",
@@ -59,6 +61,7 @@ describe("AuthController", () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.cookie).toHaveBeenCalledWith("session_id", registrationResult.session_hash, expect.any(Object));
       expect(mockRes.json).toHaveBeenCalledWith({ message: "Registration successful" });
+      expect(req.logger.info).toHaveBeenCalledWith({ error_code: STATUS_CODES.REGISTRATION_SUCCESS, short_description: "Registration successful" });
     });
   });
 
@@ -69,6 +72,7 @@ describe("AuthController", () => {
         entitySchemaCollection: { userLoginSchema: {} },
         session: { rate_limited_until: Date.now() - 1000 },
         dbConnection: {},
+        logger: { info: jest.fn() },
       };
       const loginResult = {
         session_hash: "hash",
@@ -89,6 +93,7 @@ describe("AuthController", () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.cookie).toHaveBeenCalledWith("session_id", loginResult.session_hash, expect.any(Object));
       expect(mockRes.json).toHaveBeenCalledWith({ message: "Login successful" });
+      expect(req.logger.info).toHaveBeenCalledWith({ error_code: STATUS_CODES.LOGIN_SUCCESS, short_description: "Login successful" });
     });
   });
 
@@ -198,6 +203,7 @@ describe("AuthController", () => {
         session: {},
         dbConnection: {},
         params: {},
+        logger: { info: jest.fn() },
       };
       const updateProfileResult = { success: true };
   
@@ -214,6 +220,7 @@ describe("AuthController", () => {
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(updateProfileResult);
+      expect(req.logger.info).toHaveBeenCalledWith({ error_code: STATUS_CODES.PROFILE_UPDATE_SUCCESS, short_description: "User profile update successful" });
     });
   });
   
@@ -253,6 +260,7 @@ describe("AuthController", () => {
         dbConnection: {},
         params: { token: "reset-token" },
         query: {},
+        logger: { info: jest.fn() },
       };
       const resetPasswordResult = { message: "Password reset successful" };
   
@@ -270,6 +278,7 @@ describe("AuthController", () => {
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(resetPasswordResult);
+      expect(req.logger.info).toHaveBeenCalledWith({ error_code: STATUS_CODES.PASSWORD_RESET_SUCCESS, short_description: "User password reset successful" });
     });
   });
   

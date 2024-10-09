@@ -69,44 +69,42 @@ describe("Logger", () => {
   });
 
   describe("info", () => {
-    it("should log info level messages", async () => {
+    it("should call logToDatabase with info level messages", async () => {
+      jest.spyOn(logger, 'logToDatabase').mockResolvedValue();
       const infoObject = {
-        admin_user_id: 1,
-        user_id: 2,
-        error_code_id: "200",
+        error_code: 200,
         short_description: "Info log test",
-        long_description: "This is an info log test description.",
       };
 
       await logger.info(infoObject);
 
-      expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("INSERT INTO logs"),
-        expect.any(Array)
-      );
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(2); // One for insert, one for commit
-      expect(infoObject.log_level).toBe("INFO"); // Ensure log level is set correctly
+      // Ensure logToDatabase is called with the expected log object
+      expect(logger.logToDatabase).toHaveBeenCalledWith({
+        error_code: infoObject.error_code,
+        short_description: infoObject.short_description,
+        log_level: "INFO",
+      });
     });
   });
 
   describe("error", () => {
-    it("should log error level messages", async () => {
+    it("should call logToDatabase with error level messages", async () => {
+      jest.spyOn(logger, 'logToDatabase').mockResolvedValue();
       const errorObject = {
-        admin_user_id: 1,
-        user_id: 2,
-        error_code_id: "500",
-        short_description: "Error log test",
-        long_description: "This is an error log test description.",
+        params: 500,
+        message: "Error log test",
+        stack: "stack trace",
       };
 
       await logger.error(errorObject);
 
-      expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("INSERT INTO logs"),
-        expect.any(Array)
-      );
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(2); // One for insert, one for commit
-      expect(errorObject.log_level).toBe("ERROR"); // Ensure log level is set correctly
+      // Ensure logToDatabase is called with the expected log object
+      expect(logger.logToDatabase).toHaveBeenCalledWith({
+        error_code: errorObject.params,
+        short_description: errorObject.message,
+        debug_info: errorObject.stack,
+        log_level: "ERROR",
+      });
     });
   });
 });

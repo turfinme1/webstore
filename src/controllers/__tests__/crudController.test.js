@@ -1,5 +1,6 @@
 const CrudController = require('../crudController');
 const { ASSERT_USER } = require("../../serverConfigurations/assert");
+const STATUS_CODES = require('../../serverConfigurations/constants');
 
 jest.mock("../../serverConfigurations/assert");
 
@@ -99,7 +100,7 @@ describe('CrudController', () => {
   
   describe('create', () => {
     it('should call crudService.create and respond with status 201', async () => {
-      const req = { body: { name: 'Test Product' }, params: { entity: 'testEntity' }, session: { admin_user_id: 1 } };
+      const req = { body: { name: 'Test Product' }, params: { entity: 'testEntity' }, session: { admin_user_id: 1 }, logger: { info: jest.fn() } };
       const requestObject = { body: req.body, req, params: req.params, dbConnection: req.dbConnection, entitySchemaCollection: req.entitySchemaCollection };
       const createdProduct = { id: 1, name: 'Test Product' };
 
@@ -110,6 +111,10 @@ describe('CrudController', () => {
       expect(crudService.create).toHaveBeenCalledWith(requestObject);
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith([createdProduct]);
+      expect(req.logger.info).toHaveBeenCalledWith({
+        error_code: STATUS_CODES.CREATE_SUCCESS,
+        short_description: 'Created testEntity'
+      });
     });
   });
 
@@ -163,7 +168,8 @@ describe('CrudController', () => {
       const req = {
         params: { entity: 'testEntity', id: 1 },
         body: { name: 'Updated Product' },
-        session: { admin_user_id: 1 } 
+        session: { admin_user_id: 1 } ,
+        logger: { info: jest.fn() }
       };
       const requestObject = { body: req.body, req, params: req.params, dbConnection: req.dbConnection, entitySchemaCollection: req.entitySchemaCollection };
 
@@ -176,12 +182,16 @@ describe('CrudController', () => {
       expect(crudService.update).toHaveBeenCalledWith(requestObject);
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(updatedProduct);
+      expect(req.logger.info).toHaveBeenCalledWith({
+        error_code: STATUS_CODES.UPDATE_SUCCESS,
+        short_description: 'Updated testEntity'
+      });
     });
   });
 
   describe('delete', () => {
     it('should call crudService.delete and respond with status 200', async () => {
-      const req = { params: { entity: 'testEntity', id: 1 },  session: { admin_user_id: 1 }  };
+      const req = { params: { entity: 'testEntity', id: 1 },  session: { admin_user_id: 1 },  logger: { info: jest.fn() }  };
       const expectedCallObject = { params: { entity: 'testEntity', id: 1 }};
       const deletedProduct = { id: 1, name: 'Deleted Product' };
 
@@ -192,6 +202,10 @@ describe('CrudController', () => {
       expect(crudService.delete).toHaveBeenCalledWith(expectedCallObject);
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(deletedProduct);
+      expect(req.logger.info).toHaveBeenCalledWith({
+        error_code: STATUS_CODES.DELETE_SUCCESS,
+        short_description: 'Deleted testEntity'
+      });
     });
   });
 });

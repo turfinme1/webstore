@@ -38,7 +38,8 @@ describe('CartService', () => {
       // Mock no existing cart, but new cart creation
       const mockNewCart = { id: 'newCart123', user_id: 'user123' };
       dbConnection.query
-        .mockResolvedValueOnce({ rows: [] })  // No existing cart
+        .mockResolvedValueOnce({ rows: [] })  // No existing cart for user
+        .mockResolvedValueOnce({ rows: [] })  // No existing cart for session
         .mockResolvedValueOnce({ rows: [mockNewCart] })  // Create new cart
         .mockResolvedValueOnce({ rows: [] });  // No cart items
 
@@ -49,7 +50,7 @@ describe('CartService', () => {
 
       const result = await cartService.getCart(data);
 
-      expect(dbConnection.query).toHaveBeenCalledTimes(3);
+      expect(dbConnection.query).toHaveBeenCalledTimes(4);
       expect(result.cart).toEqual(mockNewCart);
       expect(result.items).toEqual([]);
     });
