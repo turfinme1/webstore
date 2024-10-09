@@ -47,6 +47,13 @@ function validateQueryParams(req, schema) {
     if(key === "country_id"){
       filterParams[key] = paramValue.split(",");
     }
+
+    if(schema.filterParams.properties[key].type === "integer"){
+      if(paramValue !== "") {
+        filterParams[key] = parseInt(paramValue);
+        ASSERT_USER(!isNaN(filterParams[key]), `${key} should be an integer`, STATUS_CODES.INVALID_QUERY_PARAMS);
+      }
+    }
   });
   
   const validDirections = ["ASC", "DESC"];
