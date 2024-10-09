@@ -40,7 +40,7 @@ class CrudController {
   }
 
   async getFilteredPaginated(req, res) {
-    validateQueryParams(req, req.entitySchemaCollection.userQueryParamsSchema);
+    validateQueryParams(req, req.entitySchemaCollection[req.entitySchemaCollection[req.params.entity].queryValidationSchema]);
     const data = {
       query: req.query,
       params: req.params,
