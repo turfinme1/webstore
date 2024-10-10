@@ -42,6 +42,9 @@ describe('CrudController', () => {
             session: { admin_user_id: 1 },
             dbConnection: { /* Mock DB connection if needed */ },
             entitySchemaCollection: {
+                testEntity: {
+                  queryValidationSchema: 'userQueryParamsSchema',
+                },
                 userQueryParamsSchema: {
                   searchParams: {
                     type: "object",
