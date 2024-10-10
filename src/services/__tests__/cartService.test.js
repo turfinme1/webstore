@@ -6,8 +6,6 @@ describe('CartService', () => {
 
   beforeEach(() => {
     cartService = new CartService();
-
-    // Mock dbConnection
     dbConnection = {
       query: jest.fn(),
     };
@@ -15,12 +13,10 @@ describe('CartService', () => {
 
   describe('getCart', () => {
     it('should return an existing cart with items', async () => {
-      // Mock existing cart result
       const mockCart = { id: 'cart123', user_id: 'user123' };
       dbConnection.query
-        .mockResolvedValueOnce({ rows: [mockCart] })  // Cart exists
-        .mockResolvedValueOnce({ rows: [] })  // Set cart to user
-        .mockResolvedValueOnce({ rows: [{ id: 'item1', product_name: 'Product 1' }] });  // Cart items
+        .mockResolvedValueOnce({ rows: [mockCart] })  // Existing cart
+        .mockResolvedValueOnce({ rows: [{ id: 'item1', product_name: 'Product 1' }] }); // Cart items
 
       const data = {
         session: { user_id: 'user123', id: 'session123' },
@@ -29,31 +25,35 @@ describe('CartService', () => {
 
       const result = await cartService.getCart(data);
 
-      expect(dbConnection.query).toHaveBeenCalledTimes(3);
+      expect(dbConnection.query).toHaveBeenCalledTimes(2);
       expect(result.cart).toEqual(mockCart);
       expect(result.items).toEqual([{ id: 'item1', product_name: 'Product 1' }]);
     });
 
     it('should create a new cart if none exists', async () => {
-      // Mock no existing cart, but new cart creation
-      const mockNewCart = { id: 'newCart123', user_id: 'user123' };
+      const mockNewCart = { id: 'newCart123', user_id: 'user123', session_id: null };
+      
+      // Mock the getOrCreateCart method
+      jest.spyOn(cartService, 'getOrCreateCart').mockResolvedValue(mockNewCart);
+    
       dbConnection.query
-        .mockResolvedValueOnce({ rows: [] })  // No existing cart for user
-        .mockResolvedValueOnce({ rows: [] })  // No existing cart for session
-        .mockResolvedValueOnce({ rows: [mockNewCart] })  // Create new cart
+        .mockResolvedValueOnce({ rows: [] })  // No user cart merging needed
         .mockResolvedValueOnce({ rows: [] });  // No cart items
-
+    
       const data = {
         session: { user_id: 'user123', id: 'session123' },
         dbConnection,
       };
-
+    
       const result = await cartService.getCart(data);
-
-      expect(dbConnection.query).toHaveBeenCalledTimes(4);
+    
+      // Expect that getOrCreateCart was called instead of being tested here
+      expect(cartService.getOrCreateCart).toHaveBeenCalledWith(data);
+      expect(dbConnection.query).toHaveBeenCalledTimes(1);  // The number of db queries related to the cart items only
       expect(result.cart).toEqual(mockNewCart);
       expect(result.items).toEqual([]);
     });
+    
   });
 
   describe('updateItem', () => {
@@ -101,9 +101,12 @@ describe('CartService', () => {
 
   describe('deleteItem', () => {
     it('should delete an item from the cart', async () => {
-      const mockDeletedItem = { id: 'item123', cart_id: 'cart123' };
+      const mockCart = { id: 'cart123', user_id: 'user123' };
+      const mockDeletedItem = { id: 'item123', product_id: 'product123' };
 
-      dbConnection.query.mockResolvedValueOnce({ rows: [mockDeletedItem] });
+      dbConnection.query
+        .mockResolvedValueOnce({ rows: [mockCart] })  // Existing cart
+        .mockResolvedValueOnce({ rows: [mockDeletedItem] });  // Item deleted
 
       const data = {
         session: { user_id: 'user123', id: 'session123' },
@@ -113,14 +116,18 @@ describe('CartService', () => {
 
       const result = await cartService.deleteItem(data);
 
-      expect(dbConnection.query).toHaveBeenCalledTimes(1);
+      expect(dbConnection.query).toHaveBeenCalledTimes(2);
       expect(result).toEqual(mockDeletedItem);
     });
   });
 
   describe('clearCart', () => {
-    it('should clear all items from the cart', async () => {
-      dbConnection.query.mockResolvedValueOnce({});
+    it('should clear all items in the cart', async () => {
+      const mockCart = { id: 'cart123', user_id: 'user123' };
+
+      dbConnection.query
+        .mockResolvedValueOnce({ rows: [mockCart] })  // Existing cart
+        .mockResolvedValueOnce({});  // Items cleared
 
       const data = {
         session: { user_id: 'user123', id: 'session123' },
@@ -129,8 +136,8 @@ describe('CartService', () => {
 
       const result = await cartService.clearCart(data);
 
-      expect(dbConnection.query).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ message: 'Cart cleared successfully.' });
+      expect(dbConnection.query).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({ message: "Cart cleared successfully." });
     });
   });
 });

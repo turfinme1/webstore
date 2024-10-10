@@ -68,7 +68,6 @@ class OrderService {
       [data.session.user_id]
     );
 
-    await data.dbConnection.query("COMMIT");
     return { order, message: "Order placed successfully" };
   }
 

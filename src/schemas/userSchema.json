@@ -3,6 +3,7 @@
   "name": "users",
   "routeName": "users",
   "views": "users_view",
+  "queryValidationSchema": "userQueryParamsSchema",
   "properties": {
     "first_name": {
       "type": "string",
