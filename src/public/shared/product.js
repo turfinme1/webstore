@@ -1,9 +1,10 @@
 import { createNavigation } from "./navigation.js";
-import { getUserStatus } from "./auth.js";
+import { getUserStatus, attachLogoutHandler } from "./auth.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     createNavigation(await getUserStatus());
+    await attachLogoutHandler();
     const productId = getProductIdFromURL();
 
     if (!productId) {
