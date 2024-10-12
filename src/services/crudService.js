@@ -32,22 +32,34 @@ class CrudService {
     const offset = (data.query.page - 1) * data.query.pageSize;
     let searchValues = [];
     let conditions = [];
+    let selectFields = [];
+    let groupBySets = [];
+    let orderByClause = "";
   
     if (data.query.filterParams) {
       for (const [filterField, filterValue] of Object.entries(data.query.filterParams)) {
         if (Array.isArray(filterValue)) {
-          // Handle arrays (e.g., categories or IDs)
           const filterPlaceholders = filterValue
             .map((_, index) => `$${searchValues.length + index + 1}`)
             .join(", ");
           searchValues.push(...filterValue);
           conditions.push(`${filterField} IN (${filterPlaceholders})`);
         } else if (typeof filterValue === 'string') {
-          // Handle partial matches for string fields (e.g., email contains 'gmail.com')
           searchValues.push(`${filterValue}`);
           conditions.push(`STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length})) > 0`);
+        } else if (schema.properties[filterField]?.format === 'date-time') {
+          if(filterValue.min && filterValue.max) {
+            searchValues.push(filterValue.min);
+            searchValues.push(filterValue.max);
+            conditions.push(`DATE_TRUNC('day', ${filterField}) >= $${searchValues.length - 1} AND DATE_TRUNC('day', ${filterField}) <= $${searchValues.length}`);
+          } else if (filterValue.min) {
+            searchValues.push(filterValue.min);
+            conditions.push(`DATE_TRUNC('day', ${filterField}) >= $${searchValues.length}`);
+          } else if (filterValue.max) {
+            searchValues.push(filterValue.max);
+            conditions.push(`DATE_TRUNC('day', ${filterField}) <= $${searchValues.length}`);
+          }
         } else if (typeof filterValue === 'object') {
-          // Handle range filters like price or other numeric filters
           if (filterValue.min) {
             searchValues.push(filterValue.min);
             conditions.push(`${filterField} >= $${searchValues.length}`);
@@ -57,39 +69,67 @@ class CrudService {
             conditions.push(`${filterField} <= $${searchValues.length}`);
           }
         } else {
-          // Handle exact matches for other data types (e.g., ID or boolean)
           searchValues.push(filterValue);
           conditions.push(`${filterField} = $${searchValues.length}`);
         }
       }
     }
-  
+    
+    if (data.query.groupParams) {
+      for (const groupField of data.query.groupParams) {
+        const fieldConfig = schema.properties[groupField.column];
+        if (fieldConfig?.groupable) {
+          if (fieldConfig.format === 'date-time') {
+            const fieldAlias = `${fieldConfig.function}('${groupField.granularity}', ${groupField.column})`;
+            groupBySets.push(fieldAlias);
+            selectFields.push(`${fieldAlias} AS ${groupField.column}`);
+          } else {
+            groupBySets.push(groupField.column);
+            selectFields.push(groupField.column);
+          }
+        }
+      };
+      
+      selectFields.push("COUNT(*) AS count");
+    } 
+
+    if (groupBySets.length > 0) {
+      orderByClause = ` ${groupBySets.join(" DESC, ")}`;
+    } else {
+      selectFields = ["*"];
+      orderByClause = data.query.orderParams.length > 0
+        ? data.query.orderParams
+            .map(([column, direction]) => `${column} ${direction.toUpperCase()}`)
+            .join(", ")
+        : "id ASC";
+    }
+
     const combinedConditions = conditions.length > 0 
       ? `WHERE ${conditions.join(" AND ")}`
       : "";
-  
-    const orderByClause = data.query.orderParams && data.query.orderParams.length > 0
-      ? data.query.orderParams
-          .map(([column, direction]) => `${column} ${direction.toUpperCase()}`)
-          .join(", ")
-      : "id ASC";
+    
+    const groupingClause = groupBySets.length > 0 
+      ? `GROUP BY GROUPING SETS ((${groupBySets.join(", ")}))`
+      : "";
   
     const query = `
-      SELECT * FROM ${schema.views} 
-      ${combinedConditions} 
+      SELECT ${selectFields.join(", ")}
+      FROM ${schema.views} 
+      ${combinedConditions}
+      ${groupingClause}
       ORDER BY ${orderByClause} 
       LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}`;
-  
-    const totalCount = await data.dbConnection.query(
-      `SELECT COUNT(*) FROM ${schema.views} ${combinedConditions}`,
-      searchValues
-    );
+    
+    const totalCountQuery = groupBySets.length > 0
+      ? `SELECT COUNT(*) FROM (SELECT ${groupBySets.join(", ")} FROM ${schema.views} ${combinedConditions} ${groupingClause}) as count`
+      : `SELECT COUNT(*) FROM ${schema.views} ${combinedConditions}`;
+      
+    const totalCount = await data.dbConnection.query(totalCountQuery, searchValues);
     
     const result = await data.dbConnection.query(query, [...searchValues, data.query.pageSize, offset]);
   
     return { result: result.rows, count: totalCount.rows[0].count };
   }
-  
 
   async getById(data) {
     const schema = data.entitySchemaCollection[data.params.entity];
