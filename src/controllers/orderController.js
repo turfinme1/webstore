@@ -41,7 +41,7 @@ class OrderController {
       const result = await this.orderService.completeOrder(data);
       res.status(200).json(result);
 
-      await req.logger.info({ error_code: STATUS_CODES.ORDER_COMPLETE_SUCCESS, short_description: `Created ${data.params.entity}` });
+      await req.logger.info({ error_code: STATUS_CODES.ORDER_COMPLETE_SUCCESS, short_description: `Order completed successfully` });
     }
   }
   

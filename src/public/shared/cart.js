@@ -96,6 +96,7 @@ async function handleCheckout() {
     } else {
       const data = await response.json();
       alert(`Checkout failed: ${data.error}`);
+      window.location.reload();
     }
   } catch (error) {
     console.log(error);
