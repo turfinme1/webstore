@@ -15,12 +15,21 @@
             "log_level": {
                 "type": "string"
             },
-            "status_code_id": {
+            "status_code": {
                 "type": "integer"
             },
             "created_at": {
-                "type": "string",
-                "format": "date-time"
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "max": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
             }
         }
     },
@@ -30,7 +39,7 @@
             "log_level": {
                 "type": "string"
             },
-            "status_code_id": {
+            "status_code": {
                 "type": "integer"
             },
             "created_at": {
@@ -45,7 +54,7 @@
             "log_level": {
                 "type": "string"
             },
-            "status_code_id": {
+            "status_code": {
                 "type": "integer"
             },
             "created_at": {

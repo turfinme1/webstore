@@ -14,6 +14,9 @@ function validateQueryParams(req, schema) {
   let orderParams = req.query.orderParams ? JSON.parse(req.query.orderParams) : [];
   ASSERT_USER(Array.isArray(orderParams), "orderParams should be an array", STATUS_CODES.INVALID_QUERY_PARAMS);
 
+  let groupParams = req.query.groupParams ? JSON.parse(req.query.groupParams) : [];
+  ASSERT_USER(Array.isArray(groupParams), "groupParams should be an array", STATUS_CODES.INVALID_QUERY_PARAMS);
+
   Object.keys(searchParams).forEach(key => {
     const expectedType = schema.searchParams.properties[key]?.type;
     ASSERT_USER(expectedType, `Invalid search parameter: ${key}`, STATUS_CODES.INVALID_QUERY_PARAMS);
@@ -56,6 +59,11 @@ function validateQueryParams(req, schema) {
     }
   });
   
+  groupParams.forEach(groupParam => {
+    const groupColumn = schema.groupParams.properties[groupParam.column];
+    ASSERT_USER(groupColumn, `Invalid group parameter: ${groupParam.column}`, STATUS_CODES.INVALID_QUERY_PARAMS);
+  });
+
   const validDirections = ["ASC", "DESC"];
   orderParams.forEach(([key, direction]) => {
     const schemaOrder = schema.orderParams.properties[key];
@@ -75,6 +83,7 @@ function validateQueryParams(req, schema) {
   req.query.searchParams = searchParams;
   req.query.filterParams = filterParams;
   req.query.orderParams = orderParams;
+  req.query.groupParams = groupParams;
   req.query.pageSize = pageSize;
   req.query.page = page;
 }

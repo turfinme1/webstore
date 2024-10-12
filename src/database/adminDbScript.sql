@@ -72,8 +72,15 @@ CREATE TABLE logs (
 
 CREATE OR REPLACE VIEW logs_view AS
 SELECT
-    logs.*,
-    sc.code AS status_code
+    logs.id,
+    logs.admin_user_id,
+    logs.user_id,
+    sc.code AS status_code,
+    logs.log_level,
+    logs.short_description,
+    logs.long_description,
+    logs.debug_info,
+    logs.created_at
 FROM logs
 LEFT JOIN status_codes sc ON logs.status_code_id = sc.id;
 

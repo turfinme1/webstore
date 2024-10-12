@@ -29,14 +29,14 @@
                 "type": "Invalid user ID."
             }
         },
-        "status_code_id": {
-            "type": "integer",
+        "status_code": {
+            "type": "string",
             "label": "Status Code",
-            "placeholder": "Select Status Code",
-            "fetchFrom": "/crud/status-codes",
+            "placeholder": "Enter Status Code",
             "errorMessage": {
-                "type": "Invalid status code ID."
-            }
+                "type": "Invalid status code."
+            },
+            "groupable": true
         },
         "log_level": {
             "type": "string",
@@ -48,7 +48,8 @@
             "placeholder": "Select Log Level",
             "errorMessage": {
                 "enum": "Invalid log level. Allowed values are INFO, WARNING, ERROR, or DEBUG."
-            }
+            },
+            "groupable": true
         },
         "short_description": {
             "type": "string",
@@ -86,7 +87,8 @@
             "format": "date-time",
             "label": "Created At",
             "placeholder": "Automatically set at creation",
-            "readOnly": true
+            "groupable": true,
+            "function": "DATE_TRUNC"
         }
     },
     "relationships": {

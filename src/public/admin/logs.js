@@ -1,4 +1,4 @@
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
+import { getUserStatus } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 
 // Centralized state object
@@ -7,8 +7,20 @@ const state = {
   pageSize: 10,
   searchParams: {},
   filterParams: {},
+  groupParams: [],
   statusCodes: [],
   logLevels: ["INFO", "ERROR"],
+  columnsToDisplay: [
+    { key: "id", label: "Id" },
+    { key: "admin_user_id", label: "Admin User Id" },
+    { key: "user_id", label: "User Id" },
+    { key: "status_code", label: "Status Code" },
+    { key: "log_level", label: "Log Level" },
+    { key: "short_description", label: "Short Description" },
+    { key: "long_description", label: "Long Description" },
+    { key: "debug_info", label: "Debug Info" },
+    { key: "created_at", label: "Created At" },
+  ]
 };
 
 // DOM elements
@@ -23,6 +35,10 @@ const elements = {
   showFilterButton: document.getElementById("show-filter-btn"),
   cancelFilterButton: document.getElementById("cancel-filter-btn"),
   filterContainer: document.getElementById("filter-container"),
+  groupByCreatedAtSelect: document.getElementById("group_by_created_at"),
+  groupByStatusCodeSelect: document.getElementById("group_by_status_code"),
+  groupByLogLevelSelect: document.getElementById("group_by_log_level"),
+  logTableHeader: document.getElementById("log-table-header"),
 };
 
 // Initialize page and attach event listeners
@@ -30,8 +46,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
   attachEventListeners();
-  loadLogs(state.currentPage);
   loadStatusCodes();
+  loadLogs(state.currentPage);
 });
 
 // Attach event listeners
@@ -73,19 +89,84 @@ async function loadStatusCodes() {
   }
 }
 
-// Fetch and load logs
+// Handle log filtering and grouping
+async function handleFilterLogs(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.filterForm);
+  const groupParams = [];
+
+  // Construct filterParams
+  const filterParams = {};
+  formData.forEach((value, key) => {
+    if (value) filterParams[key] = value;
+  });
+
+  const createdAtMin = formData.get("created_at_min");
+  const createdAtMax = formData.get("created_at_max");
+  if (createdAtMin || createdAtMax) {
+    filterParams["created_at"] = {};
+    if(createdAtMin) {
+      filterParams["created_at"].min = createdAtMin;
+    }
+    if(createdAtMax) {
+      filterParams["created_at"].max = createdAtMax;
+    }
+    delete filterParams["created_at_min"];
+    delete filterParams["created_at_max"];
+  }
+
+  state.filterParams = filterParams;
+
+  // Group by Created At
+  const createdAtGrouping = elements.groupByCreatedAtSelect.value;
+  if (createdAtGrouping) {
+    groupParams.push({
+      column: "created_at",
+      granularity: createdAtGrouping,
+    });
+  }
+  
+  // Group by Status Code
+  const statusCodeGrouping = elements.groupByStatusCodeSelect.value;
+  if (statusCodeGrouping) {
+    groupParams.push({ column: "status_code" });
+  }
+
+  // Group by Log Level
+  const logLevelGrouping = elements.groupByLogLevelSelect.value;
+  if (logLevelGrouping) {
+    groupParams.push({ column: "log_level" });
+  }
+
+  state.groupParams = groupParams;
+
+  state.currentPage = 1;
+  loadLogs(state.currentPage);
+  hideFilterForm();
+}
+
+// Fetch and load logs with groupParams included
 async function loadLogs(page) {
   try {
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(state.filterParams),
+      groupParams: JSON.stringify(state.groupParams),
       pageSize: state.pageSize.toString(),
       page: page.toString(),
     });
 
-    const response = await fetch(
-      `/crud/logs/filtered?${queryParams.toString()}`
-    );
+    const response = await fetch(`/crud/logs/filtered?${queryParams.toString()}`);
     const { result, count } = await response.json();
+
+    state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'count');
+    if(state.columnsToDisplay[0].key !== 'id') {
+      state.columnsToDisplay.unshift({ key: "id", label: "Id" });
+    }
+    if (result.length > 0 && result[0].hasOwnProperty('count')) {
+      state.columnsToDisplay.push({ key: "count", label: "Count" });
+      state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'id');
+    }
+
     renderLogList(result);
     updatePagination(count, page);
   } catch (error) {
@@ -96,27 +177,50 @@ async function loadLogs(page) {
 // Render log list
 function renderLogList(logs) {
   elements.logListContainer.innerHTML = ""; // Clear previous list
+  elements.logTableHeader.innerHTML = ""; // Clear previous headers
+
+  if (logs.length === 0) {
+    elements.logListContainer.innerHTML = "<tr><td colspan='8'>No logs found.</td></tr>";
+    return;
+  }
+
+  // Generate table headers based on grouping
+  state.columnsToDisplay.forEach(({ label }) => {
+    const th = document.createElement("th");
+    th.textContent = label;
+    elements.logTableHeader.appendChild(th);
+  });
+
+  // Generate table rows
   logs.forEach((log) => {
     const logRow = document.createElement("tr");
 
-    // Create cells for log attributes
-    logRow.appendChild(createTableCell(log.id));
-    logRow.appendChild(createTableCell(log.log_level));
-    logRow.appendChild(createTableCell(log.status_code, "right"));
-    logRow.appendChild(createTableCell(log.short_description));
-    logRow.appendChild(createTableCell(log.debug_info || "N/A"));
-    logRow.appendChild(createTableCell(log.admin_user_id || "N/A"));
-    logRow.appendChild(createTableCell(log.user_id || "N/A"));
-    logRow.appendChild(createTableCell(new Date(log.created_at).toLocaleString()));
+    state.columnsToDisplay.forEach(({ key }) => {
+      let cellValue = log[key];
+
+      // Handle date formatting
+      if (key.includes("created_at") && cellValue) {
+        cellValue = new Date(cellValue).toLocaleString();
+      }
+
+      // Handle null or undefined values
+      if (cellValue === null || cellValue === undefined) {
+        cellValue = "---";
+      }
+
+      const direction = ["count"].includes(key) ? "right" : "left";
+      logRow.appendChild(createTableCell(cellValue, direction));
+    });
 
     elements.logListContainer.appendChild(logRow);
   });
 }
 
-function prettifyJSON(jsonData) {
-    const cell = createTableCell("");
-    cell.innerHTML = `<pre>${JSON.stringify(jsonData, null, 2)}</pre>`;
-    return cell;
+// Utility function to format header names
+function formatHeader(header) {
+  return header
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 // Create table cell
@@ -155,17 +259,4 @@ function createPaginationButton(text, enabled, onClick) {
   button.disabled = !enabled;
   if (enabled) button.addEventListener("click", onClick);
   return button;
-}
-
-// Handle log filtering
-async function handleFilterLogs(event) {
-  event.preventDefault();
-  const formData = new FormData(elements.filterForm);
-
-  const filterParams = Object.fromEntries(formData);
-  state.filterParams = filterParams;
-
-  state.currentPage = 1;
-  loadLogs(state.currentPage);
-  hideFilterForm();
 }
