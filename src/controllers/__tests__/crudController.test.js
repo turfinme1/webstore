@@ -1,5 +1,4 @@
 const CrudController = require('../crudController');
-const { ASSERT_USER } = require("../../serverConfigurations/assert");
 const STATUS_CODES = require('../../serverConfigurations/constants');
 
 jest.mock("../../serverConfigurations/assert");
@@ -43,7 +42,7 @@ describe('CrudController', () => {
             dbConnection: { /* Mock DB connection if needed */ },
             entitySchemaCollection: {
                 testEntity: {
-                  queryValidationSchema: 'userQueryParamsSchema',
+                  queryValidationSchema: "userQueryParamsSchema",
                 },
                 userQueryParamsSchema: {
                   searchParams: {
