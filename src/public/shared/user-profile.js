@@ -11,10 +11,7 @@ import {
 import { createNavigation } from "./navigation.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const accountInfoLink = document.getElementById("account-info-link");
   const updateProfile = document.getElementById("change-password-link");
-  const notificationsLink = document.getElementById("notifications-link");
-  const preferencesLink = document.getElementById("preferences-link");
   const contentArea = document.getElementById("content-area");
   
   let userStatus = await getUserStatus();
@@ -22,10 +19,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await attachLogoutHandler();
 
   const links = [
-    accountInfoLink,
     updateProfile,
-    notificationsLink,
-    preferencesLink,
   ];
 
   // Function to remove 'active' class from all links
@@ -33,25 +27,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     links.forEach((link) => {
       link.classList.remove("active");
     });
-  };
-
-  // Function to render account info
-  const renderAccountInfo = () => {
-    contentArea.innerHTML = `
-            <h5>Account Information</h5>
-            <p>Here you can view and update your account details.</p>
-            <form id="account-info-form">
-                <div class="mb-3">
-                    <label for="name" class="form-label">Name</label>
-                    <input type="text" class="form-control" id="name" value="John Doe">
-                </div>
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" value="john@example.com">
-                </div>
-                <button type="submit" class="btn btn-primary">Update Info</button>
-            </form>
-        `;
   };
 
   // Function to render change password form
@@ -81,79 +56,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
-  // Function to render notifications settings
-  const renderNotifications = () => {
-    contentArea.innerHTML = `
-            <h5>Notifications</h5>
-            <form id="notifications-form">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="email-notifications" checked>
-                    <label class="form-check-label" for="email-notifications">
-                        Receive email notifications
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="sms-notifications">
-                    <label class="form-check-label" for="sms-notifications">
-                        Receive SMS notifications
-                    </label>
-                </div>
-                <button type="submit" class="btn btn-primary mt-3">Save Settings</button>
-            </form>
-        `;
-  };
-
-  // Function to render preferences form
-  const renderPreferences = () => {
-    contentArea.innerHTML = `
-            <h5>Preferences</h5>
-            <form id="preferences-form">
-                <div class="mb-3">
-                    <label for="theme-select" class="form-label">Theme</label>
-                    <select id="theme-select" class="form-select">
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="language-select" class="form-label">Language</label>
-                    <select id="language-select" class="form-select">
-                        <option value="english">English</option>
-                        <option value="spanish">Spanish</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary">Save Preferences</button>
-            </form>
-        `;
-  };
-
-  // Add click event listeners for each sidebar link
-  accountInfoLink.addEventListener("click", () => {
-    removeActiveClass();
-    accountInfoLink.classList.add("active");
-    renderAccountInfo();
-  });
-
   updateProfile.addEventListener("click", () => {
     removeActiveClass();
     updateProfile.classList.add("active");
     renderChangePassword();
   });
 
-  notificationsLink.addEventListener("click", () => {
-    removeActiveClass();
-    notificationsLink.classList.add("active");
-    renderNotifications();
-  });
-
-  preferencesLink.addEventListener("click", () => {
-    removeActiveClass();
-    preferencesLink.classList.add("active");
-    renderPreferences();
-  });
-
   // Load the account info section by default
-  renderAccountInfo();
+  // renderChangePassword();
 });
 
 function populateFormFields(formId, userData) {

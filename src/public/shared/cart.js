@@ -96,6 +96,7 @@ async function handleCheckout() {
     } else {
       const data = await response.json();
       alert(`Checkout failed: ${data.error}`);
+      window.location.reload();
     }
   } catch (error) {
     console.log(error);
@@ -140,7 +141,7 @@ function renderCartItem(item) {
     </td>
     <td style="vertical-align: middle;">${item.product_code}</td>
     <td style="vertical-align: middle;">
-      <div class="input-group quantity-group" style="width: 120px;">
+      <div class="input-group quantity-group">
         <button class="btn btn-outline-secondary quantity-decrease" id="quantity-decrease-${item.id}" type="button" data-item-id="${item.id}">-</button>
         <input type="number" class="quantity-input form-control text-center" value="${item.quantity}" min="1" style="width: 50px;" readonly />
         <button class="btn btn-outline-secondary quantity-increase" id="quantity-increase-${item.id}" type="button" data-item-id="${item.id}">+</button>

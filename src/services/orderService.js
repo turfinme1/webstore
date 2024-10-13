@@ -9,6 +9,7 @@ class OrderService {
   }
   
   async createOrder(data) {
+    await this.verifyCartPricesAreUpToDate(data);
     const orderResult = await data.dbConnection.query(
       `
       INSERT INTO orders (user_id, status, total_price) 
@@ -151,6 +152,47 @@ class OrderService {
     await data.dbConnection.query("COMMIT");
 
     return { message: "Order completed successfully" };
+  }
+
+  async verifyCartPricesAreUpToDate(data) {
+    let arePricesUpToDate = true;
+
+    const cartResult = await data.dbConnection.query(
+      `
+      SELECT ci.*, p.price
+      FROM cart_items ci
+      JOIN products p ON ci.product_id = p.id
+      WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE)`,
+      [data.session.user_id]
+    );
+    const cartItems = cartResult.rows;
+
+    for (const item of cartItems) {
+      const productResult = await data.dbConnection.query(
+        `
+        SELECT price
+        FROM products
+        WHERE id = $1`,
+        [item.product_id]
+      );
+      const currentPrice = productResult.rows[0].price;
+
+      if (currentPrice !== item.unit_price) {
+        arePricesUpToDate = false;
+        await data.dbConnection.query(
+          `
+          UPDATE cart_items
+          SET unit_price = $1
+          WHERE cart_id = (SELECT id FROM carts WHERE user_id = $2 AND is_active = TRUE) AND product_id = $3`,
+          [currentPrice, data.session.user_id, item.product_id]
+        );
+      }
+    }
+    
+    if(! arePricesUpToDate) {
+      await data.dbConnection.query("COMMIT");
+      ASSERT_USER(false, "Prices in your cart have changed. Please review your cart.", STATUS_CODES.CART_PRICES_CHANGED);
+    }
   }
 }
 

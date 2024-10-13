@@ -109,4 +109,6 @@ INSERT INTO status_codes (code, message) VALUES
 (17, 'Password Reset Success'),
 (18, 'Update Success'),
 (19, 'Delete Success'),
-(20, 'Create Success');
+(20, 'Create Success'),
+(21, 'Order Complete Success'),
+(22, 'Cart Prices Changed');
