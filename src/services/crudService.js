@@ -120,15 +120,26 @@ class CrudService {
       ORDER BY ${orderByClause} 
       LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}`;
     
-    const totalCountQuery = groupBySets.length > 0
-      ? `SELECT COUNT(*) FROM (SELECT ${groupBySets.join(", ")} FROM ${schema.views} ${combinedConditions} ${groupingClause}) as count`
-      : `SELECT COUNT(*) FROM ${schema.views} ${combinedConditions}`;
-      
-    const totalCount = await data.dbConnection.query(totalCountQuery, searchValues);
+    // const totalCountQuery = groupBySets.length > 0
+    //   ? `SELECT COUNT(*) FROM (SELECT ${groupBySets.join(", ")} FROM ${schema.views} ${combinedConditions} ${groupingClause}) as count`
+    //   : `SELECT COUNT(*) FROM ${schema.views} ${combinedConditions}`;
+    
+    const aggregatedTotalQuery = groupBySets.length > 0
+      ? `
+        SELECT COUNT(*) AS total_rows, SUM(subquery.groupCount) AS total_group_count_sum 
+        FROM (
+          SELECT COUNT(*) AS groupCount
+          FROM ${schema.views} 
+          ${combinedConditions}
+          ${groupingClause}
+        ) AS subquery`
+      : `SELECT COUNT(*) AS total_rows FROM ${schema.views} ${combinedConditions}`;
+
+    const totalCount = await data.dbConnection.query(aggregatedTotalQuery, searchValues);
     
     const result = await data.dbConnection.query(query, [...searchValues, data.query.pageSize, offset]);
   
-    return { result: result.rows, count: totalCount.rows[0].count };
+    return { result: result.rows, count: totalCount.rows[0].total_rows, groupCount: totalCount.rows[0]?.total_group_count_sum };
   }
 
   async getById(data) {

@@ -8,18 +8,41 @@ const state = {
   searchParams: {},
   filterParams: {},
   groupParams: [],
-  statusCodes: [],
+  statusCodes: [
+    { id: 1, code: 1, message: "Internal Server Error" },
+    { id: 2, code: 2, message: "Unauthorized" },
+    { id: 3, code: 3, message: "Invalid Session" },
+    { id: 4, code: 4, message: "Invalid Login" },
+    { id: 5, code: 5, message: "Invalid Token" },
+    { id: 6, code: 6, message: "Invalid Input" },
+    { id: 7, code: 7, message: "Invalid Body" },
+    { id: 8, code: 8, message: "Invalid Query Params" },
+    { id: 9, code: 9, message: "Wrong Password" },
+    { id: 10, code: 10, message: "Rate Limited" },
+    { id: 11, code: 11, message: "No Changes" },
+    { id: 12, code: 12, message: "Duplicate" },
+    { id: 13, code: 13, message: "Not Found" },
+    { id: 14, code: 14, message: "Registration Success" },
+    { id: 15, code: 15, message: "Login Success" },
+    { id: 16, code: 16, message: "Profile Update Success" },
+    { id: 17, code: 17, message: "Password Reset Success" },
+    { id: 18, code: 18, message: "Update Success" },
+    { id: 19, code: 19, message: "Delete Success" },
+    { id: 20, code: 20, message: "Create Success" },
+    { id: 21, code: 21, message: "Order Complete Success" },
+    { id: 22, code: 22, message: "Cart Prices Changed" },
+  ],
   logLevels: ["INFO", "ERROR"],
   columnsToDisplay: [
     { key: "id", label: "Id" },
-    { key: "admin_user_id", label: "Admin User Id" },
-    { key: "user_id", label: "User Id" },
+    { key: "created_at", label: "Created At" },
     { key: "status_code", label: "Status Code" },
     { key: "log_level", label: "Log Level" },
     { key: "short_description", label: "Short Description" },
     { key: "long_description", label: "Long Description" },
     { key: "debug_info", label: "Debug Info" },
-    { key: "created_at", label: "Created At" },
+    { key: "user_id", label: "User Id" },
+    { key: "admin_user_id", label: "Admin User Id" },
   ]
 };
 
@@ -29,6 +52,7 @@ const elements = {
   paginationContainer: document.getElementById("pagination-container"),
   currentPageDisplay: document.getElementById("current-page-display"),
   resultCountDisplay: document.getElementById("result-count"),
+  resultCountGroupDisplay: document.getElementById("result-group-count"),
   filterForm: document.getElementById("filter-form"),
   statusCodeFilterSelect: document.getElementById("status_code_filter"),
   logLevelFilterSelect: document.getElementById("log_level_filter"),
@@ -69,9 +93,9 @@ function hideFilterForm() {
 // Fetch and load status codes for filtering
 async function loadStatusCodes() {
   try {
-    const response = await fetch("/crud/status-codes");
-    if (!response.ok) throw new Error("Failed to fetch status codes");
-    state.statusCodes = await response.json();
+    // const response = await fetch("/crud/status-codes");
+    // if (!response.ok) throw new Error("Failed to fetch status codes");
+    // state.statusCodes = await response.json();
 
     const allStatusOption = document.createElement("option");
     allStatusOption.value = "";
@@ -156,7 +180,7 @@ async function loadLogs(page) {
     });
 
     const response = await fetch(`/crud/logs/filtered?${queryParams.toString()}`);
-    const { result, count } = await response.json();
+    const { result, count, groupCount } = await response.json();
 
     state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'count');
     if(state.columnsToDisplay[0].key !== 'id') {
@@ -168,7 +192,7 @@ async function loadLogs(page) {
     }
 
     renderLogList(result);
-    updatePagination(count, page);
+    updatePagination(count, page, groupCount);
   } catch (error) {
     console.error("Error loading logs:", error);
   }
@@ -232,14 +256,21 @@ function createTableCell(text, align = "left") {
 }
 
 // Update pagination
-function updatePagination(totalLogs, page) {
+function updatePagination(totalLogs, page, groupCount) {
   const totalPages = Math.ceil(totalLogs / state.pageSize);
   elements.paginationContainer.innerHTML = "";
+  elements.resultCountGroupDisplay.textContent = "";
+
   elements.currentPageDisplay.innerHTML = `Page ${page} of ${totalPages}`;
-  elements.resultCountDisplay.textContent = `Found ${totalLogs} results`;
+  elements.resultCountDisplay.textContent = `Found ${totalLogs} records`;
+
+  if(groupCount){
+    elements.resultCountGroupDisplay.textContent = `Group total count ${groupCount}`;
+  }
 
   if (totalLogs == 0) {
     elements.currentPageDisplay.innerHTML = "";
+    elements.resultCountDisplay.textContent = "";
     return;
   }
 
