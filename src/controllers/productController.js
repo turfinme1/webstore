@@ -27,7 +27,7 @@ class ProductController {
   }
 
   async createComment(req, res) {
-    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", STATUS_CODES.UNAUTHORIZED);
+    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       params: req.params,
@@ -40,7 +40,7 @@ class ProductController {
   }
 
   async createRating(req, res) {
-    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", STATUS_CODES.UNAUTHORIZED);
+    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       params: req.params,
@@ -71,7 +71,7 @@ class ProductController {
   }
 
   async create(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", STATUS_CODES.UNAUTHORIZED);
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       req: req,
@@ -84,7 +84,7 @@ class ProductController {
   } 
 
   async update(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", STATUS_CODES.UNAUTHORIZED);
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       req: req,
@@ -97,7 +97,7 @@ class ProductController {
   }
 
   async delete(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", STATUS_CODES.UNAUTHORIZED);
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       params: req.params,

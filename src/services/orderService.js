@@ -33,7 +33,7 @@ class OrderService {
     );
     const cartItems = cartResult.rows;
 
-    ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", STATUS_CODES.INVALID_INPUT);
+    ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", { code: STATUS_CODES.INVALID_INPUT, long_description: "Cart is empty" });
 
     for (const item of cartItems) {
       const inventoryResult = await data.dbConnection.query(
@@ -43,8 +43,8 @@ class OrderService {
       WHERE product_id = $1`,
         [item.product_id]
       );
-      ASSERT_USER(inventoryResult.rows.length > 0, `Not enough stock for product ${item.name}`, STATUS_CODES.INVALID_INPUT);
-      ASSERT_USER(parseInt(item.quantity) <= parseInt(inventoryResult.rows[0].quantity), `Not enough stock for product ${item.name}`, STATUS_CODES.INVALID_INPUT);
+      ASSERT_USER(inventoryResult.rows.length > 0, `Not enough stock for product ${item.name}`, { code: STATUS_CODES.INVALID_INPUT, long_description: `Not enough stock for product ${item.name}` });
+      ASSERT_USER(parseInt(item.quantity) <= parseInt(inventoryResult.rows[0].quantity), `Not enough stock for product ${item.name}`, { code: STATUS_CODES.INVALID_INPUT, long_description: `Not enough stock for product ${item.name}` });
 
       await data.dbConnection.query(
         `
@@ -137,7 +137,7 @@ class OrderService {
     WHERE user_id = $1 AND status = 'Pending'`,
       [data.session.user_id]
     );
-    ASSERT_USER(orderResult.rows.length > 0, "Order not found", STATUS_CODES.NOT_FOUND);
+    ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
 
     // Update the order status to 'Complete'
     await data.dbConnection.query(
@@ -191,7 +191,7 @@ class OrderService {
     
     if(! arePricesUpToDate) {
       await data.dbConnection.query("COMMIT");
-      ASSERT_USER(false, "Prices in your cart have changed. Please review your cart.", STATUS_CODES.CART_PRICES_CHANGED);
+      ASSERT_USER(false, "Prices in your cart have changed. Please review your cart.", { code: STATUS_CODES.CART_PRICES_CHANGED, long_description: "Prices in your cart have changed. Please review your cart." });
     }
   }
 }

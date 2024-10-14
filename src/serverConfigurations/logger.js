@@ -8,24 +8,17 @@ class Logger {
 
   async logToDatabase(logObject) {
     try {
-      const longDescription = JSON.stringify({
-        request: this.req.method,
-        url: this.req.originalUrl,
-        headers: this.req.headers,
-        cookies: this.req.cookies,
-        session: this.req.session,
-      });
       await this.req.dbConnection.query(`
-        INSERT INTO logs (admin_user_id, user_id, status_code_id, short_description, long_description, debug_info, log_level)
-        VALUES ($1, $2, (SELECT id FROM status_codes WHERE code = $3), $4, $5, $6, $7)`,
+        INSERT INTO logs (admin_user_id, user_id, status_code, short_description, long_description, debug_info, log_level)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           this.req.admin_user_id || null,
           this.req.user_id || null,
-          logObject.error_code || 1,
-          logObject.short_description,
-          longDescription,
-          logObject.debug_info || null,
-          logObject.log_level,
+          logObject?.code || 1,
+          logObject?.short_description,
+          logObject?.long_description || null,
+          logObject?.debug_info || null,
+          logObject?.log_level || "ERROR",
         ]
       );
       await this.req.dbConnection.query("COMMIT");
@@ -36,8 +29,9 @@ class Logger {
 
   async info(infoObject) {
     const logObject = {
-      error_code: infoObject.error_code,
-      short_description: infoObject.short_description,
+      code: infoObject?.code,
+      short_description: infoObject?.short_description,
+      long_description: infoObject?.long_description,
       log_level: "INFO",
     };
     await this.logToDatabase(logObject);
@@ -45,9 +39,10 @@ class Logger {
 
   async error(errorObject) {
     const logObject = {
-      error_code: errorObject.params,
-      short_description: errorObject.message,
-      debug_info: errorObject.stack,
+      code: errorObject?.params?.code,
+      short_description: errorObject?.message,
+      long_description: errorObject?.params?.long_description,
+      debug_info: errorObject?.stack,
       log_level: "ERROR",
     };
     await this.logToDatabase(logObject);

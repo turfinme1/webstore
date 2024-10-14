@@ -10,7 +10,7 @@ class AppConfigController {
   }
 
   async updateRateLimitSettings(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", STATUS_CODES.UNAUTHORIZED);
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
     validateBody(req, req.entitySchemaCollection.appSettingsSchema);
     
     const data = {
@@ -24,7 +24,7 @@ class AppConfigController {
   }
 
   async getRateLimitSettings(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", STATUS_CODES.UNAUTHORIZED);
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
     const data = {
       dbConnection: req.dbConnection,
     };
