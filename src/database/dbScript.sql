@@ -241,11 +241,14 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.status <> OLD.status THEN
         IF OLD.status = 'Paid' AND NEW.status = 'Pending' THEN
-            RAISE EXCEPTION 'Cannot revert order status from Paid to Pending';
+            RAISE EXCEPTION 'Cannot revert order status from Paid to Pending'
+            USING ERRCODE = '80000';
         ELSIF OLD.status = 'Delivered' AND (NEW.status = 'Pending' OR NEW.status = 'Paid') THEN
-            RAISE EXCEPTION 'Cannot revert order status from Delivered to Pending or Paid';
+            RAISE EXCEPTION 'Cannot revert order status from Delivered to Pending or Paid'
+            USING ERRCODE = '80000';
         ELSIF OLD.status = 'Cancelled' THEN
-            RAISE EXCEPTION 'Cannot update a Cancelled order';
+            RAISE EXCEPTION 'Cannot update a Cancelled order'
+            USING ERRCODE = '80000';
         END IF;
     END IF;
     RETURN NEW;
