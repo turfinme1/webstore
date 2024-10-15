@@ -86,12 +86,12 @@ function requestMiddleware(handler) {
 
     } catch (error) {
       console.error(error);
-
-      await req.logger.error(error);
-
+      
       if (req.dbConnection) {
         req.dbConnection.query("ROLLBACK");
       }
+
+      await req.logger.error(error);
       
       if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });

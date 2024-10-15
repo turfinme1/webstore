@@ -52,37 +52,22 @@ CREATE TABLE admin_failed_attempts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE status_codes (
-    id BIGSERIAL PRIMARY KEY,
-    code BIGINT UNIQUE NOT NULL,
-    message TEXT NOT NULL 
-);
-
 CREATE TABLE logs (
     id BIGSERIAL PRIMARY KEY,
     admin_user_id BIGINT NULL REFERENCES admin_users(id),
     user_id BIGINT NULL REFERENCES users(id),
-    status_code_id BIGINT NOT NULL REFERENCES status_codes(id),
+    status_code TEXT NOT NULL,
     log_level TEXT NOT NULL,
     short_description TEXT NOT NULL,
-    long_description JSONB NULL,
+    long_description TEXT NULL,
     debug_info TEXT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE OR REPLACE VIEW logs_view AS
 SELECT
-    logs.id,
-    logs.admin_user_id,
-    logs.user_id,
-    sc.code AS status_code,
-    logs.log_level,
-    logs.short_description,
-    logs.long_description,
-    logs.debug_info,
-    logs.created_at
+    logs.*
 FROM logs
-LEFT JOIN status_codes sc ON logs.status_code_id = sc.id;
 
 CREATE OR REPLACE VIEW status_codes_view AS
 SELECT

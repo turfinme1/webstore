@@ -72,16 +72,18 @@ describe("Logger", () => {
     it("should call logToDatabase with info level messages", async () => {
       jest.spyOn(logger, 'logToDatabase').mockResolvedValue();
       const infoObject = {
-        error_code: 200,
-        short_description: "Info log test",
+        code: 200,
+        short_description: "Info log short description", 
+        long_description: "Info log long description",
       };
 
       await logger.info(infoObject);
 
       // Ensure logToDatabase is called with the expected log object
       expect(logger.logToDatabase).toHaveBeenCalledWith({
-        error_code: infoObject.error_code,
+        code: infoObject.code,
         short_description: infoObject.short_description,
+        long_description: infoObject.long_description,
         log_level: "INFO",
       });
     });
@@ -91,7 +93,7 @@ describe("Logger", () => {
     it("should call logToDatabase with error level messages", async () => {
       jest.spyOn(logger, 'logToDatabase').mockResolvedValue();
       const errorObject = {
-        params: 500,
+        params: { code: 404, long_description: "Error log long description" },
         message: "Error log test",
         stack: "stack trace",
       };
@@ -100,8 +102,9 @@ describe("Logger", () => {
 
       // Ensure logToDatabase is called with the expected log object
       expect(logger.logToDatabase).toHaveBeenCalledWith({
-        error_code: errorObject.params,
+        code: errorObject.params.code,
         short_description: errorObject.message,
+        long_description: errorObject.params.long_description,
         debug_info: errorObject.stack,
         log_level: "ERROR",
       });

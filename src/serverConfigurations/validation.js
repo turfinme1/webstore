@@ -3,47 +3,47 @@ const { ASSERT_USER } = require("./assert");
 const STATUS_CODES = require("./constants");
 
 function validateQueryParams(req, schema) { 
-  ASSERT_USER(schema, "Invalid query parameters", STATUS_CODES.INVALID_QUERY_PARAMS);
+  ASSERT_USER(schema, "Invalid query parameters", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
 
   let searchParams = req.query.searchParams ? JSON.parse(req.query.searchParams) : {};
-  ASSERT_USER(typeof searchParams === schema.searchParams.type, "searchParams should be an object", STATUS_CODES.INVALID_QUERY_PARAMS);
+  ASSERT_USER(typeof searchParams === schema.searchParams.type, "searchParams should be an object", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
 
   let filterParams = req.query.filterParams ? JSON.parse(req.query.filterParams) : {};
-  ASSERT_USER(typeof filterParams === schema.filterParams.type, "filterParams should be an object", STATUS_CODES.INVALID_QUERY_PARAMS);
+  ASSERT_USER(typeof filterParams === schema.filterParams.type, "filterParams should be an object", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
 
   let orderParams = req.query.orderParams ? JSON.parse(req.query.orderParams) : [];
-  ASSERT_USER(Array.isArray(orderParams), "orderParams should be an array", STATUS_CODES.INVALID_QUERY_PARAMS);
+  ASSERT_USER(Array.isArray(orderParams), "orderParams should be an array", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
 
   let groupParams = req.query.groupParams ? JSON.parse(req.query.groupParams) : [];
-  ASSERT_USER(Array.isArray(groupParams), "groupParams should be an array", STATUS_CODES.INVALID_QUERY_PARAMS);
+  ASSERT_USER(Array.isArray(groupParams), "groupParams should be an array", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
 
   Object.keys(searchParams).forEach(key => {
     const expectedType = schema.searchParams.properties[key]?.type;
-    ASSERT_USER(expectedType, `Invalid search parameter: ${key}`, STATUS_CODES.INVALID_QUERY_PARAMS);
-    ASSERT_USER(typeof searchParams[key] === expectedType, `${key} should be of type ${expectedType}`, STATUS_CODES.INVALID_QUERY_PARAMS);
+    ASSERT_USER(expectedType, `Invalid search parameter: ${key}`, { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
+    ASSERT_USER(typeof searchParams[key] === expectedType, `${key} should be of type ${expectedType}`, { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
   });
 
   Object.keys(filterParams).forEach(key => {
-    ASSERT_USER(schema.filterParams.properties[key], `Invalid filter parameter: ${key}`, STATUS_CODES.INVALID_QUERY_PARAMS);
+    ASSERT_USER(schema.filterParams.properties[key], `Invalid filter parameter: ${key}`, { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
 
     const paramValue = filterParams[key];
     if (key === "categories") {
-      ASSERT_USER(Array.isArray(paramValue), "categories should be an array", STATUS_CODES.INVALID_QUERY_PARAMS);
-      paramValue.forEach(cat => ASSERT_USER(typeof cat === "string", "Each category should be a string", STATUS_CODES.INVALID_QUERY_PARAMS));
+      ASSERT_USER(Array.isArray(paramValue), "categories should be an array", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
+      paramValue.forEach(cat => ASSERT_USER(typeof cat === "string", "Each category should be a string", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" }));
     }
 
     if (key === "price") {
-      ASSERT_USER(typeof paramValue === "object", "price should be an object", STATUS_CODES.INVALID_QUERY_PARAMS);
+      ASSERT_USER(typeof paramValue === "object", "price should be an object", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
       const { min, max } = paramValue;
       if (min) {
-        ASSERT_USER(typeof min === "number", "min should be a number", STATUS_CODES.INVALID_QUERY_PARAMS);
+        ASSERT_USER(typeof min === "number", "min should be a number", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
       }
       if (max) {
-        ASSERT_USER(typeof max === "number", "max should be a number", STATUS_CODES.INVALID_QUERY_PARAMS);
+        ASSERT_USER(typeof max === "number", "max should be a number", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
       }
 
       if (min && max) {
-        ASSERT_USER(min <= max, "min price should be less than or equal to max price", STATUS_CODES.INVALID_QUERY_PARAMS);
+        ASSERT_USER(min <= max, "min price should be less than or equal to max price", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
       }
     }
 
@@ -54,31 +54,31 @@ function validateQueryParams(req, schema) {
     if(schema.filterParams.properties[key].type === "integer"){
       if(paramValue !== "") {
         filterParams[key] = parseInt(paramValue);
-        ASSERT_USER(!isNaN(filterParams[key]), `${key} should be an integer`, STATUS_CODES.INVALID_QUERY_PARAMS);
+        ASSERT_USER(!isNaN(filterParams[key]), `${key} should be an integer`, { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
       }
     }
   });
   
   groupParams.forEach(groupParam => {
     const groupColumn = schema.groupParams.properties[groupParam.column];
-    ASSERT_USER(groupColumn, `Invalid group parameter: ${groupParam.column}`, STATUS_CODES.INVALID_QUERY_PARAMS);
+    ASSERT_USER(groupColumn, `Invalid group parameter: ${groupParam.column}`, { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
   });
 
   const validDirections = ["ASC", "DESC"];
   orderParams.forEach(([key, direction]) => {
     const schemaOrder = schema.orderParams.properties[key];
-    ASSERT_USER(schemaOrder, `Invalid order parameter: ${key}`, STATUS_CODES.INVALID_QUERY_PARAMS);
-    ASSERT_USER(validDirections.includes(direction.toUpperCase()), `Invalid order direction: ${direction}`, STATUS_CODES.INVALID_QUERY_PARAMS);
+    ASSERT_USER(schemaOrder, `Invalid order parameter: ${key}`, { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
+    ASSERT_USER(validDirections.includes(direction.toUpperCase()), `Invalid order direction: ${direction}`, { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
   });
   
   const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
-  ASSERT_USER(typeof pageSize === "number", "pageSize should be a number", STATUS_CODES.INVALID_QUERY_PARAMS);
-  ASSERT_USER(pageSize >= schema.pageSize.minimum, `pageSize should be greater than or equal to ${schema.pageSize.minimum}`, STATUS_CODES.INVALID_QUERY_PARAMS);
-  ASSERT_USER(pageSize <= schema.pageSize.maximum, `pageSize should be less than or equal to ${schema.pageSize.maximum}`, STATUS_CODES.INVALID_QUERY_PARAMS);
+  ASSERT_USER(typeof pageSize === "number", "pageSize should be a number", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
+  ASSERT_USER(pageSize >= schema.pageSize.minimum, `pageSize should be greater than or equal to ${schema.pageSize.minimum}`, { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
+  ASSERT_USER(pageSize <= schema.pageSize.maximum, `pageSize should be less than or equal to ${schema.pageSize.maximum}`, { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
 
   const page = req.query.page ? parseInt(req.query.page) : 1;
-  ASSERT_USER(typeof page === "number", "page should be a number", STATUS_CODES.INVALID_QUERY_PARAMS);
-  ASSERT_USER(page >= schema.page.minimum, `page should be greater than or equal to ${schema.page.minimum}`, STATUS_CODES.INVALID_QUERY_PARAMS);
+  ASSERT_USER(typeof page === "number", "page should be a number", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
+  ASSERT_USER(page >= schema.page.minimum, `page should be greater than or equal to ${schema.page.minimum}`, { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });
 
   req.query.searchParams = searchParams;
   req.query.filterParams = filterParams;
@@ -105,7 +105,7 @@ function validateBody(req, schema) {
       errors[key].push(error.message);
     }
   }
-  ASSERT_USER(isValid, "Invalid body data", STATUS_CODES.INVALID_BODY);
+  ASSERT_USER(isValid, "Invalid body data", { code: STATUS_CODES.INVALID_BODY, long_description: "Invalid body data" });
 }
 
 module.exports = { validateQueryParams, validateBody };
