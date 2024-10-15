@@ -118,37 +118,39 @@ describe("CrudService", () => {
       ];
 
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [{ count: "2" }] }) // Mock the count query
+        .mockResolvedValueOnce({ rows: [{ total_rows: "2", groupCount: undefined }] }) // Mock the count query
         .mockResolvedValueOnce({ rows: expectedResponse }); // Mock the result query
 
       const result = await crudService.getFilteredPaginated(req);
 
       expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT COUNT(*) FROM products_view"),
+        expect.stringContaining("SELECT COUNT(*) AS total_rows FROM products_view"),
         expect.any(Array)
       );
 
       expect(result).toEqual({
         result: expectedResponse,
         count: "2",
+        groupCount: undefined,
       });
     });
 
     it("should return empty array with count if no items match the criteria", async () => {
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [{ count: "0" }] }) // Mock the count query
+        .mockResolvedValueOnce({ rows: [{ total_rows: "0", groupCount: undefined }] }) // Mock the count query
         .mockResolvedValueOnce({ rows: [] }); // Mock the result query
 
       const result = await crudService.getFilteredPaginated(req);
 
       expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT COUNT(*) FROM products_view"),
+        expect.stringContaining("SELECT COUNT(*) AS total_rows FROM products_view"),
         expect.any(Array)
       );
 
       expect(result).toEqual({
         result: [],
         count: "0",
+        groupCount: undefined,
       });
     });
 
@@ -162,7 +164,7 @@ describe("CrudService", () => {
       ];
 
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [{ count: "2" }] }) // Mock the count query
+        .mockResolvedValueOnce({ rows: [{ total_rows: "2", groupCount: undefined }] }) // Mock the count query
         .mockResolvedValueOnce({ rows: expectedResponse }); // Mock the result query
 
       const result = await crudService.getFilteredPaginated(req);
@@ -175,6 +177,7 @@ describe("CrudService", () => {
       expect(result).toEqual({
         result: expectedResponse,
         count: "2",
+        groupCount: undefined,
       });
     });
 
@@ -187,7 +190,7 @@ describe("CrudService", () => {
       ];
 
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [{ count: "2" }] }) // Mock the count query
+        .mockResolvedValueOnce({ rows: [{ total_rows: "2", groupCount: undefined}] }) // Mock the count query
         .mockResolvedValueOnce({ rows: expectedResponse }); // Mock the result query
 
       const result = await crudService.getFilteredPaginated(req);
@@ -202,6 +205,7 @@ describe("CrudService", () => {
       expect(result).toEqual({
         result: expectedResponse,
         count: "2",
+        groupCount: undefined,
       });
     });
 
@@ -213,7 +217,7 @@ describe("CrudService", () => {
       ];
 
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [{ count: "1" }] }) // Mock the count query
+        .mockResolvedValueOnce({ rows: [{ total_rows: "1", groupCount: undefined}] }) // Mock the count query
         .mockResolvedValueOnce({ rows: expectedResponse }); // Mock the result query
 
       const result = await crudService.getFilteredPaginated(req);
@@ -226,6 +230,7 @@ describe("CrudService", () => {
       expect(result).toEqual({
         result: expectedResponse,
         count: "1",
+        groupCount: undefined,
       });
     });
 
@@ -276,7 +281,7 @@ describe("CrudService", () => {
       ];
 
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [{ count: "1" }] })
+        .mockResolvedValueOnce({ rows: [{ total_rows: "1", groupCount: undefined }] })
         .mockResolvedValueOnce({ rows: expectedResponse });
 
       const result = await crudService.getFilteredPaginated(req);
@@ -284,6 +289,7 @@ describe("CrudService", () => {
       expect(result).toEqual({
         result: expectedResponse,
         count: "1",
+        groupCount: undefined,
       });
       expect(mockDbConnection.query).toHaveBeenCalled();
     });
@@ -296,7 +302,7 @@ describe("CrudService", () => {
       ];
 
       mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [{ count: "1" }] })
+        .mockResolvedValueOnce({ rows: [{ total_rows: "1", groupCount: undefined}] })
         .mockResolvedValueOnce({ rows: expectedResponse });
 
       const result = await crudService.getFilteredPaginated(req);
@@ -304,6 +310,7 @@ describe("CrudService", () => {
       expect(result).toEqual({
         result: expectedResponse,
         count: "1",
+        groupCount: undefined,
       });
       expect(mockDbConnection.query).toHaveBeenCalled();
     });

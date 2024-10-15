@@ -106,16 +106,17 @@ describe('CrudController', () => {
       const requestObject = { body: req.body, req, params: req.params, dbConnection: req.dbConnection, entitySchemaCollection: req.entitySchemaCollection };
       const createdProduct = { id: 1, name: 'Test Product' };
 
-      crudService.create.mockResolvedValue([createdProduct]);
+      crudService.create.mockResolvedValue(createdProduct);
 
       await crudController.create(req, mockRes, mockNext);
 
       expect(crudService.create).toHaveBeenCalledWith(requestObject);
       expect(mockRes.status).toHaveBeenCalledWith(201);
-      expect(mockRes.json).toHaveBeenCalledWith([createdProduct]);
+      expect(mockRes.json).toHaveBeenCalledWith(createdProduct);
       expect(req.logger.info).toHaveBeenCalledWith({
-        error_code: STATUS_CODES.CREATE_SUCCESS,
-        short_description: 'Created testEntity'
+        code: STATUS_CODES.CREATE_SUCCESS,
+        short_description: 'Created testEntity',
+        long_description: `Created ${req.params.entity} with id ${createdProduct.id}`
       });
     });
   });
@@ -185,8 +186,9 @@ describe('CrudController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(updatedProduct);
       expect(req.logger.info).toHaveBeenCalledWith({
-        error_code: STATUS_CODES.UPDATE_SUCCESS,
-        short_description: 'Updated testEntity'
+        code: STATUS_CODES.UPDATE_SUCCESS,
+        short_description: 'Updated testEntity',
+        long_description: `Updated ${req.params.entity} with id ${updatedProduct.id}`
       });
     });
   });
@@ -205,8 +207,9 @@ describe('CrudController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(deletedProduct);
       expect(req.logger.info).toHaveBeenCalledWith({
-        error_code: STATUS_CODES.DELETE_SUCCESS,
-        short_description: 'Deleted testEntity'
+        code: STATUS_CODES.DELETE_SUCCESS,
+        short_description: 'Deleted testEntity',
+        long_description: `Deleted ${req.params.entity} with id ${deletedProduct.id}`
       });
     });
   });

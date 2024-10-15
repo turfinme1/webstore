@@ -140,7 +140,11 @@ describe("ProductController", () => {
 
       await productController.createComment(mockReq, mockRes, mockNext);
 
-      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action", STATUS_CODES);
+      expect(ASSERT_USER).toHaveBeenCalledWith(
+        mockReq.session.user_id, 
+        "You must be logged in to perform this action", 
+        { code: STATUS_CODES, long_description: "You must be logged in to perform this action" }
+      );
       expect(productService.createComment).toHaveBeenCalledWith({
         body: mockReq.body,
         params: mockReq.params,
@@ -160,7 +164,11 @@ describe("ProductController", () => {
 
       await productController.createRating(mockReq, mockRes, mockNext);
 
-      expect(ASSERT_USER).toHaveBeenCalledWith(mockReq.session.user_id, "You must be logged in to perform this action", STATUS_CODES);
+      expect(ASSERT_USER).toHaveBeenCalledWith(
+        mockReq.session.user_id, 
+        "You must be logged in to perform this action", 
+        { code: STATUS_CODES, long_description: "You must be logged in to perform this action" }
+      );
       expect(productService.createRating).toHaveBeenCalledWith({
         body: mockReq.body,
         params: mockReq.params,
