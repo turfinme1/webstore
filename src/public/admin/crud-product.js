@@ -135,7 +135,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     return { jsonData, fileData };
-}
+  }
 
   // Handle form submission
   productForm.addEventListener("submit", async (event) => {
@@ -415,14 +415,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
 
           if (response.ok) {
-            const product = await response.json();
-            
             const imageUploadResponse = await fetch(`/api/products/${productId}/images`, {
               method: "POST",
-              headers: { "Content-Type": "multipart/form-data" },
-              body: fileData,
+              body: formData,
             });
-            const uploadData = await imageUploadResponse.json();
           
             if(imageUploadResponse.ok) {
               alert("Product updated successfully!");
