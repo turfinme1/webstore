@@ -1,6 +1,6 @@
 function ASSERT(condition, message) {
   if (!condition) {
-    throw new Error(message);
+    throw new ApplicationError(message);
   }
 }
 
@@ -14,6 +14,12 @@ class UserError extends Error {
   constructor(message, params) {
     super(message);
     this.params = params;
+  }
+}
+
+class ApplicationError extends Error {
+  constructor(message) {
+    super(message);
   }
 }
 
