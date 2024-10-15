@@ -213,20 +213,14 @@ CREATE TABLE addresses (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Payment Methods Table (Normalized Payment Method)
-CREATE TABLE payment_methods (
-    id BIGSERIAL PRIMARY KEY,
-    method TEXT UNIQUE NOT NULL
-);
-
 -- Orders Table
 CREATE TABLE orders (
     id BIGSERIAL PRIMARY KEY,
     order_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
     user_id BIGINT NOT NULL REFERENCES users(id),
-    status TEXT NOT NULL CHECK (status IN ('Pending', 'Processing', 'Delivered', 'Cancelled')),
+    status TEXT NOT NULL CHECK (status IN ('Pending', 'Paid', 'Delivered', 'Cancelled')),
+    paid_amount NUMERIC(12, 2) NULL CHECK (paid_amount >= 0),
     total_price NUMERIC(12, 2) NOT NULL CHECK (total_price >= 0),
-    payment_method_id BIGINT NULL REFERENCES payment_methods(id),
     shipping_address_id BIGINT NULL REFERENCES addresses(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
@@ -242,8 +236,27 @@ CREATE TABLE order_items (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Optional: Insert Predefined Payment Methods
-INSERT INTO payment_methods(method) VALUES ('Credit Card'), ('Cash on Delivery');
+CREATE OR REPLACE FUNCTION validate_status_transition()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status <> OLD.status THEN
+        IF OLD.status = 'Paid' AND NEW.status = 'Pending' THEN
+            RAISE EXCEPTION 'Cannot revert order status from Paid to Pending';
+        ELSIF OLD.status = 'Delivered' AND (NEW.status = 'Pending' OR NEW.status = 'Paid') THEN
+            RAISE EXCEPTION 'Cannot revert order status from Delivered to Pending or Paid';
+        ELSIF OLD.status = 'Cancelled' THEN
+            RAISE EXCEPTION 'Cannot update a Cancelled order';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER validate_status_trigger
+BEFORE UPDATE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION validate_status_transition();
+
 
 CREATE OR REPLACE VIEW products_view AS
 SELECT
