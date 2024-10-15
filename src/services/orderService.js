@@ -143,7 +143,7 @@ class OrderService {
     await data.dbConnection.query(
       `
     UPDATE orders 
-    SET status = 'Processing' 
+    SET status = 'Paid', paid_amount = total_price 
     WHERE user_id = $1 AND status = 'Pending'`,
       [data.session.user_id]
     );
