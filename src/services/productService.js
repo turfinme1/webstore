@@ -13,6 +13,7 @@ class ProductService {
     this.create = this.create.bind(this);
     this.update = this.update.bind(this);
     this.delete = this.delete.bind(this);
+    this.uploadImages = this.uploadImages.bind(this);
     this.handleFileUploads = this.handleFileUploads.bind(this);
   }
 
@@ -126,7 +127,7 @@ class ProductService {
     const schema = data.entitySchemaCollection["products"];
     const keys = Object.keys(schema.properties);
 
-    const filePaths = await this.handleFileUploads(data.req);
+    // const filePaths = await this.handleFileUploads(data.req);
     const values = keys.map((key) => data.body[key]);
     const categories = JSON.parse(data.body.categories);
     const query = `INSERT INTO ${schema.name}(${keys.join(",")}) VALUES(${keys
@@ -143,21 +144,20 @@ class ProductService {
       await data.dbConnection.query(categoryQuery, [productResult.rows[0].id, ...categories]);
     }
 
-    for (const filePath of filePaths) {
-      await data.dbConnection.query(
-        `INSERT INTO images(product_id, url) VALUES($1, $2)`,
-        [productResult.rows[0].id, filePath]
-      );
-    }
+    // for (const filePath of filePaths) {
+    //   await data.dbConnection.query(
+    //     `INSERT INTO images(product_id, url) VALUES($1, $2)`,
+    //     [productResult.rows[0].id, filePath]
+    //   );
+    // }
 
     return productResult.rows[0];
   }
 
   async update(data) {
     const schema = data.entitySchemaCollection["products"];
-    const filePaths = await this.handleFileUploads(data.req);
-    const categories = JSON.parse(data.body.categories);
-    const imagesToDelete = JSON.parse(data.body.imagesToDelete);
+    // const filePaths = await this.handleFileUploads(data.req);
+    // const imagesToDelete = JSON.parse(data.body.imagesToDelete);
 
     const keys = Object.keys(schema.properties);
     const values = keys.map((key) => data.body[key]);
@@ -168,38 +168,38 @@ class ProductService {
 
     const productResult = await data.dbConnection.query(query, [...values, data.params.id]);
     
-    for (const image of imagesToDelete) {
-      const imageName = image.split('/').pop().split('.')[0];
-      const imagePath = path.join(__dirname, '..', '..', '..', 'images', `${imageName}.${image.split('.').pop()}`);
-      await fs.promises.unlink(imagePath);
-      await data.dbConnection.query(
-        `DELETE FROM images WHERE url = $1`,
-        [image]
-      );
-    }
+    // for (const image of imagesToDelete) {
+    //   const imageName = image.split('/').pop().split('.')[0];
+    //   const imagePath = path.join(__dirname, '..', '..', '..', 'images', `${imageName}.${image.split('.').pop()}`);
+    //   await fs.promises.unlink(imagePath);
+    //   await data.dbConnection.query(
+    //     `DELETE FROM images WHERE url = $1`,
+    //     [image]
+    //   );
+    // }
 
-    if (filePaths.length > 0) {
-      const imageValues = filePaths
-        .map((filePath, index) => `($1, $${index + 2})`)
-        .join(",");
-      await data.dbConnection.query(`
-        INSERT INTO images(product_id, url) VALUES ${imageValues}`, 
-        [productResult.rows[0].id, ...filePaths]
-      );
-    }
+    // if (filePaths.length > 0) {
+    //   const imageValues = filePaths
+    //     .map((filePath, index) => `($1, $${index + 2})`)
+    //     .join(",");
+    //   await data.dbConnection.query(`
+    //     INSERT INTO images(product_id, url) VALUES ${imageValues}`, 
+    //     [productResult.rows[0].id, ...filePaths]
+    //   );
+    // }
 
     await data.dbConnection.query(`
       DELETE FROM products_categories WHERE product_id = $1`,
       [productResult.rows[0].id]
     );
 
-    if (categories.length > 0) {
-      const categoryValues = categories
+    if (data.body.categories.length > 0) {
+      const categoryValues = data.body.categories
         .map((category, index) => `($1, $${index + 2})`)
         .join(",");
       await data.dbConnection.query(`
         INSERT INTO products_categories(product_id, category_id) VALUES ${categoryValues}`,
-        [productResult.rows[0].id, ...categories]
+        [productResult.rows[0].id, ...data.body.categories]
       );
     }
 
@@ -223,6 +223,34 @@ class ProductService {
     );
 
     return result.rows[0];
+  }
+
+  async uploadImages(req) {
+    const filePaths = await this.handleFileUploads(req);
+    const product_id = req.params.id;
+    const imagesToDelete = JSON.parse(req.body.imagesToDelete);
+
+    if (filePaths.length > 0) {
+      const imageValues = filePaths
+        .map((filePath, index) => `($1, $${index + 2})`)
+        .join(",");
+      await req.dbConnection.query(`
+        INSERT INTO images(product_id, url) VALUES ${imageValues}`, 
+        [product_id, ...filePaths]
+      );
+    }
+
+    for (const image of imagesToDelete) {
+      const imageName = image.split('/').pop().split('.')[0];
+      const imagePath = path.join(__dirname, '..', '..', '..', 'images', `${imageName}.${image.split('.').pop()}`);
+      await fs.promises.unlink(imagePath);
+      await data.dbConnection.query(
+        `DELETE FROM images WHERE url = $1`,
+        [image]
+      );
+    }
+
+    return filePaths;
   }
 
   async handleFileUploads(req) {

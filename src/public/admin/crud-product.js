@@ -117,6 +117,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function separateFormData(formData) {
+    const jsonData = {};
+    jsonData["categories"] = [];
+    const fileData = new FormData();
+
+    for (const [key, value] of formData.entries()) {
+        if (value instanceof File) {
+            fileData.append(key, value);
+        } else {
+            if(key === "categories") {
+                jsonData[key].push(value);
+            } else {
+              jsonData[key] = value;
+            }
+        }
+    }
+
+    return { jsonData, fileData };
+}
+
   // Handle form submission
   productForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -374,10 +394,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         event.preventDefault();
 
         const formData = new FormData(productUpdateForm);
-        const categories = Array.from(
-          productUpdateCategorySelect.selectedOptions
-        ).map((option) => option.value);
-        formData.set("categories", JSON.stringify(categories)); // Add selected categories to the form data
 
         // Handle image deletions
         const imagesToDelete = [
@@ -385,23 +401,41 @@ document.addEventListener("DOMContentLoaded", async () => {
         ].map((img) => img.dataset.imageUrl);
         formData.set("imagesToDelete", JSON.stringify(imagesToDelete));
 
+        const { jsonData, fileData } = separateFormData(formData);
+        const categories = Array.from(
+          productUpdateCategorySelect.selectedOptions
+        ).map((option) => option.value);
+        formData.set("categories", JSON.stringify(categories)); // Add selected categories to the form data
+       
         try {
           const response = await fetch(`/api/products/${productId}`, {
             method: "PUT",
-            body: formData,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(jsonData),
           });
 
           if (response.ok) {
-            alert("Product updated successfully!");
-            productUpdateForm.reset();
-            window.location.reload();
-            // loadProducts(currentPage);
-            formUpdateContainer.style.display = "none";
-          } else {
-            const error = await response.json();
-            console.error("Error:", error);
-            alert(`Failed to update product: ${error.error}`);
-          }
+            const product = await response.json();
+            
+            const imageUploadResponse = await fetch(`/api/products/${productId}/images`, {
+              method: "POST",
+              headers: { "Content-Type": "multipart/form-data" },
+              body: fileData,
+            });
+            const uploadData = await imageUploadResponse.json();
+          
+            if(imageUploadResponse.ok) {
+              alert("Product updated successfully!");
+              productUpdateForm.reset();
+              window.location.reload();
+              // loadProducts(currentPage);
+              formUpdateContainer.style.display = "none";
+            } else {
+              const error = await imageUploadResponse.json();
+              console.error("Error:", error);
+              alert(`Failed to update product: ${error.error}`);
+            }
+          } 
         } catch (error) {
           console.error("Error submitting the form:", error);
           alert("Failed to update product.");

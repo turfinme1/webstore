@@ -48,6 +48,7 @@ const routeTable = {
     "/auth/reset-password": authController.resetPassword,
     "/api/products/:id/comments": productController.createComment,
     "/api/products/:id/ratings": productController.createRating,
+    "/api/products/:id/images": productController.uploadImages,
   },
   put: {
     "/crud/:entity/:id": controller.update,
@@ -84,11 +85,12 @@ function requestMiddleware(handler) {
 
     } catch (error) {
       console.error(error);
-      await req.logger.error(error);
-
+      
       if (req.dbConnection) {
         req.dbConnection.query("ROLLBACK");
       }
+
+      await req.logger.error(error);
       
       if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });
