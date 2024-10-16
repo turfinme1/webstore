@@ -35,10 +35,6 @@ CREATE TABLE file_uploads (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE uploaded_files (
-    product_id BIGINT REFERENCES products(id),-- Reference to related product (if the file is tied to a product)
-);
-
 CREATE TABLE app_settings (
     id BIGSERIAL PRIMARY KEY,
     request_limit BIGINT NOT NULL DEFAULT 10,

@@ -127,6 +127,7 @@ class ProductService {
   async create(data) {
     const schema = data.entitySchemaCollection["products"];
     const keys = Object.keys(schema.properties);
+    const filePaths = await this.handleFileUploads(data.req);
     const values = keys.map((key) => data.body[key]);
     const categories = JSON.parse(data.body.categories);
     const query = `INSERT INTO ${schema.name}(${keys.join(",")}) VALUES(${keys
@@ -141,6 +142,13 @@ class ProductService {
         .join(",");
       const categoryQuery = `INSERT INTO products_categories(product_id, category_id) VALUES ${categoryValues}`;
       await data.dbConnection.query(categoryQuery, [productResult.rows[0].id, ...categories]);
+    }
+
+    for (const filePath of filePaths) {
+      await data.dbConnection.query(
+        `INSERT INTO images(product_id, url) VALUES($1, $2)`,
+        [productResult.rows[0].id, filePath]
+      );
     }
 
     return productResult.rows[0];
@@ -196,7 +204,7 @@ class ProductService {
 
   async uploadImages(req) {
     const filePaths = await this.handleFileUploads(req);
-    const product_id = req.params.id;
+    console.log(filePaths);
     const imagesToDelete = JSON.parse(req.body.imagesToDelete);
 
     if (filePaths.length > 0) {
@@ -205,7 +213,7 @@ class ProductService {
         .join(",");
       await req.dbConnection.query(`
         INSERT INTO images(product_id, url) VALUES ${imageValues}`, 
-        [product_id, ...filePaths]
+        [req.params.id, ...filePaths]
       );
     }
 
@@ -274,9 +282,6 @@ class ProductService {
           });
 
           file.pipe(writeStream);
-
-          writeStream.on('finish', () => {
-          });
 
           writeStream.on('error', (err) => {
             reject(err);
