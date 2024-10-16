@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const busboy = require('busboy');
 const crypto = require('crypto');
+const { UserError } = require('../serverConfigurations/assert');
 
 class ProductService {
   constructor() {
@@ -13,6 +14,7 @@ class ProductService {
     this.create = this.create.bind(this);
     this.update = this.update.bind(this);
     this.delete = this.delete.bind(this);
+    this.uploadImages = this.uploadImages.bind(this);
     this.handleFileUploads = this.handleFileUploads.bind(this);
   }
 
@@ -125,7 +127,6 @@ class ProductService {
   async create(data) {
     const schema = data.entitySchemaCollection["products"];
     const keys = Object.keys(schema.properties);
-
     const filePaths = await this.handleFileUploads(data.req);
     const values = keys.map((key) => data.body[key]);
     const categories = JSON.parse(data.body.categories);
@@ -155,10 +156,6 @@ class ProductService {
 
   async update(data) {
     const schema = data.entitySchemaCollection["products"];
-    const filePaths = await this.handleFileUploads(data.req);
-    const categories = JSON.parse(data.body.categories);
-    const imagesToDelete = JSON.parse(data.body.imagesToDelete);
-
     const keys = Object.keys(schema.properties);
     const values = keys.map((key) => data.body[key]);
     let query = `UPDATE ${schema.name} SET ${keys
@@ -167,39 +164,19 @@ class ProductService {
     query += ` WHERE id = $${keys.length + 1} RETURNING *`;
 
     const productResult = await data.dbConnection.query(query, [...values, data.params.id]);
-    
-    for (const image of imagesToDelete) {
-      const imageName = image.split('/').pop().split('.')[0];
-      const imagePath = path.join(__dirname, '..', '..', '..', 'images', `${imageName}.${image.split('.').pop()}`);
-      await fs.promises.unlink(imagePath);
-      await data.dbConnection.query(
-        `DELETE FROM images WHERE url = $1`,
-        [image]
-      );
-    }
-
-    if (filePaths.length > 0) {
-      const imageValues = filePaths
-        .map((filePath, index) => `($1, $${index + 2})`)
-        .join(",");
-      await data.dbConnection.query(`
-        INSERT INTO images(product_id, url) VALUES ${imageValues}`, 
-        [productResult.rows[0].id, ...filePaths]
-      );
-    }
 
     await data.dbConnection.query(`
       DELETE FROM products_categories WHERE product_id = $1`,
       [productResult.rows[0].id]
     );
 
-    if (categories.length > 0) {
-      const categoryValues = categories
+    if (data.body.categories.length > 0) {
+      const categoryValues = data.body.categories
         .map((category, index) => `($1, $${index + 2})`)
         .join(",");
       await data.dbConnection.query(`
         INSERT INTO products_categories(product_id, category_id) VALUES ${categoryValues}`,
-        [productResult.rows[0].id, ...categories]
+        [productResult.rows[0].id, ...data.body.categories]
       );
     }
 
@@ -225,51 +202,121 @@ class ProductService {
     return result.rows[0];
   }
 
+  async uploadImages(req) {
+    const filePaths = await this.handleFileUploads(req);
+    console.log(filePaths);
+    const imagesToDelete = JSON.parse(req.body.imagesToDelete);
+
+    if (filePaths.length > 0) {
+      const imageValues = filePaths
+        .map((filePath, index) => `($1, $${index + 2})`)
+        .join(",");
+      await req.dbConnection.query(`
+        INSERT INTO images(product_id, url) VALUES ${imageValues}`, 
+        [req.params.id, ...filePaths]
+      );
+    }
+
+    for (const image of imagesToDelete) {
+      const imageName = image.split('/').pop().split('.')[0];
+      const imagePath = path.join(__dirname, '..', '..', '..', 'images', `${imageName}.${image.split('.').pop()}`);
+      await fs.promises.unlink(imagePath);
+      await req.dbConnection.query(
+        `DELETE FROM images WHERE url = $1`,
+        [image]
+      );
+    }
+
+    return filePaths;
+  }
+
   async handleFileUploads(req) {
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-    const filePaths = [];
+    let filePaths = [];
+    let fileUploads = [];
 
     return new Promise((resolve, reject) => {
       const bb = busboy({ headers: req.headers });
-
+     
       bb.on('field', (fieldname, value) => {
         req.body[fieldname] = value;
       });
 
-      bb.on('file', (fieldname, file, filename, encoding, mimetype) => {
-        console.log(filename);
-        if(! filename.filename) {
-          file.resume();
-          return;
+      bb.on('file', async (fieldname, file, filename, encoding, mimetype) => {
+        try {
+          console.log(filename);
+          if(! filename.filename) {
+            file.resume();
+            return;
+          }
+
+          const fileExtension = filename.mimeType.split('/')[1];
+          const imageName = crypto.randomBytes(20).toString('hex');
+          const saveTo = path.join(__dirname, '..', '..','..', "images", `${imageName}.${fileExtension}`);
+          const filePath  = `/images/${imageName}.${fileExtension}`;
+          filePaths.push(filePath);
+          const writeStream = fs.createWriteStream(saveTo);
+
+          const fileUploadResult = await req.dbConnection.query(`
+            INSERT INTO file_uploads (file_name, file_path, status) 
+            VALUES ($1, $2, 'in_progress') 
+            RETURNING *`, 
+            [imageName, saveTo]
+          );
+          await req.dbConnection.query(`COMMIT`);
+          fileUploads.push(fileUploadResult.rows[0].id);
+
+          let fileSize = 0;
+          file.on("data", async (chunk) => {
+            try {
+              fileSize += chunk.length;
+              if (fileSize > MAX_FILE_SIZE) {
+                file.unpipe(writeStream); // Stop writing to the file
+                writeStream.end(); // End the stream
+                await fs.promises.unlink(saveTo);
+                return reject(new UserError(`${filename.filename} exceeds the limit of 5 MB`, 7));
+              }
+            } catch (error) {
+              reject(error);
+            }
+          });
+
+          file.pipe(writeStream);
+
+          writeStream.on('error', (err) => {
+            reject(err);
+          });
+        } catch (error) {
+          reject(error);
         }
-
-        const imageName = crypto.randomBytes(20).toString('hex');
-        const saveTo = path.join(__dirname, '..', '..','..', "images", `${imageName}.${filename.mimeType.split('/')[1]}`);
-        filePaths.push('/images/' + imageName + '.' + filename.mimeType.split('/')[1]);
-        const writeStream = fs.createWriteStream(saveTo);
-
-        let fileSize = 0;
-        file.on('data', async (chunk) => {
-        fileSize += chunk.length;
-        if (fileSize > MAX_FILE_SIZE) {
-          file.unpipe(writeStream); // Stop writing to the file
-          writeStream.end(); // End the stream
-          await fs.promises.unlink(saveTo);
-          return reject(new UserError(`${filename.filename} exceeds the limit of 5 MB`,  7,));
-        }});
-
-        file.pipe(writeStream);
-
-        writeStream.on('finish', () => {
-        });
-
-        writeStream.on('error', (err) => {
-          reject(err);
-        });
       });
 
-      bb.on('finish', () => {
-        resolve(filePaths);
+      bb.on('finish', async () => {
+        try {
+          await req.dbConnection.query(`
+            UPDATE file_uploads
+            SET status = 'completed'
+            WHERE id = ANY($1)`,
+            [fileUploads]
+          );
+          resolve(filePaths);
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      bb.on('error', async (err) => {
+        try {
+          await req.dbConnection.query(`
+            UPDATE file_uploads
+            SET status = 'failed'
+            WHERE id = ANY($1)`,
+            [fileUploads]
+          );
+          reject(err);
+        } catch (error) {
+          reject(error);
+        }
       });
 
       req.pipe(bb);

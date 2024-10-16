@@ -1,6 +1,8 @@
+const cron = require("node-cron");
 const pool = require("../database/dbConfig");
 const { UserError } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
+const { clearOldFileUploads } = require("./cronJobs");
 
 const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
@@ -48,6 +50,7 @@ const routeTable = {
     "/auth/reset-password": authController.resetPassword,
     "/api/products/:id/comments": productController.createComment,
     "/api/products/:id/ratings": productController.createRating,
+    "/api/products/:id/images": productController.uploadImages,
   },
   put: {
     "/crud/:entity/:id": controller.update,
@@ -84,11 +87,12 @@ function requestMiddleware(handler) {
 
     } catch (error) {
       console.error(error);
-      await req.logger.error(error);
-
+      
       if (req.dbConnection) {
         req.dbConnection.query("ROLLBACK");
       }
+
+      await req.logger.error(error);
       
       if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });
@@ -131,5 +135,9 @@ async function sessionMiddleware(req, res) {
 
   req.session = anonymousSession;
 }
+
+cron.schedule('0 0 * * *', async () => {
+  await clearOldFileUploads(pool);
+});
 
 module.exports = { routeTable, sessionMiddleware, registerRoutes };

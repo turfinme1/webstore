@@ -27,6 +27,14 @@ DROP TABLE IF EXISTS inventories;
 DROP TABLE IF EXISTS cart_items;
 DROP TABLE IF EXISTS carts;
 
+CREATE TABLE file_uploads (
+    id BIGSERIAL PRIMARY KEY,
+    file_name TEXT NOT NULL, 
+    file_path TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('in_progress', 'completed', 'failed')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE app_settings (
     id BIGSERIAL PRIMARY KEY,
     request_limit BIGINT NOT NULL DEFAULT 10,
