@@ -244,6 +244,42 @@ CREATE TABLE order_items (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE VIEW orders_view AS
+SELECT
+    o.id,
+    o.order_hash,
+    o.user_id,
+    o.status,
+    o.total_price,
+    o.paid_amount,
+    o.is_active,
+    o.created_at AS order_created_at,
+    json_build_object(
+        'id', a.id,
+        'street', a.street,
+        'city', a.city,
+        'country_id', a.country_id,
+        'country_name', c.country_name
+    ) AS shipping_address,
+    (
+        SELECT json_agg(
+            json_build_object(
+                'product_id', oi.product_id,
+                'name', p.name,
+                'quantity', oi.quantity,
+                'unit_price', oi.unit_price,
+                'total_price', oi.total_price
+            )
+        )
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = o.id
+    ) AS order_items
+FROM
+    orders o
+LEFT JOIN addresses a ON o.shipping_address_id = a.id
+LEFT JOIN iso_country_codes c ON a.country_id = c.id;
+
 CREATE OR REPLACE FUNCTION validate_status_transition()
 RETURNS TRIGGER AS $$
 BEGIN
