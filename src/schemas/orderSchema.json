@@ -1,0 +1,133 @@
+{
+    "type": "object",
+    "name": "orders",
+    "routeName": "orders",
+    "views": "orders_view",
+    "queryValidationSchema": "orderQueryParamsSchema",
+    "properties": {
+        "order_hash": {
+            "type": "string",
+            "format": "uuid",
+            "label": "Order Hash",
+            "readOnly": true,
+            "placeholder": "Automatically generated"
+        },
+        "user_id": {
+            "type": "number",
+            "label": "User ID",
+            "minimum": 1,
+            "placeholder": "Enter User ID",
+            "errorMessage": {
+                "minimum": "User ID must be a valid positive number."
+            }
+        },
+        "status": {
+            "type": "string",
+            "enum": [
+                "Pending",
+                "Paid",
+                "Delivered",
+                "Cancelled"
+            ],
+            "label": "Status",
+            "placeholder": "Select Order Status",
+            "errorMessage": {
+                "enum": "Status must be one of 'Pending', 'Paid', 'Delivered', or 'Cancelled'."
+            }
+        },
+        "total_price": {
+            "type": "number",
+            "minimum": 0,
+            "label": "Total Price",
+            "placeholder": "Enter Total Price",
+            "errorMessage": {
+                "minimum": "Total price must be a non-negative number."
+            }
+        },
+        "paid_amount": {
+            "type": "number",
+            "minimum": 0,
+            "label": "Paid Amount",
+            "placeholder": "Enter Paid Amount",
+            "errorMessage": {
+                "minimum": "Paid amount must be a non-negative number."
+            }
+        },
+        "shipping_address_id": {
+            "type": "number",
+            "label": "Shipping Address ID",
+            "minimum": 1,
+            "placeholder": "Enter Shipping Address ID",
+            "errorMessage": {
+                "minimum": "Shipping Address ID must be a valid positive number."
+            }
+        },
+        "is_active": {
+            "type": "boolean",
+            "label": "Active Order",
+            "placeholder": "Is the order active?",
+            "default": true
+        }
+    },
+    "displayProperties": {
+        "order_hash": {
+            "label": "Order Hash",
+            "placeholder": "Order Hash",
+            "searchable": true
+        },
+        "user_id": {
+            "label": "User ID",
+            "placeholder": "User ID",
+            "searchable": true
+        },
+        "status": {
+            "label": "Status",
+            "placeholder": "Order Status"
+        },
+        "total_price": {
+            "label": "Total Price",
+            "placeholder": "Total Price"
+        },
+        "paid_amount": {
+            "label": "Paid Amount",
+            "placeholder": "Paid Amount"
+        },
+        "shipping_address_id": {
+            "label": "Shipping Address ID",
+            "placeholder": "Shipping Address"
+        },
+        "is_active": {
+            "label": "Is Active",
+            "placeholder": "Active Order"
+        }
+    },
+    "relationships": {
+        "order_items": {
+            "table": "order_items",
+            "foreign_key": "order_id",
+            "related_key": "product_id",
+            "related_table": "products"
+        },
+        "shipping_address": {
+            "table": "addresses",
+            "foreign_key": "shipping_address_id",
+            "related_key": "id"
+        }
+    },
+    "required": [
+        "user_id",
+        "status",
+        "total_price",
+        "shipping_address_id"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "user_id": "User ID is required.",
+            "status": "Status is required.",
+            "total_price": "Total Price is required.",
+            "shipping_address_id": "Shipping Address ID is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

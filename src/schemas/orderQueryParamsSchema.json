@@ -1,0 +1,101 @@
+{
+    "name": "orderQueryParamsSchema",
+    "routeName": "ordersQueryParams",
+    "searchParams": {
+        "type": "object",
+        "properties": {
+            "keyword": {
+                "type": "string"
+            }
+        }
+    },
+    "filterParams": {
+        "type": "object",
+        "properties": {
+            "user_id": {
+                "type": "integer"
+            },
+            "status": {
+                "type": "string",
+                "enum": [
+                    "pending",
+                    "processing",
+                    "shipped",
+                    "delivered",
+                    "canceled"
+                ]
+            },
+            "created_at": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "max": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "total_amount": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Filter by minimum order total amount"
+                    },
+                    "max": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Filter by maximum order total amount"
+                    }
+                }
+            },
+            "customer_id": {
+                "type": "integer",
+                "description": "Filter by specific customer ID"
+            }
+        }
+    },
+    "orderParams": {
+        "type": "array",
+        "properties": {
+            "created_at": {
+                "type": "string",
+                "format": "date-time"
+            },
+            "total_amount": {
+                "type": "number"
+            },
+            "status": {
+                "type": "string"
+            }
+        }
+    },
+    "groupParams": {
+        "type": "array",
+        "properties": {
+            "user_id": {
+                "type": "integer"
+            },
+            "status": {
+                "type": "string"
+            },
+            "created_at": {
+                "type": "string",
+                "format": "date-time"
+            }
+        }
+    },
+    "pageSize": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 100
+    },
+    "page": {
+        "type": "number",
+        "minimum": 1
+    }
+}
