@@ -3,6 +3,7 @@ DROP VIEW IF EXISTS country_codes_view;
 DROP VIEW IF EXISTS categories_view;
 DROP VIEW IF EXISTS comments_view;
 DROP VIEW IF EXISTS product_ratings_view;
+DROP VIEW IF EXISTS orders_view;
 
 DROP TABLE IF EXISTS products_categories;
 DROP TABLE IF EXISTS categories;
