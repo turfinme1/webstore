@@ -30,6 +30,7 @@ const elements = {
   showFormButton: document.getElementById("show-form-btn"),
   userSelect: document.getElementById("user_id"),
   countrySelect: document.getElementById("country_id"),
+  countryUpdateSelect: document.getElementById("country_id_update"),
   addProductBtn: document.getElementById("add-product-btn"),
   productsListContainer: document.getElementById("products-list"),
   productSelect: document.getElementById("product-select"),
@@ -84,6 +85,44 @@ $(document).ready(function () {
 
 $(document).ready(function () {
   $("#user_id").select2({
+    placeholder: "Select an user...",
+    minimumInputLength: 3, // Start searching after typing at least 3 characters
+    language: {
+      inputTooShort: function () {
+        return "Please enter at least 3 characters to search"; // Custom message
+      },
+    },
+    ajax: {
+      url: "/crud/users/filtered", // Endpoint to fetch filtered product list
+      dataType: "json",
+      delay: 250,
+      data: function (params) {
+        const filterParams = JSON.stringify({ email: params.term });
+        return {
+          filterParams: filterParams, // The search term encapsulated in filterParams
+          pageSize: 10, // The number of results per page
+          page: params.page || 1, // The current page of results
+        };
+      },
+      processResults: function (data, params) {
+        params.page = params.page || 1;
+        return {
+          results: data.result.map(function (user) {
+            return { id: user.id, text: user.email };
+          }),
+          pagination: {
+            more: data.count > params.page * 10,
+          },
+        };
+      },
+      cache: true,
+    },
+    theme: "bootstrap-5",
+  });
+});
+
+$(document).ready(function () {
+  $("#user_id_update").select2({
     placeholder: "Select an user...",
     minimumInputLength: 3, // Start searching after typing at least 3 characters
     language: {
@@ -324,7 +363,7 @@ async function loadCountryCodes() {
       countryOption.value = country.id;
       countryOption.innerText = `${country.country_name}`;
       elements.countrySelect.appendChild(countryOption);
-      //   elements.countryUpdateSelect.appendChild(countryOption.cloneNode(true));
+      elements.countryUpdateSelect.appendChild(countryOption.cloneNode(true));
       //   elements.countryFilterSelect.appendChild(countryOption.cloneNode(true));
     });
   } catch (error) {
@@ -476,12 +515,13 @@ async function displayUpdateForm(orderId) {
 
 function populateUpdateForm(order) {
   // Populate the form with the order data
-  elements.updateForm.user_id_update.value = order.user_id;
+  // elements.updateForm.user_id_update.value = order.user_id;
+  $("#user_id_update").val(order.user_id).trigger("change");
   elements.updateForm.order_status.value = order.status;
   // elements.updateForm.total_price.value = order.total_price;
   // elements.updateForm.paid_amount.value = order.paid_amount;
   elements.updateForm.is_active.value = order.is_active;
   elements.updateForm.street.value = order.shipping_address.street;
   elements.updateForm.city.value = order.shipping_address.city;
-  elements.updateForm.country_id.value = order.shipping_address.country_id;
+  elements.updateForm.country_id_update.value = order.shipping_address.country_id;
 }
