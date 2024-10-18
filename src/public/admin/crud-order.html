@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Management</title>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <link
+        href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css"
+        rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
 
 </head>
@@ -53,9 +55,7 @@
                     <!-- User Selection -->
                     <div class="mb-3">
                         <label for="user_id" class="form-label">User</label>
-                        <select id="user_id" name="user_id" class="form-select">
-                            <!-- Dynamically populate this list with users -->
-                            <option value="">Select User</option>
+                        <select id="user_id" class="form-select">
                         </select>
                     </div>
 
@@ -71,42 +71,110 @@
                     </div>
 
                     <!-- Shipping Information -->
-                    <h6 class="card-title">Shipping Information</h5>
-                        <div class="mb-3">
-                            <label for="country_id" class="form-label">Country</label>
-                            <select class="form-control" id="country_id" name="country_id">
+                    <h6 class="card-title">Shipping Information</h6>
+                    <div class="mb-3">
+                        <label for="country_id" class="form-label">Country</label>
+                        <select class="form-control" id="country_id" name="country_id">
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="street">Street</label>
+                        <input type="text" id="street" name="street" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="city">City</label>
+                        <input type="text" id="city" name="city" class="form-control" required />
+                    </div>
+
+                    <!-- Product Selection -->
+                    <div id="product-selection-container" class="mb-3">
+                        <label for="product-select" class="form-label">Products</label>
+                        <div class="d-flex mb-3">
+                            <select id="product-select" class="form-select">
+                                <option value="">Select Product</option>
                             </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="street">Street</label>
-                            <input type="text" id="street" class="form-control" required />
-                        </div>
-                        <div class="mb-3">
-                            <label for="city">City</label>
-                            <input type="text" id="city" class="form-control" required />
+                            <button type="button" id="add-product-btn" class="btn btn-secondary"
+                                style="width: 25%;">Add</button>
                         </div>
 
-                        <!-- Product Selection -->
-                        <div id="product-selection-container" class="mb-3">
-                            <label for="product-select" class="form-label">Products</label>
-                            <div id="products-list">
-                                <div class="d-flex mb-2">
-                                    <select id="product-select" class="form-select me-2 product-select"
-                                        style="width: 100%; ">
-                                        <option value="">Select Product</option>
-                                    </select>
-                                    <input type="number" class="form-control product-quantity" placeholder="Quantity"
-                                        min="1">
-                                    <button type="button" class="btn btn-danger ms-2 remove-product-btn">Remove</button>
-                                </div>
-                            </div>
-                            <button type="button" id="add-product-btn" class="btn btn-secondary mt-2">Add
-                                Product</button>
+                        <div id="products-list" class=" mb-3">
+                            <!-- Dynamically populated list of products -->
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary">Create Order</button>
+                    <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Update Order Form -->
+        <div id="form-update-container" class="card mt-4" style="display: none;">
+            <div class="card-body">
+                <h5 class="card-title">Create Order</h5>
+                <form id="update-order-form">
+                    <!-- User Selection -->
+                    <div class="mb-3">
+                        <label for="user_id" class="form-label">User</label>
+                        <select id="user_id_update" class="form-select">
+                        </select>
+                    </div>
+
+                    <!-- Order Status -->
+                    <div class="mb-3">
+                        <label for="order_status" class="form-label">Order Status</label>
+                        <select id="order_status_update" name="order_status" class="form-select">
+                            <option value="Pending">Pending</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="is_active" class="form-label">Is Order Active</label>
+                        <select id="is_active" name="is_active" class="form-select">
+                            <option value="1">Yes</option>
+                            <option value="0">No</option>
+                        </select>
+                    </div>
+
+                    <!-- Shipping Information -->
+                    <h6 class="card-title">Shipping Information</h6>
+                    <div class="mb-3">
+                        <label for="country_id" class="form-label">Country</label>
+                        <select class="form-control" id="country_id_update" name="country_id">
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="street">Street</label>
+                        <input type="text" id="street" name="street" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="city">City</label>
+                        <input type="text" id="city" name="city" class="form-control" required />
+                    </div>
+
+                    <!-- Product Selection -->
+                    <div id="product-selection-container" class="mb-3">
+                        <label for="product-select" class="form-label">Products</label>
+                        <div class="d-flex mb-3">
+                            <select id="product-select" class="form-select">
+                                <option value="">Select Product</option>
+                            </select>
+                            <button type="button" id="add-product-btn" class="btn btn-secondary"
+                                style="width: 25%;">Add</button>
                         </div>
 
-                        <!-- Submit Button -->
-                        <button type="submit" class="btn btn-primary">Create Order</button>
-                        <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                        <div id="products-list" class=" mb-3">
+                            <!-- Dynamically populated list of products -->
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary">Create Order</button>
+                    <button type="button" class="btn btn-secondary" id="cancel-update-btn">Cancel</button>
                 </form>
             </div>
         </div>
@@ -146,43 +214,6 @@
     <script type="module" src="/crud-order.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            $('#product-select').select2({
-                placeholder: 'Search for a product...',
-                minimumInputLength: 3, // Start searching after typing at least 3 characters
-                ajax: {
-                    url: '/crud/products/filtered', // Endpoint to fetch filtered product list
-                    dataType: 'json',
-                    delay: 250,
-                    data: function (params) {
-                        const filterParams = JSON.stringify({ name: params.term });
-                        return {
-                            filterParams: filterParams, // The search term encapsulated in filterParams
-                            pageSize: 10, // The number of results per page
-                            page: params.page || 1 // The current page of results
-                        };
-                    },
-                    processResults: function (data, params) {
-                        params.page = params.page || 1;
-                        console.log(data);
-                        return {
-                            results: data.result.map(function (product) {
-                                return { id: product.id, text: product.name };
-                            }),
-                            pagination: {
-                                more: data.count > params.page * 10
-                            }
-                        };
-                    },
-                    cache: true
-                },
-                theme: 'bootstrap-5'
-            });
-        });
-
-    </script>
-
 </body>
 
 </html>

@@ -6,6 +6,7 @@ const state = {
   currentPage: 1,
   pageSize: 10,
   filterParams: {},
+  productsInOrder: [],
   countries: [],
   orderToUpdateId: null,
 };
@@ -13,6 +14,9 @@ const state = {
 // DOM elements
 const elements = {
   formContainer: document.getElementById("form-container"),
+  createForm: document.getElementById("create-order-form"),
+  formUpdateContainer: document.getElementById("form-update-container"),
+  updateForm: document.getElementById("update-order-form"),
   filterContainer: document.getElementById("filter-container"),
   orderListContainer: document.getElementById("order-list"),
   paginationContainer: document.getElementById("pagination-container"),
@@ -22,9 +26,13 @@ const elements = {
   cancelFilterButton: document.getElementById("cancel-filter-btn"),
   filterForm: document.getElementById("filter-form"),
   cancelButton: document.getElementById("cancel-btn"),
+  cancelUpdateButton: document.getElementById("cancel-update-btn"),
   showFormButton: document.getElementById("show-form-btn"),
   userSelect: document.getElementById("user_id"),
   countrySelect: document.getElementById("country_id"),
+  addProductBtn: document.getElementById("add-product-btn"),
+  productsListContainer: document.getElementById("products-list"),
+  productSelect: document.getElementById("product-select"),
 };
 
 // Initialize page and attach event listeners
@@ -33,8 +41,83 @@ document.addEventListener("DOMContentLoaded", async () => {
   createNavigation(userStatus);
   attachEventListeners();
   await loadOrders(state.currentPage);
-  await loadUsersSelect();
   await loadCountryCodes();
+});
+
+$(document).ready(function () {
+  $("#product-select").select2({
+    placeholder: "Add a product...",
+    minimumInputLength: 3, // Start searching after typing at least 3 characters
+    language: {
+      inputTooShort: function () {
+        return "Please enter at least 3 characters to search"; // Custom message
+      },
+    },
+    ajax: {
+      url: "/crud/products/filtered", // Endpoint to fetch filtered product list
+      dataType: "json",
+      delay: 250,
+      data: function (params) {
+        const filterParams = JSON.stringify({ name: params.term });
+        return {
+          filterParams: filterParams, // The search term encapsulated in filterParams
+          pageSize: 10, // The number of results per page
+          page: params.page || 1, // The current page of results
+        };
+      },
+      processResults: function (data, params) {
+        params.page = params.page || 1;
+        return {
+          results: data.result.map(function (product) {
+            return { id: product.id, text: product.name };
+          }),
+          pagination: {
+            more: data.count > params.page * 10,
+          },
+        };
+      },
+      cache: true,
+    },
+    theme: "bootstrap-5",
+  });
+});
+
+$(document).ready(function () {
+  $("#user_id").select2({
+    placeholder: "Select an user...",
+    minimumInputLength: 3, // Start searching after typing at least 3 characters
+    language: {
+      inputTooShort: function () {
+        return "Please enter at least 3 characters to search"; // Custom message
+      },
+    },
+    ajax: {
+      url: "/crud/users/filtered", // Endpoint to fetch filtered product list
+      dataType: "json",
+      delay: 250,
+      data: function (params) {
+        const filterParams = JSON.stringify({ email: params.term });
+        return {
+          filterParams: filterParams, // The search term encapsulated in filterParams
+          pageSize: 10, // The number of results per page
+          page: params.page || 1, // The current page of results
+        };
+      },
+      processResults: function (data, params) {
+        params.page = params.page || 1;
+        return {
+          results: data.result.map(function (user) {
+            return { id: user.id, text: user.email };
+          }),
+          pagination: {
+            more: data.count > params.page * 10,
+          },
+        };
+      },
+      cache: true,
+    },
+    theme: "bootstrap-5",
+  });
 });
 
 // Attach event listeners
@@ -43,8 +126,11 @@ function attachEventListeners() {
   elements.cancelFilterButton.addEventListener("click", hideFilterForm);
   elements.showFormButton.addEventListener("click", showForm);
   elements.cancelButton.addEventListener("click", hideForm);
+  elements.cancelUpdateButton.addEventListener("click", hideUpdateForm);
+  elements.addProductBtn.addEventListener("click", handleAddProduct);
 
   elements.filterForm.addEventListener("submit", handleFilterOrders);
+  elements.createForm.addEventListener("submit", handleCreateOrder);
 }
 
 function hideForm() {
@@ -54,6 +140,17 @@ function hideForm() {
 function showForm() {
   elements.formContainer.style.display = "block";
   elements.filterContainer.style.display = "none";
+  elements.formUpdateContainer.style.display = "none";
+}
+
+function showUpdateForm() {
+  elements.formUpdateContainer.style.display = "block";
+  elements.filterContainer.style.display = "none";
+  elements.createForm.style.display = "none";
+}
+
+function hideUpdateForm() {
+  elements.formUpdateContainer.style.display = "none";
 }
 
 // Show filter form
@@ -156,10 +253,14 @@ function renderOrders(orders) {
 
     const actionCell = createTableCell("");
     actionCell.appendChild(
-      createActionButton("Update", "btn-warning", () => {})
+      createActionButton("Update", "btn-warning", () =>
+        displayUpdateForm(order.id)
+      )
     );
     actionCell.appendChild(
-      createActionButton("Delete", "btn-danger", () => {})
+      createActionButton("Delete", "btn-danger", () =>
+        handleDeleteOrder(order.id)
+      )
     );
     row.appendChild(actionCell);
 
@@ -211,26 +312,7 @@ function createPaginationButton(text, enabled, onClick) {
   return button;
 }
 
-//------
-async function loadUsersSelect() {
-  try {
-    const response = await fetch("/crud/users");
-    if (!response.ok) {
-      throw new Error("Failed to load users");
-    }
-    const users = await response.json();
-
-    users.forEach((user) => {
-      const option = document.createElement("option");
-      option.value = user.id;
-      option.textContent = user.email;
-      elements.userSelect.appendChild(option);
-    });
-  } catch (error) {
-    console.error("Error loading users:", error);
-  }
-}
-
+// LOAD SELECTS
 async function loadCountryCodes() {
   try {
     const response = await fetch("/crud/iso-country-codes");
@@ -238,15 +320,168 @@ async function loadCountryCodes() {
     state.countries = await response.json();
 
     state.countries.forEach((country) => {
-
       const countryOption = document.createElement("option");
       countryOption.value = country.id;
       countryOption.innerText = `${country.country_name}`;
       elements.countrySelect.appendChild(countryOption);
-    //   elements.countryUpdateSelect.appendChild(countryOption.cloneNode(true));
-    //   elements.countryFilterSelect.appendChild(countryOption.cloneNode(true));
+      //   elements.countryUpdateSelect.appendChild(countryOption.cloneNode(true));
+      //   elements.countryFilterSelect.appendChild(countryOption.cloneNode(true));
     });
   } catch (error) {
     console.error("Error fetching country codes:", error);
   }
+}
+
+/// CREATE
+function handleAddProduct() {
+  const productId = elements.productSelect.value;
+  const productName =
+    elements.productSelect.options[elements.productSelect.selectedIndex].text;
+  $("#product-select").val(null).trigger("change");
+
+  // Check if product already exists in the state
+  const existingProduct = state.productsInOrder.find((p) => p.id === productId);
+  if (existingProduct) {
+    existingProduct.quantity++; // Update quantity if product exists
+  } else if (productId) {
+    state.productsInOrder.push({
+      id: productId,
+      name: productName,
+      quantity: 1,
+    });
+  }
+
+  elements.productSelect.value = ""; // Reset select field
+  renderSelectedProducts(); // Update the product list UI
+}
+
+function renderSelectedProducts() {
+  elements.productsListContainer.innerHTML = ""; // Clear current list
+
+  state.productsInOrder.forEach((product, index) => {
+    const productRow = document.createElement("div");
+    productRow.classList.add("d-flex", "align-items-center", "mb-2");
+
+    // Left: Product Name
+    const productName = document.createElement("span");
+    productName.textContent = product.name;
+    productName.classList.add("me-2");
+    productName.style.width = "40%";
+
+    // Middle: Quantity Input (Disabled for direct input)
+    const productQuantity = document.createElement("input");
+    productQuantity.type = "number";
+    productQuantity.value = product.quantity;
+    productQuantity.classList.add("form-control", "product-quantity", "me-2");
+    productQuantity.style.width = "15%";
+    productQuantity.readOnly = true;
+
+    // Increase Button
+    const increaseBtn = document.createElement("button");
+    increaseBtn.textContent = "+";
+    increaseBtn.classList.add("btn", "btn-secondary", "me-1");
+    increaseBtn.addEventListener("click", () =>
+      modifyProductQuantity(index, 1)
+    );
+
+    // Decrease Button
+    const decreaseBtn = document.createElement("button");
+    decreaseBtn.textContent = "-";
+    decreaseBtn.classList.add("btn", "btn-secondary", "me-1");
+    decreaseBtn.addEventListener("click", () =>
+      modifyProductQuantity(index, -1)
+    );
+
+    // Right: Remove Button
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "Remove";
+    removeBtn.classList.add("btn", "btn-danger", "ms-2");
+    removeBtn.addEventListener("click", () => handleRemoveProduct(index));
+
+    // Append elements to the product row
+    productRow.appendChild(productName);
+    productRow.appendChild(decreaseBtn);
+    productRow.appendChild(productQuantity);
+    productRow.appendChild(increaseBtn);
+    productRow.appendChild(removeBtn);
+
+    // Add the product row to the products list container
+    elements.productsListContainer.appendChild(productRow);
+  });
+}
+
+function modifyProductQuantity(productIndex, change) {
+  const product = state.productsInOrder[productIndex];
+  product.quantity += change;
+
+  if (product.quantity < 1) {
+    product.quantity = 1; // Prevent quantity from going below 1
+  }
+
+  renderSelectedProducts(); // Re-render UI after quantity change
+}
+
+function handleRemoveProduct(productIndex) {
+  state.productsInOrder.splice(productIndex, 1); // Remove product from the state
+  renderSelectedProducts(); // Update the UI
+}
+
+async function handleCreateOrder(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.createForm);
+  const orderData = Object.fromEntries(formData);
+  orderData.order_items = state.productsInOrder;
+  orderData.user_id = $("#user_id").val();
+  console.log(formData);
+  console.log(orderData);
+
+  try {
+    const response = await fetch("/api-back/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderData),
+    });
+
+    if (!response.ok) {
+      const errorMessage = await response.text();
+      throw new Error(errorMessage);
+    }
+
+    alert("Order created successfully");
+    elements.createForm.reset();
+    state.productsInOrder = [];
+    window.location.reload();
+    await loadOrders(state.currentPage);
+  } catch (error) {
+    alert(`Failed to create order: ${error.message}`);
+    console.error("Error creating order:", error);
+  }
+}
+
+/// UPDATE
+async function displayUpdateForm(orderId) {
+  try {
+    const orderResponse = await fetch(`/crud/orders/${orderId}`);
+    const order = await orderResponse.json();
+    console.log(order);
+    state.orderToUpdateId = orderId;
+    state.productsInOrder = order.order_items;
+    showUpdateForm();
+    populateUpdateForm(order);
+    renderSelectedProducts();
+  } catch (error) {
+    console.error("Error loading user for update:", error);
+  }
+}
+
+function populateUpdateForm(order) {
+  // Populate the form with the order data
+  elements.updateForm.user_id_update.value = order.user_id;
+  elements.updateForm.order_status.value = order.status;
+  // elements.updateForm.total_price.value = order.total_price;
+  // elements.updateForm.paid_amount.value = order.paid_amount;
+  elements.updateForm.is_active.value = order.is_active;
+  elements.updateForm.street.value = order.shipping_address.street;
+  elements.updateForm.city.value = order.shipping_address.city;
+  elements.updateForm.country_id.value = order.shipping_address.country_id;
 }
