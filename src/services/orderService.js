@@ -4,6 +4,7 @@ const STATUS_CODES = require("../serverConfigurations/constants");
 class OrderService {
   constructor() {
     this.createOrder = this.createOrder.bind(this);
+    this.createOrderByStaff = this.createOrderByStaff.bind(this);
     this.getOrder = this.getOrder.bind(this);
     this.completeOrder = this.completeOrder.bind(this);
   }
@@ -70,6 +71,70 @@ class OrderService {
     );
 
     return { order, message: "Order placed successfully" };
+  }
+  
+  async createOrderByStaff(data){
+      // Step 1: Insert the order into the orders table
+    const orderResult = await data.dbConnection.query(
+      `
+      INSERT INTO orders (user_id, status, total_price) 
+      VALUES ($1, $2, (
+        SELECT SUM(p.price * (oi->>'quantity')::BIGINT)
+        FROM products p
+        JOIN jsonb_array_elements($3::jsonb) AS oi ON p.id = (oi->>'id')::BIGINT
+      ))
+      RETURNING *;
+      `,
+      [data.body.user_id, data.body.order_status, JSON.stringify(data.body.order_items)]
+    );
+    const order = orderResult.rows[0];
+
+    // Step 2: Insert the order items into the order_items table
+    for (const item of data.body.order_items) {
+      const productResult = await data.dbConnection.query(
+        `SELECT price FROM products WHERE id = $1`,
+        [item.id]
+      );
+      const unitPrice = productResult.rows[0].price;
+
+      await data.dbConnection.query(
+        `
+        INSERT INTO order_items (order_id, product_id, quantity, unit_price) 
+        VALUES ($1, $2, $3, $4)`,
+        [order.id, item.id, item.quantity, unitPrice]
+      );
+
+      // Update inventory
+      await data.dbConnection.query(
+        `
+        UPDATE inventories
+        SET quantity = quantity - $1
+        WHERE product_id = $2`,
+        [item.quantity, item.id]
+      );
+    }
+
+    // Step 3: Insert the address into the addresses table
+    const addressResult = await data.dbConnection.query(
+      `
+      INSERT INTO addresses (user_id, street, city, country_id) 
+      VALUES ($1, $2, $3, $4) 
+      RETURNING id;
+      `,
+      [data.body.user_id, data.body.street, data.body.city, data.body.country_id]
+    );
+    const addressId = addressResult.rows[0].id;
+
+    // Step 4: Update the order with the shipping address
+    await data.dbConnection.query(
+      `
+      UPDATE orders 
+      SET shipping_address_id = $1 
+      WHERE id = $2`,
+      [addressId, order.id]
+    );
+
+    return { order, message: "Order created successfully" };
   }
 
   async getOrder(data) {

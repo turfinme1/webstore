@@ -5,6 +5,7 @@ class OrderController {
     constructor(orderService) {
       this.orderService = orderService;
       this.createOrder = this.createOrder.bind(this);
+      this.createOrderByStaff = this.createOrderByStaff.bind(this);
       this.getOrder = this.getOrder.bind(this);
       this.completeOrder = this.completeOrder.bind(this);
     }
@@ -17,6 +18,17 @@ class OrderController {
         dbConnection: req.dbConnection,
       };
       const result = await this.orderService.createOrder(data);
+      res.status(201).json(result);
+    }
+
+    async createOrderByStaff(req, res) {
+      // ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      const data = {
+        body: req.body,
+        session: req.session,
+        dbConnection: req.dbConnection,
+      };
+      const result = await this.orderService.createOrderByStaff(data);
       res.status(201).json(result);
     }
   
