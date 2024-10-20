@@ -5,8 +5,11 @@ class OrderService {
   constructor() {
     this.createOrder = this.createOrder.bind(this);
     this.createOrderByStaff = this.createOrderByStaff.bind(this);
+    this.updateOrderByStaff = this.updateOrderByStaff.bind(this);
     this.getOrder = this.getOrder.bind(this);
     this.completeOrder = this.completeOrder.bind(this);
+    this.verifyCartPricesAreUpToDate = this.verifyCartPricesAreUpToDate.bind(this);
+    this.deleteOrder = this.deleteOrder.bind(this);
   }
   
   async createOrder(data) {
@@ -137,6 +140,82 @@ class OrderService {
     return { order, message: "Order created successfully" };
   }
 
+  async updateOrderByStaff(data){
+    await data.dbConnection.query(`
+      UPDATE orders
+      SET status = $1
+      WHERE id = $2`,
+      [data.body.order_status, data.params.orderId]
+    );
+
+    const orderResult = await data.dbConnection.query(
+      `
+      SELECT * FROM orders_view WHERE id = $1`,
+      [data.params.orderId]
+    );
+    ASSERT_USER(orderResult.rows.length === 1, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    const order = orderResult.rows[0];
+
+
+    if (order.status !== "Pending") {
+      ASSERT_USER(order.order_items.length === data.body.order_items.length, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
+
+      for (let i = 0; i < order.order_items.length; i++) {
+        ASSERT_USER(order.order_items[i].product_id === data.body.order_items[i].product_id, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
+        ASSERT_USER(order.order_items[i].quantity === data.body.order_items[i].quantity, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
+      }
+    } else {  
+      for (const item of data.body.order_items) {
+        const productResult = await data.dbConnection.query(
+          `SELECT * FROM products WHERE id = $1`,
+          [item.product_id]
+        );
+        const unitPrice = productResult.rows[0].price;
+
+        const updateres = await data.dbConnection.query(
+          `
+          UPDATE order_items
+          SET quantity = $1, unit_price = $2
+          WHERE order_id = $3 AND product_id = $4
+          RETURNING *`,
+          [item.quantity, unitPrice, data.params.orderId, item.product_id]
+        );
+
+        // Update inventory
+        await data.dbConnection.query(
+          `
+          UPDATE inventories
+          SET quantity = quantity - $1
+          WHERE product_id = $2`,
+          [item.quantity, item.id]
+        );
+      }
+
+      // Step 2: Update the total price of the order
+      await data.dbConnection.query(
+        `
+        UPDATE orders
+        SET total_price = (
+          SELECT SUM(quantity * unit_price)
+          FROM order_items
+          WHERE order_id = $1
+        )
+        WHERE id = $1`,
+        [data.params.orderId]
+      );
+
+      // Step 3: Update the shipping address
+      await data.dbConnection.query(`
+        UPDATE addresses
+        SET street = $1, city = $2, country_id = $3
+        WHERE id = (SELECT shipping_address_id FROM orders WHERE id = $4)`,
+        [data.body.street, data.body.city, data.body.country_id, data.params.orderId]
+      );
+    }
+
+    return { message: "Order updated successfully" };
+  }
+
   async getOrder(data) {
     const orderResult = await data.dbConnection.query(
       `
@@ -258,6 +337,21 @@ class OrderService {
       await data.dbConnection.query("COMMIT");
       ASSERT_USER(false, "Prices in your cart have changed. Please review your cart.", { code: STATUS_CODES.CART_PRICES_CHANGED, long_description: "Prices in your cart have changed. Please review your cart." });
     }
+  }
+
+  async deleteOrder(data) {
+    const orderResult = await data.dbConnection.query(
+      `
+      UPDATE orders
+      SET is_active = FALSE
+      WHERE id = $1
+      RETURNING *`,
+      [data.params.orderId]
+    );
+
+    ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+
+    return { message: "Order deleted successfully" };
   }
 }
 

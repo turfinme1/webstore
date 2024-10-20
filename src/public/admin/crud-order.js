@@ -32,8 +32,11 @@ const elements = {
   countrySelect: document.getElementById("country_id"),
   countryUpdateSelect: document.getElementById("country_id_update"),
   addProductBtn: document.getElementById("add-product-btn"),
+  addProductUpdateBtn: document.getElementById("add-product-btn_update"),
   productsListContainer: document.getElementById("products-list"),
+  productListContainerUpdate: document.getElementById("products-list_update"),
   productSelect: document.getElementById("product-select"),
+  productSelectUpdate: document.getElementById("product-select_update"),
 };
 
 // Initialize page and attach event listeners
@@ -47,6 +50,44 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 $(document).ready(function () {
   $("#product-select").select2({
+    placeholder: "Add a product...",
+    minimumInputLength: 3, // Start searching after typing at least 3 characters
+    language: {
+      inputTooShort: function () {
+        return "Please enter at least 3 characters to search"; // Custom message
+      },
+    },
+    ajax: {
+      url: "/crud/products/filtered", // Endpoint to fetch filtered product list
+      dataType: "json",
+      delay: 250,
+      data: function (params) {
+        const filterParams = JSON.stringify({ name: params.term });
+        return {
+          filterParams: filterParams, // The search term encapsulated in filterParams
+          pageSize: 10, // The number of results per page
+          page: params.page || 1, // The current page of results
+        };
+      },
+      processResults: function (data, params) {
+        params.page = params.page || 1;
+        return {
+          results: data.result.map(function (product) {
+            return { id: product.id, text: product.name };
+          }),
+          pagination: {
+            more: data.count > params.page * 10,
+          },
+        };
+      },
+      cache: true,
+    },
+    theme: "bootstrap-5",
+  });
+});
+
+$(document).ready(function () {
+  $("#product-select_update").select2({
     placeholder: "Add a product...",
     minimumInputLength: 3, // Start searching after typing at least 3 characters
     language: {
@@ -167,9 +208,11 @@ function attachEventListeners() {
   elements.cancelButton.addEventListener("click", hideForm);
   elements.cancelUpdateButton.addEventListener("click", hideUpdateForm);
   elements.addProductBtn.addEventListener("click", handleAddProduct);
+  elements.addProductUpdateBtn.addEventListener("click", handleAddProductUpdate);
 
   elements.filterForm.addEventListener("submit", handleFilterOrders);
   elements.createForm.addEventListener("submit", handleCreateOrder);
+  elements.updateForm.addEventListener("submit", handleUpdateOrder);
 }
 
 function hideForm() {
@@ -185,7 +228,7 @@ function showForm() {
 function showUpdateForm() {
   elements.formUpdateContainer.style.display = "block";
   elements.filterContainer.style.display = "none";
-  elements.createForm.style.display = "none";
+  elements.formContainer.style.display = "none";
 }
 
 function hideUpdateForm() {
@@ -420,7 +463,7 @@ function renderSelectedProducts() {
     increaseBtn.textContent = "+";
     increaseBtn.classList.add("btn", "btn-secondary", "me-1");
     increaseBtn.addEventListener("click", () =>
-      modifyProductQuantity(index, 1)
+      modifyProductQuantity(index, 1, renderSelectedProducts)
     );
 
     // Decrease Button
@@ -428,14 +471,14 @@ function renderSelectedProducts() {
     decreaseBtn.textContent = "-";
     decreaseBtn.classList.add("btn", "btn-secondary", "me-1");
     decreaseBtn.addEventListener("click", () =>
-      modifyProductQuantity(index, -1)
+      modifyProductQuantity(index, -1, renderSelectedProducts)
     );
 
     // Right: Remove Button
     const removeBtn = document.createElement("button");
     removeBtn.textContent = "Remove";
     removeBtn.classList.add("btn", "btn-danger", "ms-2");
-    removeBtn.addEventListener("click", () => handleRemoveProduct(index));
+    removeBtn.addEventListener("click", () => handleRemoveProduct(index, renderSelectedProducts));
 
     // Append elements to the product row
     productRow.appendChild(productName);
@@ -449,7 +492,7 @@ function renderSelectedProducts() {
   });
 }
 
-function modifyProductQuantity(productIndex, change) {
+function modifyProductQuantity(productIndex, change, renderSelectedProducts) {
   const product = state.productsInOrder[productIndex];
   product.quantity += change;
 
@@ -460,7 +503,7 @@ function modifyProductQuantity(productIndex, change) {
   renderSelectedProducts(); // Re-render UI after quantity change
 }
 
-function handleRemoveProduct(productIndex) {
+function handleRemoveProduct(productIndex, renderSelectedProducts) {
   state.productsInOrder.splice(productIndex, 1); // Remove product from the state
   renderSelectedProducts(); // Update the UI
 }
@@ -507,7 +550,7 @@ async function displayUpdateForm(orderId) {
     state.productsInOrder = order.order_items;
     showUpdateForm();
     populateUpdateForm(order);
-    renderSelectedProducts();
+    renderSelectedProductsUpdate();
   } catch (error) {
     console.error("Error loading user for update:", error);
   }
@@ -516,7 +559,9 @@ async function displayUpdateForm(orderId) {
 function populateUpdateForm(order) {
   // Populate the form with the order data
   // elements.updateForm.user_id_update.value = order.user_id;
-  $("#user_id_update").val(order.user_id).trigger("change");
+  const option = new Option(order.email, order.user_id, true, true);
+  $("#user_id_update").append(option).trigger("change");
+  // $("#user_id_update").val(order.user_id).trigger("change");
   elements.updateForm.order_status.value = order.status;
   // elements.updateForm.total_price.value = order.total_price;
   // elements.updateForm.paid_amount.value = order.paid_amount;
@@ -524,4 +569,133 @@ function populateUpdateForm(order) {
   elements.updateForm.street.value = order.shipping_address.street;
   elements.updateForm.city.value = order.shipping_address.city;
   elements.updateForm.country_id_update.value = order.shipping_address.country_id;
+}
+
+function renderSelectedProductsUpdate() {
+  elements.productListContainerUpdate.innerHTML = ""; // Clear current list
+
+  state.productsInOrder.forEach((product, index) => {
+    const productRow = document.createElement("div");
+    productRow.classList.add("d-flex", "align-items-center", "mb-2");
+
+    // Left: Product Name
+    const productName = document.createElement("span");
+    productName.textContent = product.name;
+    productName.classList.add("me-2");
+    productName.style.width = "40%";
+
+    // Middle: Quantity Input (Disabled for direct input)
+    const productQuantity = document.createElement("input");
+    productQuantity.type = "number";
+    productQuantity.value = product.quantity;
+    productQuantity.classList.add("form-control", "product-quantity", "me-2");
+    productQuantity.style.width = "15%";
+    productQuantity.readOnly = true;
+
+    // Increase Button
+    const increaseBtn = document.createElement("button");
+    increaseBtn.textContent = "+";
+    increaseBtn.classList.add("btn", "btn-secondary", "me-1");
+    increaseBtn.addEventListener("click", () =>
+      modifyProductQuantity(index, 1, renderSelectedProductsUpdate)
+    );
+
+    // Decrease Button
+    const decreaseBtn = document.createElement("button");
+    decreaseBtn.textContent = "-";
+    decreaseBtn.classList.add("btn", "btn-secondary", "me-1");
+    decreaseBtn.addEventListener("click", () =>
+      modifyProductQuantity(index, -1, renderSelectedProductsUpdate)
+    );
+
+    // Right: Remove Button
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "Remove";
+    removeBtn.classList.add("btn", "btn-danger", "ms-2");
+    removeBtn.addEventListener("click", () => handleRemoveProduct(index, renderSelectedProductsUpdate));
+
+    // Append elements to the product row
+    productRow.appendChild(productName);
+    productRow.appendChild(decreaseBtn);
+    productRow.appendChild(productQuantity);
+    productRow.appendChild(increaseBtn);
+    productRow.appendChild(removeBtn);
+
+    // Add the product row to the products list container
+    elements.productListContainerUpdate.appendChild(productRow);
+  });
+}
+
+function handleAddProductUpdate() {
+  const productId = elements.productSelectUpdate.value;
+  const productName =
+    elements.productSelectUpdate.options[elements.productSelect.selectedIndex].text;
+  $("#product-select_update").val(null).trigger("change");
+
+  // Check if product already exists in the state
+  const existingProduct = state.productsInOrder.find((p) => p.id === productId);
+  if (existingProduct) {
+    existingProduct.quantity++; // Update quantity if product exists
+  } else if (productId) {
+    state.productsInOrder.push({
+      id: productId,
+      name: productName,
+      quantity: 1,
+    });
+  }
+
+  elements.productSelectUpdate.value = ""; // Reset select field
+  renderSelectedProductsUpdate(); // Update the product list UI
+}
+
+async function handleUpdateOrder(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.updateForm);
+  const orderData = Object.fromEntries(formData);
+  orderData.order_items = state.productsInOrder;
+  orderData.user_id = $("#user_id_update").val();
+
+  try {
+    const response = await fetch(`/api-back/orders/${state.orderToUpdateId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderData),
+    });
+
+    if (!response.ok) {
+      const errorMessage = await response.json();
+      throw new Error(errorMessage.error);
+    }
+
+    alert("Order updated successfully");
+    elements.updateForm.reset();
+    state.productsInOrder = [];
+    window.location.reload();
+    await loadOrders(state.currentPage);
+  } catch (error) {
+    alert(`Failed to update order: ${error.message}`);
+    console.error("Error updating order:", error);
+  }
+}
+
+/// DELETE
+async function handleDeleteOrder(orderId) {
+  if (!confirm("Are you sure you want to delete this order?")) return;
+
+  try {
+    const response = await fetch(`/api-back/orders/${orderId}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const errorMessage = await response.text();
+      throw new Error(errorMessage.error);
+    }
+
+    alert("Order deleted successfully");
+    await loadOrders(state.currentPage);
+  } catch (error) {
+    alert(`Failed to delete order: ${error.message}`);
+    console.error("Error deleting order:", error);
+  }
 }

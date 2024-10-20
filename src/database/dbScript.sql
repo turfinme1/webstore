@@ -250,6 +250,7 @@ SELECT
     o.id,
     o.order_hash,
     o.user_id,
+    u.email,
     o.status,
     o.total_price,
     o.paid_amount,
@@ -279,7 +280,8 @@ SELECT
 FROM
     orders o
 LEFT JOIN addresses a ON o.shipping_address_id = a.id
-LEFT JOIN iso_country_codes c ON a.country_id = c.id;
+LEFT JOIN iso_country_codes c ON a.country_id = c.id
+LEFT JOIN users u ON o.user_id = u.id;
 
 CREATE OR REPLACE FUNCTION validate_status_transition()
 RETURNS TRIGGER AS $$

@@ -60,12 +60,14 @@ const routeTable = {
   put: {
     "/crud/:entity/:id": controller.update,
     "/api/products/:id": productController.update,
+    "/api-back/orders/:orderId": orderController.updateOrderByStaff,
     "/auth/profile": authController.updateProfile,
     "/app-config/rate-limit-settings": appConfigController.updateRateLimitSettings,
   },
   delete: {
     "/crud/:entity/:id": controller.delete,
     "/api/products/:id": productController.delete,
+    "/api-back/orders/:orderId": orderController.deleteOrder,
   },
 };
 
