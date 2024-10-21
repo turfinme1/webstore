@@ -305,7 +305,7 @@ class OrderService {
     WHERE user_id = $2 AND status = 'Pending'`,
       [shippingAddressId, data.session.user_id]
     );
-
+    
     // Check if order exists
     const orderResult = await data.dbConnection.query(
       `
@@ -315,6 +315,19 @@ class OrderService {
       [data.session.user_id]
     );
     ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+
+    const paymentResult = await fetch("http://localhost:5000/api/payments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        client_id: data.session.user_id,
+        amount: orderResult.rows[0].total_price,
+      }),
+    });
+
+    ASSERT_USER(paymentResult.ok, "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
 
     // Update the order status to 'Complete'
     await data.dbConnection.query(
