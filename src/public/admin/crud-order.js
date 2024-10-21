@@ -220,6 +220,7 @@ function hideForm() {
 }
 
 function showForm() {
+  state.productsInOrder = [];
   elements.formContainer.style.display = "block";
   elements.filterContainer.style.display = "none";
   elements.formUpdateContainer.style.display = "none";
@@ -278,12 +279,13 @@ function renderOrders(orders) {
 
   orders.forEach((order) => {
     const row = document.createElement("tr");
-    row.appendChild(createTableCell(order.id));
+    row.appendChild(createTableCell(order.id, "right"));
     row.appendChild(createTableCell(order.order_hash));
-    row.appendChild(createTableCell(order.user_id));
+    row.appendChild(createTableCell(order.email));
+    // row.appendChild(createTableCell(order.user_id));
     row.appendChild(createTableCell(order.status));
-    row.appendChild(createTableCell(order.total_price));
-    row.appendChild(createTableCell(order.paid_amount));
+    row.appendChild(createTableCell(`$${order.total_price || 0}`, "right"));
+    row.appendChild(createTableCell(`$${order.paid_amount || 0}`, "right"));
     row.appendChild(createTableCell(order.is_active));
     row.appendChild(
       createTableCell(new Date(order.order_created_at).toLocaleString())
@@ -350,8 +352,9 @@ function renderOrders(orders) {
   });
 }
 
-function createTableCell(text) {
+function createTableCell(text, align = "left") {
   const cell = document.createElement("td");
+  cell.style.textAlign = align;
   cell.textContent = text;
   return cell;
 }
@@ -510,6 +513,12 @@ function handleRemoveProduct(productIndex, renderSelectedProducts) {
 
 async function handleCreateOrder(event) {
   event.preventDefault();
+
+  if (state.productsInOrder.length === 0) {
+    alert("You cannot submit an order without any products.");
+    return; // Prevent form submission
+  }
+
   const formData = new FormData(elements.createForm);
   const orderData = Object.fromEntries(formData);
   orderData.order_items = state.productsInOrder;
@@ -565,7 +574,7 @@ function populateUpdateForm(order) {
   elements.updateForm.order_status.value = order.status;
   // elements.updateForm.total_price.value = order.total_price;
   // elements.updateForm.paid_amount.value = order.paid_amount;
-  elements.updateForm.is_active.value = order.is_active;
+  // elements.updateForm.is_active.value = order.is_active;
   elements.updateForm.street.value = order.shipping_address.street;
   elements.updateForm.city.value = order.shipping_address.city;
   elements.updateForm.country_id_update.value = order.shipping_address.country_id;
@@ -650,6 +659,12 @@ function handleAddProductUpdate() {
 
 async function handleUpdateOrder(event) {
   event.preventDefault();
+
+  if (state.productsInOrder.length === 0) {
+    alert("You cannot submit an order without any products.");
+    return; // Prevent form submission
+  }
+
   const formData = new FormData(elements.updateForm);
   const orderData = Object.fromEntries(formData);
   orderData.order_items = state.productsInOrder;

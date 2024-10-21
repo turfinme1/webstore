@@ -30,16 +30,18 @@
                 <h5 class="card-title">Filter Orders</h5>
                 <form id="filter-form">
                     <div class="mb-3">
-                        <label for="order_id_filter" class="form-label">Order ID</label>
-                        <input type="text" class="form-control" id="order_id_filter" name="order_id">
-                    </div>
-                    <div class="mb-3">
                         <label for="user_email_filter" class="form-label">User Email</label>
-                        <input type="text" class="form-control" id="user_email_filter" name="user_email">
+                        <input type="text" class="form-control" id="user_email_filter" name="email">
                     </div>
                     <div class="mb-3">
-                        <label for="order_date_filter" class="form-label">Order Date</label>
-                        <input type="date" class="form-control" id="order_date_filter" name="order_date">
+                        <label for="order_status_filter" class="form-label">Order Status</label>
+                        <select id="order_status_filter" name="status" class="form-select">
+                            <option value="">Select Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
                     </div>
                     <button type="submit" class="btn btn-primary">Apply Filters</button>
                     <button type="button" class="btn btn-secondary" id="cancel-filter-btn">Cancel</button>
@@ -54,15 +56,15 @@
                 <form id="create-order-form">
                     <!-- User Selection -->
                     <div class="mb-3">
-                        <label for="user_id" class="form-label">User</label>
-                        <select id="user_id" class="form-select">
+                        <label for="user_id" class="form-label">User Email <span style="color:red;"> *</span></label>
+                        <select id="user_id" class="form-select" required>
                         </select>
                     </div>
 
                     <!-- Order Status -->
                     <div class="mb-3">
-                        <label for="order_status" class="form-label">Order Status</label>
-                        <select id="order_status" name="order_status" class="form-select">
+                        <label for="order_status" class="form-label">Order Status <span style="color:red;"> *</span></label>
+                        <select id="order_status" name="order_status" class="form-select" required>
                             <option value="Pending">Pending</option>
                             <option value="Paid">Paid</option>
                             <option value="Delivered">Delivered</option>
@@ -73,22 +75,22 @@
                     <!-- Shipping Information -->
                     <h6 class="card-title">Shipping Information</h6>
                     <div class="mb-3">
-                        <label for="country_id" class="form-label">Country</label>
-                        <select class="form-control" id="country_id" name="country_id">
+                        <label for="country_id" class="form-label">Country <span style="color:red;"> *</span></label>
+                        <select class="form-control" id="country_id" name="country_id" required>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="street">Street</label>
+                        <label for="street">Street <span style="color:red;"> *</span></label>
                         <input type="text" id="street" name="street" class="form-control" required />
                     </div>
                     <div class="mb-3">
-                        <label for="city">City</label>
+                        <label for="city">City <span style="color:red;"> *</span></label>
                         <input type="text" id="city" name="city" class="form-control" required />
                     </div>
 
                     <!-- Product Selection -->
                     <div id="product-selection-container" class="mb-3">
-                        <label for="product-select" class="form-label">Products</label>
+                        <label for="product-select" class="form-label">Products  <span style="color:red;"> *</span></label>
                         <div class="d-flex mb-3">
                             <select id="product-select" class="form-select">
                                 <option value="">Select Product</option>
@@ -116,15 +118,15 @@
                 <form id="update-order-form">
                     <!-- User Selection -->
                     <div class="mb-3">
-                        <label for="user_id" class="form-label">User</label>
-                        <select id="user_id_update" class="form-select">
+                        <label for="user_id" class="form-label">User <span style="color:red;"> *</span></label>
+                        <select id="user_id_update" class="form-select" required>
                         </select>
                     </div>
 
                     <!-- Order Status -->
                     <div class="mb-3">
-                        <label for="order_status" class="form-label">Order Status</label>
-                        <select id="order_status_update" name="order_status" class="form-select">
+                        <label for="order_status" class="form-label">Order Status <span style="color:red;"> *</span></label>
+                        <select id="order_status_update" name="order_status" class="form-select" required>
                             <option value="Pending">Pending</option>
                             <option value="Paid">Paid</option>
                             <option value="Delivered">Delivered</option>
@@ -132,33 +134,25 @@
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="is_active" class="form-label">Is Order Active</label>
-                        <select id="is_active" name="is_active" class="form-select">
-                            <option value="true">Yes</option>
-                            <option value="false">No</option>
-                        </select>
-                    </div>
-
                     <!-- Shipping Information -->
                     <h6 class="card-title">Shipping Information</h6>
                     <div class="mb-3">
-                        <label for="country_id" class="form-label">Country</label>
-                        <select class="form-control" id="country_id_update" name="country_id">
+                        <label for="country_id" class="form-label">Country <span style="color:red;"> *</span></label>
+                        <select class="form-control" id="country_id_update" name="country_id" required>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="street">Street</label>
+                        <label for="street">Street <span style="color:red;"> *</span></label>
                         <input type="text" id="street" name="street" class="form-control" required />
                     </div>
                     <div class="mb-3">
-                        <label for="city">City</label>
+                        <label for="city">City <span style="color:red;"> *</span></label>
                         <input type="text" id="city" name="city" class="form-control" required />
                     </div>
 
                     <!-- Product Selection -->
                     <div id="product-selection-container" class="mb-3">
-                        <label for="product-select" class="form-label">Products</label>
+                        <label for="product-select" class="form-label">Products  <span style="color:red;"> *</span></label>
                         <div class="d-flex mb-3">
                             <select id="product-select_update" class="form-select">
                             </select>
@@ -185,7 +179,7 @@
                     <tr>
                         <th>Order ID</th>
                         <th>Order Hash</th>
-                        <th>User ID</th>
+                        <th>User Email</th>
                         <th>Status</th>
                         <th>Total Price</th>
                         <th>Paid Amount</th>

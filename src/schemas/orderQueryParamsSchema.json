@@ -15,6 +15,9 @@
             "user_id": {
                 "type": "integer"
             },
+            "email": {
+                "type": "string"
+            },
             "status": {
                 "type": "string",
                 "enum": [

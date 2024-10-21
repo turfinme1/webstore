@@ -164,7 +164,26 @@ class OrderService {
         ASSERT_USER(order.order_items[i].product_id === data.body.order_items[i].product_id, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
         ASSERT_USER(order.order_items[i].quantity === data.body.order_items[i].quantity, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
       }
-    } else {  
+    } else {
+      const existingItems = order.order_items;
+      const updatedItems = data.body.order_items; 
+
+      const removedItems = existingItems.filter(
+        existingItem => !updatedItems.some(updatedItem => updatedItem.product_id === existingItem.product_id)
+      );
+
+      for (const removedItem of removedItems) {
+        await data.dbConnection.query(
+          `UPDATE inventories SET quantity = quantity + $1 WHERE product_id = $2`,
+          [removedItem.quantity, removedItem.product_id]
+        );
+
+        await data.dbConnection.query(
+          `DELETE FROM order_items WHERE order_id = $1 AND product_id = $2`,
+          [data.params.orderId, removedItem.product_id]
+        );
+      }
+
       for (const item of data.body.order_items) {
         const productResult = await data.dbConnection.query(
           `SELECT * FROM products WHERE id = $1`,
