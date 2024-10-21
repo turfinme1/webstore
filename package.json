@@ -6,7 +6,8 @@
   "scripts": {
     "test": "jest",
     "start": "nodemon server.js",
-    "admin": "nodemon adminServer.js"
+    "admin": "nodemon adminServer.js",
+    "payment": "nodemon paymentServer.js"
   },
   "author": "Borislav Angelov",
   "license": "ISC",
