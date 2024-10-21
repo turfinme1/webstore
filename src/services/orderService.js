@@ -185,29 +185,43 @@ class OrderService {
       }
 
       for (const item of data.body.order_items) {
-        const productResult = await data.dbConnection.query(
-          `SELECT * FROM products WHERE id = $1`,
-          [item.product_id]
-        );
-        const unitPrice = productResult.rows[0].price;
+        const existingItem = existingItems.find(existing => existing.product_id === item.product_id);
 
-        const updateres = await data.dbConnection.query(
-          `
-          UPDATE order_items
-          SET quantity = $1, unit_price = $2
-          WHERE order_id = $3 AND product_id = $4
-          RETURNING *`,
-          [item.quantity, unitPrice, data.params.orderId, item.product_id]
-        );
-
-        // Update inventory
-        await data.dbConnection.query(
-          `
-          UPDATE inventories
-          SET quantity = quantity - $1
-          WHERE product_id = $2`,
-          [item.quantity, item.id]
-        );
+        if (existingItem) {
+          // Calculate the quantity difference and update the inventory accordingly
+          const quantityDifference = item.quantity - existingItem.quantity;
+  
+          if (quantityDifference !== 0) {
+            await data.dbConnection.query(
+              `UPDATE inventories SET quantity = quantity - $1 WHERE product_id = $2`,
+              [quantityDifference, item.product_id]
+            );
+  
+            // Update order item with new quantity and unit price
+            await data.dbConnection.query(
+              `UPDATE order_items SET quantity = $1 WHERE order_id = $2 AND product_id = $3`,
+              [item.quantity, data.params.orderId, item.product_id]
+            );
+          }
+        } else {
+          // New product, insert it into the order and update inventory
+          const productResult = await data.dbConnection.query(
+            `SELECT * FROM products WHERE id = $1`,
+            [item.id]
+          );
+          const unitPrice = productResult.rows[0].price;
+  
+          await data.dbConnection.query(
+            `INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES ($1, $2, $3, $4)`,
+            [data.params.orderId, item.id, item.quantity, unitPrice]
+          );
+  
+          // Deduct quantity from inventory
+          await data.dbConnection.query(
+            `UPDATE inventories SET quantity = quantity - $1 WHERE product_id = $2`,
+            [item.quantity, item.id]
+          );
+        }
       }
 
       // Step 2: Update the total price of the order
