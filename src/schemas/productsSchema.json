@@ -3,6 +3,7 @@
   "name": "products",
   "routeName": "products",
   "views": "products_view",
+  "queryValidationSchema": "productQueryParamsSchema",
   "properties": {
     "name": {
       "type": "string",

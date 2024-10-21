@@ -10,6 +10,8 @@ const ProductService = require("../services/productService");
 const ProductController = require("../controllers/productController");
 const AuthService = require("../services/authService");
 const AuthController = require("../controllers/authController");
+const OrderService = require("../services/orderService");
+const OrderController = require("../controllers/orderController");
 const { MailService, transporter } = require("../services/mailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const AppConfigService = require("../services/appConfigService");
@@ -26,6 +28,8 @@ const productService = new ProductService();
 const productController = new ProductController(productService);
 const appConfigService = new AppConfigService();
 const appConfigController = new AppConfigController(appConfigService);
+const orderService = new OrderService();
+const orderController = new OrderController(orderService);
 
 const routeTable = {
   get: {
@@ -51,16 +55,19 @@ const routeTable = {
     "/api/products/:id/comments": productController.createComment,
     "/api/products/:id/ratings": productController.createRating,
     "/api/products/:id/images": productController.uploadImages,
+    "/api-back/orders": orderController.createOrderByStaff,
   },
   put: {
     "/crud/:entity/:id": controller.update,
     "/api/products/:id": productController.update,
+    "/api-back/orders/:orderId": orderController.updateOrderByStaff,
     "/auth/profile": authController.updateProfile,
     "/app-config/rate-limit-settings": appConfigController.updateRateLimitSettings,
   },
   delete: {
     "/crud/:entity/:id": controller.delete,
     "/api/products/:id": productController.delete,
+    "/api-back/orders/:orderId": orderController.deleteOrder,
   },
 };
 
