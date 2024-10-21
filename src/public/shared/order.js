@@ -43,11 +43,11 @@ async function handleOrderSubmit(event) {
     city: document.getElementById("city").value,
   };
 
-  const paymentData = {
-    card_number: document.getElementById("card-number").value,
-    expiry_date: document.getElementById("expiry-date").value,
-    cvv: document.getElementById("cvv").value,
-  };
+  // const paymentData = {
+  //   card_number: document.getElementById("card-number").value,
+  //   expiry_date: document.getElementById("expiry-date").value,
+  //   cvv: document.getElementById("cvv").value,
+  // };
 
   // Proceed with submitting the order
   try {
@@ -56,7 +56,7 @@ async function handleOrderSubmit(event) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ address: addressData, payment: paymentData }),
+      body: JSON.stringify({ address: addressData }),
     });
 
     if (response.ok) {
@@ -87,20 +87,6 @@ function renderOrderForm(container) {
     <div>
       <label for="city">City</label>
       <input type="text" id="city" class="form-control" required />
-    </div>
-
-    <h3 class="mt-3">Payment Information</h3>
-    <div>
-      <label for="card-number">Card Number</label>
-      <input type="text" id="card-number" class="form-control" required />
-    </div>
-    <div>
-      <label for="expiry-date">Expiry Date</label>
-      <input type="text" id="expiry-date" class="form-control" required />
-    </div>
-    <div>
-      <label for="cvv">CVV</label>
-      <input type="text" id="cvv" class="form-control" required />
     </div>
 
     <button type="submit" class="btn btn-primary mt-3">Submit Order</button>
