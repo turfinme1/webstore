@@ -23,7 +23,8 @@ const state = {
 
 // DOM elements
 const elements = {
-  logListContainer: document.getElementById("log-list"),
+  orderTableHeader: document.getElementById("order-table-header"),
+  orderListContainer: document.getElementById("order-list"),
   paginationContainer: document.getElementById("pagination-container"),
   currentPageDisplay: document.getElementById("current-page-display"),
   resultCountDisplay: document.getElementById("result-count"),
@@ -35,9 +36,8 @@ const elements = {
   cancelFilterButton: document.getElementById("cancel-filter-btn"),
   filterContainer: document.getElementById("filter-container"),
   groupByCreatedAtSelect: document.getElementById("group_by_created_at"),
-  groupByStatusCodeSelect: document.getElementById("group_by_status_code"),
+  groupByStatusSelect: document.getElementById("group_by_status"),
   groupByLogLevelSelect: document.getElementById("group_by_log_level"),
-  logTableHeader: document.getElementById("log-table-header"),
 };
 
 // Initialize page and attach event listeners
@@ -72,17 +72,17 @@ async function loadStatusCodes() {
     // if (!response.ok) throw new Error("Failed to fetch status codes");
     // state.statusCodes = await response.json();
 
-    const allStatusOption = document.createElement("option");
-    allStatusOption.value = "";
-    allStatusOption.innerText = "All Status Codes";
-    elements.statusCodeFilterSelect.appendChild(allStatusOption);
+    // const allStatusOption = document.createElement("option");
+    // allStatusOption.value = "";
+    // allStatusOption.innerText = "All Status Codes";
+    // elements.statusCodeFilterSelect.appendChild(allStatusOption);
 
-    state.statusCodes.forEach((code) => {
-      const option = document.createElement("option");
-      option.value = code.id;
-      option.innerText = `${code.code} - ${code.message}`;
-      elements.statusCodeFilterSelect.appendChild(option);
-    });
+    // state.statusCodes.forEach((code) => {
+    //   const option = document.createElement("option");
+    //   option.value = code.id;
+    //   option.innerText = `${code.code} - ${code.message}`;
+    //   elements.statusCodeFilterSelect.appendChild(option);
+    // });
   } catch (error) {
     console.error("Error fetching status codes:", error);
   }
@@ -114,6 +114,24 @@ async function handleFilterLogs(event) {
     delete filterParams["created_at_max"];
   }
 
+  const totalPriceMin = formData.get("total_price_min");
+  const totalPriceMax = formData.get("total_price_max");
+  if(totalPriceMin && totalPriceMax && totalPriceMin > totalPriceMax) {
+    alert("Total Price Min should be less than Total Price Max");
+    return;
+  }
+  if (totalPriceMin || totalPriceMax) {
+    filterParams["total_price"] = {};
+    if(totalPriceMin) {
+      filterParams["total_price"].min = totalPriceMin;
+    }
+    if(totalPriceMax) {
+      filterParams["total_price"].max = totalPriceMax;
+    }
+    delete filterParams["total_price_min"];
+    delete filterParams["total_price_max"];
+  }
+
   state.filterParams = filterParams;
 
   // Group by Created At
@@ -126,16 +144,16 @@ async function handleFilterLogs(event) {
   }
   
   // Group by Status Code
-  const statusCodeGrouping = elements.groupByStatusCodeSelect.value;
+  const statusCodeGrouping = elements.groupByStatusSelect.value;
   if (statusCodeGrouping) {
-    groupParams.push({ column: "status_code" });
+    groupParams.push({ column: "status" });
   }
 
   // Group by Log Level
-  const logLevelGrouping = elements.groupByLogLevelSelect.value;
-  if (logLevelGrouping) {
-    groupParams.push({ column: "log_level" });
-  }
+  // const logLevelGrouping = elements.groupByLogLevelSelect.value;
+  // if (logLevelGrouping) {
+  //   groupParams.push({ column: "log_level" });
+  // }
 
   state.groupParams = groupParams;
 
@@ -154,7 +172,7 @@ async function loadLogs(page) {
       page: page.toString(),
     });
 
-    const response = await fetch(`/crud/logs/filtered?${queryParams.toString()}`);
+    const response = await fetch(`/crud/orders/filtered?${queryParams.toString()}`);
     const { result, count, groupCount } = await response.json();
 
     state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'count');
@@ -175,11 +193,11 @@ async function loadLogs(page) {
 
 // Render log list
 function renderLogList(logs) {
-  elements.logListContainer.innerHTML = ""; // Clear previous list
-  elements.logTableHeader.innerHTML = ""; // Clear previous headers
+  elements.orderListContainer.innerHTML = ""; // Clear previous list
+  elements.orderTableHeader.innerHTML = ""; // Clear previous headers
 
   if (logs.length === 0) {
-    elements.logListContainer.innerHTML = "<tr><td colspan='8'>No logs found.</td></tr>";
+    elements.orderListContainer.innerHTML = "<tr><td colspan='8'>No logs found.</td></tr>";
     return;
   }
 
@@ -187,7 +205,7 @@ function renderLogList(logs) {
   state.columnsToDisplay.forEach(({ label }) => {
     const th = document.createElement("th");
     th.textContent = label;
-    elements.logTableHeader.appendChild(th);
+    elements.orderTableHeader.appendChild(th);
   });
 
   // Generate table rows
@@ -196,10 +214,15 @@ function renderLogList(logs) {
 
     state.columnsToDisplay.forEach(({ key }) => {
       let cellValue = log[key];
+      cellValue = cellValue && ["total_price", "paid_amount"].includes(key) ? `$${cellValue}` : cellValue;
 
       // Handle date formatting
       if (key.includes("created_at") && cellValue) {
         cellValue = new Date(cellValue).toLocaleString();
+      }
+
+      if (key === "shipping_address" && cellValue) {
+        cellValue = `${cellValue?.country_name}, ${cellValue?.city}, ${cellValue?.street}`;
       }
 
       // Handle null or undefined values
@@ -207,19 +230,12 @@ function renderLogList(logs) {
         cellValue = "---";
       }
 
-      const direction = ["count"].includes(key) ? "right" : "left";
+      const direction = ["count", "total_price", "paid_amount"].includes(key) ? "right" : "left";
       logRow.appendChild(createTableCell(cellValue, direction));
     });
 
-    elements.logListContainer.appendChild(logRow);
+    elements.orderListContainer.appendChild(logRow);
   });
-}
-
-// Utility function to format header names
-function formatHeader(header) {
-  return header
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 // Create table cell

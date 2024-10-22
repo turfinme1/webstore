@@ -45,6 +45,17 @@
                             </select>
                         </div>
 
+                        <div class="row g-3">
+                            <div class="mb-3 col-auto">
+                                <label for="total_price_min" class="form-label">Price (Min)</label>
+                                <input type="number" step=".01" min="0" id="total_price_min" name="total_price_min" class="form-control">
+                            </div>
+
+                            <div class="mb-3 col-auto">
+                                <label for="total_price_max" class="form-label">Price (Max)</label>
+                                <input type="number" step=".01" id="total_price_max" name="total_price_max" class="form-control">
+                            </div>
+                        </div>
                         <!-- <div class="mb-3">
                             <label for="log_level_filter" class="form-label">Log Level</label>
                             <select id="log_level_filter" name="log_level" class="form-select">
