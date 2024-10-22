@@ -88,7 +88,7 @@
             "label": "Created At",
             "placeholder": "Automatically set at creation",
             "groupable": true,
-            "function": "DATE_TRUNC"
+            "aggregation": "DATE_TRUNC"
         }
     },
     "relationships": {

@@ -29,8 +29,11 @@
         },
         "total_price": {
             "type": "number",
+            "format": "aggregate",
             "label": "Total Price",
-            "placeholder": "Total Price"
+            "placeholder": "Total Price",
+            "group_behavior": "SUM",
+            "groupable": true
         },
         "paid_amount": {
             "type": "number",
@@ -52,7 +55,7 @@
             "format": "date-time",
             "label": "Created At",
             "placeholder": "Automatically set at creation",
-            "function": "DATE_TRUNC",
+            "aggregation": "DATE_TRUNC",
             "groupable": true
         }
     },

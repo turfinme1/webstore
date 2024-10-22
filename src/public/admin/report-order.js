@@ -29,6 +29,7 @@ const elements = {
   currentPageDisplay: document.getElementById("current-page-display"),
   resultCountDisplay: document.getElementById("result-count"),
   resultCountGroupDisplay: document.getElementById("result-group-count"),
+  resultGroupTotalPriceDisplay: document.getElementById("result-group-total-price"),
   filterForm: document.getElementById("filter-form"),
   statusCodeFilterSelect: document.getElementById("status_code_filter"),
   logLevelFilterSelect: document.getElementById("log_level_filter"),
@@ -114,9 +115,9 @@ async function handleFilterLogs(event) {
     delete filterParams["created_at_max"];
   }
 
-  const totalPriceMin = formData.get("total_price_min");
-  const totalPriceMax = formData.get("total_price_max");
-  if(totalPriceMin && totalPriceMax && totalPriceMin > totalPriceMax) {
+  const totalPriceMin = parseFloat(formData.get("total_price_min"));
+  const totalPriceMax = parseFloat(formData.get("total_price_max"));
+  if((totalPriceMin && totalPriceMax) && (totalPriceMin > totalPriceMax)) {
     alert("Total Price Min should be less than Total Price Max");
     return;
   }
@@ -173,7 +174,7 @@ async function loadLogs(page) {
     });
 
     const response = await fetch(`/crud/orders/filtered?${queryParams.toString()}`);
-    const { result, count, groupCount } = await response.json();
+    const { result, count, groupCount, aggregationResults } = await response.json();
 
     state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'count');
     if(state.columnsToDisplay[0].key !== 'id') {
@@ -185,7 +186,7 @@ async function loadLogs(page) {
     }
 
     renderLogList(result);
-    updatePagination(count, page, groupCount);
+    updatePagination(count, page, groupCount, aggregationResults);
   } catch (error) {
     console.error("Error loading logs:", error);
   }
@@ -247,16 +248,18 @@ function createTableCell(text, align = "left") {
 }
 
 // Update pagination
-function updatePagination(totalLogs, page, groupCount) {
+function updatePagination(totalLogs, page, groupCount, aggregationResults) {
   const totalPages = Math.ceil(totalLogs / state.pageSize);
   elements.paginationContainer.innerHTML = "";
   elements.resultCountGroupDisplay.textContent = "";
+  elements.resultGroupTotalPriceDisplay.textContent = "";
 
   elements.currentPageDisplay.innerHTML = `Page ${page} of ${totalPages}`;
   elements.resultCountDisplay.textContent = `Found ${totalLogs} records`;
 
   if(groupCount){
     elements.resultCountGroupDisplay.textContent = `Group total count ${groupCount}`;
+    elements.resultGroupTotalPriceDisplay.textContent = `Group total price ${aggregationResults.total_total_price}`;
   }
 
   if (totalLogs == 0) {
