@@ -316,7 +316,7 @@ class OrderService {
     );
     ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
 
-    const paymentResult = await fetch("http://localhost:5000/api/payments", {
+    const paymentResult = await fetch("http://10.20.3.224:5002/api/payments", { 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
