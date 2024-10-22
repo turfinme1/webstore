@@ -46,7 +46,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
   attachEventListeners();
-  loadStatusCodes();
   loadLogs(state.currentPage);
 });
 
@@ -64,29 +63,6 @@ function showFilterForm() {
 
 function hideFilterForm() {
   elements.filterContainer.style.display = "none";
-}
-
-// Fetch and load status codes for filtering
-async function loadStatusCodes() {
-  try {
-    // const response = await fetch("/crud/status-codes");
-    // if (!response.ok) throw new Error("Failed to fetch status codes");
-    // state.statusCodes = await response.json();
-
-    // const allStatusOption = document.createElement("option");
-    // allStatusOption.value = "";
-    // allStatusOption.innerText = "All Status Codes";
-    // elements.statusCodeFilterSelect.appendChild(allStatusOption);
-
-    // state.statusCodes.forEach((code) => {
-    //   const option = document.createElement("option");
-    //   option.value = code.id;
-    //   option.innerText = `${code.code} - ${code.message}`;
-    //   elements.statusCodeFilterSelect.appendChild(option);
-    // });
-  } catch (error) {
-    console.error("Error fetching status codes:", error);
-  }
 }
 
 // Handle log filtering and grouping
@@ -150,17 +126,12 @@ async function handleFilterLogs(event) {
     groupParams.push({ column: "status" });
   }
 
-  // Group by Log Level
-  // const logLevelGrouping = elements.groupByLogLevelSelect.value;
-  // if (logLevelGrouping) {
-  //   groupParams.push({ column: "log_level" });
-  // }
 
   state.groupParams = groupParams;
 
   state.currentPage = 1;
   loadLogs(state.currentPage);
-  hideFilterForm();
+  // hideFilterForm();
 }
 
 // Fetch and load logs with groupParams included
@@ -258,8 +229,8 @@ function updatePagination(totalLogs, page, groupCount, aggregationResults) {
   elements.resultCountDisplay.textContent = `Found ${totalLogs} records`;
 
   if(groupCount){
-    elements.resultCountGroupDisplay.textContent = `Group total count ${groupCount}`;
-    elements.resultGroupTotalPriceDisplay.textContent = `Group total price ${aggregationResults.total_total_price}`;
+    elements.resultCountGroupDisplay.textContent = `Group total count: ${groupCount}`;
+    elements.resultGroupTotalPriceDisplay.textContent = `Total price: $${aggregationResults.total_total_price}`;
   }
 
   if (totalLogs == 0) {
