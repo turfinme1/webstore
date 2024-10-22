@@ -1,3 +1,5 @@
+const { validateBody } = require("../serverConfigurations/validation");
+
 class PaymentController {
   constructor(paymentService) {
     this.paymentService = paymentService;
@@ -5,6 +7,7 @@ class PaymentController {
   }
 
   async createPayment(req, res, next) {
+    validateBody(req, req.entitySchemaCollection.paymentSchema);
     const data = {
       body: req.body,
       params: req.params,
