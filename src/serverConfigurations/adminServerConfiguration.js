@@ -12,6 +12,8 @@ const AuthService = require("../services/authService");
 const AuthController = require("../controllers/authController");
 const OrderService = require("../services/orderService");
 const OrderController = require("../controllers/orderController");
+const ExportService = require("../services/exportService");
+const ExportController = require("../controllers/exportController");
 const { MailService, transporter } = require("../services/mailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const AppConfigService = require("../services/appConfigService");
@@ -30,11 +32,14 @@ const appConfigService = new AppConfigService();
 const appConfigController = new AppConfigController(appConfigService);
 const orderService = new OrderService();
 const orderController = new OrderController(orderService);
+const exportService = new ExportService(service);
+const exportController = new ExportController(exportService);
 
 const routeTable = {
   get: {
     "/crud/:entity": controller.getAll,
     "/crud/:entity/filtered": controller.getFilteredPaginated,
+    "/api/:entity/filtered/export/csv": exportController.exportToCsv,
     "/crud/:entity/:id": controller.getById,
     "/api/products" : productController.getFilteredPaginated,
     "/auth/verify-mail": authController.verifyMail,
@@ -147,22 +152,22 @@ cron.schedule('0 0 * * *', async () => {
   await clearOldFileUploads(pool);
 });
 
-process.on('uncaughtException', async (error) => {
-  try {
-    const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
-    await logger.error(error);
-  } catch (error) {
-    console.error(error);
-  }
-});
+// process.on('uncaughtException', async (error) => {
+//   try {
+//     const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
+//     await logger.error(error);
+//   } catch (error) {
+//     console.error(error);
+//   }
+// });
 
-process.on('unhandledRejection', async (error) => {
-  try {
-    const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
-  await logger.error(error);
-  } catch (error) {
-    console.error(error);
-  }
-});
+// process.on('unhandledRejection', async (error) => {
+//   try {
+//     const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
+//   await logger.error(error);
+//   } catch (error) {
+//     console.error(error);
+//   }
+// });
 
 module.exports = { routeTable, sessionMiddleware, registerRoutes };

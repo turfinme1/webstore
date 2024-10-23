@@ -1,3 +1,5 @@
+const { validateQueryParams } = require("../serverConfigurations/validation");
+
 class ExportController {
     constructor(exportService) {
         this.exportService = exportService;
@@ -6,6 +8,7 @@ class ExportController {
     }
 
     async exportToCsv(req, res, next) {
+        validateQueryParams(req, req.entitySchemaCollection[req.entitySchemaCollection[req.params.entity].queryValidationSchema]);
         const data = {
             req: req,
             query: req.query,
@@ -18,6 +21,7 @@ class ExportController {
     }
 
     async exportToExcel(req, res, next) {
+        validateQueryParams(req, req.entitySchemaCollection[req.entitySchemaCollection[req.params.entity].queryValidationSchema]);
         const data = {
             req: req,
             query: req.query,
@@ -29,3 +33,5 @@ class ExportController {
         res.status(200).json(result);
     }  
 }
+
+module.exports = ExportController;

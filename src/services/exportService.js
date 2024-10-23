@@ -1,14 +1,23 @@
+const { Readable } = require("stream");
+const { pipeline } = require("stream/promises");
+
 class ExportService {
-    constructor() {
+    constructor(crudService) {
+        this.crudService = crudService;
         this.exportToCsv = this.exportToCsv.bind(this);
-        this.exportToExcel = this.exportToExcel.bind(this);
     }
 
     async exportToCsv(data) {
+        const { query, aggregatedTotalQuery, searchValues } = this.crudService.buildFilteredPaginatedQuery(data);
+
+        const csvStream = Readable.from(this.generateCsvRows({ ...data, query, aggregatedTotalQuery, searchValues }));
+        
         data.res.writeHead(200, {
             "Content-Type": "text/csv",
             "Content-Disposition": `attachment; filename=${data.params.entity}.csv`,
         });
+
+        await pipeline(csvStream, data.res);
     }
 
     async executeQueryWithCursor(data){
@@ -37,5 +46,6 @@ class ExportService {
             yield rowValues;
         }
     }
-
 }
+
+module.exports = ExportService;
