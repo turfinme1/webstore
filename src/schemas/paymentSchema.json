@@ -1,19 +1,18 @@
 {
-    "type": "object",
-    "name": "paymentSchema",
-    "properties": {
-      "client_id": {
-        "type": "string",
-        "minLength": 1,
-        "description": "The ID of the client making the order"
-      },
-      "amount": {
-        "type": "number",
-        "minimum": 0,
-        "description": "The total price of the order"
-      }
+  "type": "object",
+  "name": "paymentSchema",
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The ID of the client making the order"
     },
-    "required": ["client_id", "amount"],
-    "additionalProperties": false
-  }
-  
+    "amount": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The total price of the order"
+    }
+  },
+  "required": ["client_id", "amount"],
+  "additionalProperties": false
+}
