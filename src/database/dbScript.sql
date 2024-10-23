@@ -255,7 +255,7 @@ SELECT
     o.total_price,
     o.paid_amount,
     o.is_active,
-    o.created_at AS order_created_at,
+    o.created_at,
     json_build_object(
         'id', a.id,
         'street', a.street,

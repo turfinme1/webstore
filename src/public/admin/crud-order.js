@@ -251,7 +251,45 @@ function hideFilterForm() {
 function handleFilterOrders(event) {
   event.preventDefault();
   const formData = new FormData(elements.filterForm);
-  state.filterParams = Object.fromEntries(formData);
+
+  const filterParams = {};
+  formData.forEach((value, key) => {
+    if (value) filterParams[key] = value;
+  });
+
+  const createdAtMin = formData.get("created_at_min");
+  const createdAtMax = formData.get("created_at_max");
+  if (createdAtMin || createdAtMax) {
+    filterParams["created_at"] = {};
+    if(createdAtMin) {
+      filterParams["created_at"].min = createdAtMin;
+    }
+    if(createdAtMax) {
+      filterParams["created_at"].max = createdAtMax;
+    }
+    delete filterParams["created_at_min"];
+    delete filterParams["created_at_max"];
+  }
+
+  const totalPriceMin = parseFloat(formData.get("total_price_min"));
+  const totalPriceMax = parseFloat(formData.get("total_price_max"));
+  if((totalPriceMin && totalPriceMax) && (totalPriceMin > totalPriceMax)) {
+    alert("Total Price Min should be less than Total Price Max");
+    return;
+  }
+  if (totalPriceMin || totalPriceMax) {
+    filterParams["total_price"] = {};
+    if(totalPriceMin) {
+      filterParams["total_price"].min = totalPriceMin;
+    }
+    if(totalPriceMax) {
+      filterParams["total_price"].max = totalPriceMax;
+    }
+    delete filterParams["total_price_min"];
+    delete filterParams["total_price_max"];
+  }
+
+  state.filterParams = filterParams;
   loadOrders(state.currentPage);
 }
 
@@ -284,11 +322,11 @@ function renderOrders(orders) {
     row.appendChild(createTableCell(order.email));
     // row.appendChild(createTableCell(order.user_id));
     row.appendChild(createTableCell(order.status));
-    row.appendChild(createTableCell(`$${order.total_price || 0}`, "right"));
-    row.appendChild(createTableCell(`$${order.paid_amount || 0}`, "right"));
+    row.appendChild(createTableCell(`$${order.total_price || "0.00"}`, "right"));
+    row.appendChild(createTableCell(`$${order.paid_amount || "0.00"}`, "right"));
     row.appendChild(createTableCell(order.is_active));
     row.appendChild(
-      createTableCell(new Date(order.order_created_at).toLocaleString())
+      createTableCell(new Date(order.created_at).toLocaleString())
     );
     row.appendChild(
       createTableCell(

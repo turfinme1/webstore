@@ -29,6 +29,28 @@
             <div class="card-body">
                 <h5 class="card-title">Filter Orders</h5>
                 <form id="filter-form">
+                    <div class="row g-3">
+                        <div class="mb-3 col-auto">
+                            <label for="created_at_min" class="form-label">Created At (Start)</label>
+                            <input type="date" id="created_at_min" name="created_at_min" class="form-control">
+                        </div>
+
+                        <div class="mb-3 col-auto">
+                            <label for="created_at_max" class="form-label">Created At (End)</label>
+                            <input type="date" id="created_at_max" name="created_at_max" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="mb-3 col-auto">
+                            <label for="total_price_min" class="form-label">Price (Min)</label>
+                            <input type="number" step=".01" min="0" id="total_price_min" name="total_price_min" class="form-control">
+                        </div>
+
+                        <div class="mb-3 col-auto">
+                            <label for="total_price_max" class="form-label">Price (Max)</label>
+                            <input type="number" step=".01" min="0" id="total_price_max" name="total_price_max" class="form-control">
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label for="user_email_filter" class="form-label">User Email</label>
                         <input type="text" class="form-control" id="user_email_filter" name="email">

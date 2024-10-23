@@ -80,7 +80,7 @@ class CrudService {
         const fieldConfig = schema.properties[groupField.column];
         if (fieldConfig?.groupable) {
           if (fieldConfig.format === 'date-time') {
-            const fieldAlias = `${fieldConfig.function}('${groupField.granularity}', ${groupField.column})`;
+            const fieldAlias = `${fieldConfig.aggregation}('${groupField.granularity}', ${groupField.column})`;
             groupBySets.push(fieldAlias);
             selectFields.push(`${fieldAlias} AS ${groupField.column}`);
           } else {
@@ -89,6 +89,12 @@ class CrudService {
           }
         }
       };
+
+      for (const [key, value] of Object.entries(schema.properties)) {
+        if (value.group_behavior) {
+          selectFields.push(`${value.group_behavior}(${key}) AS ${key}`);
+        }
+      }
       
       selectFields.push("COUNT(*) AS count");
     } 
@@ -124,11 +130,28 @@ class CrudService {
     //   ? `SELECT COUNT(*) FROM (SELECT ${groupBySets.join(", ")} FROM ${schema.views} ${combinedConditions} ${groupingClause}) as count`
     //   : `SELECT COUNT(*) FROM ${schema.views} ${combinedConditions}`;
     
+    const groupBehaviorFields = Object.entries(schema.properties)
+      .filter(([_, value]) => value.group_behavior);
+
     const aggregatedTotalQuery = groupBySets.length > 0
       ? `
-        SELECT COUNT(*) AS total_rows, SUM(subquery.groupCount) AS total_group_count_sum 
+        SELECT 
+         ${groupBehaviorFields.length > 0 
+          ? groupBehaviorFields
+            .map(([key, value]) => `${value.group_behavior}(${key}) AS total_${key}`)
+            .join(", ")
+            .concat(", ") 
+          : ""} 
+          COUNT(*) AS total_rows, SUM(subquery.groupCount) AS total_group_count_sum
         FROM (
-          SELECT COUNT(*) AS groupCount
+          SELECT
+          ${groupBehaviorFields.length > 0 
+            ? groupBehaviorFields
+              .map(([key, value]) => `${value.group_behavior}(${key}) AS ${key}`)
+              .join(", ")
+              .concat(", ") 
+            : ""} 
+            COUNT(*) AS groupCount  
           FROM ${schema.views} 
           ${combinedConditions}
           ${groupingClause}
@@ -139,7 +162,7 @@ class CrudService {
     
     const result = await data.dbConnection.query(query, [...searchValues, data.query.pageSize, offset]);
   
-    return { result: result.rows, count: totalCount.rows[0].total_rows, groupCount: totalCount.rows[0]?.total_group_count_sum };
+    return { result: result.rows, count: totalCount.rows[0].total_rows, groupCount: totalCount.rows[0]?.total_group_count_sum, aggregationResults: totalCount.rows[0] };
   }
 
   async getById(data) {
