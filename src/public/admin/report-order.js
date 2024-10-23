@@ -191,6 +191,17 @@ function renderLogList(logs) {
       // Handle date formatting
       if (key.includes("created_at") && cellValue) {
         cellValue = new Date(cellValue).toLocaleString();
+        if(state.groupParams.length > 0) {
+          const groupParam = state.groupParams[0];
+
+          if(groupParam.granularity === "day") {
+            cellValue = new Date(cellValue).toLocaleDateString();
+          } else if(groupParam.granularity === "month") {
+            cellValue = new Date(cellValue).toLocaleDateString();
+          } else if(groupParam.granularity === "year") {
+            cellValue = new Date(cellValue).getFullYear();
+          }
+        }
       }
 
       if (key === "shipping_address" && cellValue) {
