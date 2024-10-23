@@ -8,22 +8,21 @@ class ExportController {
     }
 
     async exportToCsv(req, res, next) {
-        validateQueryParams(req, req.entitySchemaCollection[req.entitySchemaCollection[req.params.entity].queryValidationSchema]);
+        validateQueryParams(req, req.entitySchemaCollection[req.entitySchemaCollection[req.params.entity]?.queryValidationSchema]);
         const data = {
-            req: req,
+            res: res,
             query: req.query,
             params: req.params,
             entitySchemaCollection: req.entitySchemaCollection,
             dbConnection: req.dbConnection,
         };
-        const result = await this.exportService.exportToCsv(data);
-        res.status(200).json(result);
+        await this.exportService.exportToCsv(data);
     }
 
     async exportToExcel(req, res, next) {
-        validateQueryParams(req, req.entitySchemaCollection[req.entitySchemaCollection[req.params.entity].queryValidationSchema]);
+        validateQueryParams(req, req.entitySchemaCollection[req.entitySchemaCollection[req.params.entity]?.queryValidationSchema]);
         const data = {
-            req: req,
+            res: res,
             query: req.query,
             params: req.params,
             entitySchemaCollection: req.entitySchemaCollection,

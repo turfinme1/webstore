@@ -152,22 +152,22 @@ cron.schedule('0 0 * * *', async () => {
   await clearOldFileUploads(pool);
 });
 
-// process.on('uncaughtException', async (error) => {
-//   try {
-//     const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
-//     await logger.error(error);
-//   } catch (error) {
-//     console.error(error);
-//   }
-// });
+process.on('uncaughtException', async (error) => {
+  try {
+    const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
+    await logger.error(error);
+  } catch (error) {
+    console.error(error);
+  }
+});
 
-// process.on('unhandledRejection', async (error) => {
-//   try {
-//     const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
-//   await logger.error(error);
-//   } catch (error) {
-//     console.error(error);
-//   }
-// });
+process.on('unhandledRejection', async (error) => {
+  try {
+    const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
+  await logger.error(error);
+  } catch (error) {
+    console.error(error);
+  }
+});
 
 module.exports = { routeTable, sessionMiddleware, registerRoutes };
