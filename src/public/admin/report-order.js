@@ -28,8 +28,6 @@ const elements = {
   paginationContainer: document.getElementById("pagination-container"),
   currentPageDisplay: document.getElementById("current-page-display"),
   resultCountDisplay: document.getElementById("result-count"),
-  resultCountGroupDisplay: document.getElementById("result-group-count"),
-  resultGroupTotalPriceDisplay: document.getElementById("result-group-total-price"),
   filterForm: document.getElementById("filter-form"),
   statusCodeFilterSelect: document.getElementById("status_code_filter"),
   logLevelFilterSelect: document.getElementById("log_level_filter"),
@@ -156,15 +154,15 @@ async function loadLogs(page) {
       state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'id');
     }
 
-    renderLogList(result);
-    updatePagination(count, page, groupCount, aggregationResults);
+    renderLogList(result, aggregationResults);
+    updatePagination(count, page);
   } catch (error) {
     console.error("Error loading logs:", error);
   }
 }
 
 // Render log list
-function renderLogList(logs) {
+function renderLogList(logs, aggregationResults) {
   elements.orderListContainer.innerHTML = ""; // Clear previous list
   elements.orderTableHeader.innerHTML = ""; // Clear previous headers
 
@@ -219,6 +217,28 @@ function renderLogList(logs) {
 
     elements.orderListContainer.appendChild(logRow);
   });
+
+  // Add group total row
+  if(state.groupParams.length > 0) {
+    const groupTotalRow = document.createElement("tr");
+    state.columnsToDisplay.forEach(({ key }) => {
+      let cellValue = "";
+      if(key === "created_at") {
+        cellValue = "Total:";
+      } else if(key === "count") {
+        cellValue = aggregationResults.total_group_count_sum;
+      } else if(key === "total_price") {
+        cellValue = `$${aggregationResults.total_total_price}`;
+      } else {
+        cellValue = "";
+      }
+
+      const direction = ["count", "total_price", "paid_amount"].includes(key) ? "right" : "left";
+      groupTotalRow.appendChild(createTableCell(cellValue, direction));
+    });
+
+    elements.orderListContainer.appendChild(groupTotalRow);
+  }
 }
 
 // Create table cell
@@ -230,19 +250,13 @@ function createTableCell(text, align = "left") {
 }
 
 // Update pagination
-function updatePagination(totalLogs, page, groupCount, aggregationResults) {
+function updatePagination(totalLogs, page) {
   const totalPages = Math.ceil(totalLogs / state.pageSize);
   elements.paginationContainer.innerHTML = "";
-  elements.resultCountGroupDisplay.textContent = "";
-  elements.resultGroupTotalPriceDisplay.textContent = "";
 
   elements.currentPageDisplay.innerHTML = `Page ${page} of ${totalPages}`;
   elements.resultCountDisplay.textContent = `Found ${totalLogs} records`;
 
-  if(groupCount){
-    elements.resultCountGroupDisplay.textContent = `Group total count: ${groupCount}`;
-    elements.resultGroupTotalPriceDisplay.textContent = `Total price: $${aggregationResults.total_total_price}`;
-  }
 
   if (totalLogs == 0) {
     elements.currentPageDisplay.innerHTML = "";
