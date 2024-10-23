@@ -8,8 +8,8 @@
         "description": "The ID of the client making the order"
       },
       "amount": {
-        "type": "number",
-        "minimum": 0,
+        "type": "string",
+        "minLength": 1,
         "description": "The total price of the order"
       }
     },
