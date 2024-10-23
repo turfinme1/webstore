@@ -132,6 +132,7 @@ describe("CrudService", () => {
         result: expectedResponse,
         count: "2",
         groupCount: undefined,
+        aggregationResults : { total_rows: "2", groupCount: undefined }
       });
     });
 
@@ -151,6 +152,7 @@ describe("CrudService", () => {
         result: [],
         count: "0",
         groupCount: undefined,
+        aggregationResults : { total_rows: "0", groupCount: undefined }
       });
     });
 
@@ -178,6 +180,7 @@ describe("CrudService", () => {
         result: expectedResponse,
         count: "2",
         groupCount: undefined,
+        aggregationResults : { total_rows: "2", groupCount: undefined }
       });
     });
 
@@ -206,6 +209,7 @@ describe("CrudService", () => {
         result: expectedResponse,
         count: "2",
         groupCount: undefined,
+        aggregationResults : { total_rows: "2", groupCount: undefined }
       });
     });
 
@@ -231,6 +235,7 @@ describe("CrudService", () => {
         result: expectedResponse,
         count: "1",
         groupCount: undefined,
+        aggregationResults : { total_rows: "1", groupCount: undefined }
       });
     });
 
@@ -290,6 +295,7 @@ describe("CrudService", () => {
         result: expectedResponse,
         count: "1",
         groupCount: undefined,
+        aggregationResults : { total_rows: "1", groupCount: undefined }
       });
       expect(mockDbConnection.query).toHaveBeenCalled();
     });
@@ -311,6 +317,7 @@ describe("CrudService", () => {
         result: expectedResponse,
         count: "1",
         groupCount: undefined,
+        aggregationResults : { total_rows: "1", groupCount: undefined }
       });
       expect(mockDbConnection.query).toHaveBeenCalled();
     });
