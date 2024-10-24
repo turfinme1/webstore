@@ -32,6 +32,8 @@ const elements = {
   statusCodeFilterSelect: document.getElementById("status_code_filter"),
   logLevelFilterSelect: document.getElementById("log_level_filter"),
   showFilterButton: document.getElementById("show-filter-btn"),
+  exportCsvButton: document.getElementById("export-csv-btn"),
+  exportExcelButton: document.getElementById("export-excel-btn"),
   cancelFilterButton: document.getElementById("cancel-filter-btn"),
   filterContainer: document.getElementById("filter-container"),
   groupByCreatedAtSelect: document.getElementById("group_by_created_at"),
@@ -52,6 +54,8 @@ function attachEventListeners() {
   elements.showFilterButton.addEventListener("click", showFilterForm);
   elements.cancelFilterButton.addEventListener("click", hideFilterForm);
   elements.filterForm.addEventListener("submit", handleFilterLogs);
+  elements.exportCsvButton.addEventListener("click", handleExportCsv);
+  elements.exportExcelButton.addEventListener("click", handleExportExcel);
 }
 
 // Show and hide filter form
@@ -66,6 +70,11 @@ function hideFilterForm() {
 // Handle log filtering and grouping
 async function handleFilterLogs(event) {
   event.preventDefault();
+  updateAciveFilters();
+  loadLogs(state.currentPage);
+}
+
+function updateAciveFilters() {
   const formData = new FormData(elements.filterForm);
   const groupParams = [];
 
@@ -124,12 +133,9 @@ async function handleFilterLogs(event) {
     groupParams.push({ column: "status" });
   }
 
-
   state.groupParams = groupParams;
 
   state.currentPage = 1;
-  loadLogs(state.currentPage);
-  // hideFilterForm();
 }
 
 // Fetch and load logs with groupParams included
@@ -226,7 +232,7 @@ function renderLogList(logs, aggregationResults) {
       if(key === "created_at") {
         cellValue = "Total:";
       } else if(key === "count") {
-        cellValue = aggregationResults.total_group_count_sum;
+        cellValue = aggregationResults.total_count
       } else if(key === "total_price") {
         cellValue = `$${aggregationResults.total_total_price}`;
       } else {
@@ -280,4 +286,52 @@ function createPaginationButton(text, enabled, onClick) {
   button.disabled = !enabled;
   if (enabled) button.addEventListener("click", onClick);
   return button;
+}
+
+// Export logs to CSV
+async function handleExportCsv() {
+  try {
+    updateAciveFilters();
+    const queryParams = new URLSearchParams({
+      filterParams: JSON.stringify(state.filterParams),
+      groupParams: JSON.stringify(state.groupParams),
+    });
+
+    const response = await fetch(`/api/orders/filtered/export/csv?${queryParams.toString()}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "orders.csv";
+    a.click();
+
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.log(error);
+    alert("Error exporting logs");
+  }
+}
+
+// Export logs to Excel
+async function handleExportExcel() {
+  try {
+    updateAciveFilters();
+    const queryParams = new URLSearchParams({
+      filterParams: JSON.stringify(state.filterParams),
+      groupParams: JSON.stringify(state.groupParams),
+    });
+
+    const response = await fetch(`/api/orders/filtered/export/excel?${queryParams.toString()}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "orders.xlsx";
+    a.click();
+
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.log(error);
+    alert("Error exporting logs");
+  }
 }
