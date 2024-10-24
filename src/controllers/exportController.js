@@ -28,8 +28,7 @@ class ExportController {
             entitySchemaCollection: req.entitySchemaCollection,
             dbConnection: req.dbConnection,
         };
-        const result = await this.exportService.exportToExcel(data);
-        res.status(200).json(result);
+        await this.exportService.exportToExcel(data);
     }  
 }
 
