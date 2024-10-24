@@ -52,7 +52,7 @@ class ExportService {
         const totalsResult = await data.dbConnection.query(dataParams.aggregatedTotalQuery, dataParams.searchValues);
         const totalsRow = totalsResult.rows[0]; 
 
-        const footerRow = headers.  map(header => {
+        const footerRow = headers.map(header => {
             const totalKey = `total_${header}`;
             return totalsRow[totalKey] || '';  
         });
@@ -71,6 +71,7 @@ class ExportService {
             query: parameters.query,
             aggregatedTotalQuery: parameters.aggregatedTotalQuery,
             searchValues: parameters.searchValues,
+            appliedFilters: parameters.appliedFilters,
         }
         const csvStream = Readable.from(this.generateCsvRows(dataParams));
 
@@ -99,16 +100,23 @@ class ExportService {
     
     async* generateCsvRows(data) {
         const rowGenerator = await this.executeQueryWithCursor(data);
-        let headersWritten = false;
+        let headers = null;
         yield "\uFEFF";
+      
+        yield "Filters Applied:\n";
+        for (const [key, value] of Object.entries(data.appliedFilters)) {
+            const sanitizedValue = JSON.stringify(value).replace(/[:",]/g, '');  
+            yield `${key}:,${sanitizedValue}\n`;
+        }
+        yield "\n";
+        
+
         for await (const rows of rowGenerator) {
             for (const row of rows) {
-                if (!headersWritten) {
-                    const headers = Object.keys(row)
-                    .filter(key => this.isPrimitive(row[key]))
-                    .join(",") + "\n";
-                    yield headers;
-                    headersWritten = true;
+                if (!headers) {
+                    headers = Object.keys(row).filter(key => this.isPrimitive(row[key]));
+
+                    yield `${headers.join(",")}\n`;
                 }
                 
                 const rowValues = Object.values(row)
@@ -128,7 +136,18 @@ class ExportService {
                 yield rowValues;
             }
         }
+
+        const totalsResult = await data.dbConnection.query(data.aggregatedTotalQuery, data.searchValues);
+        const totalsRow = totalsResult.rows[0];
+        const footerRow = headers.map(header => {
+            const totalKey = `total_${header}`;
+            return totalsRow[totalKey] || '';  
+        });
+
+        footerRow[0] = `Total ${totalsRow?.total_rows || 0} rows`;
+        yield footerRow.join(",") + "\n";
     }
+
     isPrimitive(value) {
         return (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value instanceof Date || value === null);
     }
