@@ -30,7 +30,6 @@ const elements = {
   resultCountDisplay: document.getElementById("result-count"),
   filterForm: document.getElementById("filter-form"),
   statusCodeFilterSelect: document.getElementById("status_code_filter"),
-  logLevelFilterSelect: document.getElementById("log_level_filter"),
   showFilterButton: document.getElementById("show-filter-btn"),
   exportCsvButton: document.getElementById("export-csv-btn"),
   exportExcelButton: document.getElementById("export-excel-btn"),
@@ -38,7 +37,6 @@ const elements = {
   filterContainer: document.getElementById("filter-container"),
   groupByCreatedAtSelect: document.getElementById("group_by_created_at"),
   groupByStatusSelect: document.getElementById("group_by_status"),
-  groupByLogLevelSelect: document.getElementById("group_by_log_level"),
 };
 
 // Initialize page and attach event listeners
@@ -46,14 +44,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
   attachEventListeners();
-  loadLogs(state.currentPage);
+  loadOrders(state.currentPage);
 });
 
 // Attach event listeners
 function attachEventListeners() {
   elements.showFilterButton.addEventListener("click", showFilterForm);
   elements.cancelFilterButton.addEventListener("click", hideFilterForm);
-  elements.filterForm.addEventListener("submit", handleFilterLogs);
+  elements.filterForm.addEventListener("submit", handleFilterOrders);
   elements.exportCsvButton.addEventListener("click", handleExportCsv);
   elements.exportExcelButton.addEventListener("click", handleExportExcel);
 }
@@ -67,11 +65,11 @@ function hideFilterForm() {
   elements.filterContainer.style.display = "none";
 }
 
-// Handle log filtering and grouping
-async function handleFilterLogs(event) {
+// Handle order filtering and grouping
+async function handleFilterOrders(event) {
   event.preventDefault();
   updateAciveFilters();
-  loadLogs(state.currentPage);
+  loadOrders(state.currentPage);
 }
 
 function updateAciveFilters() {
@@ -138,8 +136,8 @@ function updateAciveFilters() {
   state.currentPage = 1;
 }
 
-// Fetch and load logs with groupParams included
-async function loadLogs(page) {
+// Fetch and load orders with groupParams included
+async function loadOrders(page) {
   try {
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(state.filterParams),
@@ -160,20 +158,20 @@ async function loadLogs(page) {
       state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'id');
     }
 
-    renderLogList(result, aggregationResults);
+    renderOrderList(result, aggregationResults);
     updatePagination(count, page);
   } catch (error) {
-    console.error("Error loading logs:", error);
+    console.error("Error loading orders:", error);
   }
 }
 
-// Render log list
-function renderLogList(logs, aggregationResults) {
+// Render order list
+function renderOrderList(orders, aggregationResults) {
   elements.orderListContainer.innerHTML = ""; // Clear previous list
   elements.orderTableHeader.innerHTML = ""; // Clear previous headers
 
-  if (logs.length === 0) {
-    elements.orderListContainer.innerHTML = "<tr><td colspan='8'>No logs found.</td></tr>";
+  if (orders.length === 0) {
+    elements.orderListContainer.innerHTML = "<tr><td colspan='8'>No orders found.</td></tr>";
     return;
   }
 
@@ -185,11 +183,11 @@ function renderLogList(logs, aggregationResults) {
   });
 
   // Generate table rows
-  logs.forEach((log) => {
-    const logRow = document.createElement("tr");
+  orders.forEach((order) => {
+    const orderRow = document.createElement("tr");
 
     state.columnsToDisplay.forEach(({ key }) => {
-      let cellValue = log[key];
+      let cellValue = order[key];
       cellValue = cellValue && ["total_price", "paid_amount"].includes(key) ? `$${cellValue}` : cellValue;
 
       // Handle date formatting
@@ -218,10 +216,10 @@ function renderLogList(logs, aggregationResults) {
       }
 
       const direction = ["count", "total_price", "paid_amount"].includes(key) ? "right" : "left";
-      logRow.appendChild(createTableCell(cellValue, direction));
+      orderRow.appendChild(createTableCell(cellValue, direction));
     });
 
-    elements.orderListContainer.appendChild(logRow);
+    elements.orderListContainer.appendChild(orderRow);
   });
 
   // Add group total row
@@ -256,25 +254,25 @@ function createTableCell(text, align = "left") {
 }
 
 // Update pagination
-function updatePagination(totalLogs, page) {
-  const totalPages = Math.ceil(totalLogs / state.pageSize);
+function updatePagination(totalOrders, page) {
+  const totalPages = Math.ceil(totalOrders / state.pageSize);
   elements.paginationContainer.innerHTML = "";
 
   elements.currentPageDisplay.innerHTML = `Page ${page} of ${totalPages}`;
-  elements.resultCountDisplay.textContent = `Found ${totalLogs} records`;
+  elements.resultCountDisplay.textContent = `Found ${totalOrders} records`;
 
 
-  if (totalLogs == 0) {
+  if (totalOrders == 0) {
     elements.currentPageDisplay.innerHTML = "";
     elements.resultCountDisplay.textContent = "";
     return;
   }
 
   elements.paginationContainer.appendChild(
-    createPaginationButton("Previous", page > 1, () => loadLogs(page - 1))
+    createPaginationButton("Previous", page > 1, () => loadOrders(page - 1))
   );
   elements.paginationContainer.appendChild(
-    createPaginationButton("Next", page < totalPages, () => loadLogs(page + 1))
+    createPaginationButton("Next", page < totalPages, () => loadOrders(page + 1))
   );
 }
 
@@ -288,7 +286,7 @@ function createPaginationButton(text, enabled, onClick) {
   return button;
 }
 
-// Export logs to CSV
+// Export order to CSV
 async function handleExportCsv() {
   try {
     updateAciveFilters();
@@ -308,11 +306,11 @@ async function handleExportCsv() {
     URL.revokeObjectURL(url);
   } catch (error) {
     console.log(error);
-    alert("Error exporting logs");
+    alert("Error exporting orders");
   }
 }
 
-// Export logs to Excel
+// Export order to Excel
 async function handleExportExcel() {
   try {
     updateAciveFilters();
@@ -332,6 +330,6 @@ async function handleExportExcel() {
     URL.revokeObjectURL(url);
   } catch (error) {
     console.log(error);
-    alert("Error exporting logs");
+    alert("Error exporting orders");
   }
 }
