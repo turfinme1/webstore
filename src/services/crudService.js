@@ -7,6 +7,7 @@ class CrudService {
     this.update = this.update.bind(this);
     this.delete = this.delete.bind(this);
     this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
+    this.buildFilteredPaginatedQuery = this.buildFilteredPaginatedQuery.bind(this);
   }
 
   async create(data) {
@@ -28,16 +29,29 @@ class CrudService {
   }
 
   async getFilteredPaginated(data) {
-    const schema = data.entitySchemaCollection[data.params.entity]; 
+    const builtQuery = this.buildFilteredPaginatedQuery(data);
     const offset = (data.query.page - 1) * data.query.pageSize;
+    const paginatedQuery = `${builtQuery.query} LIMIT $${builtQuery.searchValues.length + 1} OFFSET $${builtQuery.searchValues.length + 2}`;
+
+    const totalCount = await data.dbConnection.query(builtQuery.aggregatedTotalQuery, builtQuery.searchValues);
+    const result = await data.dbConnection.query(paginatedQuery, [...builtQuery.searchValues, data.query.pageSize, offset]);
+    
+    return { result: result.rows, count: totalCount.rows[0].total_rows, groupCount: totalCount.rows[0]?.total_count, aggregationResults: totalCount.rows[0] };
+  }
+
+  buildFilteredPaginatedQuery(data) {
+    const schema = data.entitySchemaCollection[data.params.entity]; 
     let searchValues = [];
     let conditions = [];
     let selectFields = [];
     let groupBySets = [];
     let orderByClause = "";
+    let appliedFilters = {};
   
     if (data.query.filterParams) {
       for (const [filterField, filterValue] of Object.entries(data.query.filterParams)) {
+        appliedFilters[filterField] = filterValue;
+
         if (Array.isArray(filterValue)) {
           const filterPlaceholders = filterValue
             .map((_, index) => `$${searchValues.length + index + 1}`)
@@ -123,12 +137,7 @@ class CrudService {
       FROM ${schema.views} 
       ${combinedConditions}
       ${groupingClause}
-      ORDER BY ${orderByClause} 
-      LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}`;
-    
-    // const totalCountQuery = groupBySets.length > 0
-    //   ? `SELECT COUNT(*) FROM (SELECT ${groupBySets.join(", ")} FROM ${schema.views} ${combinedConditions} ${groupingClause}) as count`
-    //   : `SELECT COUNT(*) FROM ${schema.views} ${combinedConditions}`;
+      ORDER BY ${orderByClause}`;
     
     const groupBehaviorFields = Object.entries(schema.properties)
       .filter(([_, value]) => value.group_behavior);
@@ -142,7 +151,7 @@ class CrudService {
             .join(", ")
             .concat(", ") 
           : ""} 
-          COUNT(*) AS total_rows, SUM(subquery.groupCount) AS total_group_count_sum
+          COUNT(*) AS total_rows, SUM(subquery.groupCount) AS total_count
         FROM (
           SELECT
           ${groupBehaviorFields.length > 0 
@@ -158,11 +167,7 @@ class CrudService {
         ) AS subquery`
       : `SELECT COUNT(*) AS total_rows FROM ${schema.views} ${combinedConditions}`;
 
-    const totalCount = await data.dbConnection.query(aggregatedTotalQuery, searchValues);
-    
-    const result = await data.dbConnection.query(query, [...searchValues, data.query.pageSize, offset]);
-  
-    return { result: result.rows, count: totalCount.rows[0].total_rows, groupCount: totalCount.rows[0]?.total_group_count_sum, aggregationResults: totalCount.rows[0] };
+    return { query, aggregatedTotalQuery, searchValues, appliedFilters };
   }
 
   async getById(data) {
