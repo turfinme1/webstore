@@ -40,6 +40,7 @@ const routeTable = {
     "/crud/:entity": controller.getAll,
     "/crud/:entity/filtered": controller.getFilteredPaginated,
     "/api/:entity/filtered/export/csv": exportController.exportToCsv,
+    "/api/:entity/filtered/export/excel": exportController.exportToExcel,
     "/crud/:entity/:id": controller.getById,
     "/api/products" : productController.getFilteredPaginated,
     "/auth/verify-mail": authController.verifyMail,
