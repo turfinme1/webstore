@@ -36,7 +36,7 @@ class CrudService {
     const totalCount = await data.dbConnection.query(builtQuery.aggregatedTotalQuery, builtQuery.searchValues);
     const result = await data.dbConnection.query(paginatedQuery, [...builtQuery.searchValues, data.query.pageSize, offset]);
     
-    return { result: result.rows, count: totalCount.rows[0].total_rows, groupCount: totalCount.rows[0]?.total_group_count_sum, aggregationResults: totalCount.rows[0] };
+    return { result: result.rows, count: totalCount.rows[0].total_rows, groupCount: totalCount.rows[0]?.total_count, aggregationResults: totalCount.rows[0] };
   }
 
   buildFilteredPaginatedQuery(data) {
@@ -46,9 +46,12 @@ class CrudService {
     let selectFields = [];
     let groupBySets = [];
     let orderByClause = "";
+    let appliedFilters = {};
   
     if (data.query.filterParams) {
       for (const [filterField, filterValue] of Object.entries(data.query.filterParams)) {
+        appliedFilters[filterField] = filterValue;
+
         if (Array.isArray(filterValue)) {
           const filterPlaceholders = filterValue
             .map((_, index) => `$${searchValues.length + index + 1}`)
@@ -148,7 +151,7 @@ class CrudService {
             .join(", ")
             .concat(", ") 
           : ""} 
-          COUNT(*) AS total_rows, SUM(subquery.groupCount) AS total_group_count_sum
+          COUNT(*) AS total_rows, SUM(subquery.groupCount) AS total_count
         FROM (
           SELECT
           ${groupBehaviorFields.length > 0 
@@ -164,7 +167,7 @@ class CrudService {
         ) AS subquery`
       : `SELECT COUNT(*) AS total_rows FROM ${schema.views} ${combinedConditions}`;
 
-    return { query, aggregatedTotalQuery, searchValues };
+    return { query, aggregatedTotalQuery, searchValues, appliedFilters };
   }
 
   async getById(data) {
