@@ -10,7 +10,7 @@ class ExportService {
     }
 
     async exportToExcel(data) {
-        const parameters = this.crudService.buildFilteredPaginatedQuery(data);
+        const parameters = this.crudService.buildFilteredPaginatedQuery(data, true);
         const dataParams = {
             ...data,
             query: parameters.query,
@@ -65,7 +65,7 @@ class ExportService {
     }
 
     async exportToCsv(data) {
-        const parameters = this.crudService.buildFilteredPaginatedQuery(data);
+        const parameters = this.crudService.buildFilteredPaginatedQuery(data, true);
         const dataParams = {
             ...data,
             query: parameters.query,
@@ -86,10 +86,10 @@ class ExportService {
         await data.dbConnection.query(`DECLARE export_cursor CURSOR FOR ${data.query}`, data.searchValues);
 
         async function* fetchRows() {
-            let result = await data.dbConnection.query("FETCH 2000 FROM export_cursor");
+            let result = await data.dbConnection.query("FETCH 10000 FROM export_cursor");
             while (result.rows.length > 0) {
                 yield result.rows;
-                result = await data.dbConnection.query("FETCH 2000 FROM export_cursor");
+                result = await data.dbConnection.query("FETCH 10000 FROM export_cursor");
             }
 
             await data.dbConnection.query("CLOSE export_cursor");

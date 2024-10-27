@@ -39,8 +39,9 @@ class CrudService {
     return { result: result.rows, count: totalCount.rows[0].total_rows, groupCount: totalCount.rows[0]?.total_count, aggregationResults: totalCount.rows[0] };
   }
 
-  buildFilteredPaginatedQuery(data) {
+  buildFilteredPaginatedQuery(data, isExport = false) {
     const schema = data.entitySchemaCollection[data.params.entity]; 
+    const view = isExport ? schema.export_view : schema.views;
     let searchValues = [];
     let conditions = [];
     let selectFields = [];
@@ -134,7 +135,7 @@ class CrudService {
   
     const query = `
       SELECT ${selectFields.join(", ")}
-      FROM ${schema.views} 
+      FROM ${view} 
       ${combinedConditions}
       ${groupingClause}
       ORDER BY ${orderByClause}`;
@@ -161,11 +162,11 @@ class CrudService {
               .concat(", ") 
             : ""} 
             COUNT(*) AS groupCount  
-          FROM ${schema.views} 
+          FROM ${view} 
           ${combinedConditions}
           ${groupingClause}
         ) AS subquery`
-      : `SELECT COUNT(*) AS total_rows FROM ${schema.views} ${combinedConditions}`;
+      : `SELECT COUNT(*) AS total_rows FROM ${view} ${combinedConditions}`;
 
     return { query, aggregatedTotalQuery, searchValues, appliedFilters };
   }

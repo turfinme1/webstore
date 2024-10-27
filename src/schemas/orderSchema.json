@@ -3,6 +3,7 @@
     "name": "orders",
     "routeName": "orders",
     "views": "orders_view",
+    "export_view": "orders_export_view",
     "queryValidationSchema": "orderQueryParamsSchema",
     "properties": {
         "order_hash": {
