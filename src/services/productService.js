@@ -3,6 +3,9 @@ const path = require('path');
 const busboy = require('busboy');
 const crypto = require('crypto');
 const { UserError } = require('../serverConfigurations/assert');
+const { Readable } = require('stream');
+const { from } = require('pg-copy-streams')
+const { pipeline } = require('stream/promises');
 
 class ProductService {
   constructor() {
@@ -14,6 +17,7 @@ class ProductService {
     this.create = this.create.bind(this);
     this.update = this.update.bind(this);
     this.delete = this.delete.bind(this);
+    this.uploadProducts = this.uploadProducts.bind(this);
     this.uploadImages = this.uploadImages.bind(this);
     this.handleFileUploads = this.handleFileUploads.bind(this);
   }
@@ -200,6 +204,49 @@ class ProductService {
     );
 
     return result.rows[0];
+  }
+
+  async uploadProducts(req) {
+    const csvStream = new Readable.from(this.streamLines(req));
+
+    const query = `
+      COPY product_test (asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month)
+      FROM STDIN WITH (FORMAT csv)`;
+    
+    const ingestStream = await req.dbConnection.query(from(query));
+    await pipeline(csvStream, ingestStream);
+
+    return { message: "Products uploaded successfully" };
+  }
+
+  async* streamLines(stream) {
+    let buffer = '';
+    let fileStarted = false;
+    
+    for await (const chunk of stream) {
+      buffer += chunk.toString();
+      if(!fileStarted) {
+        const boundary = '\r\n\r\n';
+        const boundaryIndex = buffer.indexOf(boundary);
+        buffer = buffer.slice(boundaryIndex+4);
+        fileStarted = true;
+      }
+
+      if(fileStarted) {
+        let lines = buffer.split("\n");
+        // Keep the last line in the buffer in case it's incomplete
+        buffer = lines.pop();
+        
+        for (const line of lines) {
+          // let preparedLine = line.split(',').map(value => value.trim());
+          yield line.trim() + '\n';
+        }
+      }
+    }
+    
+    if (buffer) {
+      yield buffer.trim() + '\n'; // Yield any remaining data in the buffer
+    }
   }
 
   async uploadImages(req) {

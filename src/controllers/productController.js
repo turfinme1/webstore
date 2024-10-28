@@ -13,6 +13,7 @@ class ProductController {
     this.create = this.create.bind(this);
     this.update = this.update.bind(this);
     this.uploadImages = this.uploadImages.bind(this);
+    this.uploadProducts = this.uploadProducts.bind(this);
     this.delete = this.delete.bind(this);
   }
 
@@ -107,6 +108,19 @@ class ProductController {
       entitySchemaCollection: req.entitySchemaCollection,
     };  
     const result = await this.productService.uploadImages(req);
+    res.status(200).json(result);
+  }
+
+  async uploadProducts(req, res, next) {
+    // ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    const data = {
+      body: req.body,
+      req: req,
+      params: req.params,
+      dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
+    };  
+    const result = await this.productService.uploadProducts(req);
     res.status(200).json(result);
   }
 

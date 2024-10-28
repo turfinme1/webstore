@@ -62,6 +62,7 @@ const routeTable = {
     "/api/products/:id/ratings": productController.createRating,
     "/api/products/:id/images": productController.uploadImages,
     "/api-back/orders": orderController.createOrderByStaff,
+    '/api/products/upload': productController.uploadProducts,
   },
   put: {
     "/crud/:entity/:id": controller.update,

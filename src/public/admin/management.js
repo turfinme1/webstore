@@ -13,23 +13,21 @@ import {
 // Initial setup
 document.addEventListener("DOMContentLoaded", async () => {
   const settingsLink = document.getElementById("settings-link");
-  const contentArea = document.getElementById("content-area");
+  const uploadProductLink = document.getElementById("upload-products-link");
 
   // Initialize user status and navigation
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
   await attachLogoutHandler();
 
-  // Remove active class from all links
-  const removeActiveClass = () => {
-    settingsLink.classList.remove("active");
-  };
-
   // Event listener for settings link
   settingsLink.addEventListener("click", async () => {
-    removeActiveClass();
-    settingsLink.classList.add("active");
     await renderSettings();
+  });
+
+  // Event listener for upload products link
+  uploadProductLink.addEventListener("click", async () => {
+    await renderUploadProducts();
   });
 
   // Render settings by default
@@ -68,4 +66,36 @@ async function renderSettings() {
     console.error("Error rendering settings form:", error);
     contentArea.innerHTML = `<p class="text-danger">Failed to load settings. Please try again later.</p>`;
   }
+}
+
+// Function to render upload products form 
+async function renderUploadProducts() {
+  const contentArea = document.getElementById("content-area");
+  contentArea.innerHTML = ""; // Clear previous content
+  const form = document.createElement("form");
+  form.id = "upload-products-form";
+  form.classList.add("p-4", "border", "rounded");
+  form.innerHTML = `
+    <h2>Upload Products</h2>
+    <div class="mb-3">
+      <label for="product-csv" class="form-label">Upload products from CSV file</label>
+      <input type="file" class="form-control" id="product-csv" name="product-csv" accept=".csv" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Upload</button>
+  `;
+  contentArea.appendChild(form);
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const response = await fetch("/api/products/upload", {
+      method: "POST",
+      body: formData,
+    });
+    if (response.ok) {
+      alert("Products uploaded successfully");
+    } else {
+      alert("Failed to upload products. Please try again later.");
+    }
+  });
 }
