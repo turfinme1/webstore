@@ -418,10 +418,10 @@ function updatePagination(totalOrders, page) {
   }
 
   elements.paginationContainer.appendChild(
-    createPaginationButton("Previous", page > 1, () => loadUsers(page - 1))
+    createPaginationButton("Previous", page > 1, () => loadOrders(page - 1))
   );
   elements.paginationContainer.appendChild(
-    createPaginationButton("Next", page < totalPages, () => loadUsers(page + 1))
+    createPaginationButton("Next", page < totalPages, () => loadOrders(page + 1))
   );
 }
 
