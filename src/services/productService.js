@@ -208,13 +208,34 @@ class ProductService {
 
   async uploadProducts(req) {
     const csvStream = new Readable.from(this.streamLines(req));
+   
+    await req.dbConnection.query(`
+      CREATE TEMP TABLE temp_products AS
+      TABLE product_test WITH NO DATA`
+    );
 
-    const query = `
-      COPY product_test (asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month)
-      FROM STDIN WITH (FORMAT csv)`;
-    
-    const ingestStream = await req.dbConnection.query(from(query));
+    const ingestStream = await req.dbConnection.query(from(`
+      COPY temp_products (asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month)
+      FROM STDIN WITH (FORMAT csv)`
+    ));
     await pipeline(csvStream, ingestStream);
+
+    await req.dbConnection.query(`
+      INSERT INTO product_test (asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month)
+      SELECT asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month
+      FROM temp_products
+      ON CONFLICT (asin) DO UPDATE SET
+        title = EXCLUDED.title,
+        img_url = EXCLUDED.img_url,
+        product_url = EXCLUDED.product_url,
+        stars = EXCLUDED.stars,
+        reviews = EXCLUDED.reviews,
+        price = EXCLUDED.price,
+        list_price = EXCLUDED.list_price,
+        category_id = EXCLUDED.category_id,
+        is_best_seller = EXCLUDED.is_best_seller,
+        bought_in_last_month = EXCLUDED.bought_in_last_month;
+    `);
 
     return { message: "Products uploaded successfully" };
   }
@@ -222,6 +243,9 @@ class ProductService {
   async* streamLines(stream) {
     let buffer = '';
     let fileStarted = false;
+    let isFirstLine = true;
+    const boundaryMatch = stream.headers['content-type'].match(/boundary=(.+)/);
+    const boundary = `--${boundaryMatch[1]}`;
     
     for await (const chunk of stream) {
       buffer += chunk.toString();
@@ -239,13 +263,41 @@ class ProductService {
         
         for (const line of lines) {
           // let preparedLine = line.split(',').map(value => value.trim());
+          if(line === '\r'){
+            break;
+          }
+          if(isFirstLine){
+            isFirstLine = false;
+            continue;
+          }
+          if(line.split(',').length < 11){
+            continue;
+          }
+
+          const boundaryIndex = line.indexOf('-------');
+          if (boundaryIndex >= 0) {
+            console.log(line.slice(0, boundaryIndex).trim() + '\n');
+            yield line.slice(0, boundaryIndex).trim() + '\n';
+            break;
+          }
+          console.log(line.trim() + '\n');
           yield line.trim() + '\n';
         }
       }
     }
     
     if (buffer) {
-      yield buffer.trim() + '\n'; // Yield any remaining data in the buffer
+      const boundaryIndex = buffer.indexOf('--------');
+
+      if (boundaryIndex === -1) {
+        // No boundary, yield the remaining line as is
+        console.log(buffer);
+        yield buffer.trim() + '\n';
+      } else if (boundaryIndex > 0) {
+        console.log(buffer.slice(0, boundaryIndex).trim());
+        // Boundary found after valid CSV data, yield only the CSV part
+        yield buffer.slice(0, boundaryIndex).trim() + '\n';
+      }
     }
   }
 
