@@ -55,6 +55,9 @@
     "orderParams": {
       "type": "array",
       "properties": {
+        "id": {
+          "type": "number"
+        },
         "status": {
           "type": "string"
         },

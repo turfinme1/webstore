@@ -8,6 +8,7 @@ const state = {
   searchParams: {},
   filterParams: {},
   groupParams: [],
+  orderParams: [],
   columnsToDisplay: [
     { key: "id", label: "Id" },
     { key: "created_at", label: "Created At" },
@@ -37,6 +38,7 @@ const elements = {
   filterContainer: document.getElementById("filter-container"),
   groupByCreatedAtSelect: document.getElementById("group_by_created_at"),
   groupByStatusSelect: document.getElementById("group_by_status"),
+  orderBySelect: document.getElementById("order_by"),
 };
 
 // Initialize page and attach event listeners
@@ -133,6 +135,14 @@ function updateAciveFilters() {
 
   state.groupParams = groupParams;
 
+  // Order by
+  const orderBy = elements.orderBySelect.value;
+  if (orderBy) {
+    state.orderParams = [ orderBy.split(" ")];
+  } else {
+    state.orderParams = [];
+  }
+
   state.currentPage = 1;
 }
 
@@ -142,6 +152,7 @@ async function loadOrders(page) {
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(state.filterParams),
       groupParams: JSON.stringify(state.groupParams),
+      orderParams: JSON.stringify(state.orderParams),
       pageSize: state.pageSize.toString(),
       page: page.toString(),
     });
