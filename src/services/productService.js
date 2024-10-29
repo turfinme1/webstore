@@ -208,34 +208,53 @@ class ProductService {
 
   async uploadProducts(req) {
     const csvStream = new Readable.from(this.streamLines(req));
-   
-    await req.dbConnection.query(`
-      CREATE TEMP TABLE temp_products AS
-      TABLE product_test WITH NO DATA`
-    );
+    let buffer = [];
 
-    const ingestStream = await req.dbConnection.query(from(`
-      COPY temp_products (asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month)
-      FROM STDIN WITH (FORMAT csv)`
-    ));
-    await pipeline(csvStream, ingestStream);
+    for await (const line of this.streamLines(req)) {
+      const values = line.split(',').map(value => value.trim());
+      buffer.push(values);
 
-    await req.dbConnection.query(`
-      INSERT INTO product_test (asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month)
-      SELECT asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month
-      FROM temp_products
-      ON CONFLICT (asin) DO UPDATE SET
-        title = EXCLUDED.title,
-        img_url = EXCLUDED.img_url,
-        product_url = EXCLUDED.product_url,
-        stars = EXCLUDED.stars,
-        reviews = EXCLUDED.reviews,
-        price = EXCLUDED.price,
-        list_price = EXCLUDED.list_price,
-        category_id = EXCLUDED.category_id,
-        is_best_seller = EXCLUDED.is_best_seller,
-        bought_in_last_month = EXCLUDED.bought_in_last_month;
-    `);
+      if (buffer.length >= 1000) {
+        await req.dbConnection.query(`
+          INSERT INTO product_test (asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month)
+          VALUES ${buffer.map((_, i) => `(${buffer[i].map((_, j) => `$${i * buffer[0].length + j + 1}`).join(", ")})`).join(", ")}
+          ON CONFLICT (asin) DO UPDATE SET
+            title = EXCLUDED.title,
+            img_url = EXCLUDED.img_url,
+            product_url = EXCLUDED.product_url,
+            stars = EXCLUDED.stars,
+            reviews = EXCLUDED.reviews,
+            price = EXCLUDED.price,
+            list_price = EXCLUDED.list_price,
+            category_id = EXCLUDED.category_id,
+            is_best_seller = EXCLUDED.is_best_seller,
+            bought_in_last_month = EXCLUDED.bought_in_last_month;`,
+            buffer.flat()
+        );
+        await req.dbConnection.query(`COMMIT`);
+        buffer = [];
+      }
+    }
+
+    if (buffer.length > 0) {
+      await req.dbConnection.query(`
+        INSERT INTO product_test (asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month)
+        VALUES ${buffer.map((_, i) => `(${buffer[i].map((_, j) => `$${i * buffer[0].length + j + 1}`).join(", ")})`).join(", ")}
+        ON CONFLICT (asin) DO UPDATE SET
+          title = EXCLUDED.title,
+          img_url = EXCLUDED.img_url,
+          product_url = EXCLUDED.product_url,
+          stars = EXCLUDED.stars,
+          reviews = EXCLUDED.reviews,
+          price = EXCLUDED.price,
+          list_price = EXCLUDED.list_price,
+          category_id = EXCLUDED.category_id,
+          is_best_seller = EXCLUDED.is_best_seller,
+          bought_in_last_month = EXCLUDED.bought_in_last_month;`,
+          buffer.flat()
+      );
+      await req.dbConnection.query(`COMMIT`);
+    }
 
     return { message: "Products uploaded successfully" };
   }
@@ -270,17 +289,17 @@ class ProductService {
             isFirstLine = false;
             continue;
           }
-          if(line.split(',').length < 11){
+          if(line.split(',').length !== 11){
             continue;
           }
 
           const boundaryIndex = line.indexOf('-------');
           if (boundaryIndex >= 0) {
-            console.log(line.slice(0, boundaryIndex).trim() + '\n');
+            // console.log(line.slice(0, boundaryIndex).trim() + '\n');
             yield line.slice(0, boundaryIndex).trim() + '\n';
             break;
           }
-          console.log(line.trim() + '\n');
+          // console.log(line.trim() + '\n');
           yield line.trim() + '\n';
         }
       }
