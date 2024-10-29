@@ -31,6 +31,10 @@ class ExportService {
         for (const [key, value] of Object.entries(parameters.appliedFilters)) {
             worksheet.addRow([`${key}:`, JSON.stringify(value)]).commit();
         }
+        worksheet.addRow(['Grouping Applied:']).commit(); 
+        for (const [key, value] of Object.entries(parameters.appliedGroups)) {
+            worksheet.addRow([`${key}:`, value]).commit();
+        }
 
         worksheet.addRow([]).commit();
 
@@ -72,6 +76,7 @@ class ExportService {
             aggregatedTotalQuery: parameters.aggregatedTotalQuery,
             searchValues: parameters.searchValues,
             appliedFilters: parameters.appliedFilters,
+            appliedGroups: parameters.appliedGroups,
         }
         const csvStream = Readable.from(this.generateCsvRows(dataParams));
 
@@ -105,11 +110,16 @@ class ExportService {
       
         yield "Filters Applied:\n";
         for (const [key, value] of Object.entries(data.appliedFilters)) {
-            const sanitizedValue = JSON.stringify(value).replace(/[:",]/g, '');  
+            const sanitizedValue = JSON.stringify(value).replace(/[:",]/g, ' ');  
             yield `${key}:,${sanitizedValue}\n`;
         }
         yield "\n";
-        
+
+        yield "Groups Applied:\n";
+        for (const [key, value] of Object.entries(data.appliedGroups)) {
+            yield `${key}:,${value}\n`;
+        }
+        yield "\n";
 
         for await (const rows of rowGenerator) {
             for (const row of rows) {
