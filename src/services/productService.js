@@ -6,6 +6,7 @@ const { UserError } = require('../serverConfigurations/assert');
 const { Readable } = require('stream');
 const { from } = require('pg-copy-streams')
 const { pipeline } = require('stream/promises');
+const fetch = require("node-fetch");
 
 class ProductService {
   constructor() {
@@ -207,56 +208,43 @@ class ProductService {
   }
 
   async uploadProducts(req) {
-    const csvStream = new Readable.from(this.streamLines(req));
-    let buffer = [];
-
+    let insertedLines = 0;
     for await (const line of this.streamLines(req)) {
-      const values = line.split(',').map(value => value.trim());
-      buffer.push(values);
+      const result = await req.dbConnection.query(`
+        INSERT INTO products (code, name, price, short_description, long_description)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (code) DO NOTHING
+        RETURNING *`,
+        [line[0], line[1], line[6], line[1], line[1]]
+      );
+      
+      if (result.rows.length === 1) {
+        const product = result.rows[0];
+        const imageHash = crypto.randomBytes(8).toString("hex");
+        const imagePath = `/images/${imageHash}.jpg`;
+        const fullImagePath = path.join(__dirname, "..", "..", "..", "images", `${imageHash}.jpg`);
 
-      if (buffer.length >= 1000) {
         await req.dbConnection.query(`
-          INSERT INTO product_test (asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month)
-          VALUES ${buffer.map((_, i) => `(${buffer[i].map((_, j) => `$${i * buffer[0].length + j + 1}`).join(", ")})`).join(", ")}
-          ON CONFLICT (asin) DO UPDATE SET
-            title = EXCLUDED.title,
-            img_url = EXCLUDED.img_url,
-            product_url = EXCLUDED.product_url,
-            stars = EXCLUDED.stars,
-            reviews = EXCLUDED.reviews,
-            price = EXCLUDED.price,
-            list_price = EXCLUDED.list_price,
-            category_id = EXCLUDED.category_id,
-            is_best_seller = EXCLUDED.is_best_seller,
-            bought_in_last_month = EXCLUDED.bought_in_last_month;`,
-            buffer.flat()
+          INSERT INTO images (product_id, url)
+          VALUES ($1, $2);`,
+          [product.id, imagePath]
         );
+        
+        const response = await fetch(line[2]);
+        if (!response.ok) {
+          console.log(`Failed to fetch image: ${url}`);
+          await req.dbConnection.query(`ROLLBACK`);
+          continue;
+        }
+
+        const buffer = await response.buffer();
+        await fs.promises.writeFile(fullImagePath, buffer);
         await req.dbConnection.query(`COMMIT`);
-        buffer = [];
+        insertedLines++;
       }
     }
 
-    if (buffer.length > 0) {
-      await req.dbConnection.query(`
-        INSERT INTO product_test (asin, title, img_url, product_url, stars, reviews, price, list_price, category_id, is_best_seller, bought_in_last_month)
-        VALUES ${buffer.map((_, i) => `(${buffer[i].map((_, j) => `$${i * buffer[0].length + j + 1}`).join(", ")})`).join(", ")}
-        ON CONFLICT (asin) DO UPDATE SET
-          title = EXCLUDED.title,
-          img_url = EXCLUDED.img_url,
-          product_url = EXCLUDED.product_url,
-          stars = EXCLUDED.stars,
-          reviews = EXCLUDED.reviews,
-          price = EXCLUDED.price,
-          list_price = EXCLUDED.list_price,
-          category_id = EXCLUDED.category_id,
-          is_best_seller = EXCLUDED.is_best_seller,
-          bought_in_last_month = EXCLUDED.bought_in_last_month;`,
-          buffer.flat()
-      );
-      await req.dbConnection.query(`COMMIT`);
-    }
-
-    return { message: "Products uploaded successfully" };
+    return { message: `Products uploaded successfully. Inserted ${insertedLines} lines` };
   }
 
   async* streamLines(stream) {
@@ -299,8 +287,13 @@ class ProductService {
             yield line.slice(0, boundaryIndex).trim() + '\n';
             break;
           }
-          // console.log(line.trim() + '\n');
-          yield line.trim() + '\n';
+
+          let readyLine = line.split(',').map(value => value.trim());
+          if(readyLine[2].includes('No Image')){
+            continue;
+          }
+
+          yield line.split(',').map(value => value.trim());
         }
       }
     }
