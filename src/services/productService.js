@@ -3,9 +3,6 @@ const path = require('path');
 const busboy = require('busboy');
 const crypto = require('crypto');
 const { UserError } = require('../serverConfigurations/assert');
-const { Readable } = require('stream');
-const { from } = require('pg-copy-streams')
-const { pipeline } = require('stream/promises');
 const fetch = require("node-fetch");
 
 class ProductService {
