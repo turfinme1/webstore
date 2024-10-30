@@ -80,6 +80,7 @@ async function renderUploadProducts() {
     <div class="mb-3">
       <label for="product-csv" class="form-label">Upload products from CSV file</label>
       <input type="file" class="form-control" id="product-csv" name="product-csv" accept=".csv" required>
+      <div id="response-text" class="form-text"></div>
     </div>
     <div class="d-flex align-items-center">
       <button type="submit" class="btn btn-primary" id="upload-button">Upload</button>
@@ -91,12 +92,14 @@ async function renderUploadProducts() {
   contentArea.appendChild(form);
   const uploadButton = document.getElementById("upload-button");
   const spinner = document.getElementById("spinner");
+  const responseText = document.getElementById("response-text");
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     spinner.style.display = "inline-block";
     uploadButton.disabled = true;
+    responseText.textContent = "";
 
     try {
       const formData = new FormData(form);
@@ -106,7 +109,7 @@ async function renderUploadProducts() {
       });
       if (response.ok) {
         const data = await response.json();
-        alert(data.message);
+        responseText.textContent = data.message;
         spinner.style.display = "none";
         uploadButton.disabled = false;
       } else {
