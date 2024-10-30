@@ -206,7 +206,11 @@ class ProductService {
 
   async uploadProducts(req) {
     let insertedLines = 0;
-    for await (const line of this.streamLines(req)) {
+    let invalidLinesLog = {
+      noImage: 0,
+      invalidFormat: 0
+    }
+    for await (const line of this.streamLines(req, invalidLinesLog)) {
       const result = await req.dbConnection.query(`
         INSERT INTO products (code, name, price, short_description, long_description)
         VALUES ($1, $2, $3, $4, $5)
@@ -229,7 +233,8 @@ class ProductService {
         
         const response = await fetch(line[2]);
         if (!response.ok) {
-          console.log(`Failed to fetch image: ${url}`);
+          invalidLinesLog.noImage++;
+          console.log(`Failed to fetch image: ${line[2]}`);
           await req.dbConnection.query(`ROLLBACK`);
           continue;
         }
@@ -241,15 +246,13 @@ class ProductService {
       }
     }
 
-    return { message: `Products uploaded successfully. Inserted ${insertedLines} lines` };
+    return { message: `Success. Inserted ${insertedLines} lines. Rows with no image: ${invalidLinesLog.noImage}, Rows with invalid format: ${invalidLinesLog.invalidFormat}` };
   }
 
-  async* streamLines(stream) {
+  async* streamLines(stream, invalidLinesLog) {
     let buffer = '';
     let fileStarted = false;
     let isFirstLine = true;
-    const boundaryMatch = stream.headers['content-type'].match(/boundary=(.+)/);
-    const boundary = `--${boundaryMatch[1]}`;
     
     for await (const chunk of stream) {
       buffer += chunk.toString();
@@ -266,7 +269,6 @@ class ProductService {
         buffer = lines.pop();
         
         for (const line of lines) {
-          // let preparedLine = line.split(',').map(value => value.trim());
           if(line === '\r'){
             break;
           }
@@ -274,38 +276,21 @@ class ProductService {
             isFirstLine = false;
             continue;
           }
-          if(line.split(',').length !== 11){
+
+          let preparedLine = line.split(',');
+          if(preparedLine.length !== 11){
+            invalidLinesLog.invalidFormat++;
             continue;
           }
 
-          const boundaryIndex = line.indexOf('-------');
-          if (boundaryIndex >= 0) {
-            // console.log(line.slice(0, boundaryIndex).trim() + '\n');
-            yield line.slice(0, boundaryIndex).trim() + '\n';
-            break;
-          }
-
-          let readyLine = line.split(',').map(value => value.trim());
-          if(readyLine[2].includes('No Image')){
+          if(preparedLine[2].includes('No Image')){
+            invalidLinesLog.noImage++;
+            console.log(`No image for product: ${preparedLine[1]}`);
             continue;
           }
 
-          yield line.split(',').map(value => value.trim());
+          yield preparedLine.map(value => value.trim());
         }
-      }
-    }
-    
-    if (buffer) {
-      const boundaryIndex = buffer.indexOf('--------');
-
-      if (boundaryIndex === -1) {
-        // No boundary, yield the remaining line as is
-        console.log(buffer);
-        yield buffer.trim() + '\n';
-      } else if (boundaryIndex > 0) {
-        console.log(buffer.slice(0, boundaryIndex).trim());
-        // Boundary found after valid CSV data, yield only the CSV part
-        yield buffer.slice(0, boundaryIndex).trim() + '\n';
       }
     }
   }
