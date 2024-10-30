@@ -1,35 +1,30 @@
-import {
-  getUserStatus,
-  attachLogoutHandler,
-} from "./auth.js";
+import { getUserStatus, attachLogoutHandler } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 import {
   createForm,
   attachValidationListeners,
   fetchUserSchema,
-  populateFormFields
+  populateFormFields,
 } from "./form-util.js";
 
 // Initial setup
 document.addEventListener("DOMContentLoaded", async () => {
   const settingsLink = document.getElementById("settings-link");
-  const contentArea = document.getElementById("content-area");
+  const uploadProductLink = document.getElementById("upload-products-link");
 
   // Initialize user status and navigation
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
   await attachLogoutHandler();
 
-  // Remove active class from all links
-  const removeActiveClass = () => {
-    settingsLink.classList.remove("active");
-  };
-
   // Event listener for settings link
   settingsLink.addEventListener("click", async () => {
-    removeActiveClass();
-    settingsLink.classList.add("active");
     await renderSettings();
+  });
+
+  // Event listener for upload products link
+  uploadProductLink.addEventListener("click", async () => {
+    await renderUploadProducts();
   });
 
   // Render settings by default
@@ -63,9 +58,67 @@ async function renderSettings() {
       "PUT"
     );
 
-    await populateFormFields("settings-form", "/app-config/rate-limit-settings");
+    await populateFormFields(
+      "settings-form",
+      "/app-config/rate-limit-settings"
+    );
   } catch (error) {
     console.error("Error rendering settings form:", error);
     contentArea.innerHTML = `<p class="text-danger">Failed to load settings. Please try again later.</p>`;
   }
+}
+
+// Function to render upload products form
+async function renderUploadProducts() {
+  const contentArea = document.getElementById("content-area");
+  contentArea.innerHTML = ""; // Clear previous content
+  const form = document.createElement("form");
+  form.id = "upload-products-form";
+  form.classList.add("p-4", "border", "rounded");
+  form.innerHTML = `
+    <h2>Upload Products</h2>
+    <div class="mb-3">
+      <label for="product-csv" class="form-label">Upload products from CSV file</label>
+      <input type="file" class="form-control" id="product-csv" name="product-csv" accept=".csv" required>
+    </div>
+    <div class="d-flex align-items-center">
+      <button type="submit" class="btn btn-primary" id="upload-button">Upload</button>
+      <div id="spinner" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  `;
+  contentArea.appendChild(form);
+  const uploadButton = document.getElementById("upload-button");
+  const spinner = document.getElementById("spinner");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    spinner.style.display = "inline-block";
+    uploadButton.disabled = true;
+
+    try {
+      const formData = new FormData(form);
+      const response = await fetch("/api/products/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message);
+        spinner.style.display = "none";
+        uploadButton.disabled = false;
+      } else {
+        alert("Failed to upload products. Please try again later.");
+        spinner.style.display = "none";
+        uploadButton.disabled = false;
+      }
+    } catch (error) {
+      console.error("Error uploading products:", error);
+      alert("An error occurred. Please try again.");
+      spinner.style.display = "none";
+      uploadButton.disabled = false;
+    }
+  });
 }

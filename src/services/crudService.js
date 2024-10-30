@@ -48,6 +48,7 @@ class CrudService {
     let groupBySets = [];
     let orderByClause = "";
     let appliedFilters = {};
+    let appliedGroups = {};
   
     if (data.query.filterParams) {
       for (const [filterField, filterValue] of Object.entries(data.query.filterParams)) {
@@ -98,9 +99,11 @@ class CrudService {
             const fieldAlias = `${fieldConfig.aggregation}('${groupField.granularity}', ${groupField.column})`;
             groupBySets.push(fieldAlias);
             selectFields.push(`${fieldAlias} AS ${groupField.column}`);
+            appliedGroups[groupField.column] = groupField.granularity;
           } else {
             groupBySets.push(groupField.column);
             selectFields.push(groupField.column);
+            appliedGroups[groupField.column] = 'none';  
           }
         }
       };
@@ -168,7 +171,7 @@ class CrudService {
         ) AS subquery`
       : `SELECT COUNT(*) AS total_rows FROM ${view} ${combinedConditions}`;
 
-    return { query, aggregatedTotalQuery, searchValues, appliedFilters };
+    return { query, aggregatedTotalQuery, searchValues, appliedFilters, appliedGroups };
   }
 
   async getById(data) {

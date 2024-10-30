@@ -3,6 +3,7 @@ const path = require('path');
 const busboy = require('busboy');
 const crypto = require('crypto');
 const { UserError } = require('../serverConfigurations/assert');
+const fetch = require("node-fetch");
 
 class ProductService {
   constructor() {
@@ -14,6 +15,7 @@ class ProductService {
     this.create = this.create.bind(this);
     this.update = this.update.bind(this);
     this.delete = this.delete.bind(this);
+    this.uploadProducts = this.uploadProducts.bind(this);
     this.uploadImages = this.uploadImages.bind(this);
     this.handleFileUploads = this.handleFileUploads.bind(this);
   }
@@ -200,6 +202,112 @@ class ProductService {
     );
 
     return result.rows[0];
+  }
+
+  async uploadProducts(req) {
+    let insertedLines = 0;
+    for await (const line of this.streamLines(req)) {
+      const result = await req.dbConnection.query(`
+        INSERT INTO products (code, name, price, short_description, long_description)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (code) DO NOTHING
+        RETURNING *`,
+        [line[0], line[1], line[6], line[1], line[1]]
+      );
+      
+      if (result.rows.length === 1) {
+        const product = result.rows[0];
+        const imageHash = crypto.randomBytes(8).toString("hex");
+        const imagePath = `/images/${imageHash}.jpg`;
+        const fullImagePath = path.join(__dirname, "..", "..", "..", "images", `${imageHash}.jpg`);
+
+        await req.dbConnection.query(`
+          INSERT INTO images (product_id, url)
+          VALUES ($1, $2);`,
+          [product.id, imagePath]
+        );
+        
+        const response = await fetch(line[2]);
+        if (!response.ok) {
+          console.log(`Failed to fetch image: ${url}`);
+          await req.dbConnection.query(`ROLLBACK`);
+          continue;
+        }
+
+        const buffer = await response.buffer();
+        await fs.promises.writeFile(fullImagePath, buffer);
+        await req.dbConnection.query(`COMMIT`);
+        insertedLines++;
+      }
+    }
+
+    return { message: `Products uploaded successfully. Inserted ${insertedLines} lines` };
+  }
+
+  async* streamLines(stream) {
+    let buffer = '';
+    let fileStarted = false;
+    let isFirstLine = true;
+    const boundaryMatch = stream.headers['content-type'].match(/boundary=(.+)/);
+    const boundary = `--${boundaryMatch[1]}`;
+    
+    for await (const chunk of stream) {
+      buffer += chunk.toString();
+      if(!fileStarted) {
+        const boundary = '\r\n\r\n';
+        const boundaryIndex = buffer.indexOf(boundary);
+        buffer = buffer.slice(boundaryIndex+4);
+        fileStarted = true;
+      }
+
+      if(fileStarted) {
+        let lines = buffer.split("\n");
+        // Keep the last line in the buffer in case it's incomplete
+        buffer = lines.pop();
+        
+        for (const line of lines) {
+          // let preparedLine = line.split(',').map(value => value.trim());
+          if(line === '\r'){
+            break;
+          }
+          if(isFirstLine){
+            isFirstLine = false;
+            continue;
+          }
+          if(line.split(',').length !== 11){
+            continue;
+          }
+
+          const boundaryIndex = line.indexOf('-------');
+          if (boundaryIndex >= 0) {
+            // console.log(line.slice(0, boundaryIndex).trim() + '\n');
+            yield line.slice(0, boundaryIndex).trim() + '\n';
+            break;
+          }
+
+          let readyLine = line.split(',').map(value => value.trim());
+          if(readyLine[2].includes('No Image')){
+            continue;
+          }
+
+          yield line.split(',').map(value => value.trim());
+        }
+      }
+    }
+    
+    if (buffer) {
+      const boundaryIndex = buffer.indexOf('--------');
+
+      if (boundaryIndex === -1) {
+        // No boundary, yield the remaining line as is
+        console.log(buffer);
+        yield buffer.trim() + '\n';
+      } else if (boundaryIndex > 0) {
+        console.log(buffer.slice(0, boundaryIndex).trim());
+        // Boundary found after valid CSV data, yield only the CSV part
+        yield buffer.slice(0, boundaryIndex).trim() + '\n';
+      }
+    }
   }
 
   async uploadImages(req) {

@@ -15,8 +15,15 @@
         <!-- Filter -->
         <div class="d-flex justify-content-start align-items-center mb-3 gap-3">
             <button id="show-filter-btn" class="btn btn-primary">Filter Reports</button>
-            <button id="export-csv-btn" class="btn btn-primary">Export to CSV</button>
-            <button id="export-excel-btn" class="btn btn-primary">Export to Excel</button>
+            <button id="export-csv-btn" class="btn btn-primary">
+                Export to CSV
+            </button>
+            <button id="export-excel-btn" class="btn btn-primary">
+                Export to Excel
+            </button>
+            <div id="spinner" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
         </div>
 
         <div id="filter-container" style="display:none;">
@@ -79,6 +86,19 @@
                             <select id="group_by_status" class="form-select">
                                 <option value="">No Grouping</option>
                                 <option value="status">Group by Status</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="order_by" class="form-label">Order By</label>
+                            <select id="order_by" class="form-select">
+                                <option value="">Sort Orders</option>
+                                <option value="id asc">Id (ASC)</option>
+                                <option value="id desc">Id (DESC)</option>
+                                <option value="created_at asc">Created At (ASC)</option>
+                                <option value="created_at desc">Created At (DESC)</option>
+                                <option value="total_price asc">Total Price (ASC)</option>
+                                <option value="total_price desc">Total Price (DESC)</option>
                             </select>
                         </div>
 

@@ -28,8 +28,18 @@ class ExportService {
         const worksheet = workbook.addWorksheet(data.params.entity);
 
         worksheet.addRow(['Filters Applied:']).commit();
+        worksheet.addRow(['Field', 'Criteria', 'Details']).commit();
         for (const [key, value] of Object.entries(parameters.appliedFilters)) {
-            worksheet.addRow([`${key}:`, JSON.stringify(value)]).commit();
+            if (typeof value === 'object') {
+                worksheet.addRow([`${key}`, 'Range', `${value.min} - ${value.max}`]).commit();
+            } else if (typeof value === 'string') {
+                worksheet.addRow([`${key}`, 'Exact Match', value]).commit();
+            }
+        }
+        worksheet.addRow(['Grouping Applied:']).commit(); 
+        worksheet.addRow(['Field', 'Grouping Level']).commit();
+        for (const [key, value] of Object.entries(parameters.appliedGroups)) {
+            worksheet.addRow([`${key}`, value]).commit();
         }
 
         worksheet.addRow([]).commit();
@@ -72,6 +82,7 @@ class ExportService {
             aggregatedTotalQuery: parameters.aggregatedTotalQuery,
             searchValues: parameters.searchValues,
             appliedFilters: parameters.appliedFilters,
+            appliedGroups: parameters.appliedGroups,
         }
         const csvStream = Readable.from(this.generateCsvRows(dataParams));
 
@@ -104,12 +115,23 @@ class ExportService {
         yield "\uFEFF";
       
         yield "Filters Applied:\n";
+        yield "Field,Criteria,Details\n";
         for (const [key, value] of Object.entries(data.appliedFilters)) {
-            const sanitizedValue = JSON.stringify(value).replace(/[:",]/g, '');  
-            yield `${key}:,${sanitizedValue}\n`;
+            if (typeof value === 'object') {
+                yield `${key}:,range,${value.min} - ${value.max}\n`;
+            }
+            else if (typeof value === 'string') {
+                yield `${key}:,exact match,${value}\n`;
+            }
         }
         yield "\n";
-        
+
+        yield "Groups Applied:\n";
+        yield "Field,Grouping Level\n";
+        for (const [key, value] of Object.entries(data.appliedGroups)) {
+            yield `${key}:,${value}\n`;
+        }
+        yield "\n";
 
         for await (const rows of rowGenerator) {
             for (const row of rows) {

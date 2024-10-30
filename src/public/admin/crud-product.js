@@ -196,6 +196,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (Object.keys(filterParams).length > 0) {
         queryParams.append("filterParams", JSON.stringify(filterParams));
       }
+      queryParams.append("orderParams", JSON.stringify([["id", "DESC"]]));
       queryParams.append("pageSize", pageSize.toString());
       queryParams.append("page", currentPage.toString());
 
