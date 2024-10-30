@@ -39,6 +39,9 @@ const elements = {
   groupByCreatedAtSelect: document.getElementById("group_by_created_at"),
   groupByStatusSelect: document.getElementById("group_by_status"),
   orderBySelect: document.getElementById("order_by"),
+  exportCsvButton: document.getElementById("export-csv-btn"),
+  exportExcelButton: document.getElementById("export-excel-btn"),
+  spinner: document.getElementById("spinner"),
 };
 
 // Initialize page and attach event listeners
@@ -301,12 +304,17 @@ function createPaginationButton(text, enabled, onClick) {
 async function handleExportCsv() {
   try {
     updateAciveFilters();
+    toggleExportLoadingState();
+
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(state.filterParams),
       groupParams: JSON.stringify(state.groupParams),
     });
-
     const response = await fetch(`/api/orders/filtered/export/csv?${queryParams.toString()}`);
+    if (!response.ok) {
+      throw new Error("Failed to export orders");
+    }
+
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -315,9 +323,11 @@ async function handleExportCsv() {
     a.click();
 
     URL.revokeObjectURL(url);
+    toggleExportLoadingState();
   } catch (error) {
     console.log(error);
     alert("Error exporting orders");
+    toggleExportLoadingState();
   }
 }
 
@@ -325,12 +335,17 @@ async function handleExportCsv() {
 async function handleExportExcel() {
   try {
     updateAciveFilters();
+    toggleExportLoadingState();
+
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(state.filterParams),
       groupParams: JSON.stringify(state.groupParams),
     });
-
     const response = await fetch(`/api/orders/filtered/export/excel?${queryParams.toString()}`);
+    if (!response.ok) {
+      throw new Error("Failed to export orders");
+    }
+    
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -339,8 +354,16 @@ async function handleExportExcel() {
     a.click();
 
     URL.revokeObjectURL(url);
+    toggleExportLoadingState();
   } catch (error) {
     console.log(error);
     alert("Error exporting orders");
+    toggleExportLoadingState();
   }
+}
+
+function toggleExportLoadingState() {
+  elements.spinner.style.display = elements.spinner.style.display === "none" ? "inline-block" : "none";
+  elements.exportCsvButton.disabled = !elements.exportCsvButton.disabled;
+  elements.exportExcelButton.disabled = !elements.exportExcelButton.disabled;
 }

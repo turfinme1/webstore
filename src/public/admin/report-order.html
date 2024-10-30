@@ -15,8 +15,15 @@
         <!-- Filter -->
         <div class="d-flex justify-content-start align-items-center mb-3 gap-3">
             <button id="show-filter-btn" class="btn btn-primary">Filter Reports</button>
-            <button id="export-csv-btn" class="btn btn-primary">Export to CSV</button>
-            <button id="export-excel-btn" class="btn btn-primary">Export to Excel</button>
+            <button id="export-csv-btn" class="btn btn-primary">
+                Export to CSV
+            </button>
+            <button id="export-excel-btn" class="btn btn-primary">
+                Export to Excel
+            </button>
+            <div id="spinner" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
         </div>
 
         <div id="filter-container" style="display:none;">
