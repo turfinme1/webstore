@@ -11,6 +11,7 @@
       "pattern": "^[a-zA-Z]+$",
       "label": "First Name",
       "placeholder": "Enter First Name",
+      "filterable": true,
       "errorMessage": {
         "minLength": "Name must be at least 3 characters long.",
         "pattern": "Name can only contain letters and spaces."
@@ -22,6 +23,7 @@
       "pattern": "^[a-zA-Z]+$",
       "label": "Last Name",
       "placeholder": "Enter Last Name",
+      "filterable": true,
       "errorMessage": {
         "minLength": "Name must be at least 3 characters long.",
         "pattern": "Name can only contain letters and spaces."
@@ -33,6 +35,7 @@
       "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
       "label": "Email",
       "placeholder": "Enter Email",
+      "filterable": true,
       "errorMessage": {
         "minLength": "Email must be at least 6 characters long.",
         "pattern": "Email must be a valid email address."
@@ -52,6 +55,11 @@
       "label": "Country Code",
       "placeholder": "Enter Country Code",
       "fetchFrom": "/crud/iso-country-codes",
+      "renderConfig": {
+        "type": "select",
+        "fetchFrom": "/crud/iso-country-codes",
+        "displayKey": "phone_code"
+      },
       "errorMessage": {
         "type": "Invalid country code ID."
       }
@@ -68,33 +76,46 @@
       }
     },
     "gender_id": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "label": "Gender",
       "placeholder": "Select Gender",
+      "renderConfig": {
+        "type": "select",
+        "options": [
+          {
+            "value": 3,
+            "label": "Not Specified"
+          },
+          {
+            "value": 1,
+            "label": "Male"
+          },
+          {
+            "value": 2,
+            "label": "Female"
+          }
+        ]
+      },
       "errorMessage": {
         "type": "Invalid value for gender."
       }
     },
     "country_id": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "label": "Country",
       "placeholder": "Enter Country",
-      "fetchFrom": "/crud/iso-country-codes",
+      "filterable": true,
+      "renderConfig": {
+        "type": "select",
+        "fetchFrom": "/crud/iso-country-codes",
+        "displayKey": "country_name"
+      },
       "errorMessage": {
         "type": "Invalid country code ID."
       }
     },
     "address": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "label": "Address",
       "placeholder": "Enter Address",
       "errorMessage": {
@@ -110,6 +131,18 @@
       }
     }
   },
+  "table_display_columns": [
+    "id",
+    "first_name",
+    "last_name",
+    "email",
+    "phone_code",
+    "phone",
+    "country_name",
+    "gender",
+    "address",
+    "is_email_verified"
+  ],
   "relationships": {
     "sessions": {
       "table": "sessions",
