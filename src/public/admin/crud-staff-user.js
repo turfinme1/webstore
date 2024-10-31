@@ -40,6 +40,7 @@ const elements = {
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
+  attachLogoutHandler();
   attachEventListeners();
   loadUsers(state.currentPage);
   loadCountryCodes();
@@ -129,7 +130,7 @@ async function loadUsers(page) {
       page: page.toString(),
     });
 
-    const response = await fetch(`/crud/users/filtered?${queryParams.toString()}`);
+    const response = await fetch(`/crud/admin-users/filtered?${queryParams.toString()}`);
     const { result, count } = await response.json();
     renderUserList(result);
     updatePagination(count, page);
@@ -230,7 +231,7 @@ async function handleCreateUser(event) {
   const formData = new FormData(elements.userForm);
   console.log(JSON.stringify(formData));
   try {
-    const response = await fetch("/crud/users", {
+    const response = await fetch("/crud/admin-users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(Object.fromEntries(formData)),
@@ -254,7 +255,7 @@ async function handleUpdateUser(event) {
   const formData = new FormData(elements.userUpdateForm);
   console.log(JSON.stringify(formData));
   try {
-    const response = await fetch(`/crud/users/${state.userToUpdateId}`, {
+    const response = await fetch(`/crud/admin-users/${state.userToUpdateId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(Object.fromEntries(formData)),
@@ -277,7 +278,7 @@ async function handleUpdateUser(event) {
 
 async function displayUpdateForm(userId) {
   try {
-    const userResponse = await fetch(`/crud/users/${userId}`);
+    const userResponse = await fetch(`/crud/admin-users/${userId}`);
     const user = await userResponse.json();
     showUpdateForm();
     populateUpdateForm(user);
@@ -304,7 +305,7 @@ function populateUpdateForm(user) {
 async function handleDeleteUser(userId) {
   if (!confirm("Are you sure you want to delete this user?")) return;
   try {
-    const response = await fetch(`/crud/users/${userId}`, {
+    const response = await fetch(`/crud/admin-users/${userId}`, {
       method: "DELETE",
     });
     if (response.ok) {

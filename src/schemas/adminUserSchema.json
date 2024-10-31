@@ -1,8 +1,8 @@
 {
   "type": "object",
-  "name": "users",
-  "table": "users",
-  "views": "users_view",
+  "name": "admin-users",
+  "table": "admin_users",
+  "views": "admin_users_view",
   "queryValidationSchema": "userQueryParamsSchema",
   "properties": {
     "first_name": {
@@ -68,7 +68,10 @@
       }
     },
     "gender_id": {
-      "type": ["integer", "null"],
+      "type": [
+        "integer",
+        "null"
+      ],
       "label": "Gender",
       "placeholder": "Select Gender",
       "errorMessage": {
@@ -76,7 +79,10 @@
       }
     },
     "country_id": {
-      "type": ["integer", "null"],
+      "type": [
+        "integer",
+        "null"
+      ],
       "label": "Country",
       "placeholder": "Enter Country",
       "fetchFrom": "/crud/iso-country-codes",
@@ -85,7 +91,10 @@
       }
     },
     "address": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "label": "Address",
       "placeholder": "Enter Address",
       "errorMessage": {
@@ -109,7 +118,7 @@
         "captchas": {
           "table": "captchas",
           "foreign_key": "session_id"
-        },  
+        },
         "failed_attempts": {
           "table": "failed_attempts",
           "foreign_key": "session_id"

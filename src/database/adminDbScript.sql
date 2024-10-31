@@ -74,6 +74,27 @@ SELECT
     sc.*
 FROM status_codes sc;
 
+CREATE OR REPLACE VIEW admin_users_view AS
+SELECT
+    admin_users.id,
+    admin_users.first_name,
+    admin_users.last_name,
+    admin_users.email,
+    admin_users.phone,
+    icc.phone_code AS phone_code,
+    admin_users.iso_country_code_id,
+    cc.country_name AS country_name,
+	admin_users.country_id,
+    genders.type AS gender,
+    admin_users.gender_id,
+    admin_users.address,
+    admin_users.is_email_verified,
+    admin_users.has_first_login
+FROM admin_users
+LEFT JOIN iso_country_codes icc ON admin_users.iso_country_code_id = icc.id
+LEFT JOIN iso_country_codes cc ON admin_users.country_id = cc.id
+LEFT JOIN genders ON admin_users.gender_id = genders.id;
+
 INSERT INTO status_codes (code, message) VALUES
 (1, 'Internal Server Error'),
 (2, 'Unauthorized'),

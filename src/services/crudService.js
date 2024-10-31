@@ -19,7 +19,7 @@ class CrudService {
     }
     const values = keys.map((key) => data.body[key]);
 
-    const query = `INSERT INTO ${schema.name}(${keys.join(",")}) VALUES(${keys
+    const query = `INSERT INTO ${schema.table}(${keys.join(",")}) VALUES(${keys
       .map((_, i) => `$${i + 1}`)
       .join(",")}) RETURNING *`;
 
@@ -206,7 +206,7 @@ class CrudService {
     }
 
     const values = keys.map((key) => data.body[key]);
-    let query = `UPDATE ${schema.name} SET ${keys
+    let query = `UPDATE ${schema.table} SET ${keys
       .map((key, i) => `${key} = $${i + 1}`)
       .join(", ")}`;
     query += ` WHERE id = $${keys.length + 1} RETURNING *`;
@@ -221,7 +221,7 @@ class CrudService {
     await this.deleteRelationships(data, schema, data.params.id);
 
     const result = await data.dbConnection.query(
-      `DELETE FROM ${schema.name} WHERE id = $1 RETURNING *`,
+      `DELETE FROM ${schema.table} WHERE id = $1 RETURNING *`,
       [data.params.id]
     );
 
