@@ -4,6 +4,12 @@ DROP TABLE IF EXISTS admin_sessions;
 DROP TABLE IF EXISTS admin_session_types;
 DROP TABLE IF EXISTS admin_users;
 
+DROP TABLE IF EXISTS admin_user_roles;
+DROP TABLE IF EXISTS interfaces;
+DROP TABLE IF EXISTS permissions;
+DROP TABLE IF EXISTS role_permissions;
+DROP TABLE IF EXISTS roles;
+
 DROP TABLE IF EXISTS logs;
 DROP TABLE IF EXISTS status_codes;
 
@@ -62,6 +68,41 @@ CREATE TABLE logs (
     long_description TEXT NULL,
     debug_info TEXT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE roles (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE admin_user_roles (
+    id BIGSERIAL PRIMARY KEY,
+    admin_user_id BIGINT NOT NULL REFERENCES admin_users(id),
+    role_id BIGINT NOT NULL REFERENCES roles(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE interfaces (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE permissions (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL CHECK (name IN ('view', 'create', 'read', 'update', 'delete')),
+    interface_id BIGINT NOT NULL REFERENCES interfaces(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (name, interface_id)
+);
+
+CREATE TABLE role_permissions (
+    role_id BIGINT NOT NULL REFERENCES roles(id),
+    permission_id BIGINT NOT NULL REFERENCES permissions(id),
+    PRIMARY KEY (role_id, permission_id)
 );
 
 CREATE OR REPLACE VIEW logs_view AS
