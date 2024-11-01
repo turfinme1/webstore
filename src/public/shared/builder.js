@@ -5,7 +5,12 @@ class CrudPageBuilder {
     this.rootContainer = document.getElementById(rootContainerId); // Main container for everything
 
     // State and element references
-    this.state = { currentPage: 1, pageSize: 10, filterParams: {} };
+    this.state = {
+      currentPage: 1,
+      pageSize: 10,
+      filterParams: {},
+      updateEntityId: null,
+    };
     this.elements = {
       filterContainer: null,
       filterForm: null,
@@ -24,11 +29,11 @@ class CrudPageBuilder {
   }
 
   // Initialize the CRUD page by creating containers and attaching event listeners
-  initialize() {
+  async initialize() {
     this.createContainers(); // Create all necessary HTML containers
-    this.renderForm("create");
+    await this.renderForm("create");
     // this.renderForm("update"); // Render Update form
-    this.renderFilterForm();
+    await this.renderFilterForm();
     this.loadRecords(); // Load initial records with pagination
     this.attachEventListeners(); // Attach necessary event listeners
   }
@@ -79,22 +84,22 @@ class CrudPageBuilder {
     createFormContainer.id = "form-container";
     createFormContainer.classList.add("card", "mt-4");
     createFormContainer.style.display = "none";
-    createFormContainer.innerHTML = `<div class="card-body"><h5 class="card-title">Create ${this.schema.name}</h5><form id="create-form"></form></div>`;
+    // createFormContainer.innerHTML = `<div class="card-body"><h5 class="card-title">Create ${this.schema.name}</h5><form id="create-form"></form></div>`;
     this.rootContainer.appendChild(createFormContainer);
     this.elements.createFormContainer = createFormContainer;
-    this.elements.createForm =
-      createFormContainer.querySelector("#create-form");
+    // this.elements.createForm =
+    //   createFormContainer.querySelector("#create-form");
 
     // Create Update form container (hidden initially)
     const updateFormContainer = document.createElement("div");
     updateFormContainer.id = "form-update-container";
     updateFormContainer.classList.add("card", "mt-4");
     updateFormContainer.style.display = "none";
-    updateFormContainer.innerHTML = `<div class="card-body"><h5 class="card-title">Update ${this.schema.name}</h5><form id="update-form"></form></div>`;
+    // updateFormContainer.innerHTML = `<div class="card-body"><h5 class="card-title">Update ${this.schema.name}</h5><form id="update-form"></form></div>`;
     this.rootContainer.appendChild(updateFormContainer);
     this.elements.updateFormContainer = updateFormContainer;
-    this.elements.updateForm =
-      updateFormContainer.querySelector("#update-form");
+    // this.elements.updateForm =
+    //   updateFormContainer.querySelector("#update-form");
 
     // Create table container
     const tableContainer = document.createElement("div");
@@ -134,47 +139,58 @@ class CrudPageBuilder {
   }
 
   // Render Create and Update Forms
-  renderForm(type, data = {}) {
+  async renderForm(type, data = {}) {
     const formContainer =
-      type === "create" ? this.elements.createForm : this.elements.updateForm;
-    formContainer.innerHTML = ""; // Clear any existing form
+      type === "create"
+        ? this.elements.createFormContainer
+        : this.elements.updateFormContainer;
+    formContainer.innerHTML = "";
+    const cardBody = document.createElement("div");
+    cardBody.className = "card-body";
 
-    // const formContainer = document.createElement("form");
-    formContainer.id = `${type}-form`;
-    formContainer.addEventListener("submit", (event) =>
+    const cardTitle = document.createElement("h5");
+    cardTitle.className = "card-title";
+    cardTitle.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} ${
+      this.schema.name
+    }`;
+
+    const form = document.createElement("form");
+    form.id = `${type}-form`;
+
+    cardBody.appendChild(cardTitle);
+    cardBody.appendChild(form);
+    formContainer.appendChild(cardBody);
+    this.elements[`${type}Form`] = form;
+
+    form.addEventListener("submit", (event) =>
       this.handleFormSubmit(event, type)
     );
 
     for (const field in this.schema.properties) {
       const property = this.schema.properties[field];
-      const formGroup = this.createFormGroup(field, property);
+      const formGroup = await this.createFormGroup(field, property);
 
       const input = formGroup.querySelector(`#${field}`);
       if (data[field] !== undefined) {
         if (input.type === "checkbox") {
           input.checked = data[field];
-        } else if (input.tagName === "SELECT") {
-          input.value = data[field];
-        } 
-        else {
+        } else {
           input.value = data[field];
         }
       }
 
-      formContainer.appendChild(formGroup);
+      form.appendChild(formGroup);
     }
 
     const submitButton = document.createElement("button");
     submitButton.type = "submit";
     submitButton.classList.add("btn", "btn-primary");
     submitButton.textContent = type === "create" ? "Submit" : "Update";
-    formContainer.appendChild(submitButton);
-
-    // formContainer.appendChild(formContainer);
+    form.appendChild(submitButton);
   }
 
   // Create form group for each field
-  createFormGroup(field, property) {
+  async createFormGroup(field, property) {
     const formGroup = document.createElement("div");
     formGroup.classList.add("mb-3");
 
@@ -191,19 +207,18 @@ class CrudPageBuilder {
         input.classList.add("form-control");
         input.id = field;
         input.name = field;
-        fetch(property.renderConfig.fetchFrom)
-          .then((response) => response.json())
-          .then((data) => {
-            const emptyOption = new Option("Select an option", "");
-            input.appendChild(emptyOption);
-            data.forEach((option) => {
-              const optionElement = new Option(
-                option[property.renderConfig.displayKey],
-                option.id
-              );
-              input.appendChild(optionElement);
-            });
-          });
+        const response = await fetch(property.renderConfig.fetchFrom);
+        const data = await response.json();
+
+        const emptyOption = new Option("Select an option", "");
+        input.appendChild(emptyOption);
+        data.forEach((option) => {
+          const optionElement = new Option(
+            option[property.renderConfig.displayKey],
+            option.id
+          );
+          input.appendChild(optionElement);
+        });
       } else if (property?.renderConfig?.options) {
         input = document.createElement("select");
         input.classList.add("form-control");
@@ -275,11 +290,10 @@ class CrudPageBuilder {
     event.preventDefault();
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData);
-
     const url =
       type === "create"
         ? `${this.apiEndpoint}`
-        : `${this.apiEndpoint}/${data.id}`;
+        : `${this.apiEndpoint}/${this.elements.updateEntityId}`;
     const method = type === "create" ? "POST" : "PUT";
 
     const response = await fetch(url, {
@@ -356,7 +370,9 @@ class CrudPageBuilder {
 
       const actionTd = document.createElement("td");
       actionTd.appendChild(
-        this.createActionButton("Edit", () => this.populateUpdateForm(record))
+        this.createActionButton("Update", async () =>
+          this.populateUpdateForm(record)
+        )
       );
       actionTd.appendChild(
         this.createActionButton("Delete", () => this.deleteRecord(record.id))
@@ -376,7 +392,7 @@ class CrudPageBuilder {
     button.classList.add(
       "btn",
       "btn-sm",
-      text === "Edit" ? "btn-warning" : "btn-danger"
+      text === "Update" ? "btn-warning" : "btn-danger"
     );
     button.addEventListener("click", onClick);
     return button;
@@ -390,12 +406,14 @@ class CrudPageBuilder {
 
       if (response.ok) {
         // Populate the form with data
-        this.renderForm("update", data);
+        await this.renderForm("update", data);
+        this.elements.updateEntityId = data.id;
 
         // Show the update form container, hide the create form if visible
         this.elements.updateFormContainer.style.display = "block";
         this.elements.createFormContainer.style.display = "none";
       } else {
+        this.elements.updateEntityId = null;
         alert(`Error fetching record: ${data.message}`);
       }
     } catch (error) {
@@ -450,14 +468,14 @@ class CrudPageBuilder {
   }
 
   // Render filter form
-  renderFilterForm() {
+  async renderFilterForm() {
     const filterForm = this.elements.filterForm;
     filterForm.innerHTML = "";
 
     for (const [field, property] of Object.entries(
       this.schema.properties
     ).filter(([key, property]) => property.filterable)) {
-      const filterGroup = this.createFormGroup(field, property);
+      const filterGroup = await this.createFormGroup(field, property);
       filterForm.appendChild(filterGroup);
     }
 
@@ -538,6 +556,4 @@ class CrudPageBuilder {
   }
 }
 
-export {
-  CrudPageBuilder
-};
+export { CrudPageBuilder };
