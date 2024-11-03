@@ -290,6 +290,10 @@ class CrudPageBuilder {
     event.preventDefault();
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData);
+    // remove empty values
+    for (const key in data) {
+      if (!data[key]) delete data[key];
+    }
     const url =
       type === "create"
         ? `${this.apiEndpoint}`
@@ -497,13 +501,13 @@ class CrudPageBuilder {
 
   attachEventListeners() {
     // Handle Create form submission
-    const createForm = this.rootContainer.querySelector("#create-form");
-    if (createForm) {
-      createForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        this.handleFormSubmit(event, "create");
-      });
-    }
+    // const createForm = this.rootContainer.querySelector("#create-form");
+    // if (createForm) {
+    //   createForm.addEventListener("submit", (event) => {
+    //     event.preventDefault();
+    //     this.handleFormSubmit(event, "create");
+    //   });
+    // }
 
     // Handle Update form submission
     const updateForm = this.rootContainer.querySelector("#update-form");
