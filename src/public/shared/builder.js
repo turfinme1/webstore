@@ -188,11 +188,11 @@ class CrudPageBuilder {
     form.addEventListener("submit", (event) =>
       this.handleFormSubmit(event, type)
     );
-
   }
 
   // Create form group for each field
   async createFormGroup(field, property) {
+    
     const formGroup = document.createElement("div");
     formGroup.classList.add("mb-3");
 
@@ -214,6 +214,7 @@ class CrudPageBuilder {
       formGroup.appendChild(label);
       formGroup.appendChild(input);
 
+      const self = this;
       $(document).ready(function () {
         $(`#${field}`).select2({
           placeholder: "Select permissions...",
@@ -260,21 +261,11 @@ class CrudPageBuilder {
         });
       })
 
-      // $(document).on("select2:select select2:unselect",`#${field}`, function(e) {
-      //   const selectedItems = $(`#${field}`).select2('data');
-      //   console.log("Selected items:", selectedItems);
-      // });
-      const self = this;
       $(document).on("select2:select select2:unselect", `#${field}`, function (e) {
         const selectedValues = $(this).val();  // Get current selected values
         console.log("Current selected items:", selectedValues);  // Debug selected items
         self.state.additionalFormData[field] = selectedValues;
       });
-      
-
-      // Append elements to formGroup
-      // formGroup.appendChild(label);
-      // formGroup.appendChild(input);
     } else if (property?.renderConfig?.type === "select") {
       if (property?.renderConfig?.fetchFrom) {
         input = document.createElement("select");
@@ -585,24 +576,6 @@ class CrudPageBuilder {
   }
 
   attachEventListeners() {
-    // Handle Create form submission
-    // const createForm = this.rootContainer.querySelector("#create-form");
-    // if (createForm) {
-    //   createForm.addEventListener("submit", (event) => {
-    //     event.preventDefault();
-    //     this.handleFormSubmit(event, "create");
-    //   });
-    // }
-
-    // Handle Update form submission
-    const updateForm = this.rootContainer.querySelector("#update-form");
-    if (updateForm) {
-      updateForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        this.handleFormSubmit(event, "update");
-      });
-    }
-
     // Handle filter form submission
     const filterForm = this.elements.filterForm;
     if (filterForm) {
