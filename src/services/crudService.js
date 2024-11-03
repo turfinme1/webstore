@@ -12,20 +12,62 @@ class CrudService {
 
   async create(data) {
     const schema = data.entitySchemaCollection[data.params.entity];
-    const keys = Object.keys(schema.properties);
-
-    if(data.body.password_hash){
+    
+    // Hash the password if it exists
+    if (data.body.password_hash) {
       data.body.password_hash = await bcrypt.hash(data.body.password_hash, 10);
     }
-    const values = keys.map((key) => data.body[key]);
+  
+    // Insert the main entity and return its ID
+    const insertedEntity = await this.insertMainEntity(data, schema);
+  
+    // Handle insertions into mapping tables
+    await this.handleMappingInsertions(data, schema, insertedEntity.id);
+  
+    return insertedEntity; // Return the created main entity
+  }
 
-    const query = `INSERT INTO ${schema.table}(${keys.join(",")}) VALUES(${keys
-      .map((_, i) => `$${i + 1}`)
-      .join(",")}) RETURNING *`;
+  async insertMainEntity(data, schema) {
+    const keys = Object.keys(schema.properties);
+    const mainEntityValues = keys
+      .filter(key => schema.properties[key] && !schema.properties[key]?.insertConfig) // Exclude properties with insertConfig
+      .map(key => data.body[key]);
+  
+    const insertQuery = `INSERT INTO ${schema.table}(${keys.filter(key => schema.properties[key] && !schema.properties[key]?.insertConfig).join(",")}) VALUES(${mainEntityValues.map((_, i) => `$${i + 1}`).join(",")}) RETURNING *`;
+  
+    const result = await data.dbConnection.query(insertQuery, mainEntityValues);
+    return result.rows[0]; // The newly created main entity
+  }
 
-    const result = await data.dbConnection.query(query, values);
-
-    return result.rows;
+  async handleMappingInsertions(data, schema, mainEntityId) {
+    const keys = Object.keys(schema.properties);
+  
+    for (const key of keys) {
+      const property = schema.properties[key];
+  
+      if (property?.insertConfig?.type === "mapping_table") {
+        const { insertConfig } = property;
+        const mappingTable = insertConfig.table;
+        const foreignKey = insertConfig.foreignKey;
+        const mappingKey = insertConfig.mappingKey;
+  
+        // Prepare the data to insert into the mapping table
+        const mappingValues = data.body[key].map((value) => ({
+          [foreignKey]: mainEntityId,
+          [mappingKey]: value,
+        }));
+  
+        // Insert each entry into the mapping table
+        for (const mapping of mappingValues) {
+          const columns = Object.keys(mapping).join(", ");
+          const values = Object.values(mapping);
+          const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
+  
+          const mappingQuery = `INSERT INTO ${mappingTable} (${columns}) VALUES (${placeholders})`;
+          await data.dbConnection.query(mappingQuery, values);
+        }
+      }
+    }
   }
 
   async getFilteredPaginated(data) {
