@@ -187,7 +187,7 @@ SELECT
     roles.created_at,
     jsonb_agg(
         jsonb_build_object(
-            'permission_id', permissions_view.id,
+            'id', permissions_view.id,
             'type', permissions_view.name,
             'interface_name', permissions_view.interface_name
         )
