@@ -28,10 +28,8 @@
       "insertConfig": {
         "type": "mapping_table",
         "table": "role_permissions",
-        "mapping": {
-          "role_id": "id",
-          "permission_id": "id"
-        }
+        "foreignKey": "role_id",
+        "mappingKey": "permission_id"
       }
     }
   },

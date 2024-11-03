@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS status_codes;
 
 CREATE TABLE admin_users (
     id BIGSERIAL PRIMARY KEY,
+    role_id BIGINT NULL REFERENCES roles(id),
     user_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
     password_hash TEXT NOT NULL,
     first_name TEXT NOT NULL,
@@ -31,6 +32,8 @@ CREATE TABLE admin_users (
     is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     has_first_login BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+ALTER TABLE admin_users ADD COLUMN role_id BIGINT NULL REFERENCES roles(id);
 
 CREATE TABLE admin_sessions (
     id BIGSERIAL PRIMARY KEY,
@@ -231,11 +234,14 @@ SELECT
     admin_users.gender_id,
     admin_users.address,
     admin_users.is_email_verified,
-    admin_users.has_first_login
+    admin_users.has_first_login,
+    admin_users.role_id,
+    roles.name AS role_name
 FROM admin_users
 LEFT JOIN iso_country_codes icc ON admin_users.iso_country_code_id = icc.id
 LEFT JOIN iso_country_codes cc ON admin_users.country_id = cc.id
-LEFT JOIN genders ON admin_users.gender_id = genders.id;
+LEFT JOIN genders ON admin_users.gender_id = genders.id
+LEFT JOIN roles ON admin_users.role_id = roles.id;
 
 INSERT INTO status_codes (code, message) VALUES
 (1, 'Internal Server Error'),

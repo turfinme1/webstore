@@ -129,6 +129,19 @@
       "errorMessage": {
         "type": "Invalid value for email verification."
       }
+    },
+    "role_id": {
+      "type": ["integer", "null"],
+      "label": "Role",
+      "placeholder": "Select Role",
+      "renderConfig": {
+        "type": "select",
+        "fetchFrom": "/crud/roles",
+        "displayKey": "name"
+      },
+      "errorMessage": {
+        "type": "Invalid role ID."
+      }
     }
   },
   "table_display_columns": [
@@ -141,7 +154,8 @@
     "country_name",
     "gender",
     "address",
-    "is_email_verified"
+    "is_email_verified",
+    "role_name"
   ],
   "relationships": {
     "sessions": {
