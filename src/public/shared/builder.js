@@ -6,6 +6,7 @@ class CrudPageBuilder {
 
     // State and element references
     this.state = {
+      additionalFormData: {},
       currentPage: 1,
       pageSize: 10,
       filterParams: {},
@@ -162,10 +163,6 @@ class CrudPageBuilder {
     formContainer.appendChild(cardBody);
     this.elements[`${type}Form`] = form;
 
-    form.addEventListener("submit", (event) =>
-      this.handleFormSubmit(event, type)
-    );
-
     for (const field in this.schema.properties) {
       const property = this.schema.properties[field];
       const formGroup = await this.createFormGroup(field, property);
@@ -187,6 +184,11 @@ class CrudPageBuilder {
     submitButton.classList.add("btn", "btn-primary");
     submitButton.textContent = type === "create" ? "Submit" : "Update";
     form.appendChild(submitButton);
+
+    form.addEventListener("submit", (event) =>
+      this.handleFormSubmit(event, type)
+    );
+
   }
 
   // Create form group for each field
@@ -201,7 +203,79 @@ class CrudPageBuilder {
 
     let input;
 
-    if (property?.renderConfig?.type === "select") {
+    if (property?.renderConfig?.type === "table_multi_select") {
+      // Table Multi-Select Logic
+      input = document.createElement("select");
+      input.classList.add("form-select"); // Add margin for spacing
+      input.id = field;
+      // input.name = field;
+      input.multiple = true;
+
+      formGroup.appendChild(label);
+      formGroup.appendChild(input);
+
+      $(document).ready(function () {
+        $(`#${field}`).select2({
+          placeholder: "Select permissions...",
+          minimumInputLength: 3,
+          language: {
+            inputTooShort: function () {
+              return "Please enter at least 3 characters to search"; // Custom message
+            },
+          },
+          ajax: {
+            url: property.renderConfig.fetchFrom,
+            dataType: "json",
+            delay: 250,
+            data: function (params) {
+              const searchTerm =
+                property.renderConfig.selectSearchKey || "name";
+              const filterParams = JSON.stringify({
+                [searchTerm]: params.term,
+              });
+              return {
+                filterParams: filterParams,
+                pageSize: 10,
+                page: params.page || 1,
+              };
+            },
+            processResults: function (data, params) {
+              params.page = params.page || 1;
+
+              return {
+                results: data.result.map(function (item) {
+                  const displayText = property.renderConfig.selectDisplayKey
+                    .map((key) => item[key].toUpperCase())
+                    .join(" - ");
+                  return { id: item.id, text: displayText };
+                }),
+                pagination: {
+                  more: data.count > params.page * 10,
+                },
+              };
+            },
+            cache: true,
+          },
+          theme: "bootstrap-5",
+        });
+      })
+
+      // $(document).on("select2:select select2:unselect",`#${field}`, function(e) {
+      //   const selectedItems = $(`#${field}`).select2('data');
+      //   console.log("Selected items:", selectedItems);
+      // });
+      const self = this;
+      $(document).on("select2:select select2:unselect", `#${field}`, function (e) {
+        const selectedValues = $(this).val();  // Get current selected values
+        console.log("Current selected items:", selectedValues);  // Debug selected items
+        self.state.additionalFormData[field] = selectedValues;
+      });
+      
+
+      // Append elements to formGroup
+      // formGroup.appendChild(label);
+      // formGroup.appendChild(input);
+    } else if (property?.renderConfig?.type === "select") {
       if (property?.renderConfig?.fetchFrom) {
         input = document.createElement("select");
         input.classList.add("form-control");
@@ -288,8 +362,18 @@ class CrudPageBuilder {
   // Handle form submission (Create or Update)
   async handleFormSubmit(event, type) {
     event.preventDefault();
-    const formData = new FormData(event.target);
+    const form = event.target;
+    const formData = new FormData(form);
+
     const data = Object.fromEntries(formData);
+
+    // Add additional form data to the form data object
+    for (const [key, value] of Object.entries(this.state.additionalFormData)) {
+      console.log("Additional form data:", key, value);
+      // console.log(JSON.stringify(value));
+      data[key] = value;
+    }
+
     // remove empty values
     for (const key in data) {
       if (!data[key]) delete data[key];
@@ -300,6 +384,7 @@ class CrudPageBuilder {
         : `${this.apiEndpoint}/${this.elements.updateEntityId}`;
     const method = type === "create" ? "POST" : "PUT";
 
+    console.log("Data to be submitted:", data);
     const response = await fetch(url, {
       method: method,
       headers: { "Content-Type": "application/json" },

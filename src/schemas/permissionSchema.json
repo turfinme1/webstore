@@ -5,20 +5,12 @@
     "views": "permissions_view",
     "queryValidationSchema": "permissionQueryParamsSchema",
     "properties": {
-        "type": {
+        "name": {
             "type": "string",
             "label": "Permission type",
             "placeholder": "Select permission type",
             "errorMessage": {
                 "type": "Invalid value for type."
-            }
-        },
-        "role_id": {
-            "type": "integer",
-            "label": "Role",
-            "placeholder": "Select Role",
-            "errorMessage": {
-                "type": "Invalid role selected."
             }
         },
         "interface_id": {
@@ -31,14 +23,13 @@
         }
     },
     "table_display_columns": [
-        "type",
-        "role_id",
-        "interface_id"
+        "name",
+        "interface_name"
     ],
     "relationships": {
-        "roles": {
-            "table": "roles",
-            "foreign_key": "role_id"
+        "role_permissions": {
+            "table": "role_permissions",
+            "foreign_key": "permission_id"
         },
         "interfaces": {
             "table": "interfaces",
@@ -46,14 +37,13 @@
         }
     },
     "required": [
-        "type",
-        "role_id",
+        "name",
         "interface_id"
     ],
     "additionalProperties": false,
     "errorMessage": {
         "required": {
-            "type": "Permission type is required.",
+            "name": "Permission type is required.",
             "role_id": "Role is required.",
             "interface_id": "Interface is required."
         },
