@@ -1,0 +1,100 @@
+{
+  "type": "object",
+  "name": "roles",
+  "table": "roles",
+  "views": "roles_view",
+  "queryValidationSchema": "roleQueryParamsSchema",
+  "properties": {
+    "name": {
+      "type": "string",
+      "label": "Role Name",
+      "placeholder": "Enter Role Name",
+      "filterable": true,
+      "errorMessage": {
+        "type": "Invalid value for role name."
+      }
+    },
+    "permissions": {
+      "$ref": "/permissionSchema.json",
+      "type": "array",
+      "renderConfig": {
+        "type": "table_multi_select",
+        "fetchFrom": "/crud/permissions",
+        "multiple": true
+      },
+      "schema": {
+        "type": "object",
+        "name": "permissions",
+        "table": "permissions",
+        "views": "permissions_view",
+        "queryValidationSchema": "permissionQueryParamsSchema",
+        "properties": {
+          "type": {
+            "type": "string",
+            "label": "Permission type",
+            "placeholder": "Select permission type",
+            "errorMessage": {
+              "type": "Invalid value for type."
+            }
+          },
+          "role_id": {
+            "type": "integer",
+            "label": "Role",
+            "placeholder": "Select Role",
+            "errorMessage": {
+              "type": "Invalid role selected."
+            }
+          },
+          "interface_id": {
+            "type": "integer",
+            "label": "Interface",
+            "placeholder": "Select Interface",
+            "errorMessage": {
+              "type": "Invalid interface selected."
+            }
+          }
+        },
+        "table_display_columns": ["type", "role_id", "interface_id"],
+        "relationships": {
+          "roles": {
+            "table": "roles",
+            "foreign_key": "role_id"
+          },
+          "interfaces": {
+            "table": "interfaces",
+            "foreign_key": "interface_id"
+          }
+        },
+        "required": ["type", "role_id", "interface_id"],
+        "additionalProperties": false,
+        "errorMessage": {
+          "required": {
+            "type": "Permission type is required.",
+            "role_id": "Role is required.",
+            "interface_id": "Interface is required."
+          },
+          "additionalProperties": "No additional properties are allowed."
+        }
+      }
+    }
+  },
+  "table_display_columns": ["name"],
+  "relationships": {
+    "permissions": {
+      "table": "permissions",
+      "foreign_key": "role_id"
+    },
+    "admin_user_roles": {
+      "table": "admin_user_roles",
+      "foreign_key": "role_id"
+    }
+  },
+  "required": ["name"],
+  "additionalProperties": false,
+  "errorMessage": {
+    "required": {
+      "name": "Name is required."
+    },
+    "additionalProperties": "No additional properties are allowed."
+  }
+}

@@ -1,13 +1,16 @@
+DROP VIEW IF EXISTS roles_view;
+DROP VIEW IF EXISTS permissions_view;
+
 DROP TABLE IF EXISTS admin_captchas;
 DROP TABLE IF EXISTS admin_failed_attempts;
 DROP TABLE IF EXISTS admin_sessions;
 DROP TABLE IF EXISTS admin_session_types;
 DROP TABLE IF EXISTS admin_users;
 
+DROP TABLE IF EXISTS role_permissions;
+DROP TABLE IF EXISTS permissions;
 DROP TABLE IF EXISTS admin_user_roles;
 DROP TABLE IF EXISTS interfaces;
-DROP TABLE IF EXISTS permissions;
-DROP TABLE IF EXISTS role_permissions;
 DROP TABLE IF EXISTS roles;
 
 DROP TABLE IF EXISTS logs;
@@ -78,10 +81,10 @@ CREATE TABLE roles (
 );
 
 CREATE TABLE admin_user_roles (
-    id BIGSERIAL PRIMARY KEY,
     admin_user_id BIGINT NOT NULL REFERENCES admin_users(id),
     role_id BIGINT NOT NULL REFERENCES roles(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (admin_user_id, role_id)
 );
 
 CREATE TABLE interfaces (
@@ -89,6 +92,13 @@ CREATE TABLE interfaces (
     name TEXT UNIQUE NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE role_permissions (
+    role_id BIGINT NOT NULL REFERENCES roles(id),
+    permission_id BIGINT NOT NULL REFERENCES permissions(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (role_id, permission_id)
 );
 
 CREATE TABLE permissions (
@@ -99,11 +109,102 @@ CREATE TABLE permissions (
     UNIQUE (name, interface_id)
 );
 
-CREATE TABLE role_permissions (
-    role_id BIGINT NOT NULL REFERENCES roles(id),
-    permission_id BIGINT NOT NULL REFERENCES permissions(id),
-    PRIMARY KEY (role_id, permission_id)
-);
+INSERT INTO roles (name) VALUES
+('admin'),
+('product_manager'),
+('order_manager'),
+('customer_service');
+
+INSERT INTO interfaces (name) VALUES
+('crud_products'),
+('crud_users'),
+('crud_admin_users'),
+('crud_orders'),
+('report_logs'),
+('report_orders');
+
+INSERT INTO permissions (name, interface_id) VALUES
+('view', 1),
+('create', 1),
+('read', 1),
+('update', 1),
+('delete', 1),
+('view', 2),
+('create', 2),
+('read', 2),
+('update', 2),
+('delete', 2),
+('view', 3),
+('create', 3),
+('read', 3),
+('update', 3),
+('delete', 3),
+('view', 4),
+('create', 4),
+('read', 4),
+('update', 4),
+('delete', 4),
+('view', 5),
+('create', 5),
+('read', 5),
+('update', 5),
+('delete', 5),
+('view', 6),
+('create', 6),
+('read', 6),
+('update', 6),
+('delete', 6);
+
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+    (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),   -- crud_products
+    (1, 6), (1, 7), (1, 8), (1, 9), (1, 10),  -- crud_users
+    (1, 11), (1, 12), (1, 13), (1, 14), (1, 15), -- crud_admin_users
+    (1, 16), (1, 17), (1, 18), (1, 19), (1, 20), -- crud_orders
+    (1, 21), (1, 22),                          -- report_logs (view, create)
+    (1, 23), (1, 24);                          -- report_orders (view, create)
+
+-- Product Manager Role (2) - All permissions on crud_products
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+    (2, 1), (2, 2), (2, 3), (2, 4), (2, 5);  -- crud_products
+
+-- Order Manager Role (3) - All permissions on crud_orders
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+    (3, 16), (3, 17), (3, 18), (3, 19), (3, 20);  -- crud_orders
+
+-- Customer Service Role (4) - Limited permissions on orders and reports
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+    (4, 16), (4, 18),  -- crud_orders (view, read)
+    (4, 23), (4, 24);  -- report_orders (view, read)
+    
+CREATE OR REPLACE VIEW roles_view AS
+SELECT
+    roles.id,
+    roles.name,
+    roles.is_active,
+    roles.created_at,
+    jsonb_agg(
+        jsonb_build_object(
+            'permission_id', permissions_view.id,
+            'type', permissions_view.name,
+            'interface_name', permissions_view.interface_name
+        )
+    ) AS permissions
+FROM roles
+LEFT JOIN role_permissions ON roles.id = role_permissions.role_id
+LEFT JOIN permissions_view ON role_permissions.permission_id = permissions_view.id
+GROUP BY roles.id, roles.name, roles.is_active, roles.created_at
+ORDER BY roles.id;
+
+CREATE OR REPLACE VIEW permissions_view AS
+SELECT
+    permissions.id,
+    permissions.interface_id,
+    permissions.name,
+    interfaces.name AS interface_name
+FROM permissions
+LEFT JOIN interfaces ON permissions.interface_id = interfaces.id
+ORDER BY permissions.interface_id, permissions.name;
+
 
 CREATE OR REPLACE VIEW logs_view AS
 SELECT
