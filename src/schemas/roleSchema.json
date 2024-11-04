@@ -18,9 +18,9 @@
       "type": "array",
       "label": "Permissions",
       "placeholder": "Select Permissions",
+      "hideInCreate": true,
       "renderConfig": {
         "type": "table_multi_select",
-        "fetchFrom": "/crud/permissions/filtered",
         "selectSearchKey": "name",
         "selectDisplayKey": ["name", "interface_name"],
         "multiple": true

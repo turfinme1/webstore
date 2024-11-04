@@ -83,25 +83,11 @@ CREATE TABLE roles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE admin_user_roles (
-    admin_user_id BIGINT NOT NULL REFERENCES admin_users(id),
-    role_id BIGINT NOT NULL REFERENCES roles(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (admin_user_id, role_id)
-);
-
 CREATE TABLE interfaces (
     id BIGSERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE role_permissions (
-    role_id BIGINT NOT NULL REFERENCES roles(id),
-    permission_id BIGINT NOT NULL REFERENCES permissions(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (role_id, permission_id)
 );
 
 CREATE TABLE permissions (
@@ -112,19 +98,26 @@ CREATE TABLE permissions (
     UNIQUE (name, interface_id)
 );
 
+CREATE TABLE role_permissions (
+    role_id BIGINT NOT NULL REFERENCES roles(id),
+    permission_id BIGINT NOT NULL REFERENCES permissions(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (role_id, permission_id)
+);
+
 INSERT INTO roles (name) VALUES
 ('admin'),
-('product_manager'),
-('order_manager'),
-('customer_service');
+('product manager'),
+('order manager'),
+('customer service');
 
 INSERT INTO interfaces (name) VALUES
-('crud_products'),
-('crud_users'),
-('crud_admin_users'),
-('crud_orders'),
-('report_logs'),
-('report_orders');
+('crud products'),
+('crud users'),
+('crud admin users'),
+('crud orders'),
+('report logs'),
+('report orders');
 
 INSERT INTO permissions (name, interface_id) VALUES
 ('view', 1),
@@ -178,25 +171,6 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
 INSERT INTO role_permissions (role_id, permission_id) VALUES
     (4, 16), (4, 18),  -- crud_orders (view, read)
     (4, 23), (4, 24);  -- report_orders (view, read)
-    
-CREATE OR REPLACE VIEW roles_view AS
-SELECT
-    roles.id,
-    roles.name,
-    roles.is_active,
-    roles.created_at,
-    jsonb_agg(
-        jsonb_build_object(
-            'id', permissions_view.id,
-            'type', permissions_view.name,
-            'interface_name', permissions_view.interface_name
-        )
-    ) AS permissions
-FROM roles
-LEFT JOIN role_permissions ON roles.id = role_permissions.role_id
-LEFT JOIN permissions_view ON role_permissions.permission_id = permissions_view.id
-GROUP BY roles.id, roles.name, roles.is_active, roles.created_at
-ORDER BY roles.id;
 
 CREATE OR REPLACE VIEW permissions_view AS
 SELECT
@@ -207,6 +181,52 @@ SELECT
 FROM permissions
 LEFT JOIN interfaces ON permissions.interface_id = interfaces.id
 ORDER BY permissions.interface_id, permissions.name;
+
+CREATE VIEW roles_view AS
+WITH permissions_per_interface AS (
+    SELECT
+        r.id AS role_id,
+        i.id AS interface_id,
+        i.name AS interface_name,
+        COALESCE(BOOL_OR((p.name = 'view') AND rp.permission_id IS NOT NULL), FALSE) AS "view",
+        COALESCE(BOOL_OR((p.name = 'create') AND rp.permission_id IS NOT NULL), FALSE) AS "create",
+        COALESCE(BOOL_OR((p.name = 'read') AND rp.permission_id IS NOT NULL), FALSE) AS "read",
+        COALESCE(BOOL_OR((p.name = 'update') AND rp.permission_id IS NOT NULL), FALSE) AS "update",
+        COALESCE(BOOL_OR((p.name = 'delete') AND rp.permission_id IS NOT NULL), FALSE) AS "delete"
+    FROM 
+        roles r
+    CROSS JOIN 
+        interfaces i
+    LEFT JOIN 
+        permissions p ON i.id = p.interface_id
+    LEFT JOIN 
+        role_permissions rp ON r.id = rp.role_id AND p.id = rp.permission_id
+    GROUP BY 
+        r.id, i.id, i.name
+)
+SELECT 
+    r.id,
+    r.name,
+    r.created_at,
+    jsonb_agg(
+        jsonb_build_object(
+            'interface_id', pi.interface_id,
+            'interface_name', pi.interface_name,
+            'view', pi."view",
+            'create', pi."create",
+            'read', pi."read",
+            'update', pi."update",
+            'delete', pi."delete"
+        ) ORDER BY pi.interface_id
+    ) AS permissions
+FROM 
+    roles r
+JOIN 
+    permissions_per_interface pi ON r.id = pi.role_id
+WHERE 
+    r.is_active = TRUE
+GROUP BY 
+    r.id, r.name, r.created_at;
 
 
 CREATE OR REPLACE VIEW logs_view AS

@@ -40,12 +40,12 @@ class CrudService {
   }
 
   async handleMappingInsertions(data, schema, mainEntityId) {
-    const keys = Object.keys(schema.properties);
+    const keys =  Object.keys(schema.properties);
   
     for (const key of keys) {
       const property = schema.properties[key];
   
-      if (property?.insertConfig?.type === "mapping_table") {
+      if (property?.insertConfig?.type === "mapping_table" && data.body[key]) {
         const { insertConfig } = property;
         const mappingTable = insertConfig.table;
         const foreignKey = insertConfig.foreignKey;
@@ -239,33 +239,44 @@ class CrudService {
 
   async update(data) {
     const schema = data.entitySchemaCollection[data.params.entity];
-    let keys = Object.keys(schema.properties);
+    let insertObject = {
+      keys: Object.keys(schema.properties),
+      values: [],
+    }
 
     if(data.body.password_hash){
       data.body.password_hash = await bcrypt.hash(data.body.password_hash, 10);
     } else {
-      keys = keys.filter(key => key !== 'password_hash');
+      insertObject.keys = insertObject.keys.filter(key => key !== 'password_hash');
+    }
+    if(this.hooks().update[data.params.entity]?.before){
+      await this.hooks().update[data.params.entity].before(data, insertObject);
     }
 
-    const values = keys.map((key) => data.body[key]);
-    let query = `UPDATE ${schema.table} SET ${keys
+    insertObject.values = insertObject.keys.map((key) => data.body[key]);
+    let query = `UPDATE ${schema.table} SET ${insertObject.keys
       .map((key, i) => `${key} = $${i + 1}`)
       .join(", ")}`;
-    query += ` WHERE id = $${keys.length + 1} RETURNING *`;
+    query += ` WHERE id = $${insertObject.keys.length + 1} RETURNING *`;
 
-    const result = await data.dbConnection.query(query, [...values, data.params.id]);
+    const result = await data.dbConnection.query(query, [...insertObject.values, data.params.id]);
 
     return result.rows[0];
   }
 
   async delete(data) {
     const schema = data.entitySchemaCollection[data.params.entity];
-    await this.deleteRelationships(data, schema, data.params.id);
+    // await this.deleteRelationships(data, schema, data.params.id);
 
-    const result = await data.dbConnection.query(
-      `DELETE FROM ${schema.table} WHERE id = $1 RETURNING *`,
+    const result = await data.dbConnection.query(`
+      UPDATE ${schema.table} SET is_active = FALSE WHERE id = $1 RETURNING *`, 
       [data.params.id]
     );
+
+    // const result = await data.dbConnection.query(
+    //   `DELETE FROM ${schema.table} WHERE id = $1 RETURNING *`,
+    //   [data.params.id]
+    // );
 
     return result.rows[0];
   }
@@ -298,6 +309,39 @@ class CrudService {
         [parentId]
       );
     }
+  }
+
+  hooks() {
+    async function roleUpdateHook(data, insertObject) {
+      // Delete existing permissions for the role
+      await data.dbConnection.query(
+        `DELETE FROM role_permissions WHERE role_id = $1`,
+        [data.params.id]
+      );
+
+      // Insert new permissions
+      const permissions = data.body.permissions;
+      for (const permission of permissions) {
+        const result = await data.dbConnection.query(
+          `INSERT INTO role_permissions (role_id, permission_id, created_at)
+           SELECT $1, p.id, NOW()
+           FROM permissions p
+           WHERE p.interface_id = $2 AND p.name = $3 AND $4 = TRUE
+           RETURNING *`,
+          [data.params.id, permission.interface_id, permission.action, permission.allowed]
+        );
+      }
+      // delete data.body.permissions;
+      insertObject.keys = insertObject.keys.filter(key => key !== 'role_permissions');
+    }
+
+    return {
+      update: {
+        roles:{
+          before: roleUpdateHook,
+        }
+      },
+    };
   }
 }
 

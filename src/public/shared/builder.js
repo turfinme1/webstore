@@ -11,6 +11,10 @@ class CrudPageBuilder {
       pageSize: 10,
       filterParams: {},
       updateEntityId: null,
+      collectValuesCallbacks: {
+        create: [],
+        update: [],
+      },
     };
     this.elements = {
       filterContainer: null,
@@ -165,7 +169,10 @@ class CrudPageBuilder {
 
     for (const field in this.schema.properties) {
       const property = this.schema.properties[field];
-      const formGroup = await this.createFormGroup(field, property);
+      console.log("Property:", property);
+      if (property?.hideInCreate && type === "create") continue;
+
+      const formGroup = await this.createFormGroup(field, property, data);
 
       const input = formGroup.querySelector(`#${field}`);
       if (data[field] !== undefined) {
@@ -186,86 +193,27 @@ class CrudPageBuilder {
     form.appendChild(submitButton);
 
     form.addEventListener("submit", (event) =>
-      this.handleFormSubmit(event, type)
+      this.handleFormSubmit(event, type, this.state.collectValuesCallbacks)
     );
   }
 
   // Create form group for each field
-  async createFormGroup(field, property) {
-    
+  async createFormGroup(field, property, data) {
     const formGroup = document.createElement("div");
     formGroup.classList.add("mb-3");
-
     const label = document.createElement("label");
     label.classList.add("form-label");
     label.setAttribute("for", field);
     label.textContent = property.label || field;
 
+    formGroup.appendChild(label);
     let input;
 
-    if (property?.renderConfig?.type === "table_multi_select") {
-      // Table Multi-Select Logic
-      input = document.createElement("select");
-      input.classList.add("form-select"); // Add margin for spacing
-      input.id = field;
-      // input.name = field;
-      input.multiple = true;
-
-      formGroup.appendChild(label);
-      formGroup.appendChild(input);
-
-      const self = this;
-      $(document).ready(function () {
-        $(`#${field}`).select2({
-          placeholder: "Select permissions...",
-          minimumInputLength: 3,
-          language: {
-            inputTooShort: function () {
-              return "Please enter at least 3 characters to search"; // Custom message
-            },
-          },
-          ajax: {
-            url: property.renderConfig.fetchFrom,
-            dataType: "json",
-            delay: 250,
-            data: function (params) {
-              const searchTerm =
-                property.renderConfig.selectSearchKey || "name";
-              const filterParams = JSON.stringify({
-                [searchTerm]: params.term,
-              });
-              return {
-                filterParams: filterParams,
-                pageSize: 10,
-                page: params.page || 1,
-              };
-            },
-            processResults: function (data, params) {
-              params.page = params.page || 1;
-
-              return {
-                results: data.result.map(function (item) {
-                  const displayText = property.renderConfig.selectDisplayKey
-                    .map((key) => item[key].toUpperCase())
-                    .join(" - ");
-                  return { id: item.id, text: displayText };
-                }),
-                pagination: {
-                  more: data.count > params.page * 10,
-                },
-              };
-            },
-            cache: true,
-          },
-          theme: "bootstrap-5",
-        });
-      })
-
-      $(document).on("select2:select select2:unselect", `#${field}`, function (e) {
-        const selectedValues = $(this).val();  // Get current selected values
-        console.log("Current selected items:", selectedValues);  // Debug selected items
-        self.state.additionalFormData[field] = selectedValues;
-      });
+    if (
+      property?.renderConfig?.type === "table_multi_select" &&
+      Object.keys(data).length > 0
+    ) {
+      this.renderPermissionsTable(data, formGroup, label);
     } else if (property?.renderConfig?.type === "select") {
       if (property?.renderConfig?.fetchFrom) {
         input = document.createElement("select");
@@ -330,9 +278,82 @@ class CrudPageBuilder {
       input.type = this.getInputType(property.type); // Set the input type based on the schema
     }
 
-    formGroup.appendChild(label);
-    formGroup.appendChild(input);
+    if (input) {
+      formGroup.appendChild(input);
+    }
     return formGroup;
+  }
+
+  renderPermissionsTable(data, container, label) {
+    const permissions = data.permissions;
+    container.innerHTML = "";
+
+    const table = document.createElement("table");
+    table.className = "table table-striped table-bordered";
+    table.id = "permissionsContainer";
+
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    const headers = [
+      "Interface Name",
+      "View",
+      "Create",
+      "Read",
+      "Update",
+      "Delete",
+    ];
+    headers.forEach((header) => {
+      const th = document.createElement("th");
+      th.textContent = header;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    permissions.forEach((permission) => {
+      const row = document.createElement("tr");
+
+      const interfaceNameCell = document.createElement("td");
+      interfaceNameCell.textContent = permission.interface_name;
+      row.appendChild(interfaceNameCell);
+
+      ["view", "create", "read", "update", "delete"].forEach((action) => {
+        const cell = document.createElement("td");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = permission[action];
+        checkbox.id = `${permission.interface_id}-${action}`;
+        cell.appendChild(checkbox);
+        row.appendChild(cell);
+      });
+
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    container.appendChild(label);
+    container.appendChild(table);
+
+    const roleIdInput = document.createElement("input");
+    roleIdInput.type = "hidden";
+    roleIdInput.id = "roleIdInput";
+    roleIdInput.value = data.id;
+    container.appendChild(roleIdInput);
+
+    this.state.collectValuesCallbacks.update.push(() => {
+      const permissions = [];
+      document
+        .querySelectorAll('#permissionsContainer input[type="checkbox"]')
+        .forEach((checkbox) => {
+          const [interfaceId, action] = checkbox.id.split("-");
+          permissions.push({
+            interface_id: parseInt(interfaceId),
+            action: action,
+            allowed: checkbox.checked,
+          });
+        });
+      return { id: data.id, permissions: permissions };
+    });
   }
 
   getInputType(type) {
@@ -351,12 +372,19 @@ class CrudPageBuilder {
   }
 
   // Handle form submission (Create or Update)
-  async handleFormSubmit(event, type) {
+  async handleFormSubmit(event, type, collectValuesCallbacks) {
     event.preventDefault();
     const form = event.target;
     const formData = new FormData(form);
 
     const data = Object.fromEntries(formData);
+
+    for (const callback of collectValuesCallbacks[type]) {
+      const additionalData = callback();
+      for (const [key, value] of Object.entries(additionalData)) {
+        data[key] = value;
+      }
+    }
 
     // Add additional form data to the form data object
     for (const [key, value] of Object.entries(this.state.additionalFormData)) {
@@ -503,9 +531,21 @@ class CrudPageBuilder {
   }
 
   async deleteRecord(id) {
-    if (confirm("Are you sure you want to delete this record?")) {
-      await fetch(`${this.apiEndpoint}/delete/${id}`, { method: "DELETE" });
-      this.loadRecords();
+    try {
+      if (confirm("Are you sure you want to delete this record?")) {
+        const result = await fetch(`${this.apiEndpoint}/${id}`, {
+          method: "DELETE",
+        });
+        if (result.ok) {
+          alert("Record deleted successfully!");
+          await this.loadRecords();
+        } else {
+          const error = await result.json();
+          alert(`Error deleting record: ${error.error}`);
+        }
+      }
+    } catch (error) {
+      alert("An error occurred while deleting the record.");
     }
   }
 
