@@ -155,7 +155,7 @@
     "gender",
     "address",
     "is_email_verified",
-    "role_name"
+    "roles"
   ],
   "relationships": {
     "sessions": {

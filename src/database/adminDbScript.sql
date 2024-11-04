@@ -18,7 +18,6 @@ DROP TABLE IF EXISTS status_codes;
 
 CREATE TABLE admin_users (
     id BIGSERIAL PRIMARY KEY,
-    role_id BIGINT NULL REFERENCES roles(id),
     user_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
     password_hash TEXT NOT NULL,
     first_name TEXT NOT NULL,
@@ -32,8 +31,6 @@ CREATE TABLE admin_users (
     is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     has_first_login BOOLEAN NOT NULL DEFAULT TRUE
 );
-
-ALTER TABLE admin_users ADD COLUMN role_id BIGINT NULL REFERENCES roles(id);
 
 CREATE TABLE admin_sessions (
     id BIGSERIAL PRIMARY KEY,
@@ -81,6 +78,13 @@ CREATE TABLE roles (
     name TEXT UNIQUE NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE admin_user_roles (
+    admin_user_id BIGINT NOT NULL REFERENCES admin_users(id),
+    role_id BIGINT NOT NULL REFERENCES roles(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (admin_user_id, role_id)
 );
 
 CREATE TABLE interfaces (
@@ -172,6 +176,10 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
     (4, 16), (4, 18),  -- crud_orders (view, read)
     (4, 23), (4, 24);  -- report_orders (view, read)
 
+INSERT INTO admin_user_roles (admin_user_id, role_id) VALUES
+    (1, 1), (1, 2), (1, 3), (1, 4), 
+    (2, 2), (3, 3), (4, 4); 
+
 CREATE OR REPLACE VIEW permissions_view AS
 SELECT
     permissions.id,
@@ -249,19 +257,38 @@ SELECT
     icc.phone_code AS phone_code,
     admin_users.iso_country_code_id,
     cc.country_name AS country_name,
-	admin_users.country_id,
+    admin_users.country_id,
     genders.type AS gender,
     admin_users.gender_id,
     admin_users.address,
     admin_users.is_email_verified,
     admin_users.has_first_login,
-    admin_users.role_id,
-    roles.name AS role_name
+    COALESCE(
+        jsonb_agg(jsonb_build_object('id', roles.id, 'name', roles.name))
+        FILTER (WHERE roles.id IS NOT NULL),
+        '[]'::jsonb
+    ) AS roles
 FROM admin_users
 LEFT JOIN iso_country_codes icc ON admin_users.iso_country_code_id = icc.id
 LEFT JOIN iso_country_codes cc ON admin_users.country_id = cc.id
 LEFT JOIN genders ON admin_users.gender_id = genders.id
-LEFT JOIN roles ON admin_users.role_id = roles.id;
+LEFT JOIN admin_user_roles aur ON admin_users.id = aur.admin_user_id
+LEFT JOIN roles ON aur.role_id = roles.id
+GROUP BY
+    admin_users.id,
+    admin_users.first_name,
+    admin_users.last_name,
+    admin_users.email,
+    admin_users.phone,
+    icc.phone_code,
+    admin_users.iso_country_code_id,
+    cc.country_name,
+    admin_users.country_id,
+    genders.type,
+    admin_users.gender_id,
+    admin_users.address,
+    admin_users.is_email_verified,
+    admin_users.has_first_login;
 
 INSERT INTO status_codes (code, message) VALUES
 (1, 'Internal Server Error'),

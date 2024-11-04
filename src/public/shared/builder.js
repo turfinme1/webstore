@@ -169,7 +169,6 @@ class CrudPageBuilder {
 
     for (const field in this.schema.properties) {
       const property = this.schema.properties[field];
-      console.log("Property:", property);
       if (property?.hideInCreate && type === "create") continue;
 
       const formGroup = await this.createFormGroup(field, property, data);
@@ -472,7 +471,13 @@ class CrudPageBuilder {
       const row = document.createElement("tr");
       this.schema.table_display_columns.forEach((key) => {
         const td = document.createElement("td");
-        td.textContent = record[key];
+
+        if (Array.isArray(record[key])) {
+          td.textContent = record[key].map((item) => item.name).join(", ");
+        } else
+        {
+          td.textContent = record[key];
+        }
         row.appendChild(td);
       });
 
