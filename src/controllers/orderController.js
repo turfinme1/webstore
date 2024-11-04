@@ -2,8 +2,9 @@ const { ASSERT_USER } = require("../serverConfigurations/assert");
 const STATUS_CODES = require("../serverConfigurations/constants");
 
 class OrderController {
-    constructor(orderService) {
+    constructor(orderService, authService) {
       this.orderService = orderService;
+      this.authService = authService;
       this.createOrder = this.createOrder.bind(this);
       this.createOrderByStaff = this.createOrderByStaff.bind(this);
       this.updateOrderByStaff = this.updateOrderByStaff.bind(this);
@@ -24,7 +25,8 @@ class OrderController {
     }
 
     async createOrderByStaff(req, res) {
-      // ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      this.authService.requirePermission(req, "create", 'orders');
       const data = {
         body: req.body,
         session: req.session,
@@ -35,7 +37,8 @@ class OrderController {
     }
 
     async updateOrderByStaff(req, res) {
-      // ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      this.authService.requirePermission(req, "update", 'orders');
       const data = {
         body: req.body,
         params: req.params,
@@ -71,7 +74,8 @@ class OrderController {
     }
 
     async deleteOrder(req, res) {
-      // ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      this.authService.requirePermission(req, "delete", 'orders');
       const data = {
         params: req.params,
         session: req.session,

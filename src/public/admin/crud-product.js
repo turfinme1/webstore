@@ -432,7 +432,11 @@ document.addEventListener("DOMContentLoaded", async () => {
               console.error("Error:", error);
               alert(`Failed to update product: ${error.error}`);
             }
-          } 
+          } else {
+            const error = await response.json();
+            console.error("Error:", error);
+            alert(`Failed to update product: ${error.error}`);
+          }
         } catch (error) {
           console.error("Error submitting the form:", error);
           alert("Failed to update product.");

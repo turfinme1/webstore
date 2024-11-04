@@ -422,7 +422,7 @@ class CrudPageBuilder {
     } else {
       const error = await response.json();
       const errorMessage =
-        error.message || "An error occurred! Please try again.";
+        error.error || "An error occurred! Please try again.";
       alert(`Error: ${errorMessage}`);
     }
   }

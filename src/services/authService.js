@@ -21,6 +21,7 @@ class AuthService {
     this.verifyCaptcha = this.verifyCaptcha.bind(this);
     this.updateProfile = this.updateProfile.bind(this);
     this.forgotPassword = this.forgotPassword.bind(this);
+    this.requirePermission = this.requirePermission.bind(this);
   }
 
   async register(data) {
@@ -427,7 +428,11 @@ class AuthService {
     );
 
     return { message: "Password successfully reset" };
-  } 
+  }
+  
+  requirePermission(req, permission, interfaceName) {
+    ASSERT_USER(req.session.rolesPermissions.some((rolePermission) => rolePermission.permission === permission && rolePermission.interface === interfaceName), "You do not have permission to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: `You do not have permission to perform this action` });
+  }
 }
 
 module.exports = AuthService;
