@@ -186,8 +186,10 @@ class AuthService {
         [data.session.user_id]
       );
     }
-
-    return result.rows[0];
+    
+    let userStatus = result.rows[0];
+    userStatus.role_permissions = data.session.role_permissions;
+    return userStatus;
   }
 
   async getCaptcha(data) {
@@ -431,7 +433,7 @@ class AuthService {
   }
   
   requirePermission(req, permission, interfaceName) {
-    ASSERT_USER(req.session.rolesPermissions.some((rolePermission) => rolePermission.permission === permission && rolePermission.interface === interfaceName), "You do not have permission to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: `You do not have permission to perform this action` });
+    ASSERT_USER(req.session.role_permissions.some((rolePermission) => rolePermission.permission === permission && rolePermission.interface === interfaceName), "You do not have permission to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: `You do not have permission to perform this action` });
   }
 }
 

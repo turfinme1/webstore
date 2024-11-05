@@ -1,8 +1,11 @@
+import { hasPermission } from "./auth.js";
+
 class CrudPageBuilder {
-  constructor(schema, apiEndpoint, rootContainerId) {
+  constructor(schema, apiEndpoint, rootContainerId, userStatus) {
     this.schema = schema;
     this.apiEndpoint = apiEndpoint;
     this.rootContainer = document.getElementById(rootContainerId); // Main container for everything
+    this.userStatus = userStatus;
 
     // State and element references
     this.state = {
@@ -64,15 +67,19 @@ class CrudPageBuilder {
     showFilterButton.id = "show-filter-btn";
     showFilterButton.classList.add("btn", "btn-primary");
     showFilterButton.textContent = `FILTER`;
-    buttonContainer.appendChild(showFilterButton);
     this.elements.showFilterButton = showFilterButton;
+    if (hasPermission(this.userStatus, "read", this.schema.name)) {
+      buttonContainer.appendChild(showFilterButton);
+    }
 
     const showCreateFormButton = document.createElement("button");
     showCreateFormButton.id = "show-form-btn";
     showCreateFormButton.classList.add("btn", "btn-success");
     showCreateFormButton.textContent = `CREATE`;
-    buttonContainer.appendChild(showCreateFormButton);
     this.elements.showCreateFormButton = showCreateFormButton;
+    if (hasPermission(this.userStatus, "create", this.schema.name)) {
+      buttonContainer.appendChild(showCreateFormButton);
+    }
 
     // Create filter container
     const filterContainer = document.createElement("div");
@@ -89,22 +96,16 @@ class CrudPageBuilder {
     createFormContainer.id = "form-container";
     createFormContainer.classList.add("card", "mt-4");
     createFormContainer.style.display = "none";
-    // createFormContainer.innerHTML = `<div class="card-body"><h5 class="card-title">Create ${this.schema.name}</h5><form id="create-form"></form></div>`;
     this.rootContainer.appendChild(createFormContainer);
     this.elements.createFormContainer = createFormContainer;
-    // this.elements.createForm =
-    //   createFormContainer.querySelector("#create-form");
 
     // Create Update form container (hidden initially)
     const updateFormContainer = document.createElement("div");
     updateFormContainer.id = "form-update-container";
     updateFormContainer.classList.add("card", "mt-4");
     updateFormContainer.style.display = "none";
-    // updateFormContainer.innerHTML = `<div class="card-body"><h5 class="card-title">Update ${this.schema.name}</h5><form id="update-form"></form></div>`;
     this.rootContainer.appendChild(updateFormContainer);
     this.elements.updateFormContainer = updateFormContainer;
-    // this.elements.updateForm =
-    //   updateFormContainer.querySelector("#update-form");
 
     // Create table container
     const tableContainer = document.createElement("div");
@@ -429,6 +430,10 @@ class CrudPageBuilder {
 
   // Render table with pagination controls
   async loadRecords() {
+    if (!hasPermission(this.userStatus, "read", this.schema.name) || !hasPermission(this.userStatus, "view", this.schema.name)) {
+      return;
+    }
+
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(this.state.filterParams),
       page: this.state.currentPage,
@@ -437,6 +442,7 @@ class CrudPageBuilder {
 
     const response = await fetch(`${this.apiEndpoint}/filtered?${queryParams}`);
     const { result, count } = await response.json();
+
     this.renderTable(result);
     this.renderPagination(count, this.state.currentPage);
   }
@@ -474,22 +480,33 @@ class CrudPageBuilder {
 
         if (Array.isArray(record[key])) {
           td.textContent = record[key].map((item) => item.name).join(", ");
-        } else
-        {
+        } else {
           td.textContent = record[key];
         }
         row.appendChild(td);
       });
 
       const actionTd = document.createElement("td");
-      actionTd.appendChild(
-        this.createActionButton("Update", async () =>
-          this.populateUpdateForm(record)
-        )
-      );
-      actionTd.appendChild(
-        this.createActionButton("Delete", () => this.deleteRecord(record.id))
-      );
+      if (hasPermission(this.userStatus, "update", this.schema.name)) {
+        actionTd.appendChild(
+          this.createActionButton("Edit", async () =>
+            this.populateUpdateForm(record)
+          )
+        );
+      }
+      if (hasPermission(this.userStatus, "delete", this.schema.name)) {
+        actionTd.appendChild(
+          this.createActionButton("Delete", () => this.deleteRecord(record.id))
+        );
+      }
+      // actionTd.appendChild(
+      //   this.createActionButton("Edit", async () =>
+      //     this.populateUpdateForm(record)
+      //   )
+      // );
+      // actionTd.appendChild(
+      //   this.createActionButton("Delete", () => this.deleteRecord(record.id))
+      // );
       row.appendChild(actionTd);
 
       tbody.appendChild(row);
@@ -505,7 +522,8 @@ class CrudPageBuilder {
     button.classList.add(
       "btn",
       "btn-sm",
-      text === "Update" ? "btn-warning" : "btn-danger"
+      "me-2",
+      text === "Edit" ? "btn-warning" : "btn-danger"
     );
     button.addEventListener("click", onClick);
     return button;

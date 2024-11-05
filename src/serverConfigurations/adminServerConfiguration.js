@@ -29,7 +29,7 @@ const controller = new CrudController(service, authService);
 const productService = new ProductService();
 const productController = new ProductController(productService, authService);
 const appConfigService = new AppConfigService();
-const appConfigController = new AppConfigController(appConfigService);
+const appConfigController = new AppConfigController(appConfigService, authService);
 const orderService = new OrderService();
 const orderController = new OrderController(orderService, authService);
 const exportService = new ExportService(service);
@@ -144,7 +144,7 @@ async function sessionMiddleware(req, res) {
         WHERE roles.id IN (SELECT role_id FROM admin_user_roles WHERE admin_user_id = $1)`,
         [session.admin_user_id]
       );
-      session.rolesPermissions = rolesPermissions.rows;
+      session.role_permissions = rolesPermissions.rows;
       req.session = session;
       console.log(session);
       return;

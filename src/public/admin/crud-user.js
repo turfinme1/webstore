@@ -1,4 +1,4 @@
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
+import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 
 // Centralized state object
@@ -13,6 +13,7 @@ const state = {
 
 // DOM elements
 const elements = {
+  mainContainer: document.getElementById("main-container"),
   formContainer: document.getElementById("form-container"),
   formUpdateContainer: document.getElementById("form-update-container"),
   userListContainer: document.getElementById("user-list"),
@@ -40,6 +41,14 @@ const elements = {
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
+  await attachLogoutHandler();
+  if (!hasPermission(userStatus, "read", "users")) {
+    elements.mainContainer.innerHTML = "<h1>User Management</h1>";
+    return;
+  }
+  if (!hasPermission(userStatus, "create", "users")) {
+    elements.showFormButton.style.display = "none";
+  }
   attachEventListeners();
   loadUsers(state.currentPage);
   loadCountryCodes();
@@ -161,7 +170,7 @@ function renderUserList(users) {
     // Actions (Update/Delete)
     const actionCell = createTableCell("");
     actionCell.appendChild(
-      createActionButton("Update", "btn-warning", () =>
+      createActionButton("Edit", "btn-warning", () =>
         displayUpdateForm(user.id)
       )
     );

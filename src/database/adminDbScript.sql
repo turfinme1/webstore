@@ -116,12 +116,13 @@ INSERT INTO roles (name) VALUES
 ('customer service');
 
 INSERT INTO interfaces (name) VALUES
-('crud products'),
-('crud users'),
-('crud admin users'),
-('crud orders'),
-('report logs'),
-('report orders');
+('products'),
+('users'),
+('admin-users'),
+('orders'),
+('report-logs'),
+('report-orders'),
+('roles');
 
 INSERT INTO permissions (name, interface_id) VALUES
 ('view', 1),
@@ -153,7 +154,12 @@ INSERT INTO permissions (name, interface_id) VALUES
 ('create', 6),
 ('read', 6),
 ('update', 6),
-('delete', 6);
+('delete', 6),
+('view', 7),
+('create', 7),
+('read', 7),
+('update', 7),
+('delete', 7);
 
 INSERT INTO role_permissions (role_id, permission_id) VALUES
     (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),   -- crud_products
