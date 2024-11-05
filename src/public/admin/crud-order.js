@@ -1,4 +1,5 @@
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
+import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
+
 import { createNavigation } from "./navigation.js";
 
 // Centralized state object
@@ -9,10 +10,12 @@ const state = {
   productsInOrder: [],
   countries: [],
   orderToUpdateId: null,
+  userStatus: null,
 };
 
 // DOM elements
 const elements = {
+  mainContainer: document.getElementById("main-container"),
   formContainer: document.getElementById("form-container"),
   createForm: document.getElementById("create-order-form"),
   formUpdateContainer: document.getElementById("form-update-container"),
@@ -42,7 +45,16 @@ const elements = {
 // Initialize page and attach event listeners
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
+  state.userStatus = userStatus;
   createNavigation(userStatus);
+  await attachLogoutHandler();
+  if (!hasPermission(userStatus, "read", "orders")) {
+    elements.mainContainer.innerHTML = "<h1>User Management</h1>";
+    return;
+  }
+  if (!hasPermission(userStatus, "create", "orders")) {
+    elements.showFormButton.style.display = "none";
+  }
   attachEventListeners();
   await loadOrders(state.currentPage);
   await loadCountryCodes();
@@ -374,16 +386,21 @@ function renderOrders(orders) {
     row.appendChild(itemsCell);
 
     const actionCell = createTableCell("");
-    actionCell.appendChild(
-      createActionButton("Update", "btn-warning", () =>
-        displayUpdateForm(order.id)
-      )
-    );
-    actionCell.appendChild(
-      createActionButton("Delete", "btn-danger", () =>
-        handleDeleteOrder(order.id)
-      )
-    );
+    if (hasPermission(state.userStatus, "update", "orders")) {
+      actionCell.appendChild(
+        createActionButton("Edit", "btn-warning", () =>
+          displayUpdateForm(user.id)
+        )
+      );
+    }
+
+    if (hasPermission(state.userStatus, "delete", "orders")) {
+      actionCell.appendChild(
+        createActionButton("Delete", "btn-danger", () =>
+          handleDeleteOrder(user.id)
+        )
+      );
+    }
     row.appendChild(actionCell);
 
     elements.orderListContainer.appendChild(row);

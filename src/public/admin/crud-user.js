@@ -9,6 +9,7 @@ const state = {
   filterParams: {},
   countries: [],
   userToUpdateId: null,
+  userStatus: null,
 };
 
 // DOM elements
@@ -28,7 +29,9 @@ const elements = {
   showFormButton: document.getElementById("show-form-btn"),
   countryCodeSelect: document.getElementById("iso_country_code_id"),
   countrySelect: document.getElementById("country_id"),
-  countryCodeUpdateSelect: document.getElementById("iso_country_code_id_update"),
+  countryCodeUpdateSelect: document.getElementById(
+    "iso_country_code_id_update"
+  ),
   countryUpdateSelect: document.getElementById("country_id_update"),
   showFilterButton: document.getElementById("show-filter-btn"),
   cancelFilterButton: document.getElementById("cancel-filter-btn"),
@@ -40,6 +43,7 @@ const elements = {
 // Initialize page and attach event listeners
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
+  state.userStatus = userStatus;
   createNavigation(userStatus);
   await attachLogoutHandler();
   if (!hasPermission(userStatus, "read", "users")) {
@@ -64,7 +68,7 @@ function attachEventListeners() {
 
   elements.userForm.addEventListener("submit", handleCreateUser);
   elements.userUpdateForm.addEventListener("submit", handleUpdateUser);
-  elements.filterForm.addEventListener("submit", handleFilterUsers); 
+  elements.filterForm.addEventListener("submit", handleFilterUsers);
 }
 
 // Show and hide functions
@@ -116,7 +120,7 @@ async function loadCountryCodes() {
       phoneOption.innerText = `${country.country_name} (${country.phone_code})`;
       elements.countryCodeSelect.appendChild(phoneOption);
       elements.countryCodeUpdateSelect.appendChild(phoneOption.cloneNode(true));
-      
+
       const countryOption = document.createElement("option");
       countryOption.value = country.id;
       countryOption.innerText = `${country.country_name}`;
@@ -138,7 +142,9 @@ async function loadUsers(page) {
       page: page.toString(),
     });
 
-    const response = await fetch(`/crud/users/filtered?${queryParams.toString()}`);
+    const response = await fetch(
+      `/crud/users/filtered?${queryParams.toString()}`
+    );
     const { result, count } = await response.json();
     renderUserList(result);
     updatePagination(count, page);
@@ -169,16 +175,21 @@ function renderUserList(users) {
 
     // Actions (Update/Delete)
     const actionCell = createTableCell("");
-    actionCell.appendChild(
-      createActionButton("Edit", "btn-warning", () =>
-        displayUpdateForm(user.id)
-      )
-    );
-    actionCell.appendChild(
-      createActionButton("Delete", "btn-danger", () =>
-        handleDeleteUser(user.id)
-      )
-    );
+    if (hasPermission(state.userStatus, "update", "users")) {
+      actionCell.appendChild(
+        createActionButton("Edit", "btn-warning", () =>
+          displayUpdateForm(user.id)
+        )
+      );
+    }
+
+    if (hasPermission(state.userStatus, "delete", "users")) {
+      actionCell.appendChild(
+        createActionButton("Delete", "btn-danger", () =>
+          handleDeleteUser(user.id)
+        )
+      );
+    }
     userRow.appendChild(actionCell);
 
     elements.userListContainer.appendChild(userRow);
@@ -217,9 +228,7 @@ function updatePagination(totalUsers, page) {
     createPaginationButton("Previous", page > 1, () => loadUsers(page - 1))
   );
   elements.paginationContainer.appendChild(
-    createPaginationButton("Next", page < totalPages, () =>
-      loadUsers(page + 1)
-    )
+    createPaginationButton("Next", page < totalPages, () => loadUsers(page + 1))
   );
 }
 
@@ -301,7 +310,8 @@ function populateUpdateForm(user) {
   elements.userUpdateForm["first_name"].value = user.first_name;
   elements.userUpdateForm["last_name"].value = user.last_name;
   elements.userUpdateForm["email"].value = user.email;
-  elements.userUpdateForm["iso_country_code_id"].value = user.iso_country_code_id;
+  elements.userUpdateForm["iso_country_code_id"].value =
+    user.iso_country_code_id;
   elements.userUpdateForm["phone"].value = user.phone;
   elements.userUpdateForm["country_id"].value = user.country_id;
   elements.userUpdateForm["gender_id"].value = user.gender_id;
@@ -331,7 +341,7 @@ async function handleDeleteUser(userId) {
 async function handleFilterUsers(event) {
   event.preventDefault();
   const formData = new FormData(elements.filterForm);
-  if(formData.get("country_id") === "") {
+  if (formData.get("country_id") === "") {
     formData.delete("country_id");
   }
   const filterParams = Object.fromEntries(formData);

@@ -1,10 +1,11 @@
-import { getUserStatus } from "./auth.js";
+import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 
 // Centralized state object
 const state = {
   currentPage: 1,
   pageSize: 10,
+  userStatus: null,
   searchParams: {},
   filterParams: {},
   groupParams: [],
@@ -24,6 +25,7 @@ const state = {
 
 // DOM elements
 const elements = {
+  mainContainer: document.getElementById("main-container"),
   orderTableHeader: document.getElementById("order-table-header"),
   orderListContainer: document.getElementById("order-list"),
   paginationContainer: document.getElementById("pagination-container"),
@@ -47,7 +49,13 @@ const elements = {
 // Initialize page and attach event listeners
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
+  state.userStatus = userStatus;
   createNavigation(userStatus);
+  if (!hasPermission(userStatus, "read", "report-orders")) {
+    elements.mainContainer.innerHTML = "<h1>Order Management</h1>";
+    return;
+  }
+
   attachEventListeners();
   loadOrders(state.currentPage);
 });
