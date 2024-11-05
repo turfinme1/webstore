@@ -172,7 +172,7 @@ class CrudPageBuilder {
       const property = this.schema.properties[field];
       if (property?.hideInCreate && type === "create") continue;
 
-      const formGroup = await this.createFormGroup(field, property, data);
+      const formGroup = await this.createFormGroup(field, property, data, type);
 
       const input = formGroup.querySelector(`#${field}`);
       if (data[field] !== undefined) {
@@ -198,7 +198,7 @@ class CrudPageBuilder {
   }
 
   // Create form group for each field
-  async createFormGroup(field, property, data) {
+  async createFormGroup(field, property, data, formType) {
     const formGroup = document.createElement("div");
     formGroup.classList.add("mb-3");
     const label = document.createElement("label");
@@ -245,6 +245,94 @@ class CrudPageBuilder {
           input.appendChild(optionElement);
         });
       }
+    } else if (property?.renderConfig?.type === "multiselect") {
+      const multiSelectContainer = document.createElement("div");
+      multiSelectContainer.classList.add("dropdown");
+
+      // Button to display selected items
+      const button = document.createElement("button");
+      button.type = "button";
+      button.classList.add("btn", "btn-secondary", "dropdown-toggle");
+      button.textContent = "Select options";
+
+      // Dropdown container with Bootstrap classes
+      const dropdown = document.createElement("div");
+      dropdown.classList.add("dropdown-menu", "p-3");
+      dropdown.style.maxHeight = "200px";
+      dropdown.style.overflowY = "auto";
+
+      // Fetch options dynamically if needed
+      const options = property.renderConfig.options || [];
+      if (property.renderConfig.fetchFrom) {
+        const response = await fetch(property.renderConfig.fetchFrom);
+        const fetchedData = await response.json();
+        options.push(
+          ...fetchedData.map((item) => ({
+            label: item[property.renderConfig.displayKey],
+            value: item.id,
+          }))
+        );
+      }
+      console.log("DATA", data);
+      // Populate dropdown with checkboxes for each option
+      options.forEach((option) => {
+        const optionLabel = document.createElement("label");
+        optionLabel.classList.add("dropdown-item", "form-check-label");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.classList.add("form-check-input", "me-2");
+        checkbox.value = option.value;
+        checkbox.checked = (data.roles || []).some(role => role.id == option.value);
+
+        optionLabel.appendChild(checkbox);
+        optionLabel.appendChild(document.createTextNode(option.label));
+        dropdown.appendChild(optionLabel);
+      });
+
+      // Toggle dropdown visibility on button click
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        dropdown.style.display =
+          dropdown.style.display === "none" ? "block" : "none";
+      });
+
+      // Prevent dropdown from closing when clicking inside
+      dropdown.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener("click", (event) => {
+        if (!multiSelectContainer.contains(event.target)) {
+          dropdown.style.display = "none";
+        }
+      });
+
+      // Update button text based on selected options
+      const updateButtonText = () => {
+        const selectedOptions = Array.from(
+          dropdown.querySelectorAll("input:checked")
+        )
+          .map((checkbox) => checkbox.parentNode.textContent.trim())
+          .join(", ");
+        button.textContent = selectedOptions || "Select options";
+      };
+
+      // Add change event listener to each checkbox to update selection
+      dropdown.addEventListener("change", updateButtonText);
+      updateButtonText(); // Initial update
+
+      // Append elements to container
+      multiSelectContainer.appendChild(button);
+      multiSelectContainer.appendChild(dropdown);
+      formGroup.appendChild(multiSelectContainer);
+
+      // Collect selected values for form submission
+      this.state.collectValuesCallbacks[formType].push(() => ({
+        [field]: Array.from(dropdown.querySelectorAll("input:checked")).map(
+          (checkbox) => checkbox.value
+        ),
+      }));
     } else if (property.type === "boolean" || property.options) {
       // Check if the field should be a select dropdown (e.g., boolean)
       input = document.createElement("select");
@@ -430,7 +518,10 @@ class CrudPageBuilder {
 
   // Render table with pagination controls
   async loadRecords() {
-    if (!hasPermission(this.userStatus, "read", this.schema.name) || !hasPermission(this.userStatus, "view", this.schema.name)) {
+    if (
+      !hasPermission(this.userStatus, "read", this.schema.name) ||
+      !hasPermission(this.userStatus, "view", this.schema.name)
+    ) {
       return;
     }
 

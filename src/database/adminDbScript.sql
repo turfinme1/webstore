@@ -279,7 +279,7 @@ LEFT JOIN iso_country_codes icc ON admin_users.iso_country_code_id = icc.id
 LEFT JOIN iso_country_codes cc ON admin_users.country_id = cc.id
 LEFT JOIN genders ON admin_users.gender_id = genders.id
 LEFT JOIN admin_user_roles aur ON admin_users.id = aur.admin_user_id
-LEFT JOIN roles ON aur.role_id = roles.id
+LEFT JOIN roles ON aur.role_id = roles.id AND roles.is_active = true 
 GROUP BY
     admin_users.id,
     admin_users.first_name,

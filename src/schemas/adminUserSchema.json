@@ -131,13 +131,19 @@
       }
     },
     "role_id": {
-      "type": ["integer", "null"],
-      "label": "Role",
-      "placeholder": "Select Role",
+      "type": "array",
+      "label": "Roles",
+      "placeholder": "Select Roles",
       "renderConfig": {
-        "type": "select",
+        "type": "multiselect",
         "fetchFrom": "/crud/roles",
         "displayKey": "name"
+      },
+      "insertConfig": {
+        "type": "mapping_table",
+        "table": "admin_user_roles",
+        "foreignKey": "admin_user_id",
+        "mappingKey": "role_id"
       },
       "errorMessage": {
         "type": "Invalid role ID."
