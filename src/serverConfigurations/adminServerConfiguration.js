@@ -146,7 +146,6 @@ async function sessionMiddleware(req, res) {
       );
       session.role_permissions = rolesPermissions.rows;
       req.session = session;
-      console.log(session);
       return;
     }
   }

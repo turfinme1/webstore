@@ -70,6 +70,7 @@ class CrudController {
     const data = {
       body: req.body,
       req: req,
+      logger: req.logger,
       params: req.params,
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
