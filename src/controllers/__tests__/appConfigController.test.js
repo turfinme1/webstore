@@ -8,6 +8,7 @@ jest.mock("../../serverConfigurations/validation");
 describe("AppConfigController", () => {
   let appConfigController;
   let appConfigService;
+  let authService;
   let mockRes;
   let mockNext;
   let ERROR_CODE = 2;
@@ -19,8 +20,12 @@ describe("AppConfigController", () => {
       getRateLimitSettings: jest.fn(),
     };
 
+    authService = {
+      requirePermission: jest.fn(),
+    };
+
     // Initialize the controller with the mocked service
-    appConfigController = new AppConfigController(appConfigService);
+    appConfigController = new AppConfigController(appConfigService, authService);
 
     // Mock response and next functions
     mockRes = {

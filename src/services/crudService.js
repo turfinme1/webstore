@@ -332,8 +332,7 @@ class CrudService {
     const schema = data.entitySchemaCollection[data.params.entity];
     // await this.deleteRelationships(data, schema, data.params.id);
 
-    const result = await data.dbConnection.query(`
-      UPDATE ${schema.table} SET is_active = FALSE WHERE id = $1 RETURNING *`,
+    const result = await data.dbConnection.query(`UPDATE ${schema.table} SET is_active = FALSE WHERE id = $1 RETURNING *`,
       [data.params.id]
     );
 
