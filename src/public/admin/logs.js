@@ -1,10 +1,11 @@
-import { getUserStatus } from "./auth.js";
+import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 
 // Centralized state object
 const state = {
   currentPage: 1,
   pageSize: 10,
+  userStatus: null,
   searchParams: {},
   filterParams: {},
   groupParams: [],
@@ -48,6 +49,7 @@ const state = {
 
 // DOM elements
 const elements = {
+  mainContainer: document.getElementById("main-container"),
   logListContainer: document.getElementById("log-list"),
   paginationContainer: document.getElementById("pagination-container"),
   currentPageDisplay: document.getElementById("current-page-display"),
@@ -68,7 +70,15 @@ const elements = {
 // Initialize page and attach event listeners
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
+  state.userStatus = userStatus;
   createNavigation(userStatus);
+  await attachLogoutHandler();
+
+  if (!hasPermission(userStatus, "read", "report-logs")) {
+    elements.mainContainer.innerHTML = "<h1>Log Management</h1>";
+    return;
+  }
+
   attachEventListeners();
   loadStatusCodes();
   loadLogs(state.currentPage);

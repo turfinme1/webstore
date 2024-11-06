@@ -1,7 +1,8 @@
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
+import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const mainContainer = document.getElementById("main-container");
   const createProductButton = document.getElementById("create-product-btn");
   const formContainer = document.getElementById("form-container");
   const formUpdateContainer = document.getElementById("form-update-container");
@@ -42,6 +43,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   productForm.reset();
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
+  await attachLogoutHandler();
+
+  if (!hasPermission(userStatus, "read", "products")) {
+    mainContainer.innerHTML = "<h1>Product Management</h1>";
+    return;
+  }
+
+  if (!hasPermission(userStatus, "create", "products")) {
+    createProductButton.style.display = "none";
+  }
 
   cancelButton.addEventListener("click", () => {
     formContainer.style.display = "none";
@@ -123,15 +134,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const fileData = new FormData();
 
     for (const [key, value] of formData.entries()) {
-        if (value instanceof File) {
-            fileData.append(key, value);
+      if (value instanceof File) {
+        fileData.append(key, value);
+      } else {
+        if (key === "categories") {
+          jsonData[key].push(value);
         } else {
-            if(key === "categories") {
-                jsonData[key].push(value);
-            } else {
-              jsonData[key] = value;
-            }
+          jsonData[key] = value;
         }
+      }
     }
 
     return { jsonData, fileData };
@@ -175,7 +186,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function loadProducts(currentPage) {
     try {
-      
       const filterParams = {};
       if (selectedCategories.length > 0) {
         filterParams.categories = selectedCategories;
@@ -215,7 +225,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const codeCell = document.createElement("td");
         codeCell.textContent = product.code;
         productRow.appendChild(codeCell);
-        
+
         // Name Column
         const nameCell = document.createElement("td");
         nameCell.textContent = product.name;
@@ -226,7 +236,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         priceCell.textContent = `$${product.price}`;
         priceCell.style.textAlign = "right";
         productRow.appendChild(priceCell);
-
 
         // Short Description Column
         const shortDescCell = document.createElement("td");
@@ -271,7 +280,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateButton.addEventListener("click", () =>
           handleUpdateProduct(product.id)
         );
-        actionCell.appendChild(updateButton);
+        if (hasPermission(userStatus, "update", "products")) {
+          actionCell.appendChild(updateButton);
+        }
 
         const deleteButton = document.createElement("button");
         deleteButton.textContent = "Delete";
@@ -279,10 +290,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         deleteButton.addEventListener("click", () =>
           handleDeleteProduct(product.id)
         );
-        actionCell.appendChild(deleteButton);
+        if (hasPermission(userStatus, "delete", "products")) {
+          actionCell.appendChild(deleteButton);
+        }
 
         productRow.appendChild(actionCell);
-
         productListContainer.appendChild(productRow);
       });
 
@@ -390,7 +402,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             : ""; // Visual feedback
         });
       });
-      
+
       productUpdateForm.addEventListener("submit", async (event) => {
         event.preventDefault();
 
@@ -407,7 +419,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           productUpdateCategorySelect.selectedOptions
         ).map((option) => option.value);
         formData.set("categories", JSON.stringify(categories)); // Add selected categories to the form data
-       
+
         try {
           const response = await fetch(`/api/products/${productId}`, {
             method: "PUT",
@@ -416,12 +428,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
 
           if (response.ok) {
-            const imageUploadResponse = await fetch(`/api/products/${productId}/images`, {
-              method: "POST",
-              body: formData,
-            });
-          
-            if(imageUploadResponse.ok) {
+            const imageUploadResponse = await fetch(
+              `/api/products/${productId}/images`,
+              {
+                method: "POST",
+                body: formData,
+              }
+            );
+
+            if (imageUploadResponse.ok) {
               alert("Product updated successfully!");
               productUpdateForm.reset();
               window.location.reload();
@@ -432,7 +447,11 @@ document.addEventListener("DOMContentLoaded", async () => {
               console.error("Error:", error);
               alert(`Failed to update product: ${error.error}`);
             }
-          } 
+          } else {
+            const error = await response.json();
+            console.error("Error:", error);
+            alert(`Failed to update product: ${error.error}`);
+          }
         } catch (error) {
           console.error("Error submitting the form:", error);
           alert("Failed to update product.");

@@ -6,6 +6,7 @@ jest.mock("../../serverConfigurations/assert");
 describe('CrudController', () => {
   let crudController;
   let crudService;
+  let authService;
   let mockRes;
   let mockNext;
 
@@ -18,7 +19,12 @@ describe('CrudController', () => {
       update: jest.fn(),
       delete: jest.fn(),
     };
-    crudController = new CrudController(crudService);
+
+    authService = {
+      requirePermission: jest.fn(),
+    };
+
+    crudController = new CrudController(crudService, authService);
 
     mockRes = {
       status: jest.fn().mockReturnThis(),
@@ -174,7 +180,7 @@ describe('CrudController', () => {
         session: { admin_user_id: 1 } ,
         logger: { info: jest.fn() }
       };
-      const requestObject = { body: req.body, req, params: req.params, dbConnection: req.dbConnection, entitySchemaCollection: req.entitySchemaCollection };
+      const requestObject = { body: req.body, req, params: req.params, dbConnection: req.dbConnection, logger: req.logger, entitySchemaCollection: req.entitySchemaCollection };
 
       const updatedProduct = { id: 1, name: 'Updated Product' };
 

@@ -25,13 +25,13 @@ const mailService = new MailService(transporter);
 const authService = new AuthService(mailService);
 const authController = new AuthController(authService);
 const service = new CrudService();
-const controller = new CrudController(service);
+const controller = new CrudController(service, authService);
 const productService = new ProductService();
-const productController = new ProductController(productService);
+const productController = new ProductController(productService, authService);
 const appConfigService = new AppConfigService();
-const appConfigController = new AppConfigController(appConfigService);
+const appConfigController = new AppConfigController(appConfigService, authService);
 const orderService = new OrderService();
-const orderController = new OrderController(orderService);
+const orderController = new OrderController(orderService, authService);
 const exportService = new ExportService(service);
 const exportController = new ExportController(exportService);
 
@@ -134,8 +134,18 @@ async function sessionMiddleware(req, res) {
         expires: refreshedSession.expires_at,
         secure: false, httpOnly: false
       });
-      req.session = session;
 
+      const rolesPermissions = await req.dbConnection.query(`
+        SELECT roles.name as role, permissions.name as permission, interfaces.name as interface
+        FROM role_permissions
+        JOIN permissions ON role_permissions.permission_id = permissions.id
+        JOIN interfaces ON permissions.interface_id = interfaces.id
+        JOIN roles ON role_permissions.role_id = roles.id
+        WHERE roles.id IN (SELECT role_id FROM admin_user_roles WHERE admin_user_id = $1) AND roles.is_active = true`,
+        [session.admin_user_id]
+      );
+      session.role_permissions = rolesPermissions.rows;
+      req.session = session;
       return;
     }
   }

@@ -12,8 +12,8 @@ class Logger {
         INSERT INTO logs (admin_user_id, user_id, status_code, short_description, long_description, debug_info, log_level)
         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
-          this.req?.admin_user_id || null,
-          this.req?.user_id || null,
+          this.req?.session?.admin_user_id || null,
+          this.req?.session?.user_id || null,
           logObject?.code || 1,
           logObject?.short_description,
           logObject?.long_description || null,

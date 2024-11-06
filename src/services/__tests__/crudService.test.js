@@ -16,6 +16,7 @@ describe("CrudService", () => {
       testEntity: {
         name: "products",
         views: "products_view",
+        table: "products",
         properties: {
           name: { type: "string" },
           price: { type: "numeric" },
@@ -71,7 +72,7 @@ describe("CrudService", () => {
         "INSERT INTO products(name,price,short_description,long_description) VALUES($1,$2,$3,$4) RETURNING *",
         ["Test Product", 100.5, "Short description", "Long description"]
       );
-      expect(result).toEqual([expectedResponse]);
+      expect(result).toEqual(expectedResponse);
     });
 
     it("should hash the password if password_hash is provided", async () => {
@@ -83,6 +84,7 @@ describe("CrudService", () => {
       mockEntitySchemaCollection.testEntity = {
         name: "users",
         views: "users_view",
+        table: "users",
         properties: {
           first_name: { type: "string" },
           last_name: { type: "string" },
@@ -376,6 +378,7 @@ describe("CrudService", () => {
         users: {
           name: "users",
           views: "users_view",
+          table: "users",
           properties: {
             first_name: { type: "string" },
             last_name: { type: "string" },
@@ -556,8 +559,7 @@ describe("CrudService", () => {
 
       const result = await crudService.delete(req);
 
-      expect(mockDbConnection.query).toHaveBeenCalledWith(
-        "DELETE FROM products WHERE id = $1 RETURNING *",
+      expect(mockDbConnection.query).toHaveBeenCalledWith(`UPDATE products SET is_active = FALSE WHERE id = $1 RETURNING *`,
         ["1"]
       );
 

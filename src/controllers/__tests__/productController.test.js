@@ -6,6 +6,7 @@ jest.mock("../../serverConfigurations/assert");
 describe("ProductController", () => {
   let productController;
   let productService;
+  let authService;
   let mockRes;
   let mockReq;
   let mockNext;
@@ -22,6 +23,10 @@ describe("ProductController", () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+    };
+
+    authService = {
+      requirePermission: jest.fn(),
     };
 
     mockDbConnection = {
@@ -84,7 +89,7 @@ describe("ProductController", () => {
       session: { user_id: "1" },
     };
 
-    productController = new ProductController(productService);
+    productController = new ProductController(productService, authService);
 
     mockRes = {
       status: jest.fn().mockReturnThis(),

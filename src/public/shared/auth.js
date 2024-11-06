@@ -317,6 +317,16 @@ function attachCaptchaRefreshHandler() {
   captchaImage.addEventListener("click", loadCaptchaImage);
 }
 
+function hasPermission(userStatus, permission, interfaceName) {
+  const result = 
+    userStatus.role_permissions.some(
+    (rolePermission) =>
+      rolePermission.permission === permission &&
+      rolePermission.interface === interfaceName
+  );
+  return result;
+}
+
 export {
   fetchUserSchema,
   createForm,
@@ -326,4 +336,5 @@ export {
   attachLogoutHandler,
   loadCaptchaImage,
   attachCaptchaRefreshHandler,
+  hasPermission,
 };

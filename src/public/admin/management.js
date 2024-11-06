@@ -1,4 +1,4 @@
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
+import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 import {
   createForm,
@@ -9,27 +9,56 @@ import {
 
 // Initial setup
 document.addEventListener("DOMContentLoaded", async () => {
-  const settingsLink = document.getElementById("settings-link");
-  const uploadProductLink = document.getElementById("upload-products-link");
-
   // Initialize user status and navigation
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
   await attachLogoutHandler();
 
-  // Event listener for settings link
-  settingsLink.addEventListener("click", async () => {
-    await renderSettings();
-  });
+  renderDynamicNavigation(userStatus);
 
-  // Event listener for upload products link
-  uploadProductLink.addEventListener("click", async () => {
-    await renderUploadProducts();
-  });
-
-  // Render settings by default
-  renderSettings();
 });
+
+function renderDynamicNavigation(userStatus) {
+  const navContainer = document.getElementById("dynamic-nav");
+  navContainer.innerHTML = ""; // Clear previous content
+
+  const navItems = [
+    { id: "settings-link", text: "Site Settings", href: "#", permission: "view", interface: "site-settings" },
+    { id: "crud-product-link", text: "CRUD Products", href: "/crud-product", permission: "view", interface: "products" },
+    { id: "crud-user-link", text: "CRUD Users", href: "/crud-user", permission: "view", interface: "users" },
+    { id: "crud-staff-user-link", text: "CRUD Staff Users", href: "/crud-staff-user", permission: "view", interface: "admin-users" },
+    { id: "crud-order-link", text: "CRUD Orders", href: "/crud-order", permission: "view", interface: "orders" },
+    { id: "crud-role-link", text: "CRUD Roles", href: "/crud-role", permission: "view", interface: "roles" },
+    { id: "logs-link", text: "Report Logs", href: "/logs", permission: "view", interface: "report-logs" },
+    { id: "report-order-link", text: "Report Orders", href: "/report-order", permission: "view", interface: "report-orders" },
+    { id: "upload-products-link", text: "Upload Products from CSV", href: "#", permission: "create", interface: "products" },
+  ];
+
+  navItems.forEach(item => {
+    if (hasPermission(userStatus, item.permission, item.interface)) {
+      const li = document.createElement("li");
+      li.classList.add("nav-item");
+      const a = document.createElement("a");
+      a.classList.add("nav-link");
+      a.id = item.id;
+      a.href = item.href;
+      a.textContent = item.text;
+      li.appendChild(a);
+      navContainer.appendChild(li);
+
+      // Attach event listeners for dynamic content rendering
+      if (item.id === "settings-link") {
+        a.addEventListener("click", async () => {
+          await renderSettings();
+        });
+      } else if (item.id === "upload-products-link") {
+        a.addEventListener("click", async () => {
+          await renderUploadProducts();
+        });
+      }
+    }
+  });
+}
 
 // Function to render settings form
 async function renderSettings() {
