@@ -141,7 +141,7 @@ async function sessionMiddleware(req, res) {
         JOIN permissions ON role_permissions.permission_id = permissions.id
         JOIN interfaces ON permissions.interface_id = interfaces.id
         JOIN roles ON role_permissions.role_id = roles.id
-        WHERE roles.id IN (SELECT role_id FROM admin_user_roles WHERE admin_user_id = $1)`,
+        WHERE roles.id IN (SELECT role_id FROM admin_user_roles WHERE admin_user_id = $1) AND roles.is_active = true`,
         [session.admin_user_id]
       );
       session.role_permissions = rolesPermissions.rows;

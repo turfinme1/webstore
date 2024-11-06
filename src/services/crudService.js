@@ -377,30 +377,97 @@ class CrudService {
 
   hooks() {
     async function roleUpdateHook(data, insertObject) {
-      // Delete existing permissions for the role
-      await data.dbConnection.query(
-        `DELETE FROM role_permissions WHERE role_id = $1`,
+      const currentPermissionsResult = await data.dbConnection.query(`
+        SELECT role_permissions.permission_id, permissions.interface_id, permissions.name AS action, interfaces.name AS interface
+        FROM role_permissions
+        JOIN permissions ON role_permissions.permission_id = permissions.id
+        JOIN interfaces ON permissions.interface_id = interfaces.id
+        WHERE role_permissions.role_id = $1`,
         [data.params.id]
       );
+      
+      const currentPermissions = currentPermissionsResult.rows.map(row => ({
+        permission_id: row.permission_id,
+        interface_id: parseInt(row.interface_id, 10),
+        action: row.action,
+        interface: row.interface
+      }));
+    
+      const newPermissions = data.body.permissions.filter(permission => permission.allowed);
+      
+      const addedPermissions = newPermissions.filter(
+        (newPerm) =>
+          !currentPermissions.some(
+            (currPerm) =>
+              currPerm.interface_id === newPerm.interface_id &&
+              currPerm.action === newPerm.action
+          )
+      );
 
-      // Insert new permissions
-      const permissions = data.body.permissions;
-      for (const permission of permissions) {
-        const result = await data.dbConnection.query(
-          `INSERT INTO role_permissions (role_id, permission_id, created_at)
-           SELECT $1, p.id, NOW()
-           FROM permissions p
-           WHERE p.interface_id = $2 AND p.name = $3 AND $4 = TRUE
-           RETURNING *`,
-          [
-            data.params.id,
-            permission.interface_id,
-            permission.action,
-            permission.allowed,
-          ]
+      const removedPermissions = currentPermissions.filter(
+        (currPerm) =>
+          !newPermissions.some(
+            (newPerm) =>
+              newPerm.interface_id === currPerm.interface_id &&
+              newPerm.action === currPerm.action
+          )
+      );
+      
+      const addedPermissionNames = [];
+      const removedPermissionNames = [];
+    
+      // Insert added permissions and retrieve interface and action names for logging
+      for (const permission of addedPermissions) {
+        const insertResult = await data.dbConnection.query(
+          `WITH inserted_permission AS (
+            INSERT INTO role_permissions (role_id, permission_id, created_at)
+            SELECT $1, p.id, NOW()
+            FROM permissions p
+            WHERE p.interface_id = $2 AND p.name = $3
+            RETURNING permission_id
+          )
+          SELECT inserted_permission.permission_id, permissions.name AS action, interfaces.name AS interface
+          FROM inserted_permission
+          JOIN permissions ON inserted_permission.permission_id = permissions.id
+          JOIN interfaces ON permissions.interface_id = interfaces.id`,
+          [data.params.id, permission.interface_id, permission.action]
         );
+
+        // Add to log list with interface name and action
+        insertResult.rows.forEach(row => {
+          addedPermissionNames.push(`${row.action} - ${row.interface}`);
+        });
       }
-      // delete data.body.permissions;
+
+      // Delete removed permissions and retrieve interface and action names for logging
+      for (const permission of removedPermissions) {
+        const deleteResult = await data.dbConnection.query(
+          `WITH deleted_permission AS (
+            DELETE FROM role_permissions
+            WHERE role_id = $1 AND permission_id = (
+              SELECT id FROM permissions
+              WHERE interface_id = $2 AND name = $3
+            )
+            RETURNING permission_id
+          )
+          SELECT deleted_permission.permission_id, permissions.name AS action, interfaces.name AS interface
+          FROM deleted_permission
+          JOIN permissions ON deleted_permission.permission_id = permissions.id
+          JOIN interfaces ON permissions.interface_id = interfaces.id`,
+          [data.params.id, permission.interface_id, permission.action]
+        );
+           
+        deleteResult.rows.forEach(row => {
+          removedPermissionNames.push(`${row.action} - ${row.interface}`);
+        });
+      }
+          
+      await data.logger.info({
+        code: STATUS_CODES.PERMISSION_CHANGE_SUCCESS,
+        short_description: `Permissions updated for role with ID: ${data.params.id}`,
+        long_description: `Added permissions: ${addedPermissionNames.join(', ')}; Removed permissions: ${removedPermissionNames.join(', ')}`
+      });
+
       insertObject.keys = insertObject.keys.filter(
         (key) => key !== "role_permissions"
       );
