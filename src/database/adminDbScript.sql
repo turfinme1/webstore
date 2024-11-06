@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS admin_failed_attempts;
 DROP TABLE IF EXISTS admin_sessions;
 DROP TABLE IF EXISTS admin_session_types;
 DROP TABLE IF EXISTS admin_users;
+DROP TABLE IF EXISTS email_templates;
 
 DROP TABLE IF EXISTS role_permissions;
 DROP TABLE IF EXISTS permissions;
@@ -70,6 +71,15 @@ CREATE TABLE logs (
     short_description TEXT NOT NULL,
     long_description TEXT NULL,
     debug_info TEXT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE email_templates (
+    id BIGSERIAL PRIMARY KEY,
+    type TEXT UNIQUE NOT NULL CHECK (type IN ('email_verification', 'order_created', 'order_paid')),
+    subject TEXT NOT NULL,
+    placeholders TEXT NOT NULL,
+    template TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
