@@ -1,5 +1,9 @@
 DROP VIEW IF EXISTS roles_view;
 DROP VIEW IF EXISTS permissions_view;
+DROP VIEW IF EXISTS logs_view;
+DROP VIEW IF EXISTS status_codes_view;
+DROP VIEW IF EXISTS admin_users_view;
+DROP VIEW IF EXISTS email_templates_view;
 
 DROP TABLE IF EXISTS admin_captchas;
 DROP TABLE IF EXISTS admin_failed_attempts;
@@ -76,10 +80,10 @@ CREATE TABLE logs (
 
 CREATE TABLE email_templates (
     id BIGSERIAL PRIMARY KEY,
-    type TEXT UNIQUE NOT NULL CHECK (type IN ('email_verification', 'order_created', 'order_paid')),
+    type TEXT UNIQUE NOT NULL CHECK (type IN ('Email verification', 'Order created', 'Order paid')),
     subject TEXT NOT NULL,
-    placeholders TEXT NOT NULL,
-    template TEXT NOT NULL,
+	placeholders JSONB NOT NULL,
+    template TEXT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -132,7 +136,9 @@ INSERT INTO interfaces (name) VALUES
 ('orders'),
 ('report-logs'),
 ('report-orders'),
-('roles');
+('roles'),
+('site-settings'),
+('email-templates');
 
 INSERT INTO permissions (name, interface_id) VALUES
 ('view', 1),
@@ -169,7 +175,17 @@ INSERT INTO permissions (name, interface_id) VALUES
 ('create', 7),
 ('read', 7),
 ('update', 7),
-('delete', 7);
+('delete', 7),
+('view', 8),
+('create', 8),
+('read', 8),
+('update', 8),
+('delete', 8),
+('view', 9),
+('create', 9),
+('read', 9),
+('update', 9),
+('delete', 9);
 
 INSERT INTO role_permissions (role_id, permission_id) VALUES
     (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),   -- crud_products
@@ -329,3 +345,7 @@ INSERT INTO status_codes (code, message) VALUES
 (20, 'Create Success'),
 (21, 'Order Complete Success'),
 (22, 'Cart Prices Changed');
+
+CREATE VIEW email_templates_view AS
+SELECT *
+FROM email_templates;
