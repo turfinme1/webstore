@@ -12,6 +12,10 @@
       "label": "First Name",
       "placeholder": "Enter First Name",
       "filterable": true,
+      "required": {
+        "create": true,
+        "update": true
+      },
       "errorMessage": {
         "minLength": "Name must be at least 3 characters long.",
         "pattern": "Name can only contain letters and spaces."
@@ -24,6 +28,10 @@
       "label": "Last Name",
       "placeholder": "Enter Last Name",
       "filterable": true,
+      "required": {
+        "create": true,
+        "update": true
+      },
       "errorMessage": {
         "minLength": "Name must be at least 3 characters long.",
         "pattern": "Name can only contain letters and spaces."
@@ -32,10 +40,14 @@
     "email": {
       "type": "string",
       "minLength": 6,
-      "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+      "pattern": "^[\\w.%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$",
       "label": "Email",
       "placeholder": "Enter Email",
       "filterable": true,
+      "required": {
+        "create": true,
+        "update": true
+      },
       "errorMessage": {
         "minLength": "Email must be at least 6 characters long.",
         "pattern": "Email must be a valid email address."
@@ -46,6 +58,9 @@
       "minLength": 6,
       "label": "Password",
       "placeholder": "Enter password",
+      "required": {
+        "create": true
+      },
       "errorMessage": {
         "minLength": "Password must be at least 6 characters long."
       }
@@ -55,6 +70,10 @@
       "label": "Country Code",
       "placeholder": "Enter Country Code",
       "fetchFrom": "/crud/iso-country-codes",
+      "required": {
+        "create": true,
+        "update": true
+      },
       "renderConfig": {
         "type": "select",
         "fetchFrom": "/crud/iso-country-codes",
@@ -70,6 +89,10 @@
       "pattern": "^[0-9]+$",
       "label": "Phone Number",
       "placeholder": "Enter Phone Number",
+      "required": {
+        "create": true,
+        "update": true
+      },
       "errorMessage": {
         "minLength": "Phone number must be at least 7 digits long.",
         "pattern": "Phone number can only contain digits."

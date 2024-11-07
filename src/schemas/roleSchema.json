@@ -7,9 +7,15 @@
   "properties": {
     "name": {
       "type": "string",
+      "minLength": 3,
+      "pattern": "^[a-zA-Z_-]+$",
       "label": "Role Name",
       "placeholder": "Enter Role Name",
       "filterable": true,
+      "required": {
+        "create": true,
+        "update": true
+      },
       "errorMessage": {
         "type": "Invalid value for role name."
       }

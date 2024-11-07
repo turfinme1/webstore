@@ -232,6 +232,10 @@ class CrudPageBuilder {
           );
           input.appendChild(optionElement);
         });
+
+        if(property.required) {
+          input.required = true;
+        }
       } else if (property?.renderConfig?.options) {
         input = document.createElement("select");
         input.classList.add("form-control");
@@ -244,6 +248,10 @@ class CrudPageBuilder {
           );
           input.appendChild(optionElement);
         });
+
+        if(property.required) {
+          input.required = true;
+        }
       }
     } else if (property?.renderConfig?.type === "multiselect") {
       const multiSelectContainer = document.createElement("div");
@@ -364,6 +372,37 @@ class CrudPageBuilder {
       input.name = field;
       input.placeholder = property.placeholder || "";
       input.type = this.getInputType(property.type); // Set the input type based on the schema
+      
+      if (property.minLength) {
+        input.minLength = property.minLength;
+      }
+      if (property.pattern) {
+        input.pattern = property.pattern;
+      }
+      if (property?.required?.[formType]) {
+        input.required = true;
+
+        // Add asterisk to label for required fields
+        // label.textContent = `${label.textContent} <span style="color:red;">*</span>`;
+        label.innerHTML = `${label.textContent} <span style="color:red;">*</span>`;
+        // Add validation message for required fields
+        // const validationMessage = document.createElement("div");
+        // validationMessage.classList.add("invalid-feedback");
+
+        // input.addEventListener("invalid", () => {
+        //   if (!input.validity.valid) {
+        //     input.classList.add("is-invalid");
+        //     validationMessage.textContent = "This field is required.";
+        //     input.parentNode.appendChild(validationMessage);
+        //   }
+        // }
+        // );
+        // input.addEventListener("input", () => {
+        //   input.classList.remove("is-invalid");
+        //   validationMessage.textContent = "";
+        // });
+        // formGroup.appendChild(validationMessage);
+      }
     }
 
     if (input) {
