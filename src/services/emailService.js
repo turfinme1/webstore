@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const { ASSERT } = require("../serverConfigurations/assert");
 
 const transporter = nodemailer.createTransport({
   host: "localhost",
@@ -6,21 +7,27 @@ const transporter = nodemailer.createTransport({
   auth: null,
 });
 
-class MailService {
+class EmailService {
   constructor(transporter) {
     this.transporter = transporter;
     this.sendVerificationEmail = this.sendVerificationEmail.bind(this);
     this.sendResetPasswordEmail = this.sendResetPasswordEmail.bind(this);
   }
 
-  async sendVerificationEmail(email, token) {
-    const verificationUrl = `http://localhost:3000/auth/verify-mail?token=${token}`;
+  async sendVerificationEmail(data) {
+    const verificationUrl = `http://localhost:3000/auth/verify-mail?token=${data.verifyToken}`;
+
+    const templateResult = await data.dbConnection.query(`
+      SELECT * FROM email_templates WHERE type = 'Email verification'`
+    );
+    const emailTemplate = templateResult.rows[0];
+    const emailBody = emailTemplate.template.replace("{first_name}", data.user.first_name).replace("{last_name}", data.user.last_name).replace("{address}", `<a href="${verificationUrl}">Verify Email</a>`);
+
     let mailOptions = {
       from: "no-reply@web-store4eto.com",
-      to: email,
-      subject: "Email Verification",
-      text: `Please verify your email by clicking the following link: ${verificationUrl}`,
-      html: `<p>Please verify your email by clicking the following link:</p><a href="${verificationUrl}">Verify Email</a>`,
+      to: data.user.email,
+      subject: emailTemplate.subject,
+      html: emailBody,
     };
 
     await transporter.sendMail(mailOptions);
@@ -40,4 +47,4 @@ class MailService {
   }
 }
 
-module.exports = { MailService, transporter };
+module.exports = { EmailService, transporter };

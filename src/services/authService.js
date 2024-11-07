@@ -51,11 +51,13 @@ class AuthService {
       VALUES ($1) RETURNING *`,
       [user.id]
     );
+    const verifyToken = createVerifyTokenResult.rows[0].token_hash;
     
     const requestData = { entitySchemaCollection: data.entitySchemaCollection, dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Email Verification", userId: user.id };
     const session = await this.changeSessionType(requestData);
     
-    await this.mailService.sendVerificationEmail(user.email, createVerifyTokenResult.rows[0].token_hash);
+    const emailObject = { ...data, user, verifyToken };
+    await this.mailService.sendVerificationEmail(emailObject);
 
     return session;
   }

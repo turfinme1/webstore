@@ -82,10 +82,15 @@ CREATE TABLE email_templates (
     id BIGSERIAL PRIMARY KEY,
     type TEXT UNIQUE NOT NULL CHECK (type IN ('Email verification', 'Order created', 'Order paid')),
     subject TEXT NOT NULL,
-	placeholders JSONB NOT NULL,
+	placeholders JSONB NULL,
     template TEXT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+INSERT INTO email_templates (type, subject, placeholders, template) VALUES
+('Email verification', 'Email verification', '["{first_name}", "{last_name}", "{address}"]', 'Hello, {first_name} {last_name}! Please verify your email address by clicking the link below: {address}'),
+('Order created', 'Order created', '["first_name", "{last_name}", "{order}", "{order_number}"]', 'Hello, {first_name} {last_name}! Your order {{order}} has been created. Your order number is {order_number}'),
+('Order paid', 'Order paid', '["first_name", "{last_name}", "{order}", "{order_number}", "{payment_number}"]', 'Hello, {first_name} {last_name}! Your order {order} has been paid. Your order number is {order_number} and your payment number is {payment_number}');
 
 CREATE TABLE roles (
     id BIGSERIAL PRIMARY KEY,
