@@ -14,6 +14,9 @@ const elements = {
   subjectInput: document.getElementById("subject"),
   templateInput: document.getElementById("template"),
   placeholderArea: document.getElementById("placeholders"),
+  tableBorderColorInput: document.getElementById("table-border-color"),
+  tableBorderWidthInput: document.getElementById("table-border-width"),
+  borderCustomizationElements: document.querySelectorAll(".border-customization"),
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -80,6 +83,10 @@ async function handleTemplateFormSubmit(event) {
   const template = CKEDITOR.instances.template.getData();
   console.log({ type, subject, template });
   const data = Object.fromEntries(formData);
+  if(elements.templateTypeSelect.value === "Email verification") {
+    data.table_border_color = null;
+    data.table_border_width = null;
+  }
   const response = await fetch(
     `/crud/email-templates/${state.emailTemplateId}`,
     {
@@ -101,7 +108,6 @@ async function handleTemplateFormSubmit(event) {
 }
 
 async function loadCurrentTemplate() {
-  elements.templateTypeSelect.value;
   const type = elements.templateTypeSelect.value;
   const currentTemplate = state.templates.find(
     (template) => template.type === type
@@ -126,8 +132,18 @@ async function loadCurrentTemplate() {
 }
 
 function populateTemplateForm(template) {
+ 
+  if (elements.templateTypeSelect.value  === "Order created" || elements.templateTypeSelect.value  === "Order paid") {
+    elements.borderCustomizationElements.forEach(element => element.style.display = "block");
+    elements.tableBorderColorInput.value = template.table_border_color;
+    elements.tableBorderWidthInput.value = template.table_border_width;
+  } else {
+      elements.borderCustomizationElements.forEach(element => element.style.display = "none");
+  }
   elements.templateTypeSelect.value = template.type;
   elements.subjectInput.value = template.subject;
   CKEDITOR.instances.template.setData(template.template);
-  elements.placeholderArea.innerHTML = "Available placeholders: " + template.placeholders.join(", ") || "No placeholders";
+  elements.placeholderArea.innerHTML =
+    "Available placeholders: " + template.placeholders.join(", ") ||
+    "No placeholders";
 }

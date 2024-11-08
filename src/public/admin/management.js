@@ -33,6 +33,7 @@ function renderDynamicNavigation(userStatus) {
     { id: "logs-link", text: "Report Logs", href: "/logs", permission: "view", interface: "report-logs" },
     { id: "report-order-link", text: "Report Orders", href: "/report-order", permission: "view", interface: "report-orders" },
     { id: "upload-products-link", text: "Upload Products from CSV", href: "#", permission: "create", interface: "products" },
+    { id: "email-templates-link", text: "Email Templates", href: "/email-templates", permission: "view", interface: "email-templates" },
   ];
 
   navItems.forEach(item => {

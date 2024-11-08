@@ -15,6 +15,7 @@
 
 		<div class="card-body">
 			<form id="template-form">
+				
 				<div class="mb-3">
 					<label for="type" class="form-label">Type of Template</label>
 					<select id="type" class="form-select" name="type">
@@ -33,6 +34,41 @@
 
 					
 				</div>
+
+				<div class="mb-3 border-customization" style="display: none;">
+					<label for="table_border_width" class="form-label">Table Border Width</label>
+					<input type="number" class="form-control" id="table-border-width" name="table_border_width" min="1" max="10">
+				</div>
+				
+				<div class="mb-3 border-customization" style="display: none;">
+					<label for="table_border_color" class="form-label">Table Border Color</label>
+					<select id="table-border-color" class="form-select" name="table_border_color">
+						<option value="black">Black</option>
+						<option value="green">Green</option>
+						<option value="red">Red</option>
+						<option value="blue">Blue</option>
+						<option value="yellow">Yellow</option>
+						<option value="white">White</option>
+						<option value="gray">Gray</option>
+						<option value="purple">Purple</option>
+						<option value="orange">Orange</option>
+						<option value="brown">Brown</option>
+						<option value="pink">Pink</option>
+						<option value="cyan">Cyan</option>
+						<option value="magenta">Magenta</option>
+						<option value="lime">Lime</option>
+						<option value="teal">Teal</option>
+						<option value="indigo">Indigo</option>
+						<option value="maroon">Maroon</option>
+						<option value="navy">Navy</option>
+						<option value="olive">Olive</option>
+						<option value="silver">Silver</option>
+						<option value="aqua">Aqua</option>
+						<option value="fuchsia">Fuchsia</option>
+						<option value="violet">Violet</option>
+					</select>
+				</div>
+				
 				<button type="submit" class="btn btn-primary">Save</button>
 			</form>
 		</div>

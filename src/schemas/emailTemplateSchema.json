@@ -45,6 +45,30 @@
             "errorMessage": {
                 "type": "Invalid value for template."
             }
+        },
+        "table_border_width": {
+            "type": "number",
+            "label": "Table Border Width",
+            "placeholder": "Enter Table Border Width",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "errorMessage": {
+                "type": "Invalid value for table border width."
+            }
+        },
+        "table_border_color": {
+            "type": "string",
+            "label": "Table Border Color",
+            "placeholder": "Enter Table Border Color",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "errorMessage": {
+                "type": "Invalid value for table border color."
+            }
         }
     },
     "table_display_columns": [
