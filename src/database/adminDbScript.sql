@@ -84,13 +84,15 @@ CREATE TABLE email_templates (
     subject TEXT NOT NULL,
 	placeholders JSONB NULL,
     template TEXT NULL,
+    table_border_width BIGINT NULL CHECK (table_border_width IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)),
+    table_border_color TEXT NULL CHECK (table_border_color IN ('black', 'green', 'red', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-INSERT INTO email_templates (type, subject, placeholders, template) VALUES
-('Email verification', 'Email verification', '["{first_name}", "{last_name}", "{address}"]', 'Hello, {first_name} {last_name}! Please verify your email address by clicking the link below: {address}'),
-('Order created', 'Order created', '["first_name", "{last_name}", "{order}", "{order_number}"]', 'Hello, {first_name} {last_name}! Your order {{order}} has been created. Your order number is {order_number}'),
-('Order paid', 'Order paid', '["first_name", "{last_name}", "{order}", "{order_number}", "{payment_number}"]', 'Hello, {first_name} {last_name}! Your order {order} has been paid. Your order number is {order_number} and your payment number is {payment_number}');
+INSERT INTO email_templates (type, subject, placeholders, template, table_border_width, table_border_color) VALUES
+('Email verification', 'Email verification', '["{first_name}", "{last_name}", "{address}"]', 'Hello, {first_name} {last_name}! Please verify your email address by clicking the link below: {address}', NULL, NULL),
+('Order created', 'Order created', '["{first_name}", "{last_name}", "{order_table}", "{order_number}"]', 'Hello, {first_name} {last_name}! Your order has been created. Your order number is {order_number}: {order_table}', 2, 'black'),
+('Order paid', 'Order paid', '["{first_name}", "{last_name}", "{order_table}", "{order_number}", "{payment_number}"]', 'Hello, {first_name} {last_name}! Your order has been paid. Your order number is {order_number} and your payment number is {payment_number}: {order_table} ', 2, 'green');
 
 CREATE TABLE roles (
     id BIGSERIAL PRIMARY KEY,

@@ -26,7 +26,7 @@ const productService = new ProductService();
 const productController = new ProductController(productService);
 const cartService = new CartService();
 const cartController = new CartController(cartService);
-const orderService = new OrderService();
+const orderService = new OrderService(emailService);
 const orderController = new OrderController(orderService);
 
 const routeTable = {
