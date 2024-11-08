@@ -15,8 +15,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   await attachLogoutHandler();
 
   renderDynamicNavigation(userStatus);
-
+  await renderOrderChart();
 });
+
 
 function renderDynamicNavigation(userStatus) {
   const navContainer = document.getElementById("dynamic-nav");
@@ -154,3 +155,68 @@ async function renderUploadProducts() {
     }
   });
 }
+
+async function renderOrderChart() {
+  const contentArea = document.getElementById("content-area");
+  contentArea.innerHTML = "<canvas id='orderChart' width='400' height='200'></canvas>";
+
+  try {
+    // Fetch order data from the backend
+    const response = await fetch("/crud/orders/filtered?filterParams=%7B%7D&groupParams=%5B%7B%22column%22%3A%22created_at%22%2C%22granularity%22%3A%22month%22%7D%5D&orderParams=%5B%5B%22total_price%22%2C%22asc%22%5D%5D&pageSize=10&page=1");
+    const data = await response.json();
+
+    // Parse data for chart
+    const labels = data.result.map(item => new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+    const orderCounts = data.result.map(item => Number(item.count));
+    const orderPrices = data.result.map(item => parseFloat(item.total_price));
+
+    // Render chart using Chart.js
+    const ctx = document.getElementById("orderChart").getContext("2d");
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Order Count",
+            data: orderCounts,
+            backgroundColor: "rgba(75, 192, 192, 0.6)",
+            borderColor: "rgba(75, 192, 192, 1)",
+            borderWidth: 1,
+            yAxisID: 'y1',
+          },
+          {
+            label: "Total Price ($)",
+            data: orderPrices,
+            backgroundColor: "rgba(255, 159, 64, 0.6)",
+            borderColor: "rgba(255, 159, 64, 1)",
+            borderWidth: 1,
+            yAxisID: 'y2',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y1: {
+            type: 'linear',
+            position: 'left',
+            beginAtZero: true,
+            title: { display: true, text: 'Order Count' }
+          },
+          y2: {
+            type: 'linear',
+            position: 'right',
+            beginAtZero: true,
+            title: { display: true, text: 'Total Price ($)' },
+            grid: { drawOnChartArea: false }
+          }
+        },
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching order data:", error);
+    contentArea.innerHTML = "<p class='text-danger'>Failed to load order chart. Please try again later.</p>";
+  }
+}
+
