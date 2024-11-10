@@ -39,6 +39,7 @@ CREATE TABLE file_uploads (
 
 CREATE TABLE app_settings (
     id BIGSERIAL PRIMARY KEY,
+    vat_percentage NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
     request_limit BIGINT NOT NULL DEFAULT 10,
     request_window INTERVAL NOT NULL DEFAULT '10 minutes',
     request_block_duration INTERVAL NOT NULL DEFAULT '1 hour',
