@@ -7,13 +7,13 @@ const state = {
   items: [],
   total: 0,
   userStatus: null,
+  vatPercentage: 0,
 };
 
 // DOM elements
 const elements = {
   cartContainer: document.getElementById('cart-container'),
   checkoutButton: document.getElementById('checkout-btn'),
-  totalDisplay: document.getElementById('total-display'),
   cartCount: document.getElementById('cart-count'),
 };
 
@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const cart = await getCartItems();
   state.items = cart.items;
   state.cart_id = cart.cart_id;
+  state.vatPercentage = cart.vatPercentage;
+  state.total = parseFloat(cart.items.reduce((sum, item) => sum + parseFloat(item.total_price), 0).toFixed(2));
   updateCartDisplay(state);
   attachEventListeners();
 });
@@ -57,6 +59,8 @@ async function updateCartItemQuantity(productId, newQuantity) {
     const cart = await getCartItems();
     state.items = cart.items;
     state.cart_id = cart.cart_id;
+    state.total = parseFloat(cart.items.reduce((sum, item) => sum + parseFloat(item.total_price), 0).toFixed(2));
+    state.vatPercentage = cart.vatPercentage;
     updateCartDisplay(state);
   } catch (error) {
     console.error('Error updating cart item:', error);
@@ -70,6 +74,8 @@ async function removeItemFromCart(itemId) {
     const cart = await getCartItems();
     state.items = cart.items;
     state.cart_id = cart.cart_id;
+    state.total = parseFloat(cart.items.reduce((sum, item) => sum + parseFloat(item.total_price), 0).toFixed(2));
+    state.vatPercentage = cart.vatPercentage;
     updateCartDisplay(state);
   } catch (error) {
     console.error('Error removing cart item:', error);
@@ -156,6 +162,45 @@ function renderCartItem(item) {
   return itemRow;
 }
 
+function renderCartTotalRow() {
+  const vatRate = state.vatPercentage / 100;
+  const subtotal = state.total;
+  const vatAmount = parseFloat((subtotal * vatRate).toFixed(2));
+  const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
+
+  const fragment = document.createDocumentFragment();
+
+  const subtotalRow = document.createElement('tr');
+  subtotalRow.classList.add('cart-subtotal');
+  subtotalRow.innerHTML = `
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Subtotal:</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${subtotal.toFixed(2)}</td>
+    <td></td>
+  `;
+  fragment.appendChild(subtotalRow);
+
+  const vatRow = document.createElement('tr');
+  vatRow.classList.add('cart-vat');
+  vatRow.innerHTML = `
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">VAT (${(vatRate * 100).toFixed(2)}%):</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${vatAmount}</td>
+    <td></td>
+  `;
+  fragment.appendChild(vatRow);
+
+  const totalRow = document.createElement('tr');
+  totalRow.classList.add('cart-total');
+  totalRow.innerHTML = `
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total:</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${totalPriceWithVAT}</td>
+    <td></td>
+  `;
+  fragment.appendChild(totalRow);
+
+  return fragment;
+}
+
+
 function updateCartDisplay(state) {
   const cartContainer = document.getElementById('cart-container');
   cartContainer.innerHTML = '';
@@ -163,6 +208,14 @@ function updateCartDisplay(state) {
   state.items.forEach((item) => {
     cartContainer.appendChild(renderCartItem(item));
   });
+
+  if (state.items.length === 0) {
+    cartContainer.innerHTML = '<tr><td colspan="6" style="text-align: center;">Your cart is empty.</td></tr>';
+    elements.checkoutButton.disabled = true;
+    return;
+  }
+  elements.checkoutButton.disabled = false;
+  cartContainer.appendChild(renderCartTotalRow(state.total));
 
   for (const item of state.items) {
     if (parseInt(item.quantity) === 1) {
@@ -177,6 +230,4 @@ function updateCartDisplay(state) {
       updateCartItemQuantity(item.product_id, parseInt(item.quantity) + 1);
     });
   }
-  const total = state.items.reduce((sum, item) => sum + parseFloat(item.total_price), 0);
-  document.getElementById('cart-total').textContent = total.toFixed(2);
 }
