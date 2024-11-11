@@ -91,7 +91,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "2" }] }) // Mock the count query
-        .mockResolvedValueOnce({ rows: expectedResponse }); // Mock the result query
+        .mockResolvedValueOnce({ rows: expectedResponse }) // Mock the result query
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       const result = await productService.getFilteredPaginated(params);
 
@@ -109,7 +110,8 @@ describe("ProductService", () => {
     it("should return an empty array with count if no products match the criteria", async () => {
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "0" }] }) // Mock the count query
-        .mockResolvedValueOnce({ rows: [] }); // Mock the result query
+        .mockResolvedValueOnce({ rows: [] }) // Mock the result query
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       const result = await productService.getFilteredPaginated(params);
 
@@ -138,7 +140,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "0" }] })
-        .mockResolvedValueOnce({ rows: [] });
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       await productService.getFilteredPaginated(params);
 
@@ -153,7 +156,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "0" }] })
-        .mockResolvedValueOnce({ rows: [] });
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       await productService.getFilteredPaginated(params);
 
@@ -169,7 +173,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "0" }] })
-        .mockResolvedValueOnce({ rows: [] });
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       await productService.getFilteredPaginated(params);
 
@@ -188,7 +193,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "1" }] })
-        .mockResolvedValueOnce({ rows: expectedResponse });
+        .mockResolvedValueOnce({ rows: expectedResponse })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       const result = await productService.getFilteredPaginated(params);
 
@@ -206,7 +212,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "1" }] })
-        .mockResolvedValueOnce({ rows: expectedResponse });
+        .mockResolvedValueOnce({ rows: expectedResponse })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       const result = await productService.getFilteredPaginated(params);
 
@@ -224,7 +231,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "1" }] })
-        .mockResolvedValueOnce({ rows: expectedResponse });
+        .mockResolvedValueOnce({ rows: expectedResponse })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       const result = await productService.getFilteredPaginated(params);
 
@@ -242,7 +250,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "1"}] })
-        .mockResolvedValueOnce({ rows: expectedResponse });
+        .mockResolvedValueOnce({ rows: expectedResponse })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       const result = await productService.getFilteredPaginated(params);
 
@@ -260,7 +269,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "1" }] })
-        .mockResolvedValueOnce({ rows: expectedResponse });
+        .mockResolvedValueOnce({ rows: expectedResponse })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       const result = await productService.getFilteredPaginated(params);
 
@@ -278,7 +288,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: "0"}] })
-        .mockResolvedValueOnce({ rows: [] });
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       await productService.getFilteredPaginated(params);
 
@@ -295,7 +306,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: 0 }] })
-        .mockResolvedValueOnce({ rows: [] });
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       await productService.getFilteredPaginated(params);
 
@@ -312,7 +324,8 @@ describe("ProductService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [{ count: 0 }] })
-        .mockResolvedValueOnce({ rows: [] });
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
 
       await productService.getFilteredPaginated(params);
 
