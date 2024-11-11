@@ -25,6 +25,7 @@ describe("AppConfigService", () => {
           password_require_lowercase: false,
           password_require_uppercase: false,
           password_require_special: false,
+          vat_percentage: 20,
         },
         dbConnection: mockDbConnection,
       };
@@ -40,6 +41,7 @@ describe("AppConfigService", () => {
             password_require_lowercase: false,
             password_require_uppercase: false,
             password_require_special: false,
+            vat_percentage: 20,
           },
         ],
       });
@@ -48,7 +50,7 @@ describe("AppConfigService", () => {
 
       const expectedQuery = `
         UPDATE app_settings 
-        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7
+        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8
         WHERE id = 1 RETURNING *`;
 
       expect(
@@ -71,6 +73,7 @@ describe("AppConfigService", () => {
           password_require_lowercase: false,
           password_require_uppercase: false,
           password_require_special: false,
+          vat_percentage: 20,
         },
         dbConnection: mockDbConnection,
       };
@@ -84,7 +87,7 @@ describe("AppConfigService", () => {
 
       const expectedQuery = `
         UPDATE app_settings 
-        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7
+        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8
         WHERE id = 1 RETURNING *`;
 
       expect(

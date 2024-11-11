@@ -16,7 +16,8 @@ describe('CartService', () => {
       const mockCart = { id: 'cart123', user_id: 'user123' };
       dbConnection.query
         .mockResolvedValueOnce({ rows: [mockCart] })  // Existing cart
-        .mockResolvedValueOnce({ rows: [{ id: 'item1', product_name: 'Product 1' }] }); // Cart items
+        .mockResolvedValueOnce({ rows: [{ id: 'item1', product_name: 'Product 1' }] })
+        .mockResolvedValueOnce({ rows: [{ vat_percentage: 20 }] });
 
       const data = {
         session: { user_id: 'user123', id: 'session123' },
@@ -25,9 +26,10 @@ describe('CartService', () => {
 
       const result = await cartService.getCart(data);
 
-      expect(dbConnection.query).toHaveBeenCalledTimes(2);
+      expect(dbConnection.query).toHaveBeenCalledTimes(3);
       expect(result.cart).toEqual(mockCart);
       expect(result.items).toEqual([{ id: 'item1', product_name: 'Product 1' }]);
+      expect(result.vatPercentage).toEqual(20);
     });
 
     it('should create a new cart if none exists', async () => {
@@ -38,7 +40,7 @@ describe('CartService', () => {
     
       dbConnection.query
         .mockResolvedValueOnce({ rows: [] })  // No user cart merging needed
-        .mockResolvedValueOnce({ rows: [] });  // No cart items
+        .mockResolvedValueOnce({ rows: [{ vat_percentage: 20 }] });
     
       const data = {
         session: { user_id: 'user123', id: 'session123' },
@@ -49,9 +51,10 @@ describe('CartService', () => {
     
       // Expect that getOrCreateCart was called instead of being tested here
       expect(cartService.getOrCreateCart).toHaveBeenCalledWith(data);
-      expect(dbConnection.query).toHaveBeenCalledTimes(1);  // The number of db queries related to the cart items only
+      expect(dbConnection.query).toHaveBeenCalledTimes(2);  // The number of db queries related to the cart items only
       expect(result.cart).toEqual(mockNewCart);
       expect(result.items).toEqual([]);
+      expect(result.vatPercentage).toEqual(20);
     });
     
   });

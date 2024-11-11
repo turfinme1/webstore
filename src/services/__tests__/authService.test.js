@@ -77,10 +77,11 @@ describe("AuthService", () => {
       // Assertions
       expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
       expect(bcrypt.hash).toHaveBeenCalledWith("password123", 10);
-      expect(mockMailService.sendVerificationEmail).toHaveBeenCalledWith(
-        "test@example.com",
-        "token123"
-      );
+      expect(mockMailService.sendVerificationEmail).toHaveBeenCalledWith({
+        ...data,
+        user: mockUser,
+        verifyToken: "token123",
+      });
       expect(result).toEqual(mockSession);
     });
 
@@ -453,7 +454,7 @@ describe("AuthService", () => {
   describe("verifyCaptcha", () => {
     beforeEach(() => {
       data.body = { captcha_answer: "8" };
-      data.session = { session_hash: "test-session-hash" }
+      data.session = { session_hash: "test-session-hash" };
     });
 
     it("should verify the captcha and deactivate it when the answer is correct", async () => {
@@ -469,32 +470,32 @@ describe("AuthService", () => {
         is_active: true,
         expires_at: new Date(Date.now() + 60000),
       };
-  
+
       // Mock queries for app settings, failed attempts, captcha, and updating the captcha
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [mockAppSettings] }) // App settings
         .mockResolvedValueOnce({ rows: [mockFailedAttempts] }) // Failed attempts
         .mockResolvedValueOnce({ rows: [mockCaptcha] }) // Captcha found
         .mockResolvedValueOnce({ rows: [] }); // Update captcha to inactive
-  
+
       await authService.verifyCaptcha(data);
-  
+
       const expectedAppSettingsQuery = `
         SELECT request_limit, request_window, request_block_duration
         FROM app_settings LIMIT 1`;
-  
+
       const expectedFailedAttemptsQuery = `
         SELECT COUNT(*) AS failed_attempts_count
         FROM failed_attempts
         WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1)
         AND attempt_type_id = (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1)
         AND created_at >= NOW() - (SELECT request_window FROM app_settings LIMIT 1)`;
-  
+
       const expectedCaptchaQuery = `
         SELECT * FROM captchas
         WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1) 
         AND is_active = TRUE AND expires_at > NOW()`;
-  
+
       // Assertions for the database queries
       expect(
         containsQueryString(
@@ -524,31 +525,31 @@ describe("AuthService", () => {
         request_block_duration: "30 minutes",
       };
       const mockFailedAttempts = { failed_attempts_count: "6" }; // Over the threshold
-    
+
       // Mock query results for app settings and failed attempts
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [mockAppSettings] }) // App settings
         .mockResolvedValueOnce({ rows: [mockFailedAttempts] }); // Failed attempts
-    
+
       // Mocking the update for rate limiting
       mockDbConnection.query.mockResolvedValueOnce({ rows: [] }); // For rate limiting
-    
+
       await expect(authService.verifyCaptcha(data)).rejects.toThrow(
         "Too many failed attempts. Try again later"
       );
-    
+
       const expectedFailedAttemptsQuery = `
         SELECT COUNT(*) AS failed_attempts_count
         FROM failed_attempts
         WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1)
         AND attempt_type_id = (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1)
         AND created_at >= NOW() - (SELECT request_window FROM app_settings LIMIT 1)`;
-    
+
       const expectedRateLimitUpdateQuery = `
         UPDATE sessions
         SET rate_limited_until = NOW() + (SELECT request_block_duration FROM app_settings LIMIT 1)
         WHERE session_hash = $1`;
-    
+
       // Ensure the correct query was made for failed attempts
       expect(
         containsQueryString(
@@ -556,7 +557,7 @@ describe("AuthService", () => {
           expectedFailedAttemptsQuery
         )
       ).toBe(true);
-    
+
       // Ensure the rate limiting update query was called
       expect(
         containsQueryString(
@@ -564,11 +565,10 @@ describe("AuthService", () => {
           expectedRateLimitUpdateQuery
         )
       ).toBe(true);
-    
+
       // Ensure no further steps were taken after the rate limiting
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(4); 
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(4);
     });
-    
 
     it("should throw an error when the captcha answer is incorrect", async () => {
       const mockAppSettings = {
@@ -583,7 +583,7 @@ describe("AuthService", () => {
         is_active: true,
         expires_at: new Date(Date.now() + 60000),
       };
-    
+
       // Mock queries for failed attempts, captcha, inserting failed attempt, and invalidating captcha
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [mockAppSettings] }) // App settings
@@ -592,32 +592,32 @@ describe("AuthService", () => {
         .mockResolvedValueOnce({ rows: [] }) // Insert into failed_attempts
         .mockResolvedValueOnce({ rows: [] }) // Update captcha to inactive
         .mockResolvedValueOnce({ rows: [] }); // Commit transaction (optional)
-    
+
       // The test should reject with an error for invalid captcha
       await expect(authService.verifyCaptcha(data)).rejects.toThrow(
         "Invalid captcha answer"
       );
-    
+
       const expectedFailedAttemptsQuery = `
         SELECT COUNT(*) AS failed_attempts_count
         FROM failed_attempts
         WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1)
         AND attempt_type_id = (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1)
         AND created_at >= NOW() - (SELECT request_window FROM app_settings LIMIT 1)`;
-    
+
       const expectedCaptchaQuery = `
         SELECT * FROM captchas
         WHERE session_id = (SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1) 
         AND is_active = TRUE AND expires_at > NOW()`;
-    
+
       const expectedCaptchaInvalidationQuery = `
         UPDATE captchas SET is_active = FALSE WHERE id = $1`;
-    
+
       const expectedInsertFailedAttemptQuery = `
         INSERT INTO failed_attempts (session_id, attempt_type_id)
         VALUES ((SELECT id FROM sessions WHERE session_hash = $1 LIMIT 1),
         (SELECT id FROM attempt_types WHERE type = 'Captcha' LIMIT 1))`;
-    
+
       // Verify the queries executed
       expect(
         containsQueryString(
@@ -643,22 +643,21 @@ describe("AuthService", () => {
           expectedInsertFailedAttemptQuery
         )
       ).toBe(true);
-    
+
       // Ensure the number of queries is correct (app settings, failed attempts, captcha, failed attempt insert, captcha invalidation)
       expect(mockDbConnection.query).toHaveBeenCalledTimes(6); // 5 queries + commit
     });
-    
   });
 
   describe("updateProfile", () => {
     it("should update the user profile and return the updated user", async () => {
-      const mockUser = { 
-        id: 1, 
-        email: "test@example.com", 
-        name: "Test User", 
-        password_hash: "oldHashedPassword"  // Old password hash
+      const mockUser = {
+        id: 1,
+        email: "test@example.com",
+        name: "Test User",
+        password_hash: "oldHashedPassword", // Old password hash
       };
-      data.body.old_password = "oldPassword123";  // Old password
+      data.body.old_password = "oldPassword123"; // Old password
 
       // Mock fetching the user
       mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] });
@@ -674,7 +673,7 @@ describe("AuthService", () => {
         id: 1,
         email: "test@example.com",
         name: "Updated User",
-        password_hash: "newHashedPassword"
+        password_hash: "newHashedPassword",
       };
       mockDbConnection.query.mockResolvedValueOnce({ rows: [updatedUser] });
 
@@ -682,8 +681,11 @@ describe("AuthService", () => {
       const result = await authService.updateProfile(data);
 
       // Verify the calls
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(2);  // One for SELECT, one for UPDATE
-      expect(bcrypt.compare).toHaveBeenCalledWith("oldPassword123", "oldHashedPassword");
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(2); // One for SELECT, one for UPDATE
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        "oldPassword123",
+        "oldHashedPassword"
+      );
       expect(bcrypt.hash).toHaveBeenCalledWith("password123", 10);
 
       // Verify the result
@@ -691,13 +693,13 @@ describe("AuthService", () => {
     });
 
     it("should not update if no changes are detected", async () => {
-      const mockUser = { 
-        id: 1, 
-        email: "test@example.com", 
-        name: "Test User", 
-        password_hash: "oldHashedPassword" 
+      const mockUser = {
+        id: 1,
+        email: "test@example.com",
+        name: "Test User",
+        password_hash: "oldHashedPassword",
       };
-      data.body.old_password = "oldPassword123";  // Old password
+      data.body.old_password = "oldPassword123"; // Old password
 
       // Mock fetching the user
       mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] });
@@ -706,25 +708,30 @@ describe("AuthService", () => {
       jest.spyOn(bcrypt, "compare").mockResolvedValue(true);
 
       // No password change in this case
-      data.body.password = undefined;  // No new password provided
-      data.body.name = "Test User";  // No name change either
+      data.body.password = undefined; // No new password provided
+      data.body.name = "Test User"; // No name change either
 
       // Call the updateProfile method
-      await expect(authService.updateProfile(data)).rejects.toThrow("No changes to update");
+      await expect(authService.updateProfile(data)).rejects.toThrow(
+        "No changes to update"
+      );
 
       // Verify only the SELECT query was called
       expect(mockDbConnection.query).toHaveBeenCalledTimes(1);
-      expect(bcrypt.compare).toHaveBeenCalledWith("oldPassword123", "oldHashedPassword");
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        "oldPassword123",
+        "oldHashedPassword"
+      );
     });
 
     it("should throw an error if the old password is incorrect", async () => {
-      const mockUser = { 
-        id: 1, 
-        email: "test@example.com", 
-        name: "Test User", 
-        password_hash: "oldHashedPassword" 
+      const mockUser = {
+        id: 1,
+        email: "test@example.com",
+        name: "Test User",
+        password_hash: "oldHashedPassword",
       };
-      data.body.old_password = "oldPassword123";  // Old password
+      data.body.old_password = "oldPassword123"; // Old password
 
       // Mock fetching the user
       mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] });
@@ -733,19 +740,24 @@ describe("AuthService", () => {
       jest.spyOn(bcrypt, "compare").mockResolvedValue(false);
 
       // Call the updateProfile method and expect it to throw an error
-      await expect(authService.updateProfile(data)).rejects.toThrow("Old password is incorrect");
+      await expect(authService.updateProfile(data)).rejects.toThrow(
+        "Old password is incorrect"
+      );
 
       // Verify only the SELECT query was called
       expect(mockDbConnection.query).toHaveBeenCalledTimes(1);
-      expect(bcrypt.compare).toHaveBeenCalledWith("oldPassword123", "oldHashedPassword");
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        "oldPassword123",
+        "oldHashedPassword"
+      );
     });
 
     it("should update the profile without changing the password", async () => {
-      const mockUser = { 
-        id: 1, 
-        email: "test@example.com", 
-        name: "Test User", 
-        password_hash: "oldHashedPassword" 
+      const mockUser = {
+        id: 1,
+        email: "test@example.com",
+        name: "Test User",
+        password_hash: "oldHashedPassword",
       };
 
       // Mock fetching the user
@@ -755,15 +767,15 @@ describe("AuthService", () => {
       jest.spyOn(bcrypt, "compare").mockResolvedValue(true);
 
       // No password change in this case
-      data.body.old_password = "oldPassword123";  // No new password provided
-      data.body.name = "Updated User";  // Name is changing
+      data.body.old_password = "oldPassword123"; // No new password provided
+      data.body.name = "Updated User"; // Name is changing
 
       // Mock the query for updating the user profile
       const updatedUser = {
         id: 1,
         email: "test@example.com",
         name: "Updated User",
-        password_hash: "oldHashedPassword"  // Password remains unchanged
+        password_hash: "oldHashedPassword", // Password remains unchanged
       };
       mockDbConnection.query.mockResolvedValueOnce({ rows: [updatedUser] });
 
@@ -771,8 +783,11 @@ describe("AuthService", () => {
       const result = await authService.updateProfile(data);
 
       // Verify the calls
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(2);  // One for SELECT, one for UPDATE
-      expect(bcrypt.compare).toHaveBeenCalledWith("oldPassword123", "oldHashedPassword");
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(2); // One for SELECT, one for UPDATE
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        "oldPassword123",
+        "oldHashedPassword"
+      );
 
       // Verify the result
       expect(result).toEqual(updatedUser);
@@ -797,7 +812,9 @@ describe("AuthService", () => {
         "test@example.com",
         "resetToken123"
       );
-      expect(result.message).toBe("If the email exists, a password reset link will be sent");
+      expect(result.message).toBe(
+        "If the email exists, a password reset link will be sent"
+      );
     });
 
     it("should return a message if the email does not exist", async () => {
@@ -806,7 +823,9 @@ describe("AuthService", () => {
 
       const result = await authService.forgotPassword(data);
 
-      expect(result.message).toBe("If the email exists, a password reset link will be sent");
+      expect(result.message).toBe(
+        "If the email exists, a password reset link will be sent"
+      );
     });
   });
 
@@ -815,9 +834,7 @@ describe("AuthService", () => {
       const mockUser = { id: 1, expires_at: new Date(Date.now() + 10000) }; // Token is valid
       jest.spyOn(bcrypt, "hash").mockResolvedValue("newHashedPassword");
 
-      mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [mockUser] }) // Valid token found
-        
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [mockUser] }); // Valid token found
 
       const result = await authService.resetPassword({
         ...data,
@@ -832,10 +849,12 @@ describe("AuthService", () => {
     it("should throw an error for an invalid or expired token", async () => {
       mockDbConnection.query.mockResolvedValueOnce({ rows: [] }); // Invalid token
 
-      await expect(authService.resetPassword({
-        ...data,
-        query: { token: "invalidToken" },
-      })).rejects.toThrow("Invalid or expired token");
+      await expect(
+        authService.resetPassword({
+          ...data,
+          query: { token: "invalidToken" },
+        })
+      ).rejects.toThrow("Invalid or expired token");
     });
   });
 });
