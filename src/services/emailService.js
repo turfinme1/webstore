@@ -51,6 +51,13 @@ class EmailService {
     );
     const user = userResult.rows[0];
 
+    const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
+    const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
+    const vatRate = vatPercentage / 100;
+    const subtotal = data.cartItems.reduce((sum, item) => sum + parseFloat(item.total_price), 0);
+    const vatAmount = Math.floor((subtotal * vatRate) * 100) / 100;
+    const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
+
     let orderTable = `
       <table style="border-collapse: collapse; width: 100%; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">
         <thead>
@@ -63,7 +70,7 @@ class EmailService {
         </thead>
         <tbody>
     `;
-
+    
     data.cartItems.forEach((item) => {
       orderTable += `
         <tr>
@@ -77,10 +84,16 @@ class EmailService {
 
     orderTable += `
       <tr>
-        <td style="padding: 8px; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};"></td>
-        <td style="padding: 8px; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};"></td>
-        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">Total:</td>
-        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">$${data.order.total_price}</td>
+        <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Subtotal:</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">$${subtotal.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">VAT (${(vatRate * 100).toFixed(2)}%):</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">$${vatAmount}</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Total:</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">$${totalPriceWithVAT}</td>
       </tr>
     `;
 
@@ -116,6 +129,13 @@ class EmailService {
     );
     const user = userResult.rows[0];
 
+    const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
+    const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
+    const vatRate = vatPercentage / 100;
+    const subtotal = parseFloat(data.order.total_price);
+    const vatAmount = Math.floor((subtotal * vatRate) * 100) / 100;
+    const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
+
     let orderTable = `
       <table style="border-collapse: collapse; width: 100%; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">
         <thead>
@@ -142,10 +162,16 @@ class EmailService {
 
     orderTable += `
       <tr>
-        <td style="padding: 8px; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};"></td>
-        <td style="padding: 8px; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};"></td>
-        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">Total:</td>
-        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">$${data.order.total_price}</td>
+        <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Subtotal:</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">$${subtotal.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">VAT (${(vatRate * 100).toFixed(2)}%):</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">$${vatAmount}</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Total:</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">$${totalPriceWithVAT}</td>
       </tr>
     `;
 

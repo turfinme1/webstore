@@ -318,13 +318,14 @@ class OrderService {
       [data.session.user_id]
     );
     ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    const order = orderResult.rows[0];
 
     const orderItemsResult = await data.dbConnection.query(`
       SELECT oi.*, p.name AS product_name
       FROM order_items oi
       JOIN products p ON oi.product_id = p.id
       WHERE order_id = $1`,
-      [orderResult.rows[0].id]
+      [order.id]
     );
     const orderItems = orderItemsResult.rows;
 
@@ -335,7 +336,7 @@ class OrderService {
       },
       body: JSON.stringify({
         client_id: data.session.user_id,
-        amount: orderResult.rows[0].total_price,
+        amount: order.total_price,
       }),
     });
 
@@ -343,15 +344,22 @@ class OrderService {
     const paymentData = await paymentResult.json();
 
     // Update the order status to 'Complete'
+    const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
+    const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
+    const vatRate = vatPercentage / 100;
+    const subtotal = parseFloat(order.total_price);
+    const vatAmount = Math.floor((subtotal * vatRate) * 100) / 100;
+    const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
+
     await data.dbConnection.query(
       `
       UPDATE orders 
-      SET status = 'Paid', paid_amount = total_price 
-      WHERE user_id = $1 AND status = 'Pending'`,
-      [data.session.user_id]
+      SET status = 'Paid', paid_amount = $1
+      WHERE user_id = $2 AND status = 'Pending'`,
+      [totalPriceWithVAT, data.session.user_id]
     );
 
-    const emailObject = { ...data, orderItems, order: orderResult.rows[0], paymentNumber: paymentData.payment_number };
+    const emailObject = { ...data, orderItems, order: order, paymentNumber: paymentData.payment_number };
     await this.emailService.sendOrderPaidConfirmationEmail(emailObject);
     
     await data.dbConnection.query("COMMIT");
