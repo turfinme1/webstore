@@ -1,27 +1,81 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<title>CKEditor 5 Sample</title>
-		<link rel="stylesheet" href="/email-templates.css">
-		<link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.3.1/ckeditor5.css">
-	</head>
-	<body>
-		<div>
-			<div class="main-container">
-				<div class="editor-container editor-container_classic-editor" id="editor-container">
-					<div class="editor-container__editor"><div id="editor"></div></div>
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Email Template Management</title>
+	<link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.3.1/ckeditor5.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+	<div class="container mt-5 p-4 border rounded shadow-sm" id="main-container">
+		<h1 class="mb-4">Email Template Management</h1>
+
+		<div class="card-body">
+			<form id="template-form">
+				
+				<div class="mb-3">
+					<label for="type" class="form-label">Type of Template</label>
+					<select id="type" class="form-select" name="type">
+						
+					</select>
 				</div>
-			</div>
+				<div class="mb-3">
+					<label for="subject" class="form-label">Email Subject</label>
+					<input type="text" class="form-control" id="subject" name="subject" required />
+				</div>
+				<div class="mb-3">
+					<label for="template" class="form-label">Email Body</label>
+					<textarea id="template" class="form-control" name="template" rows="10" required></textarea>
+				</div>
+				<div class="mb-3" id="placeholders">
+
+					
+				</div>
+
+				<div class="mb-3 border-customization" style="display: none;">
+					<label for="table_border_width" class="form-label">Table Border Width</label>
+					<input type="number" class="form-control" id="table-border-width" name="table_border_width" min="1" max="10">
+				</div>
+				
+				<div class="mb-3 border-customization" style="display: none;">
+					<label for="table_border_color" class="form-label">Table Border Color</label>
+					<select id="table-border-color" class="form-select" name="table_border_color">
+						<option value="black">Black</option>
+						<option value="green">Green</option>
+						<option value="red">Red</option>
+						<option value="blue">Blue</option>
+						<option value="yellow">Yellow</option>
+						<option value="white">White</option>
+						<option value="gray">Gray</option>
+						<option value="purple">Purple</option>
+						<option value="orange">Orange</option>
+						<option value="brown">Brown</option>
+						<option value="pink">Pink</option>
+						<option value="cyan">Cyan</option>
+						<option value="magenta">Magenta</option>
+						<option value="lime">Lime</option>
+						<option value="teal">Teal</option>
+						<option value="indigo">Indigo</option>
+						<option value="maroon">Maroon</option>
+						<option value="navy">Navy</option>
+						<option value="olive">Olive</option>
+						<option value="silver">Silver</option>
+						<option value="aqua">Aqua</option>
+						<option value="fuchsia">Fuchsia</option>
+						<option value="violet">Violet</option>
+					</select>
+				</div>
+				
+				<button type="submit" class="btn btn-primary">Save</button>
+			</form>
 		</div>
-		<script type="importmap">
-		{
-			"imports": {
-				"ckeditor5": "https://cdn.ckeditor.com/ckeditor5/43.3.1/ckeditor5.js",
-				"ckeditor5/": "https://cdn.ckeditor.com/ckeditor5/43.3.1/"
-			}
-		}
-		</script>
-		<script type="module" src="/email-templates.js"></script>
-	</body>
+	</div>
+
+	<script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
+	<script type="module" src="/email-templates.js"></script>
+</body>
+
 </html>

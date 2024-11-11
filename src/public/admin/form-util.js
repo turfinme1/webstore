@@ -72,6 +72,8 @@ export async function createInputField(key, field) {
     );
   } else if (field.fileInput) {
     return createFileInputField(key, field);
+  } else if(field.type === "number") {
+    return createNumberField(key, field);
   } else {
     return createTextField(key, field);
   }
@@ -115,6 +117,19 @@ export function createTextField(key, field) {
   input.type = key === "password" ? "password" : "text";
   input.id = key;
   input.name = key;
+  input.placeholder = field.placeholder || "";
+  input.className = "form-control";
+  return input;
+}
+
+export function createNumberField(key, field) {
+  const input = document.createElement("input");
+  input.type = "number";
+  input.id = key;
+  input.name = key;
+  input.minLength = field.minLength || 0;
+  input.maxLength = field.maxLength || 100;
+  input.step = field.step || 0.01;
   input.placeholder = field.placeholder || "";
   input.className = "form-control";
   return input;

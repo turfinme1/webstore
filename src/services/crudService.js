@@ -198,7 +198,8 @@ class CrudService {
     }
 
     if (groupBySets.length > 0) {
-      orderByClause = ` ${groupBySets.join(" DESC, ")}`;
+      let orderByCaluseFields = groupBySets.map((field) => `${field} DESC`).join(", ");
+      orderByClause = ` ${orderByCaluseFields}`;
     } else {
       selectFields = ["*"];
       orderByClause =

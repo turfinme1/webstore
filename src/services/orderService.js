@@ -2,7 +2,8 @@ const { ASSERT_USER } = require("../serverConfigurations/assert");
 const STATUS_CODES = require("../serverConfigurations/constants");
 
 class OrderService {
-  constructor() {
+  constructor(emailService) {
+    this.emailService = emailService;
     this.createOrder = this.createOrder.bind(this);
     this.createOrderByStaff = this.createOrderByStaff.bind(this);
     this.updateOrderByStaff = this.updateOrderByStaff.bind(this);
@@ -73,6 +74,8 @@ class OrderService {
       [data.session.user_id]
     );
 
+    const emailObject = { ...data, order, cartItems };
+    await this.emailService.sendOrderCreatedConfirmationEmail(emailObject);
     return { order, message: "Order placed successfully" };
   }
   
@@ -316,6 +319,15 @@ class OrderService {
     );
     ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
 
+    const orderItemsResult = await data.dbConnection.query(`
+      SELECT oi.*, p.name AS product_name
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.id
+      WHERE order_id = $1`,
+      [orderResult.rows[0].id]
+    );
+    const orderItems = orderItemsResult.rows;
+
     const paymentResult = await fetch("http://10.20.3.224:5002/api/payments", { 
       method: "POST",
       headers: {
@@ -328,19 +340,21 @@ class OrderService {
     });
 
     ASSERT_USER(paymentResult.ok, "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
+    const paymentData = await paymentResult.json();
 
     // Update the order status to 'Complete'
     await data.dbConnection.query(
       `
-    UPDATE orders 
-    SET status = 'Paid', paid_amount = total_price 
-    WHERE user_id = $1 AND status = 'Pending'`,
+      UPDATE orders 
+      SET status = 'Paid', paid_amount = total_price 
+      WHERE user_id = $1 AND status = 'Pending'`,
       [data.session.user_id]
     );
 
-    // Commit transaction
+    const emailObject = { ...data, orderItems, order: orderResult.rows[0], paymentNumber: paymentData.payment_number };
+    await this.emailService.sendOrderPaidConfirmationEmail(emailObject);
+    
     await data.dbConnection.query("COMMIT");
-
     return { message: "Order completed successfully" };
   }
 

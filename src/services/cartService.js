@@ -82,7 +82,10 @@ class CartService {
       [cart.id]
     );
 
-    return { cart, items: cartItemsResult.rows };
+    const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
+    const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
+
+    return { cart, items: cartItemsResult.rows, vatPercentage };
   }
 
   async updateItem(data) {

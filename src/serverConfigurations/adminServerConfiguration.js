@@ -14,34 +14,34 @@ const OrderService = require("../services/orderService");
 const OrderController = require("../controllers/orderController");
 const ExportService = require("../services/exportService");
 const ExportController = require("../controllers/exportController");
-const { MailService, transporter } = require("../services/mailService");
+const { EmailService, transporter } = require("../services/emailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const AppConfigService = require("../services/appConfigService");
 const AppConfigController = require("../controllers/appConfigController");
 const Logger = require("./logger");
 
 const entitySchemaCollection = loadEntitySchemas("admin");
-const mailService = new MailService(transporter);
-const authService = new AuthService(mailService);
+const emailService = new EmailService(transporter);
+const authService = new AuthService(emailService);
 const authController = new AuthController(authService);
-const service = new CrudService();
-const controller = new CrudController(service, authService);
+const crudService = new CrudService();
+const crudController = new CrudController(crudService, authService);
 const productService = new ProductService();
 const productController = new ProductController(productService, authService);
 const appConfigService = new AppConfigService();
 const appConfigController = new AppConfigController(appConfigService, authService);
-const orderService = new OrderService();
+const orderService = new OrderService(emailService);
 const orderController = new OrderController(orderService, authService);
-const exportService = new ExportService(service);
+const exportService = new ExportService(crudService);
 const exportController = new ExportController(exportService);
 
 const routeTable = {
   get: {
-    "/crud/:entity": controller.getAll,
-    "/crud/:entity/filtered": controller.getFilteredPaginated,
+    "/crud/:entity": crudController.getAll,
+    "/crud/:entity/filtered": crudController.getFilteredPaginated,
     "/api/:entity/filtered/export/csv": exportController.exportToCsv,
     "/api/:entity/filtered/export/excel": exportController.exportToExcel,
-    "/crud/:entity/:id": controller.getById,
+    "/crud/:entity/:id": crudController.getById,
     "/api/products" : productController.getFilteredPaginated,
     "/auth/verify-mail": authController.verifyMail,
     "/auth/status": authController.getStatus,
@@ -52,7 +52,7 @@ const routeTable = {
     "/app-config/rate-limit-settings": appConfigController.getRateLimitSettings,
   },
   post: {
-    "/crud/:entity": controller.create,
+    "/crud/:entity": crudController.create,
     "/api/products": productController.create,
     "/auth/register": authController.register,
     "/auth/login": authController.login,
@@ -65,14 +65,14 @@ const routeTable = {
     '/api/products/upload': productController.uploadProducts,
   },
   put: {
-    "/crud/:entity/:id": controller.update,
+    "/crud/:entity/:id": crudController.update,
     "/api/products/:id": productController.update,
     "/api-back/orders/:orderId": orderController.updateOrderByStaff,
     "/auth/profile": authController.updateProfile,
     "/app-config/rate-limit-settings": appConfigController.updateRateLimitSettings,
   },
   delete: {
-    "/crud/:entity/:id": controller.delete,
+    "/crud/:entity/:id": crudController.delete,
     "/api/products/:id": productController.delete,
     "/api-back/orders/:orderId": orderController.deleteOrder,
   },

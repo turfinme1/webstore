@@ -15,7 +15,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   await attachLogoutHandler();
 
   renderDynamicNavigation(userStatus);
-
+  await renderOrderChartLastSixMonths();
+  await renderOrderChartLastTwoDays();
 });
 
 function renderDynamicNavigation(userStatus) {
@@ -23,18 +24,79 @@ function renderDynamicNavigation(userStatus) {
   navContainer.innerHTML = ""; // Clear previous content
 
   const navItems = [
-    { id: "settings-link", text: "Site Settings", href: "#", permission: "view", interface: "site-settings" },
-    { id: "crud-product-link", text: "CRUD Products", href: "/crud-product", permission: "view", interface: "products" },
-    { id: "crud-user-link", text: "CRUD Users", href: "/crud-user", permission: "view", interface: "users" },
-    { id: "crud-staff-user-link", text: "CRUD Staff Users", href: "/crud-staff-user", permission: "view", interface: "admin-users" },
-    { id: "crud-order-link", text: "CRUD Orders", href: "/crud-order", permission: "view", interface: "orders" },
-    { id: "crud-role-link", text: "CRUD Roles", href: "/crud-role", permission: "view", interface: "roles" },
-    { id: "logs-link", text: "Report Logs", href: "/logs", permission: "view", interface: "report-logs" },
-    { id: "report-order-link", text: "Report Orders", href: "/report-order", permission: "view", interface: "report-orders" },
-    { id: "upload-products-link", text: "Upload Products from CSV", href: "#", permission: "create", interface: "products" },
+    {
+      id: "settings-link",
+      text: "Site Settings",
+      href: "#",
+      permission: "view",
+      interface: "site-settings",
+    },
+    {
+      id: "crud-product-link",
+      text: "CRUD Products",
+      href: "/crud-product",
+      permission: "view",
+      interface: "products",
+    },
+    {
+      id: "crud-user-link",
+      text: "CRUD Users",
+      href: "/crud-user",
+      permission: "view",
+      interface: "users",
+    },
+    {
+      id: "crud-staff-user-link",
+      text: "CRUD Staff Users",
+      href: "/crud-staff-user",
+      permission: "view",
+      interface: "admin-users",
+    },
+    {
+      id: "crud-order-link",
+      text: "CRUD Orders",
+      href: "/crud-order",
+      permission: "view",
+      interface: "orders",
+    },
+    {
+      id: "crud-role-link",
+      text: "CRUD Roles",
+      href: "/crud-role",
+      permission: "view",
+      interface: "roles",
+    },
+    {
+      id: "logs-link",
+      text: "Report Logs",
+      href: "/logs",
+      permission: "view",
+      interface: "report-logs",
+    },
+    {
+      id: "report-order-link",
+      text: "Report Orders",
+      href: "/report-order",
+      permission: "view",
+      interface: "report-orders",
+    },
+    {
+      id: "upload-products-link",
+      text: "Upload Products from CSV",
+      href: "#",
+      permission: "create",
+      interface: "products",
+    },
+    {
+      id: "email-templates-link",
+      text: "Email Templates",
+      href: "/email-templates",
+      permission: "view",
+      interface: "email-templates",
+    },
   ];
 
-  navItems.forEach(item => {
+  navItems.forEach((item) => {
     if (hasPermission(userStatus, item.permission, item.interface)) {
       const li = document.createElement("li");
       li.classList.add("nav-item");
@@ -153,4 +215,186 @@ async function renderUploadProducts() {
       uploadButton.disabled = false;
     }
   });
+}
+
+async function renderOrderChartLastSixMonths() {
+  const contentArea = document.getElementById("content-area");
+  contentArea.innerHTML = `
+    <h1 class='mb-4'>Order Charts</h1>
+    <h2>Orders Last 6 Months</h2>
+    <canvas id='orderChart' width='400' height='200'></canvas>
+    
+    <h2 style="margin-top: 10rem;" >Orders Last 2 Days</h2>
+    <canvas id='orderChartLastTwoDays' width='400' height='200'></canvas>`;
+
+  try {
+    // Fetch order data from the backend
+    let date = new Date();
+    date.setMonth(date.getMonth() - 6);
+    const isoDate = date.toISOString().split("T")[0];
+    const queryParams = new URLSearchParams({
+      filterParams: JSON.stringify({ created_at: { min: isoDate } }),
+      groupParams: JSON.stringify([
+        { column: "created_at", granularity: "month" },
+      ]),
+      pageSize: "6",
+      page: "1",
+    });
+
+    const response = await fetch(
+      `/crud/orders/filtered?${queryParams.toString()}`
+    );
+    const data = await response.json();
+
+    // Parse data for chart
+    const labels = data.result
+      .map((item) =>
+        new Date(item.created_at).toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        })
+      )
+      .reverse();
+    const orderCounts = data.result.map((item) => Number(item.count)).reverse();
+    const orderPrices = data.result
+      .map((item) => parseFloat(item.total_price))
+      .reverse();
+
+    // Render chart using Chart.js
+    const ctx = document.getElementById("orderChart").getContext("2d");
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Order Count",
+            data: orderCounts,
+            backgroundColor: "rgba(75, 192, 192, 0.6)",
+            borderColor: "rgba(75, 192, 192, 1)",
+            borderWidth: 1,
+            yAxisID: "y1",
+          },
+          {
+            label: "Total Price ($)",
+            data: orderPrices,
+            backgroundColor: "rgba(255, 159, 64, 0.6)",
+            borderColor: "rgba(255, 159, 64, 1)",
+            borderWidth: 1,
+            yAxisID: "y2",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y1: {
+            type: "linear",
+            position: "left",
+            beginAtZero: true,
+            title: { display: true, text: "Order Count" },
+          },
+          y2: {
+            type: "linear",
+            position: "right",
+            beginAtZero: true,
+            title: { display: true, text: "Total Price ($)" },
+            grid: { drawOnChartArea: false },
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching order data:", error);
+    contentArea.innerHTML =
+      "<p class='text-danger'>Failed to load order chart. Please try again later.</p>";
+  }
+}
+
+async function renderOrderChartLastTwoDays() {
+  const contentArea = document.getElementById("content-area");
+  try {
+    let date = new Date();
+    date.setDate(date.getDate() - 2);
+    const isoDate = date.toISOString().split("T")[0];
+    const queryParams = new URLSearchParams({
+      filterParams: JSON.stringify({ created_at: { min: isoDate } }),
+      groupParams: JSON.stringify([
+        { column: "created_at", granularity: "day" },
+      ]),
+      pageSize: "2",
+      page: "1",
+    });
+
+    const response = await fetch(
+      `/crud/orders/filtered?${queryParams.toString()}`
+    );
+    const data = await response.json();
+
+    // Parse data for 2-day chart
+    const labels = data.result
+      .map((item) =>
+        new Date(item.created_at).toLocaleDateString("en-US", {
+          month: "2-digit",
+          day: "2-digit",
+          year: "numeric",
+        })
+      )
+      .reverse();
+    const orderCounts = data.result.map((item) => Number(item.count)).reverse();
+    const orderPrices = data.result
+      .map((item) => parseFloat(item.total_price))
+      .reverse();
+
+    // Render 2-day chart using Chart.js
+    const ctx = document
+      .getElementById("orderChartLastTwoDays")
+      .getContext("2d");
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Order Count",
+            data: orderCounts,
+            backgroundColor: "rgba(54, 162, 235, 0.6)",
+            borderColor: "rgba(54, 162, 235, 1)",
+            borderWidth: 1,
+            yAxisID: "y1",
+          },
+          {
+            label: "Total Price ($)",
+            data: orderPrices,
+            backgroundColor: "rgba(255, 99, 132, 0.6)",
+            borderColor: "rgba(255, 99, 132, 1)",
+            borderWidth: 1,
+            yAxisID: "y2",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y1: {
+            type: "linear",
+            position: "left",
+            beginAtZero: true,
+            title: { display: true, text: "Order Count" },
+          },
+          y2: {
+            type: "linear",
+            position: "right",
+            beginAtZero: true,
+            title: { display: true, text: "Total Price ($)" },
+            grid: { drawOnChartArea: false },
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching last 2 days order data:", error);
+    contentArea.innerHTML =
+      "<p class='text-danger'>Failed to load 2-day order chart. Please try again later.</p>";
+  }
 }

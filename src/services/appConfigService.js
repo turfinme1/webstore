@@ -7,7 +7,7 @@ class AppConfigService {
   async updateRateLimitSettings(data) {
     const query = `
     UPDATE app_settings 
-    SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7
+    SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8
     WHERE id = 1 RETURNING *`;
 
     const result = await data.dbConnection.query(query, [
@@ -18,6 +18,7 @@ class AppConfigService {
       data.body.password_require_lowercase || false,
       data.body.password_require_uppercase || false,
       data.body.password_require_special || false,
+      data.body.vat_percentage || 0,
     ]);
     return { message: "Rate limit settings updated" };
   }

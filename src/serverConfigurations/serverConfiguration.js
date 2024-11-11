@@ -12,13 +12,13 @@ const CartController = require("../controllers/cartController");
 const CartService = require("../services/cartService");
 const OrderService = require("../services/orderService");
 const OrderController = require("../controllers/orderController");
-const { MailService, transporter } = require("../services/mailService");
+const { EmailService, transporter } = require("../services/emailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const Logger = require("./logger");
 
 const entitySchemaCollection = loadEntitySchemas("user");
-const mailService = new MailService(transporter);
-const authService = new AuthService(mailService);
+const emailService = new EmailService(transporter);
+const authService = new AuthService(emailService);
 const authController = new AuthController(authService);
 const service = new CrudService();
 const controller = new CrudController(service);
@@ -26,7 +26,7 @@ const productService = new ProductService();
 const productController = new ProductController(productService);
 const cartService = new CartService();
 const cartController = new CartController(cartService);
-const orderService = new OrderService();
+const orderService = new OrderService(emailService);
 const orderController = new OrderController(orderService);
 
 const routeTable = {
