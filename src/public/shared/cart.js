@@ -165,7 +165,7 @@ function renderCartItem(item) {
 function renderCartTotalRow() {
   const vatRate = state.vatPercentage / 100;
   const subtotal = state.total;
-  const vatAmount = parseFloat((subtotal * vatRate).toFixed(2));
+  const vatAmount = Math.floor((subtotal * vatRate) * 100) / 100;
   const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
 
   const fragment = document.createDocumentFragment();

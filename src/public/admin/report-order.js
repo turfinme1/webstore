@@ -17,6 +17,7 @@ const state = {
     { key: "email", label: "User Email" },
     { key: "status", label: "Status" },
     { key: "total_price", label: "Total Price" },
+    { key: "total_price_with_vat", label: "Total Price (VAT)" },
     { key: "paid_amount", label: "Paid Amount" },
     { key: "is_active", label: "Is Active" },
     { key: "shipping_address", label: "Shipping Address" },
@@ -210,7 +211,7 @@ function renderOrderList(orders, aggregationResults) {
 
     state.columnsToDisplay.forEach(({ key }) => {
       let cellValue = order[key];
-      cellValue = cellValue && ["total_price", "paid_amount"].includes(key) ? `$${cellValue}` : cellValue;
+      cellValue = cellValue && ["total_price", "paid_amount", "total_price_with_vat"].includes(key) ? `$${cellValue}` : cellValue;
 
       // Handle date formatting
       if (key.includes("created_at") && cellValue) {
@@ -237,7 +238,7 @@ function renderOrderList(orders, aggregationResults) {
         cellValue = "---";
       }
 
-      const direction = ["count", "total_price", "paid_amount"].includes(key) ? "right" : "left";
+      const direction = ["count", "total_price", "paid_amount", "total_price_with_vat"].includes(key) ? "right" : "left";
       orderRow.appendChild(createTableCell(cellValue, direction));
     });
 
@@ -259,7 +260,7 @@ function renderOrderList(orders, aggregationResults) {
         cellValue = "";
       }
 
-      const direction = ["count", "total_price", "paid_amount"].includes(key) ? "right" : "left";
+      const direction = ["count", "total_price", "paid_amount", "total_price_with_vat"].includes(key) ? "right" : "left";
       groupTotalRow.appendChild(createTableCell(cellValue, direction));
     });
 

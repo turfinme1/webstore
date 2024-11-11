@@ -318,6 +318,7 @@ function attachCaptchaRefreshHandler() {
 }
 
 function hasPermission(userStatus, permission, interfaceName) {
+  if (!userStatus || !userStatus.role_permissions) return false;
   const result = 
     userStatus.role_permissions.some(
     (rolePermission) =>

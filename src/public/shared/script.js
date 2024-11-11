@@ -167,7 +167,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             <h5 class="card-title">${product.name}</h5>
             <p class="card-text">${product.short_description}</p>
             <p class="text-muted"><b>Categories</b>: ${product.categories.join(", ")}</p>
-            <p class="text-muted">$${product.price}</p>
+            <p class="text-muted">Price: $${product.price}</p>
+            <p class="text-muted">Price with VAT: $${product.price_with_vat}</p>
           </div>
         </div>
       `;

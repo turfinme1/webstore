@@ -335,6 +335,7 @@ function renderOrders(orders) {
     // row.appendChild(createTableCell(order.user_id));
     row.appendChild(createTableCell(order.status));
     row.appendChild(createTableCell(`$${order.total_price || "0.00"}`, "right"));
+    row.appendChild(createTableCell(`$${order.total_price_with_vat || "0.00"}`, "right"));
     row.appendChild(createTableCell(`$${order.paid_amount || "0.00"}`, "right"));
     row.appendChild(createTableCell(order.is_active));
     row.appendChild(

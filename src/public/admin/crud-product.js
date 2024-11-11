@@ -236,6 +236,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         priceCell.textContent = `$${product.price}`;
         priceCell.style.textAlign = "right";
         productRow.appendChild(priceCell);
+        
+        // Price with VAT Column
+        const priceWithVatCell = document.createElement("td");
+        priceWithVatCell.textContent = `$${product.price_with_vat}`;
+        priceWithVatCell.style.textAlign = "right";
+        productRow.appendChild(priceWithVatCell);
 
         // Short Description Column
         const shortDescCell = document.createElement("td");
