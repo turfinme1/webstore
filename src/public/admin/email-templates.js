@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.emailTemplateId = state.templates[0].id;
     populateTemplateForm(state.templates[0]);
   }
-  loadCurrentTemplate();
+  await loadCurrentTemplate();
 });
 
 async function getTemplates() {
@@ -75,7 +75,7 @@ function attachEventListeners() {
   elements.templateForm.addEventListener("submit", handleTemplateFormSubmit);
   elements.templateTypeSelect.addEventListener("change", loadCurrentTemplate);
   elements.sendTestEmailButton.addEventListener("click", handleSendTestEmail);
-  elements.previewEmailButton.addEventListener("click", handlePreviewEmail);
+  // elements.previewEmailButton.addEventListener("click", handlePreviewEmail);
 }
 
 async function handleTemplateFormSubmit(event) {
@@ -87,6 +87,7 @@ async function handleTemplateFormSubmit(event) {
   const template = CKEDITOR.instances.template.getData();
   console.log({ type, subject, template });
   const data = Object.fromEntries(formData);
+  data.template = template;
   if(elements.templateTypeSelect.value === "Email verification") {
     data.table_border_color = null;
     data.table_border_width = null;
@@ -104,6 +105,7 @@ async function handleTemplateFormSubmit(event) {
 
   if (response.ok) {
     alert("Template saved!");
+    await getTemplates();
   } else {
     const apiError = await response.json();
     const errorMessage = apiError.error || "Error saving template";

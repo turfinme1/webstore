@@ -11,7 +11,7 @@ const state = {
   groupParams: [],
   orderParams: [],
   columnsToDisplay: [
-    { key: "id", label: "Id" },
+    // { key: "id", label: "Id" },
     { key: "created_at", label: "Created At" },
     { key: "order_hash", label: "Order Hash" },
     { key: "email", label: "User Email" },
@@ -45,10 +45,15 @@ const elements = {
   exportCsvButton: document.getElementById("export-csv-btn"),
   exportExcelButton: document.getElementById("export-excel-btn"),
   spinner: document.getElementById("spinner"),
+  createdAtMin : document.getElementById("created_at_min")
 };
 
 // Initialize page and attach event listeners
 document.addEventListener("DOMContentLoaded", async () => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  elements.createdAtMin.value = yesterday.toISOString().split("T")[0];
+
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
   createNavigation(userStatus);
@@ -58,7 +63,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   attachEventListeners();
-  loadOrders(state.currentPage);
+  // loadOrders(state.currentPage);
 });
 
 // Attach event listeners
@@ -168,14 +173,14 @@ async function loadOrders(page) {
       pageSize: state.pageSize.toString(),
       page: page.toString(),
     });
-
+    toggleExportLoadingState();
     const response = await fetch(`/crud/orders/filtered?${queryParams.toString()}`);
     const { result, count, groupCount, aggregationResults } = await response.json();
 
     state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'count');
-    if(state.columnsToDisplay[0].key !== 'id') {
-      state.columnsToDisplay.unshift({ key: "id", label: "Id" });
-    }
+    // if(state.columnsToDisplay[0].key !== 'id') {
+    //   state.columnsToDisplay.unshift({ key: "id", label: "Id" });
+    // }
     if (result.length > 0 && result[0].hasOwnProperty('count')) {
       state.columnsToDisplay.push({ key: "count", label: "Count" });
       state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'id');
@@ -183,6 +188,7 @@ async function loadOrders(page) {
 
     renderOrderList(result, aggregationResults);
     updatePagination(count, page);
+    toggleExportLoadingState();
   } catch (error) {
     console.error("Error loading orders:", error);
   }

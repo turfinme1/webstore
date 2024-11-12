@@ -26,19 +26,19 @@
             </div>
         </div>
 
-        <div id="filter-container" style="display:none;">
+        <div id="filter-container">
             <form id="filter-form" class="mb-3">
                 <div class="row">
                     <!-- Left Side: Filters -->
                     <div class="col-md-6">
                         <div class="row g-3">
                             <div class="mb-3 col-auto">
-                                <label for="created_at_min" class="form-label">Created At (Start)</label>
+                                <label for="created_at_min" class="form-label">Period (Start)</label>
                                 <input type="date" id="created_at_min" name="created_at_min" class="form-control">
                             </div>
 
                             <div class="mb-3 col-auto">
-                                <label for="created_at_max" class="form-label">Created At (End)</label>
+                                <label for="created_at_max" class="form-label">Period (End)</label>
                                 <input type="date" id="created_at_max" name="created_at_max" class="form-control">
                             </div>
                         </div>
@@ -71,7 +71,7 @@
                     <!-- Right Side: Grouping Options -->
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="group_by_created_at" class="form-label">Group by Created At</label>
+                            <label for="group_by_created_at" class="form-label">Group by Period</label>
                             <select id="group_by_created_at" class="form-select">
                                 <option value="">No Grouping</option>
                                 <option value="hour">Group by Hour</option>

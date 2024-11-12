@@ -40,10 +40,16 @@ const elements = {
   productListContainerUpdate: document.getElementById("products-list_update"),
   productSelect: document.getElementById("product-select"),
   productSelectUpdate: document.getElementById("product-select_update"),
+  spinner: document.getElementById("spinner"),
+  createdAtMin : document.getElementById("created_at_min")
 };
 
 // Initialize page and attach event listeners
 document.addEventListener("DOMContentLoaded", async () => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  elements.createdAtMin.value = yesterday.toISOString().split("T")[0];
+
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
   createNavigation(userStatus);
@@ -56,7 +62,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     elements.showFormButton.style.display = "none";
   }
   attachEventListeners();
-  await loadOrders(state.currentPage);
+  // await loadOrders(state.currentPage);
   await loadCountryCodes();
 });
 
@@ -314,11 +320,14 @@ async function loadOrders(page) {
       page: page.toString(),
     });
 
+    toggleExportLoadingState();
     const response = await fetch(`/crud/orders/filtered?${queryParams}`);
     const { result, count } = await response.json();
+    toggleExportLoadingState(true);
     renderOrders(result);
     updatePagination(count, page);
   } catch (error) {
+    toggleExportLoadingState(true);
     console.error("Error loading orders:", error);
   }
 }
@@ -330,6 +339,9 @@ function renderOrders(orders) {
   orders.forEach((order) => {
     const row = document.createElement("tr");
     row.appendChild(createTableCell(order.id, "right"));
+    row.appendChild(
+      createTableCell(new Date(order.created_at).toLocaleString())
+    );
     row.appendChild(createTableCell(order.order_hash));
     row.appendChild(createTableCell(order.email));
     // row.appendChild(createTableCell(order.user_id));
@@ -338,9 +350,6 @@ function renderOrders(orders) {
     row.appendChild(createTableCell(`$${order.total_price_with_vat || "0.00"}`, "right"));
     row.appendChild(createTableCell(`$${order.paid_amount || "0.00"}`, "right"));
     row.appendChild(createTableCell(order.is_active));
-    row.appendChild(
-      createTableCell(new Date(order.created_at).toLocaleString())
-    );
     row.appendChild(
       createTableCell(
         `${order.shipping_address.country_name}, ${order.shipping_address.city}, ${order.shipping_address.street}`
@@ -769,4 +778,12 @@ async function handleDeleteOrder(orderId) {
     alert(`Failed to delete order: ${error.message}`);
     console.error("Error deleting order:", error);
   }
+}
+
+function toggleExportLoadingState(reset = false) {
+  if(reset) {
+    elements.spinner.style.display = "none";
+    return;
+  }
+  elements.spinner.style.display = elements.spinner.style.display === "none" ? "inline-block" : "none";
 }
