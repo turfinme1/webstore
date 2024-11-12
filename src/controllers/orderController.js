@@ -25,7 +25,7 @@ class OrderController {
     }
 
     async createOrderByStaff(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
       this.authService.requirePermission(req, "create", 'orders');
       const data = {
         body: req.body,
@@ -37,7 +37,7 @@ class OrderController {
     }
 
     async updateOrderByStaff(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
       this.authService.requirePermission(req, "update", 'orders');
       const data = {
         body: req.body,

@@ -590,8 +590,8 @@ async function handleCreateOrder(event) {
     });
 
     if (!response.ok) {
-      const errorMessage = await response.text();
-      throw new Error(errorMessage);
+      const errorResponseData = await response.json();
+      throw new Error(errorResponseData.error);
     }
 
     alert("Order created successfully");
