@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
-const { ASSERT } = require("../serverConfigurations/assert");
+const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
+const STATUS_CODES = require("../serverConfigurations/constants");
 
 const transporter = nodemailer.createTransport({
   host: "localhost",
@@ -11,11 +12,11 @@ class EmailService {
   constructor(transporter) {
     this.transporter = transporter;
     this.sendVerificationEmail = this.sendVerificationEmail.bind(this);
-    this.sendOrderCreatedConfirmationEmail =
-      this.sendOrderCreatedConfirmationEmail.bind(this);
-    this.sendOrderPaidConfirmationEmail =
-      this.sendOrderPaidConfirmationEmail.bind(this);
+    this.sendOrderCreatedConfirmationEmail = this.sendOrderCreatedConfirmationEmail.bind(this);
+    this.sendOrderPaidConfirmationEmail = this.sendOrderPaidConfirmationEmail.bind(this);
     this.sendResetPasswordEmail = this.sendResetPasswordEmail.bind(this);
+    this.sendTestEmail = this.sendTestEmail.bind(this);
+    this.previewEmail = this.previewEmail.bind(this);
   }
 
   async sendVerificationEmail(data) {
@@ -39,17 +40,27 @@ class EmailService {
     await transporter.sendMail(mailOptions);
   }
 
-  async sendOrderCreatedConfirmationEmail(data) {
+  async sendOrderCreatedConfirmationEmail(data, isTest = false) {
     const templateResult = await data.dbConnection.query(`
       SELECT * FROM email_templates WHERE type = 'Order created'`);
     const emailTemplate = templateResult.rows[0];
+    let user;
 
-    const userResult = await data.dbConnection.query(
-      `
-      SELECT * FROM users WHERE id = $1`,
-      [data.session.user_id]
-    );
-    const user = userResult.rows[0];
+    if(isTest) {
+      const userResult = await data.dbConnection.query(
+        `
+        SELECT * FROM admin_users WHERE id = $1`,
+        [data.session.admin_user_id]
+      );
+      user = userResult.rows[0];
+    } else {
+      const userResult = await data.dbConnection.query(
+        `
+        SELECT * FROM users WHERE id = $1`,
+        [data.session.user_id]
+      );
+      user = userResult.rows[0];
+    }
 
     const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
     const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
@@ -117,17 +128,27 @@ class EmailService {
     await transporter.sendMail(mailOptions);
   }
 
-  async sendOrderPaidConfirmationEmail(data) {
+  async sendOrderPaidConfirmationEmail(data, isTest = false) {
     const templateResult = await data.dbConnection.query(`
       SELECT * FROM email_templates WHERE type = 'Order paid'`);
     const emailTemplate = templateResult.rows[0];
+    let user;
 
-    const userResult = await data.dbConnection.query(
-      `
-      SELECT * FROM users WHERE id = $1`,
-      [data.session.user_id]
-    );
-    const user = userResult.rows[0];
+    if(isTest) {
+      const userResult = await data.dbConnection.query(
+        `
+        SELECT * FROM admin_users WHERE id = $1`,
+        [data.session.admin_user_id]
+      );
+      user = userResult.rows[0];
+    } else {
+      const userResult = await data.dbConnection.query(
+        `
+        SELECT * FROM users WHERE id = $1`,
+        [data.session.user_id]
+      );
+      user = userResult.rows[0];
+    }
 
     const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
     const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
@@ -208,6 +229,68 @@ class EmailService {
     };
 
     await transporter.sendMail(mailOptions);
+  }
+
+  async sendTestEmail(data) {
+    const userResult = await data.dbConnection.query(
+      `
+      SELECT * FROM admin_users WHERE id = $1`,
+      [data.session.admin_user_id]
+    );
+    const user = userResult.rows[0];
+    user.user_id = user.admin_user_id;
+
+    if(data.params.type === "email-verification") {
+      const verifyToken = "test-verify-123456";
+      const emailObject = { ...data, verifyToken, user };
+      await this.sendVerificationEmail(emailObject, true);
+    } else if(data.params.type === "order-created") {
+      const cartItems = [
+        {
+          name: "Test Product",
+          quantity: 7,
+          unit_price: 100,
+          total_price: 700,
+        },
+        {
+          name: "Test Product 2",
+          quantity: 6,
+          unit_price: 50,
+          total_price: 300,
+        }
+      ];
+      const order = { id: 1 };
+
+      const emailObject = { ...data, order, cartItems };
+      await this.sendOrderCreatedConfirmationEmail(emailObject, true);
+    } else if(data.params.type === "order-paid") {
+      const orderItems = [
+        {
+          product_name: "Test Product",
+          quantity: 7,
+          unit_price: 100,
+          total_price: 700,
+        },
+        {
+          product_name: "Test Product 2",
+          quantity: 6,
+          unit_price: 50,
+          total_price: 300,
+        }
+      ];
+      const order = { id: 1, total_price: 1000 };
+      const paymentNumber = "test-payment-number-1234";
+      const emailObject = { ...data, orderItems, order, paymentNumber };
+      await this.sendOrderPaidConfirmationEmail(emailObject, true);
+    } else {
+      ASSERT_USER(false, "Invalid email type", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: `Invalid email type: ${data.params.type}` });
+    }
+    
+    return { message: "Test email sent" };
+  }
+
+  async previewEmail(data) {
+
   }
 }
 

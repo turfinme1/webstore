@@ -15,6 +15,7 @@ const OrderController = require("../controllers/orderController");
 const ExportService = require("../services/exportService");
 const ExportController = require("../controllers/exportController");
 const { EmailService, transporter } = require("../services/emailService");
+const EmailController = require("../controllers/emailController");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const AppConfigService = require("../services/appConfigService");
 const AppConfigController = require("../controllers/appConfigController");
@@ -22,6 +23,7 @@ const Logger = require("./logger");
 
 const entitySchemaCollection = loadEntitySchemas("admin");
 const emailService = new EmailService(transporter);
+const emailController = new EmailController(emailService);
 const authService = new AuthService(emailService);
 const authController = new AuthController(authService);
 const crudService = new CrudService();
@@ -50,6 +52,8 @@ const routeTable = {
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
     "/app-config/rate-limit-settings": appConfigController.getRateLimitSettings,
+    "/api/test-email/:type": emailController.sendTestEmail,
+    "/api/preview-email/:type": emailController.previewEmail,
   },
   post: {
     "/crud/:entity": crudController.create,

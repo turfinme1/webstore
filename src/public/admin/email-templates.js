@@ -17,6 +17,8 @@ const elements = {
   tableBorderColorInput: document.getElementById("table-border-color"),
   tableBorderWidthInput: document.getElementById("table-border-width"),
   borderCustomizationElements: document.querySelectorAll(".border-customization"),
+  sendTestEmailButton: document.getElementById("send-test-email"),
+  previewEmailButton: document.getElementById("preview-email"),
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -72,6 +74,8 @@ async function populateTemplateTypeSelect() {
 function attachEventListeners() {
   elements.templateForm.addEventListener("submit", handleTemplateFormSubmit);
   elements.templateTypeSelect.addEventListener("change", loadCurrentTemplate);
+  elements.sendTestEmailButton.addEventListener("click", handleSendTestEmail);
+  elements.previewEmailButton.addEventListener("click", handlePreviewEmail);
 }
 
 async function handleTemplateFormSubmit(event) {
@@ -146,4 +150,15 @@ function populateTemplateForm(template) {
   elements.placeholderArea.innerHTML =
     "Available placeholders: " + template.placeholders.join(", ") ||
     "No placeholders";
+}
+
+async function handleSendTestEmail() {
+  const emailType = elements.templateTypeSelect.value.replace(/\s/g, "-").toLowerCase();
+  const response = await fetch(`/api/test-email/${emailType}`);
+
+  if (response.ok) {
+    alert("Test email sent!");
+  } else {
+    alert("Error sending test email");
+  }
 }
