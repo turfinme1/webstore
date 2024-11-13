@@ -1,5 +1,5 @@
 import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation } from "./navigation.js";
+import { createNavigation, createBackofficeNavigation } from "./navigation.js";
 
 let state = {
   userStatus: null,
@@ -24,6 +24,7 @@ const elements = {
 document.addEventListener("DOMContentLoaded", async () => {
   state.userStatus = await getUserStatus();
   createNavigation(state.userStatus);
+  createBackofficeNavigation(state.userStatus);
   await attachLogoutHandler();
   // if (!hasPermission(state.userStatus, 'read', "site-settings")) {
   // 	window.location = '/login.html';

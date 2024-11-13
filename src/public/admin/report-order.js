@@ -1,5 +1,5 @@
 import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation } from "./navigation.js";
+import { createNavigation, createBackofficeNavigation } from "./navigation.js";
 
 // Centralized state object
 const state = {
@@ -57,6 +57,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
   createNavigation(userStatus);
+  await attachLogoutHandler();
+  createBackofficeNavigation(userStatus);
   if (!hasPermission(userStatus, "read", "report-orders")) {
     elements.mainContainer.innerHTML = "<h1>Order Management</h1>";
     return;

@@ -5,114 +5,128 @@
     <meta charset="UTF-8">
     <title>Log Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
     <script defer type="module" src="logs.js"></script>
 </head>
 
 <body>
-    <div class="container mt-4" id="main-container">
-        <h1>Log Management</h1>
-
-        <!-- Filter Logs -->
-        <div class="d-flex justify-content-start align-items-center mb-3">
-            <button id="show-filter-btn" class="btn btn-primary">Filter Logs</button>
-            <div id="spinner" class="spinner-border text-primary ms-3" role="status" style="display: none;">
-                <span class="visually-hidden">Loading...</span>
-            </div>
+    <div class="profile-container">
+        <div class="profile-sidebar">
+            <h4>Management Panel</h4>
+            <ul class="nav flex-column" id="dynamic-nav">
+                <!-- Dynamic navigation will be generated here -->
+            </ul>
         </div>
+        <div class="profile-content">
+            <div class="container mt-4" id="main-container">
+                <h1>Log Management</h1>
 
-        <div id="filter-container">
-            <form id="filter-form" class="mb-3">
-                <div class="row">
-                    <!-- Left Side: Filters -->
-                    <div class="col-md-6">
-                        <div class="row g-3">
-                            <div class="mb-3 col-auto">
-                                <label for="created_at_min" class="form-label">Period (Start)</label>
-                                <input type="date" id="created_at_min" name="created_at_min" class="form-control">
-                            </div>
-
-                            <div class="mb-3 col-auto">
-                                <label for="created_at_max" class="form-label">Period (End)</label>
-                                <input type="date" id="created_at_max" name="created_at_max" class="form-control">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="status_code_filter" class="form-label">Status Code</label>
-                            <select id="status_code_filter" name="status_code" class="form-select">
-                                <!-- Options will be dynamically loaded -->
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="log_level_filter" class="form-label">Log Level</label>
-                            <select id="log_level_filter" name="log_level" class="form-select">
-                                <option value="">All Levels</option>
-                                <option value="INFO">INFO</option>
-                                <option value="ERROR">ERROR</option>
-                            </select>
-                        </div>
-
-                        
-
-                    </div>
-
-                    <!-- Right Side: Grouping Options -->
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="group_by_created_at" class="form-label">Group by Period</label>
-                            <select id="group_by_created_at" class="form-select">
-                                <option value="">No Grouping</option>
-                                <option value="hour">Group by Hour</option>
-                                <option value="day">Group by Day</option>
-                                <option value="month">Group by Month</option>
-                                <option value="year">Group by Year</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="group_by_status_code" class="form-label">Group by Status Code</label>
-                            <select id="group_by_status_code" class="form-select">
-                                <option value="">No Grouping</option>
-                                <option value="status_code">Group by Status Code</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="group_by_log_level" class="form-label">Group by Log Level</label>
-                            <select id="group_by_log_level" class="form-select">
-                                <option value="">No Grouping</option>
-                                <option value="log_level">Group by Log Level</option>
-                            </select>
-                        </div>
+                <!-- Filter Logs -->
+                <div class="d-flex justify-content-start align-items-center mb-3">
+                    <button id="show-filter-btn" class="btn btn-primary">Filter Logs</button>
+                    <div id="spinner" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary">Apply Filters</button>
-                <button type="button" id="cancel-filter-btn" class="btn btn-secondary">Cancel</button>
-            </form>
-        </div>
+                <div id="filter-container">
+                    <form id="filter-form" class="mb-3">
+                        <div class="row">
+                            <!-- Left Side: Filters -->
+                            <div class="col-md-6">
+                                <div class="row g-3">
+                                    <div class="mb-3 col-auto">
+                                        <label for="created_at_min" class="form-label">Period (Start)</label>
+                                        <input type="date" id="created_at_min" name="created_at_min"
+                                            class="form-control">
+                                    </div>
 
-        <!-- Log Table -->
-        <table class="table table-bordered">
-            <thead>
-                <tr id="log-table-header">
-                    <!-- Table headers will be dynamically generated -->
-                </tr>
-            </thead>
-            <tbody id="log-list">
-                <!-- Logs will be rendered here -->
-            </tbody>
-        </table>
+                                    <div class="mb-3 col-auto">
+                                        <label for="created_at_max" class="form-label">Period (End)</label>
+                                        <input type="date" id="created_at_max" name="created_at_max"
+                                            class="form-control">
+                                    </div>
+                                </div>
 
-        <!-- Pagination -->
-        <div class="d-flex justify-content-between align-items-center">
-            <span id="current-page-display"></span>
-            <span id="result-count"></span>
-            <div id="pagination-container"></div>
-            <span id="result-group-count"></span>
+                                <div class="mb-3">
+                                    <label for="status_code_filter" class="form-label">Status Code</label>
+                                    <select id="status_code_filter" name="status_code" class="form-select">
+                                        <!-- Options will be dynamically loaded -->
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="log_level_filter" class="form-label">Log Level</label>
+                                    <select id="log_level_filter" name="log_level" class="form-select">
+                                        <option value="">All Levels</option>
+                                        <option value="INFO">INFO</option>
+                                        <option value="ERROR">ERROR</option>
+                                    </select>
+                                </div>
+
+
+
+                            </div>
+
+                            <!-- Right Side: Grouping Options -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="group_by_created_at" class="form-label">Group by Period</label>
+                                    <select id="group_by_created_at" class="form-select">
+                                        <option value="">No Grouping</option>
+                                        <option value="hour">Group by Hour</option>
+                                        <option value="day">Group by Day</option>
+                                        <option value="month">Group by Month</option>
+                                        <option value="year">Group by Year</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="group_by_status_code" class="form-label">Group by Status Code</label>
+                                    <select id="group_by_status_code" class="form-select">
+                                        <option value="">No Grouping</option>
+                                        <option value="status_code">Group by Status Code</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="group_by_log_level" class="form-label">Group by Log Level</label>
+                                    <select id="group_by_log_level" class="form-select">
+                                        <option value="">No Grouping</option>
+                                        <option value="log_level">Group by Log Level</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        <button type="button" id="cancel-filter-btn" class="btn btn-secondary">Cancel</button>
+                    </form>
+                </div>
+
+                <!-- Log Table -->
+                <table class="table table-bordered">
+                    <thead>
+                        <tr id="log-table-header">
+                            <!-- Table headers will be dynamically generated -->
+                        </tr>
+                    </thead>
+                    <tbody id="log-list">
+                        <!-- Logs will be rendered here -->
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <span id="current-page-display"></span>
+                    <span id="result-count"></span>
+                    <div id="pagination-container"></div>
+                    <span id="result-group-count"></span>
+                </div>
+            </div>
         </div>
     </div>
+
 </body>
 
 </html>
