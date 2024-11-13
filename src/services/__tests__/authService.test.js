@@ -286,7 +286,7 @@ describe("AuthService", () => {
       const result = await authService.refreshSessionExpiry(data);
 
       const expectedQuery = `
-          UPDATE sessions SET expires_at = NOW() + INTERVAL '10 minutes' WHERE session_hash = $1 RETURNING *`;
+          UPDATE sessions SET expires_at = NOW() + INTERVAL '40 minutes' WHERE session_hash = $1 RETURNING *`;
 
       const actualQuery = mockDbConnection.query.mock.calls[0][0];
 
