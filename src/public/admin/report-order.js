@@ -1,5 +1,5 @@
 import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation, createBackofficeNavigation } from "./navigation.js";
+import { createNavigation, createBackofficeNavigation, formatCurrency } from "./navigation.js";
 
 // Centralized state object
 const state = {
@@ -219,7 +219,7 @@ function renderOrderList(orders, aggregationResults) {
 
     state.columnsToDisplay.forEach(({ key }) => {
       let cellValue = order[key];
-      cellValue = cellValue && ["total_price", "paid_amount", "total_price_with_vat"].includes(key) ? `$${cellValue}` : cellValue;
+      cellValue = cellValue && ["total_price", "paid_amount", "total_price_with_vat"].includes(key) ? formatCurrency(cellValue) : cellValue;
 
       // Handle date formatting
       if (key.includes("created_at") && cellValue) {
@@ -236,7 +236,7 @@ function renderOrderList(orders, aggregationResults) {
           }
         }
       }
-
+      
       if (key === "shipping_address" && cellValue) {
         cellValue = `${cellValue?.country_name}, ${cellValue?.city}, ${cellValue?.street}`;
       }

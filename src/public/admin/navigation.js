@@ -138,4 +138,11 @@ function createBackofficeNavigation(userStatus) {
   });
 }
 
-export { createNavigation, createBackofficeNavigation };
+function formatCurrency(number) {
+  if(!number) {
+    return '$0.00';
+  }
+  return `$${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(number)).replace(',', '.')}`;
+}
+
+export { createNavigation, createBackofficeNavigation, formatCurrency };

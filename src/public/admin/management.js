@@ -7,8 +7,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   await attachLogoutHandler();
   createBackofficeNavigation(userStatus);
 
-   renderOrderChartLastSixMonths();
-   renderOrderChartLastTwoDays();
+  renderOrderChartLastSixMonths();
+  renderOrderChartLastTwoDays();
 });
 
 async function renderOrderChartLastSixMonths() {
@@ -80,7 +80,7 @@ async function renderOrderChartLastSixMonths() {
             yAxisID: "y1",
           },
           {
-            label: "Total Price ($)",
+            label: "Total Price without VAT ($)",
             data: orderPrices,
             backgroundColor: "rgba(255, 159, 64, 0.6)",
             borderColor: "rgba(255, 159, 64, 1)",
@@ -102,7 +102,7 @@ async function renderOrderChartLastSixMonths() {
             type: "linear",
             position: "right",
             beginAtZero: true,
-            title: { display: true, text: "Total Price ($)" },
+            title: { display: true, text: "Total Price without VAT ($)" },
             grid: { drawOnChartArea: false },
           },
         },
@@ -174,7 +174,7 @@ async function renderOrderChartLastTwoDays() {
             yAxisID: "y1",
           },
           {
-            label: "Total Price ($)",
+            label: "Total Price without VAT ($)",
             data: orderPrices,
             backgroundColor: "rgba(255, 99, 132, 0.6)",
             borderColor: "rgba(255, 99, 132, 1)",
@@ -196,7 +196,7 @@ async function renderOrderChartLastTwoDays() {
             type: "linear",
             position: "right",
             beginAtZero: true,
-            title: { display: true, text: "Total Price ($)" },
+            title: { display: true, text: "Total Price without VAT ($)" },
             grid: { drawOnChartArea: false },
           },
         },

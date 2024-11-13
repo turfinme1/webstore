@@ -1,5 +1,5 @@
 import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation, createBackofficeNavigation } from "./navigation.js";
+import { createNavigation, createBackofficeNavigation, formatCurrency } from "./navigation.js";
 
 // Centralized state object
 const state = {
@@ -338,17 +338,17 @@ function renderOrders(orders) {
 
   orders.forEach((order) => {
     const row = document.createElement("tr");
-    row.appendChild(createTableCell(order.id, "right"));
     row.appendChild(
       createTableCell(new Date(order.created_at).toLocaleString())
     );
-    row.appendChild(createTableCell(order.order_hash));
+    row.appendChild(createTableCell(order.id, "right"));
+    // row.appendChild(createTableCell(order.order_hash));
     row.appendChild(createTableCell(order.email));
     // row.appendChild(createTableCell(order.user_id));
     row.appendChild(createTableCell(order.status));
-    row.appendChild(createTableCell(`$${order.total_price || "0.00"}`, "right"));
-    row.appendChild(createTableCell(`$${order.total_price_with_vat || "0.00"}`, "right"));
-    row.appendChild(createTableCell(`$${order.paid_amount || "0.00"}`, "right"));
+    row.appendChild(createTableCell(formatCurrency(order.total_price), "right"));
+    row.appendChild(createTableCell(formatCurrency(order.total_price_with_vat), "right"));
+    row.appendChild(createTableCell(formatCurrency(order.paid_amount), "right"));
     row.appendChild(createTableCell(order.is_active));
     row.appendChild(
       createTableCell(
