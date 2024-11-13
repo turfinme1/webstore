@@ -4,7 +4,7 @@ import { createNavigation, createBackofficeNavigation, formatCurrency } from "./
 // Centralized state object
 const state = {
   currentPage: 1,
-  pageSize: 10,
+  pageSize: 1000,
   userStatus: null,
   searchParams: {},
   filterParams: {},
@@ -42,10 +42,9 @@ const elements = {
   groupByCreatedAtSelect: document.getElementById("group_by_created_at"),
   groupByStatusSelect: document.getElementById("group_by_status"),
   orderBySelect: document.getElementById("order_by"),
-  exportCsvButton: document.getElementById("export-csv-btn"),
-  exportExcelButton: document.getElementById("export-excel-btn"),
   spinner: document.getElementById("spinner"),
-  createdAtMin : document.getElementById("created_at_min")
+  createdAtMin : document.getElementById("created_at_min"),
+  rowCount: document.getElementById("row-count"),
 };
 
 // Initialize page and attach event listeners
@@ -189,9 +188,13 @@ async function loadOrders(page) {
     }
 
     renderOrderList(result, aggregationResults);
-    updatePagination(count, page);
+    // updatePagination(count, page);
     toggleExportLoadingState();
+    if(parseInt(count) > state.pageSize) {
+      alert(`Please note that only the first ${state.pageSize} records are displayed. Please filter your search to view more records.`);
+    }
   } catch (error) {
+    toggleExportLoadingState();
     console.error("Error loading orders:", error);
   }
 }
@@ -200,11 +203,14 @@ async function loadOrders(page) {
 function renderOrderList(orders, aggregationResults) {
   elements.orderListContainer.innerHTML = ""; // Clear previous list
   elements.orderTableHeader.innerHTML = ""; // Clear previous headers
+  elements.rowCount.textContent = "";
 
   if (orders.length === 0) {
     elements.orderListContainer.innerHTML = "<tr><td colspan='8'>No orders found.</td></tr>";
     return;
   }
+
+  elements.rowCount.textContent = `Showing ${orders.length} records`;
 
   // Generate table headers based on grouping
   state.columnsToDisplay.forEach(({ label }) => {

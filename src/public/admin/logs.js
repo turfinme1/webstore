@@ -5,7 +5,7 @@ import { createNavigation, createBackofficeNavigation } from "./navigation.js";
 // Centralized state object
 const state = {
   currentPage: 1,
-  pageSize: 10,
+  pageSize: 300,
   userStatus: null,
   searchParams: {},
   filterParams: {},
@@ -72,7 +72,8 @@ const elements = {
   groupByLogLevelSelect: document.getElementById("group_by_log_level"),
   logTableHeader: document.getElementById("log-table-header"),
   spinner: document.getElementById("spinner"),
-  createdAtMin : document.getElementById("created_at_min")
+  createdAtMin : document.getElementById("created_at_min"),
+  rowCount: document.getElementById("row-count"),
 };
 
 // Initialize page and attach event listeners
@@ -212,9 +213,14 @@ async function loadLogs(page) {
       state.columnsToDisplay.push({ key: "count", label: "Count" });
       state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'id');
     }
+    
     toggleExportLoadingState(true);
     renderLogList(result);
-    updatePagination(count, page, groupCount);
+    // updatePagination(count, page, groupCount);
+    
+    if(parseInt(count) > state.pageSize) {
+      alert(`Please note that only the first ${state.pageSize} records are displayed. Please filter your search to view more records.`);
+    }
   } catch (error) {
     toggleExportLoadingState(true);
     console.error("Error loading logs:", error);
@@ -225,12 +231,13 @@ async function loadLogs(page) {
 function renderLogList(logs) {
   elements.logListContainer.innerHTML = ""; // Clear previous list
   elements.logTableHeader.innerHTML = ""; // Clear previous headers
-
+  elements.rowCount.textContent = "";
+  
   if (logs.length === 0) {
     elements.logListContainer.innerHTML = "<tr><td colspan='8'>No logs found.</td></tr>";
     return;
   }
-
+  elements.rowCount.textContent = `Showing ${logs.length} records`;
   // Generate table headers based on grouping
   state.columnsToDisplay.forEach(({ label }) => {
     const th = document.createElement("th");
