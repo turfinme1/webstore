@@ -149,7 +149,7 @@ class AuthService {
 
   async refreshSessionExpiry(data) {
     const result = await data.dbConnection.query(`
-      UPDATE ${data.entitySchemaCollection.userManagementSchema.session_table} SET expires_at = NOW() + INTERVAL '10 minutes' WHERE session_hash = $1 RETURNING *`,
+      UPDATE ${data.entitySchemaCollection.userManagementSchema.session_table} SET expires_at = NOW() + INTERVAL '40 minutes' WHERE session_hash = $1 RETURNING *`,
       [data.sessionHash]
     );
     ASSERT_USER(result.rows.length === 1, "Invalid session", { code: STATUS_CODES.INVALID_SESSION, long_description: `Invalid session ${data.sessionHash}` });
