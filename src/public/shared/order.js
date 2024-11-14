@@ -1,33 +1,38 @@
 import { getUserStatus, attachLogoutHandler } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 
-// Centralized state for the order page
 const state = {
   userStatus: null,
 };
 
-// DOM elements
 const elements = {
   orderForm: document.getElementById("order-form"),
-  submitOrderButton: document.getElementById("submit-order-btn"),
 };
 
-// Initialize order page and attach event listeners
 document.addEventListener("DOMContentLoaded", async () => {
   state.userStatus = await getUserStatus();
-  createNavigation(state.userStatus);
-  await attachLogoutHandler();
-
+  createNavigation(state.userStatus, document.getElementById("navigation-container"));
+  attachLogoutHandler();
+  
   renderOrderForm(elements.orderForm);
   attachEventListeners();
 });
 
-// Attach event listeners
 function attachEventListeners() {
   elements.orderForm.addEventListener("submit", handleOrderSubmit);
+  paypal.Buttons({
+    createOrder: (data, actions) => actions.order.create({
+      purchase_units: [{ amount: { value: '100.00' } }]
+    }),
+    onApprove: async (data, actions) => {
+      await actions.order.capture();
+      alert("Payment Successful");
+      window.location.href = "/index";
+    },
+    onError: (err) => console.error("PayPal error:", err)
+  }).render("#paypal-button-container");
 }
 
-// Handle order submission
 async function handleOrderSubmit(event) {
   event.preventDefault();
 
@@ -36,26 +41,16 @@ async function handleOrderSubmit(event) {
     return;
   }
 
-  // Gather address and payment details from the form
   const addressData = {
     country_id: document.getElementById("country").value,
     street: document.getElementById("street").value,
     city: document.getElementById("city").value,
   };
 
-  // const paymentData = {
-  //   card_number: document.getElementById("card-number").value,
-  //   expiry_date: document.getElementById("expiry-date").value,
-  //   cvv: document.getElementById("cvv").value,
-  // };
-
-  // Proceed with submitting the order
   try {
     const response = await fetch("/api/orders/complete", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ address: addressData }),
     });
 
@@ -72,7 +67,6 @@ async function handleOrderSubmit(event) {
   }
 }
 
-// Renders the combined address and payment form
 function renderOrderForm(container) {
   const formHTML = `
     <h3>Address Information</h3>
@@ -89,6 +83,7 @@ function renderOrderForm(container) {
       <input type="text" id="city" class="form-control" required />
     </div>
 
+    <div id="paypal-button-container" class="mt-4"></div>
     <button type="submit" class="btn btn-primary mt-3">Submit Order</button>
   `;
 
@@ -96,7 +91,6 @@ function renderOrderForm(container) {
   populateCountryDropdown();
 }
 
-// Populate the country dropdown with data from the server
 async function populateCountryDropdown() {
   const countrySelect = document.getElementById("country");
   const countries = await getCountries();
@@ -109,7 +103,6 @@ async function populateCountryDropdown() {
   });
 }
 
-// Fetch countries from the server
 async function getCountries() {
   const response = await fetch("/crud/iso-country-codes");
   if (!response.ok) throw new Error("Failed to fetch countries");

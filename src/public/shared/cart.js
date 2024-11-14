@@ -98,6 +98,7 @@ async function handleCheckout() {
     });
 
     if (response.ok) {
+      const { order, approvalUrl, paypalOrder } = await response.json();
       window.location.href = '/order'; 
     } else {
       const data = await response.json();
