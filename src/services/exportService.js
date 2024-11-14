@@ -10,6 +10,9 @@ class ExportService {
     }
 
     async exportToExcel(data) {
+        const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
+        const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
+        let totalPriceWithVAT = 0;
         const parameters = this.crudService.buildFilteredPaginatedQuery(data, true);
         const dataParams = {
             ...data,
@@ -50,16 +53,20 @@ class ExportService {
             for (const row of rows) {
                 if (!headers) {
                     headers = Object.keys(row).filter(key => this.isPrimitive(row[key]));
+                    headers.push("total_price_with_vat");
                     worksheet.addRow(headers).commit();
                 }
-
-                const rowValues = headers.map(header => row[header]);
+                row.total_price_with_vat = (row.total_price * (1 + vatPercentage / 100)).toFixed(2);
+                totalPriceWithVAT += parseFloat(row.total_price_with_vat);
+                let rowValues = headers.map(header => row[header]);
+                
                 worksheet.addRow(rowValues).commit();
             }
         }
 
         const totalsResult = await data.dbConnection.query(dataParams.aggregatedTotalQuery, dataParams.searchValues);
-        const totalsRow = totalsResult.rows[0]; 
+        const totalsRow = totalsResult.rows[0];
+        totalsRow.total_total_price_with_vat = totalPriceWithVAT.toFixed(2); 
 
         const footerRow = headers.map(header => {
             const totalKey = `total_${header}`;
@@ -110,6 +117,10 @@ class ExportService {
     
     async* generateCsvRows(data) {
         const rowGenerator = await this.executeQueryWithCursor(data);
+        const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
+        const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
+        let totalPriceWithVAT = 0;
+
         let headers = null;
         yield "\uFEFF";
       
@@ -135,10 +146,14 @@ class ExportService {
             for (const row of rows) {
                 if (!headers) {
                     headers = Object.keys(row).filter(key => this.isPrimitive(row[key]));
+                    headers.push("total_price_with_vat");
 
                     yield `${headers.join(",")}\n`;
                 }
-                
+
+                row.total_price_with_vat = (row.total_price * (1 + vatPercentage / 100)).toFixed(2);
+                totalPriceWithVAT += parseFloat(row.total_price_with_vat);
+
                 const rowValues = Object.values(row)
                 .filter(value => this.isPrimitive(value))
                 .map(value => {
@@ -158,7 +173,8 @@ class ExportService {
         }
 
         const totalsResult = await data.dbConnection.query(data.aggregatedTotalQuery, data.searchValues);
-        const totalsRow = totalsResult.rows[0];
+        let totalsRow = totalsResult.rows[0];
+        totalsRow.total_total_price_with_vat = totalPriceWithVAT.toFixed(2);
         const footerRow = headers.map(header => {
             const totalKey = `total_${header}`;
             return totalsRow[totalKey] || '';  

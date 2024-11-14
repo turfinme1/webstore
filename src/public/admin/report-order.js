@@ -267,9 +267,9 @@ function renderOrderList(orders, aggregationResults) {
       if(key === "created_at") {
         cellValue = "Total:";
       } else if(key === "count") {
-        cellValue = aggregationResults.total_count
+        cellValue = aggregationResults.total_count;
       } else if(key === "total_price") {
-        cellValue = `$${aggregationResults.total_total_price}`;
+        cellValue = formatCurrency(aggregationResults.total_total_price);
       } else {
         cellValue = "";
       }
