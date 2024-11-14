@@ -2,6 +2,7 @@ const pool = require("../database/dbConfig");
 const { UserError } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
 
+const paypalClient = require("./paypalClient");
 const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
 const ProductService = require("../services/productService");
@@ -26,7 +27,7 @@ const productService = new ProductService();
 const productController = new ProductController(productService);
 const cartService = new CartService();
 const cartController = new CartController(cartService);
-const orderService = new OrderService(emailService);
+const orderService = new OrderService(emailService, paypalClient);
 const orderController = new OrderController(orderService);
 
 const routeTable = {

@@ -1,9 +1,11 @@
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const STATUS_CODES = require("../serverConfigurations/constants");
+const paypal = require("@paypal/checkout-server-sdk");
 
 class OrderService {
-  constructor(emailService) {
+  constructor(emailService, paypalClient) {
     this.emailService = emailService;
+    this.paypalClient = paypalClient;
     this.createOrder = this.createOrder.bind(this);
     this.createOrderByStaff = this.createOrderByStaff.bind(this);
     this.updateOrderByStaff = this.updateOrderByStaff.bind(this);
@@ -76,6 +78,31 @@ class OrderService {
 
     const emailObject = { ...data, order, cartItems };
     await this.emailService.sendOrderCreatedConfirmationEmail(emailObject);
+
+    const request = new paypal.orders.OrdersCreateRequest();
+    request.prefer("return=representation");
+    request.requestBody({
+      intent: "CAPTURE",
+      purchase_units: [
+        {
+          amount: {
+            currency_code: "USD",
+            value: order.total_price,
+          },
+        },
+      ],
+      application_context: {
+        return_url: 'http://localhost:3000/order',
+        cancel_url: 'http://localhost:3000/order/cancel-order',
+        shipping_preference: 'NO_SHIPPING',
+        user_action: 'PAY_NOW'
+      }
+    });
+
+    const paypalOrder = await this.paypalClient.execute(request);
+    const approvalUrl = paypalOrder.result.links.find(link => link.rel === "approve").href;
+    return { order, approvalUrl, paypalOrder };
+
     return { order, message: "Order placed successfully" };
   }
   
