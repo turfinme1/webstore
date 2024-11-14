@@ -55,6 +55,7 @@ const routeTable = {
     "/api/cart": cartController.updateItem,
     "/api/orders": orderController.createOrder,
     "/api/orders/complete": orderController.completeOrder,
+    "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
   },
   put: {
     "/auth/profile": authController.updateProfile,

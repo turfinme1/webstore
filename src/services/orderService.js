@@ -1,4 +1,4 @@
-const { ASSERT_USER } = require("../serverConfigurations/assert");
+const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
 const STATUS_CODES = require("../serverConfigurations/constants");
 const paypal = require("@paypal/checkout-server-sdk");
 
@@ -11,6 +11,7 @@ class OrderService {
     this.updateOrderByStaff = this.updateOrderByStaff.bind(this);
     this.getOrder = this.getOrder.bind(this);
     this.completeOrder = this.completeOrder.bind(this);
+    this.capturePaypalPayment = this.capturePaypalPayment.bind(this);
     this.verifyCartPricesAreUpToDate = this.verifyCartPricesAreUpToDate.bind(this);
     this.deleteOrder = this.deleteOrder.bind(this);
   }
@@ -79,29 +80,30 @@ class OrderService {
     const emailObject = { ...data, order, cartItems };
     await this.emailService.sendOrderCreatedConfirmationEmail(emailObject);
 
-    const request = new paypal.orders.OrdersCreateRequest();
-    request.prefer("return=representation");
-    request.requestBody({
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          amount: {
-            currency_code: "USD",
-            value: order.total_price,
-          },
-        },
-      ],
-      application_context: {
-        return_url: 'http://localhost:3000/order',
-        cancel_url: 'http://localhost:3000/order/cancel-order',
-        shipping_preference: 'NO_SHIPPING',
-        user_action: 'PAY_NOW'
-      }
-    });
+    // const request = new paypal.orders.OrdersCreateRequest();
+    // request.prefer("return=representation");
+    // request.requestBody({
+    //   intent: "CAPTURE",
+    //   purchase_units: [
+    //     {
+    //       amount: {
+    //         currency_code: "USD",
+    //         // value: order.total_price,
+    //         value: "2078.25",
+    //       },
+    //     },
+    //   ],
+    //   application_context: {
+    //     return_url: 'http://localhost:3000/order',
+    //     cancel_url: 'http://localhost:3000/order/cancel-order',
+    //     shipping_preference: 'NO_SHIPPING',
+    //     user_action: 'PAY_NOW'
+    //   }
+    // });
 
-    const paypalOrder = await this.paypalClient.execute(request);
-    const approvalUrl = paypalOrder.result.links.find(link => link.rel === "approve").href;
-    return { order, approvalUrl, paypalOrder };
+    // const paypalOrder = await this.paypalClient.execute(request);
+    // const approvalUrl = paypalOrder.result.links.find(link => link.rel === "approve").href;
+    // return { approvalUrl, paypalOrder };
 
     return { order, message: "Order placed successfully" };
   }
@@ -282,13 +284,8 @@ class OrderService {
   async getOrder(data) {
     const orderResult = await data.dbConnection.query(
       `
-      SELECT o.*, 
-        a.street AS shipping_address, a.city AS shipping_city, c.name AS country_name,
-        pm.method AS payment_method
+      SELECT o.*
       FROM orders o
-      LEFT JOIN addresses a ON o.shipping_address_id = a.id
-      LEFT JOIN iso_country_codes c ON a.country_id = c.id
-      LEFT JOIN payment_methods pm ON o.payment_method_id = pm.id
       WHERE o.id = $1 AND o.user_id = $2`,
       [data.params.orderId, data.session.user_id]
     );
@@ -391,6 +388,22 @@ class OrderService {
     
     await data.dbConnection.query("COMMIT");
     return { message: "Order completed successfully" };
+  }
+
+  async capturePaypalPayment(data) {
+    const request = new paypal.orders.OrdersCaptureRequest(data.body.orderID);
+
+    await data.dbConnection.query(`
+      UPDATE orders
+      SET status = 'Paid', paid_amount = total_price
+      WHERE id = $1`,
+      [data.params.orderId]
+    );
+
+    const capture = await this.paypalClient.execute(request);
+    ASSERT_USER(capture.result.status === "COMPLETED", "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
+
+    return { message: "Payment completed successfully" };
   }
 
   async verifyCartPricesAreUpToDate(data) {

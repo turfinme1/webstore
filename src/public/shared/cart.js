@@ -98,11 +98,11 @@ async function handleCheckout() {
     });
 
     if (response.ok) {
-      const { order, approvalUrl, paypalOrder } = await response.json();
-      window.location.href = '/order'; 
+      const { order } = await response.json();
+      window.location.href = `/order?orderId=${order.id}`; 
     } else {
       const data = await response.json();
-      alert(`Checkout failed: ${data.error}`);
+      alert(`Checkout failed: ${data.error}`); 
       window.location.reload();
     }
   } catch (error) {

@@ -10,22 +10,103 @@ const elements = {
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    
+  
   state.userStatus = await getUserStatus();
   createNavigation(state.userStatus, document.getElementById("navigation-container"));
   attachLogoutHandler();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const orderId = urlParams.get("orderId");
+
+  /// get current order
+  // async getOrder(req, res) {
+  //   ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+  //   const data = {
+  //     params: req.params,
+  //     session: req.session,
+  //     dbConnection: req.dbConnection,
+  //   };
+  //   const result = await this.orderService.getOrder(data);
+  //   res.status(200).json(result);
+  // }
+  const response = await fetch(`/api/orders/${orderId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch order: ${response.status}`);
+  }
+  const { order } = await response.json();
+  console.log("Order:", order);
   
   renderOrderForm(elements.orderForm);
-  attachEventListeners();
+  attachEventListeners(order);
+} catch (error) {
+  console.error("Error loading order:", error);
+  alert("Failed to load order");
+}
 });
 
-function attachEventListeners() {
+function attachEventListeners(order) {
   elements.orderForm.addEventListener("submit", handleOrderSubmit);
   paypal.Buttons({
     createOrder: (data, actions) => actions.order.create({
-      purchase_units: [{ amount: { value: '100.00' } }]
+      intent: "CAPTURE",
+      purchase_units: [
+        {
+          amount: {
+            value: order.total_price,
+            currency_code: "USD",
+          },
+        },
+      ],
+      application_context: {
+        return_url: 'http://localhost:3000/order',
+        cancel_url: 'http://localhost:3000/order/cancel-order',
+        shipping_preference: 'NO_SHIPPING',
+        user_action: 'PAY_NOW'
+      }
     }),
     onApprove: async (data, actions) => {
-      await actions.order.capture();
+      // await actions.order.capture();
+      const captureResult = await fetch(`/api/paypal/capture/${order.id}`,{
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderID: data.orderID }),
+      });
+      
+      if (!captureResult.ok) {
+        const data = await captureResult.json();
+        alert(`Payment failed: ${data.error}`);
+        return;
+      }
+
+      alert("Payment Successful");
+      window.location.href = "/index";
+    },
+    onError: (err) => console.error("PayPal error:", err)
+  }).render("#paypal-button-container");
+}
+
+async function initializePayPalButton(order) {
+  paypal.Buttons({
+    createOrder: (data, actions) => actions.order.create({
+      intent: "CAPTURE",
+      purchase_units: [
+        {
+          amount: {
+            value: order.total_price,
+            currency_code: "USD",
+          },
+        },
+      ],
+      application_context: {
+        return_url: 'http://localhost:3000/order',
+        cancel_url: 'http://localhost:3000/order/cancel-order',
+        shipping_preference: 'NO_SHIPPING',
+        user_action: 'PAY_NOW'
+      }
+    }),
+    onApprove: async (data, actions) => {
       alert("Payment Successful");
       window.location.href = "/index";
     },

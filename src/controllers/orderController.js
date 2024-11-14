@@ -11,6 +11,7 @@ class OrderController {
       this.deleteOrder = this.deleteOrder.bind(this);
       this.getOrder = this.getOrder.bind(this);
       this.completeOrder = this.completeOrder.bind(this);
+      this.capturePaypalPayment = this.capturePaypalPayment.bind(this);
     }
   
     async createOrder(req, res) {
@@ -71,6 +72,18 @@ class OrderController {
       res.status(200).json(result);
 
       await req.logger.info({ code: STATUS_CODES.ORDER_COMPLETE_SUCCESS, short_description: `Order completed successfully`, long_description: `Order for user ${req.session.user_id} completed successfully` });
+    }
+
+    async capturePaypalPayment(req, res) {
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      const data = {
+        body: req.body,
+        params: req.params,
+        session: req.session,
+        dbConnection: req.dbConnection,
+      };
+      const result = await this.orderService.capturePaypalPayment(data);
+      res.status(200).json(result);
     }
 
     async deleteOrder(req, res) {
