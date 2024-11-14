@@ -1,17 +1,17 @@
 import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation } from "./navigation.js";
+import { createNavigation, createBackofficeNavigation, formatCurrency } from "./navigation.js";
 
 // Centralized state object
 const state = {
   currentPage: 1,
-  pageSize: 10,
+  pageSize: 1000,
   userStatus: null,
   searchParams: {},
   filterParams: {},
   groupParams: [],
   orderParams: [],
   columnsToDisplay: [
-    { key: "id", label: "Id" },
+    // { key: "id", label: "Id" },
     { key: "created_at", label: "Created At" },
     { key: "order_hash", label: "Order Hash" },
     { key: "email", label: "User Email" },
@@ -42,23 +42,29 @@ const elements = {
   groupByCreatedAtSelect: document.getElementById("group_by_created_at"),
   groupByStatusSelect: document.getElementById("group_by_status"),
   orderBySelect: document.getElementById("order_by"),
-  exportCsvButton: document.getElementById("export-csv-btn"),
-  exportExcelButton: document.getElementById("export-excel-btn"),
   spinner: document.getElementById("spinner"),
+  createdAtMin : document.getElementById("created_at_min"),
+  rowCount: document.getElementById("row-count"),
 };
 
 // Initialize page and attach event listeners
 document.addEventListener("DOMContentLoaded", async () => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  elements.createdAtMin.value = yesterday.toISOString().split("T")[0];
+
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
   createNavigation(userStatus);
+  await attachLogoutHandler();
+  createBackofficeNavigation(userStatus);
   if (!hasPermission(userStatus, "read", "report-orders")) {
     elements.mainContainer.innerHTML = "<h1>Order Management</h1>";
     return;
   }
 
   attachEventListeners();
-  loadOrders(state.currentPage);
+  // loadOrders(state.currentPage);
 });
 
 // Attach event listeners
@@ -168,22 +174,27 @@ async function loadOrders(page) {
       pageSize: state.pageSize.toString(),
       page: page.toString(),
     });
-
+    toggleExportLoadingState();
     const response = await fetch(`/crud/orders/filtered?${queryParams.toString()}`);
     const { result, count, groupCount, aggregationResults } = await response.json();
 
     state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'count');
-    if(state.columnsToDisplay[0].key !== 'id') {
-      state.columnsToDisplay.unshift({ key: "id", label: "Id" });
-    }
+    // if(state.columnsToDisplay[0].key !== 'id') {
+    //   state.columnsToDisplay.unshift({ key: "id", label: "Id" });
+    // }
     if (result.length > 0 && result[0].hasOwnProperty('count')) {
       state.columnsToDisplay.push({ key: "count", label: "Count" });
       state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'id');
     }
 
     renderOrderList(result, aggregationResults);
-    updatePagination(count, page);
+    // updatePagination(count, page);
+    toggleExportLoadingState();
+    if(parseInt(count) > state.pageSize) {
+      alert(`Please note that only the first ${state.pageSize} records are displayed. Please filter your search to view more records.`);
+    }
   } catch (error) {
+    toggleExportLoadingState();
     console.error("Error loading orders:", error);
   }
 }
@@ -192,11 +203,14 @@ async function loadOrders(page) {
 function renderOrderList(orders, aggregationResults) {
   elements.orderListContainer.innerHTML = ""; // Clear previous list
   elements.orderTableHeader.innerHTML = ""; // Clear previous headers
+  elements.rowCount.textContent = "";
 
   if (orders.length === 0) {
     elements.orderListContainer.innerHTML = "<tr><td colspan='8'>No orders found.</td></tr>";
     return;
   }
+
+  elements.rowCount.textContent = `Showing ${orders.length} records`;
 
   // Generate table headers based on grouping
   state.columnsToDisplay.forEach(({ label }) => {
@@ -211,7 +225,7 @@ function renderOrderList(orders, aggregationResults) {
 
     state.columnsToDisplay.forEach(({ key }) => {
       let cellValue = order[key];
-      cellValue = cellValue && ["total_price", "paid_amount", "total_price_with_vat"].includes(key) ? `$${cellValue}` : cellValue;
+      cellValue = cellValue && ["total_price", "paid_amount", "total_price_with_vat"].includes(key) ? formatCurrency(cellValue) : cellValue;
 
       // Handle date formatting
       if (key.includes("created_at") && cellValue) {
@@ -228,7 +242,7 @@ function renderOrderList(orders, aggregationResults) {
           }
         }
       }
-
+      
       if (key === "shipping_address" && cellValue) {
         cellValue = `${cellValue?.country_name}, ${cellValue?.city}, ${cellValue?.street}`;
       }
@@ -253,9 +267,9 @@ function renderOrderList(orders, aggregationResults) {
       if(key === "created_at") {
         cellValue = "Total:";
       } else if(key === "count") {
-        cellValue = aggregationResults.total_count
+        cellValue = aggregationResults.total_count;
       } else if(key === "total_price") {
-        cellValue = `$${aggregationResults.total_total_price}`;
+        cellValue = formatCurrency(aggregationResults.total_total_price);
       } else {
         cellValue = "";
       }

@@ -1,5 +1,6 @@
 import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation } from "./navigation.js";
+import { createNavigation, createBackofficeNavigation } from "./navigation.js";
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const mainContainer = document.getElementById("main-container");
@@ -44,6 +45,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
   await attachLogoutHandler();
+  createBackofficeNavigation(userStatus);
 
   if (!hasPermission(userStatus, "read", "products")) {
     mainContainer.innerHTML = "<h1>Product Management</h1>";

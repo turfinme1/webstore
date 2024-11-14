@@ -1,234 +1,37 @@
-import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation } from "./navigation.js";
-import {
-  createForm,
-  attachValidationListeners,
-  fetchUserSchema,
-  populateFormFields,
-} from "./form-util.js";
+import { getUserStatus, attachLogoutHandler } from "./auth.js";
+import { createNavigation, createBackofficeNavigation } from "./navigation.js";
 
-// Initial setup
 document.addEventListener("DOMContentLoaded", async () => {
-  // Initialize user status and navigation
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
   await attachLogoutHandler();
+  createBackofficeNavigation(userStatus);
 
-  renderDynamicNavigation(userStatus);
-  await renderOrderChartLastSixMonths();
-  await renderOrderChartLastTwoDays();
+  renderOrderChartLastSixMonths();
+  renderOrderChartLastTwoDays();
 });
-
-function renderDynamicNavigation(userStatus) {
-  const navContainer = document.getElementById("dynamic-nav");
-  navContainer.innerHTML = ""; // Clear previous content
-
-  const navItems = [
-    {
-      id: "settings-link",
-      text: "Site Settings",
-      href: "#",
-      permission: "view",
-      interface: "site-settings",
-    },
-    {
-      id: "crud-product-link",
-      text: "CRUD Products",
-      href: "/crud-product",
-      permission: "view",
-      interface: "products",
-    },
-    {
-      id: "crud-user-link",
-      text: "CRUD Users",
-      href: "/crud-user",
-      permission: "view",
-      interface: "users",
-    },
-    {
-      id: "crud-staff-user-link",
-      text: "CRUD Staff Users",
-      href: "/crud-staff-user",
-      permission: "view",
-      interface: "admin-users",
-    },
-    {
-      id: "crud-order-link",
-      text: "CRUD Orders",
-      href: "/crud-order",
-      permission: "view",
-      interface: "orders",
-    },
-    {
-      id: "crud-role-link",
-      text: "CRUD Roles",
-      href: "/crud-role",
-      permission: "view",
-      interface: "roles",
-    },
-    {
-      id: "logs-link",
-      text: "Report Logs",
-      href: "/logs",
-      permission: "view",
-      interface: "report-logs",
-    },
-    {
-      id: "report-order-link",
-      text: "Report Orders",
-      href: "/report-order",
-      permission: "view",
-      interface: "report-orders",
-    },
-    {
-      id: "upload-products-link",
-      text: "Upload Products from CSV",
-      href: "#",
-      permission: "create",
-      interface: "products",
-    },
-    {
-      id: "email-templates-link",
-      text: "Email Templates",
-      href: "/email-templates",
-      permission: "view",
-      interface: "email-templates",
-    },
-  ];
-
-  navItems.forEach((item) => {
-    if (hasPermission(userStatus, item.permission, item.interface)) {
-      const li = document.createElement("li");
-      li.classList.add("nav-item");
-      const a = document.createElement("a");
-      a.classList.add("nav-link");
-      a.id = item.id;
-      a.href = item.href;
-      a.textContent = item.text;
-      li.appendChild(a);
-      navContainer.appendChild(li);
-
-      // Attach event listeners for dynamic content rendering
-      if (item.id === "settings-link") {
-        a.addEventListener("click", async () => {
-          await renderSettings();
-        });
-      } else if (item.id === "upload-products-link") {
-        a.addEventListener("click", async () => {
-          await renderUploadProducts();
-        });
-      }
-    }
-  });
-}
-
-// Function to render settings form
-async function renderSettings() {
-  const contentArea = document.getElementById("content-area");
-  contentArea.innerHTML = ""; // Clear previous content
-
-  const settingsSchema = await fetchUserSchema("/appSettingsSchema.json");
-
-  try {
-    // Dynamically create form based on settings schema
-    const settingsForm = await createForm(
-      settingsSchema,
-      "settings-form",
-      "Update Settings"
-    );
-    const formContainer = document.createElement("div");
-    formContainer.classList.add("p-4", "border", "rounded");
-    formContainer.appendChild(settingsForm);
-    contentArea.appendChild(formContainer);
-
-    // Attach validation and submission logic
-    attachValidationListeners(
-      "settings-form",
-      settingsSchema,
-      "/app-config/rate-limit-settings",
-      "PUT"
-    );
-
-    await populateFormFields(
-      "settings-form",
-      "/app-config/rate-limit-settings"
-    );
-  } catch (error) {
-    console.error("Error rendering settings form:", error);
-    contentArea.innerHTML = `<p class="text-danger">Failed to load settings. Please try again later.</p>`;
-  }
-}
-
-// Function to render upload products form
-async function renderUploadProducts() {
-  const contentArea = document.getElementById("content-area");
-  contentArea.innerHTML = ""; // Clear previous content
-  const form = document.createElement("form");
-  form.id = "upload-products-form";
-  form.classList.add("p-4", "border", "rounded");
-  form.innerHTML = `
-    <h2>Upload Products</h2>
-    <div class="mb-3">
-      <label for="product-csv" class="form-label">Upload products from CSV file</label>
-      <input type="file" class="form-control" id="product-csv" name="product-csv" accept=".csv" required>
-      <div id="response-text" class="form-text"></div>
-    </div>
-    <div class="d-flex align-items-center">
-      <button type="submit" class="btn btn-primary" id="upload-button">Upload</button>
-      <div id="spinner" class="spinner-border text-primary ms-3" role="status" style="display: none;">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-    </div>
-  `;
-  contentArea.appendChild(form);
-  const uploadButton = document.getElementById("upload-button");
-  const spinner = document.getElementById("spinner");
-  const responseText = document.getElementById("response-text");
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    spinner.style.display = "inline-block";
-    uploadButton.disabled = true;
-    responseText.textContent = "";
-
-    try {
-      const formData = new FormData(form);
-      const response = await fetch("/api/products/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (response.ok) {
-        const data = await response.json();
-        responseText.textContent = data.message;
-        spinner.style.display = "none";
-        uploadButton.disabled = false;
-      } else {
-        alert("Failed to upload products. Please try again later.");
-        spinner.style.display = "none";
-        uploadButton.disabled = false;
-      }
-    } catch (error) {
-      console.error("Error uploading products:", error);
-      alert("An error occurred. Please try again.");
-      spinner.style.display = "none";
-      uploadButton.disabled = false;
-    }
-  });
-}
 
 async function renderOrderChartLastSixMonths() {
   const contentArea = document.getElementById("content-area");
   contentArea.innerHTML = `
     <h1 class='mb-4'>Order Charts</h1>
-    <h2>Orders Last 6 Months</h2>
+    <h2>Orders Last 6 Months
+      <div id="spinner-6-months" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </h2>
     <canvas id='orderChart' width='400' height='200'></canvas>
     
-    <h2 style="margin-top: 10rem;" >Orders Last 2 Days</h2>
+    <h2 style="margin-top: 10rem;">Orders Last 2 Days
+      <div id="spinner-2-days" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </h2>
     <canvas id='orderChartLastTwoDays' width='400' height='200'></canvas>`;
 
   try {
-    // Fetch order data from the backend
+    const spinner = document.getElementById("spinner-6-months");
+
     let date = new Date();
     date.setMonth(date.getMonth() - 6);
     const isoDate = date.toISOString().split("T")[0];
@@ -241,6 +44,7 @@ async function renderOrderChartLastSixMonths() {
       page: "1",
     });
 
+    spinner.style.display = "inline-block";
     const response = await fetch(
       `/crud/orders/filtered?${queryParams.toString()}`
     );
@@ -276,7 +80,7 @@ async function renderOrderChartLastSixMonths() {
             yAxisID: "y1",
           },
           {
-            label: "Total Price ($)",
+            label: "Total Price without VAT ($)",
             data: orderPrices,
             backgroundColor: "rgba(255, 159, 64, 0.6)",
             borderColor: "rgba(255, 159, 64, 1)",
@@ -298,13 +102,16 @@ async function renderOrderChartLastSixMonths() {
             type: "linear",
             position: "right",
             beginAtZero: true,
-            title: { display: true, text: "Total Price ($)" },
+            title: { display: true, text: "Total Price without VAT ($)" },
             grid: { drawOnChartArea: false },
           },
         },
       },
     });
+
+    spinner.style.display = "none";
   } catch (error) {
+    spinner.style.display = "none";
     console.error("Error fetching order data:", error);
     contentArea.innerHTML =
       "<p class='text-danger'>Failed to load order chart. Please try again later.</p>";
@@ -314,6 +121,8 @@ async function renderOrderChartLastSixMonths() {
 async function renderOrderChartLastTwoDays() {
   const contentArea = document.getElementById("content-area");
   try {
+    const spinner = document.getElementById("spinner-2-days");
+    
     let date = new Date();
     date.setDate(date.getDate() - 2);
     const isoDate = date.toISOString().split("T")[0];
@@ -326,6 +135,7 @@ async function renderOrderChartLastTwoDays() {
       page: "1",
     });
 
+    spinner.style.display = "inline-block";
     const response = await fetch(
       `/crud/orders/filtered?${queryParams.toString()}`
     );
@@ -364,7 +174,7 @@ async function renderOrderChartLastTwoDays() {
             yAxisID: "y1",
           },
           {
-            label: "Total Price ($)",
+            label: "Total Price without VAT ($)",
             data: orderPrices,
             backgroundColor: "rgba(255, 99, 132, 0.6)",
             borderColor: "rgba(255, 99, 132, 1)",
@@ -386,13 +196,15 @@ async function renderOrderChartLastTwoDays() {
             type: "linear",
             position: "right",
             beginAtZero: true,
-            title: { display: true, text: "Total Price ($)" },
+            title: { display: true, text: "Total Price without VAT ($)" },
             grid: { drawOnChartArea: false },
           },
         },
       },
     });
+    spinner.style.display = "none";
   } catch (error) {
+    spinner.style.display = "none";
     console.error("Error fetching last 2 days order data:", error);
     contentArea.innerHTML =
       "<p class='text-danger'>Failed to load 2-day order chart. Please try again later.</p>";

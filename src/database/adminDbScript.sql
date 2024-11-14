@@ -34,7 +34,8 @@ CREATE TABLE admin_users (
     gender_id BIGINT NULL REFERENCES genders(id),
     address TEXT NULL,
     is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    has_first_login BOOLEAN NOT NULL DEFAULT TRUE
+    has_first_login BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE admin_sessions (
@@ -312,7 +313,8 @@ LEFT JOIN iso_country_codes icc ON admin_users.iso_country_code_id = icc.id
 LEFT JOIN iso_country_codes cc ON admin_users.country_id = cc.id
 LEFT JOIN genders ON admin_users.gender_id = genders.id
 LEFT JOIN admin_user_roles aur ON admin_users.id = aur.admin_user_id
-LEFT JOIN roles ON aur.role_id = roles.id AND roles.is_active = true 
+LEFT JOIN roles ON aur.role_id = roles.id AND roles.is_active = true
+WHERE admin_users.is_active = TRUE 
 GROUP BY
     admin_users.id,
     admin_users.first_name,

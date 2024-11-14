@@ -10,6 +10,9 @@ class ExportService {
     }
 
     async exportToExcel(data) {
+        const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
+        const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
+        let totalPriceWithVAT = 0;
         const parameters = this.crudService.buildFilteredPaginatedQuery(data, true);
         const dataParams = {
             ...data,
@@ -28,18 +31,17 @@ class ExportService {
         const worksheet = workbook.addWorksheet(data.params.entity);
 
         worksheet.addRow(['Filters Applied:']).commit();
-        worksheet.addRow(['Field', 'Criteria', 'Details']).commit();
+        worksheet.addRow(['Field', 'Criteria']).commit();
         for (const [key, value] of Object.entries(parameters.appliedFilters)) {
             if (typeof value === 'object') {
-                worksheet.addRow([`${key}`, 'Range', `${value.min} - ${value.max}`]).commit();
+                worksheet.addRow([`${key}`, `${value.min} - ${value.max}`]).commit();
             } else if (typeof value === 'string') {
-                worksheet.addRow([`${key}`, 'Exact Match', value]).commit();
+                worksheet.addRow([`${key}`, value]).commit();
             }
         }
         worksheet.addRow(['Grouping Applied:']).commit(); 
-        worksheet.addRow(['Field', 'Grouping Level']).commit();
         for (const [key, value] of Object.entries(parameters.appliedGroups)) {
-            worksheet.addRow([`${key}`, value]).commit();
+            worksheet.addRow([`${value}`]).commit();
         }
 
         worksheet.addRow([]).commit();
@@ -51,16 +53,20 @@ class ExportService {
             for (const row of rows) {
                 if (!headers) {
                     headers = Object.keys(row).filter(key => this.isPrimitive(row[key]));
+                    headers.push("total_price_with_vat");
                     worksheet.addRow(headers).commit();
                 }
-
-                const rowValues = headers.map(header => row[header]);
+                row.total_price_with_vat = (row.total_price * (1 + vatPercentage / 100)).toFixed(2);
+                totalPriceWithVAT += parseFloat(row.total_price_with_vat);
+                let rowValues = headers.map(header => row[header]);
+                
                 worksheet.addRow(rowValues).commit();
             }
         }
 
         const totalsResult = await data.dbConnection.query(dataParams.aggregatedTotalQuery, dataParams.searchValues);
-        const totalsRow = totalsResult.rows[0]; 
+        const totalsRow = totalsResult.rows[0];
+        totalsRow.total_total_price_with_vat = totalPriceWithVAT.toFixed(2); 
 
         const footerRow = headers.map(header => {
             const totalKey = `total_${header}`;
@@ -111,25 +117,28 @@ class ExportService {
     
     async* generateCsvRows(data) {
         const rowGenerator = await this.executeQueryWithCursor(data);
+        const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
+        const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
+        let totalPriceWithVAT = 0;
+
         let headers = null;
         yield "\uFEFF";
       
         yield "Filters Applied:\n";
-        yield "Field,Criteria,Details\n";
+        yield "Field,Criteria\n";
         for (const [key, value] of Object.entries(data.appliedFilters)) {
             if (typeof value === 'object') {
-                yield `${key}:,range,${value.min} - ${value.max}\n`;
+                yield `${key},${value.min} - ${value.max}\n`;
             }
             else if (typeof value === 'string') {
-                yield `${key}:,exact match,${value}\n`;
+                yield `${key},${value}\n`;
             }
         }
         yield "\n";
 
         yield "Groups Applied:\n";
-        yield "Field,Grouping Level\n";
         for (const [key, value] of Object.entries(data.appliedGroups)) {
-            yield `${key}:,${value}\n`;
+            yield `${value}\n`;
         }
         yield "\n";
 
@@ -137,10 +146,14 @@ class ExportService {
             for (const row of rows) {
                 if (!headers) {
                     headers = Object.keys(row).filter(key => this.isPrimitive(row[key]));
+                    headers.push("total_price_with_vat");
 
                     yield `${headers.join(",")}\n`;
                 }
-                
+
+                row.total_price_with_vat = (row.total_price * (1 + vatPercentage / 100)).toFixed(2);
+                totalPriceWithVAT += parseFloat(row.total_price_with_vat);
+
                 const rowValues = Object.values(row)
                 .filter(value => this.isPrimitive(value))
                 .map(value => {
@@ -160,7 +173,8 @@ class ExportService {
         }
 
         const totalsResult = await data.dbConnection.query(data.aggregatedTotalQuery, data.searchValues);
-        const totalsRow = totalsResult.rows[0];
+        let totalsRow = totalsResult.rows[0];
+        totalsRow.total_total_price_with_vat = totalPriceWithVAT.toFixed(2);
         const footerRow = headers.map(header => {
             const totalKey = `total_${header}`;
             return totalsRow[totalKey] || '';  

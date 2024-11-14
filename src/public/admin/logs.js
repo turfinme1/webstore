@@ -1,10 +1,11 @@
 import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation } from "./navigation.js";
+import { createNavigation, createBackofficeNavigation } from "./navigation.js";
+
 
 // Centralized state object
 const state = {
   currentPage: 1,
-  pageSize: 10,
+  pageSize: 300,
   userStatus: null,
   searchParams: {},
   filterParams: {},
@@ -31,7 +32,12 @@ const state = {
     { id: 19, code: 19, message: "Delete Success" },
     { id: 20, code: 20, message: "Create Success" },
     { id: 21, code: 21, message: "Order Complete Success" },
-    { id: 22, code: 22, message: "Cart Prices Changed" },
+    { id: 22, code: 22, message: "Order Complete Failure" },
+    { id: 23, code: 23, message: "Cart Prices Changed" },
+    { id: 24, code: 24, message: "Cron Success" },
+    { id: 25, code: 25, message: "Cron Failure" },
+    { id: 26, code: 26, message: "Role Change Success" },
+    { id: 27, code: 27, message: "Permission Change Success" },
   ],
   logLevels: ["INFO", "ERROR"],
   columnsToDisplay: [
@@ -65,14 +71,22 @@ const elements = {
   groupByStatusCodeSelect: document.getElementById("group_by_status_code"),
   groupByLogLevelSelect: document.getElementById("group_by_log_level"),
   logTableHeader: document.getElementById("log-table-header"),
+  spinner: document.getElementById("spinner"),
+  createdAtMin : document.getElementById("created_at_min"),
+  rowCount: document.getElementById("row-count"),
 };
 
 // Initialize page and attach event listeners
 document.addEventListener("DOMContentLoaded", async () => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  elements.createdAtMin.value = yesterday.toISOString().split("T")[0];
+  
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
   createNavigation(userStatus);
   await attachLogoutHandler();
+  createBackofficeNavigation(userStatus);
 
   if (!hasPermission(userStatus, "read", "report-logs")) {
     elements.mainContainer.innerHTML = "<h1>Log Management</h1>";
@@ -81,7 +95,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   attachEventListeners();
   loadStatusCodes();
-  loadLogs(state.currentPage);
+  // loadLogs(state.currentPage);
 });
 
 // Attach event listeners
@@ -187,7 +201,7 @@ async function loadLogs(page) {
       pageSize: state.pageSize.toString(),
       page: page.toString(),
     });
-
+    toggleExportLoadingState();
     const response = await fetch(`/crud/logs/filtered?${queryParams.toString()}`);
     const { result, count, groupCount } = await response.json();
 
@@ -199,10 +213,16 @@ async function loadLogs(page) {
       state.columnsToDisplay.push({ key: "count", label: "Count" });
       state.columnsToDisplay = state.columnsToDisplay.filter(col => col.key !== 'id');
     }
-
+    
+    toggleExportLoadingState(true);
     renderLogList(result);
-    updatePagination(count, page, groupCount);
+    // updatePagination(count, page, groupCount);
+    
+    if(parseInt(count) > state.pageSize) {
+      alert(`Please note that only the first ${state.pageSize} records are displayed. Please filter your search to view more records.`);
+    }
   } catch (error) {
+    toggleExportLoadingState(true);
     console.error("Error loading logs:", error);
   }
 }
@@ -211,12 +231,13 @@ async function loadLogs(page) {
 function renderLogList(logs) {
   elements.logListContainer.innerHTML = ""; // Clear previous list
   elements.logTableHeader.innerHTML = ""; // Clear previous headers
-
+  elements.rowCount.textContent = "";
+  
   if (logs.length === 0) {
     elements.logListContainer.innerHTML = "<tr><td colspan='8'>No logs found.</td></tr>";
     return;
   }
-
+  elements.rowCount.textContent = `Showing ${logs.length} records`;
   // Generate table headers based on grouping
   state.columnsToDisplay.forEach(({ label }) => {
     const th = document.createElement("th");
@@ -310,4 +331,12 @@ function createPaginationButton(text, enabled, onClick) {
   button.disabled = !enabled;
   if (enabled) button.addEventListener("click", onClick);
   return button;
+}
+
+function toggleExportLoadingState(reset = false) {
+  if(reset) {
+    elements.spinner.style.display = "none";
+    return;
+  }
+  elements.spinner.style.display = elements.spinner.style.display === "none" ? "inline-block" : "none";
 }

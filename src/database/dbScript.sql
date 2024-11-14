@@ -74,8 +74,10 @@ CREATE TABLE users (
     gender_id BIGINT NULL REFERENCES genders(id),
     address TEXT NULL,
     is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-	has_first_login BOOLEAN NOT NULL DEFAULT FALSE
+	has_first_login BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
+ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;
 
 CREATE TABLE session_types (
     id BIGSERIAL PRIMARY KEY,
@@ -403,7 +405,8 @@ SELECT
 FROM users
 LEFT JOIN iso_country_codes icc ON users.iso_country_code_id = icc.id
 LEFT JOIN iso_country_codes cc ON users.country_id = cc.id
-LEFT JOIN genders ON users.gender_id = genders.id;
+LEFT JOIN genders ON users.gender_id = genders.id
+WHERE users.is_active = TRUE;
 
 INSERT INTO genders(type) VALUES ('Male'), ('Female');
 INSERT INTO session_types(type) VALUES ('Anonymous'), ('Authenticated'), ('Email Verification');

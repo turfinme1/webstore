@@ -188,11 +188,11 @@ class CrudService {
             const fieldAlias = `${fieldConfig.aggregation}('${groupField.granularity}', ${groupField.column})`;
             groupBySets.push(fieldAlias);
             selectFields.push(`${fieldAlias} AS ${groupField.column}`);
-            appliedGroups[groupField.column] = groupField.granularity;
+            appliedGroups[groupField.column] = `${groupField.column}-${groupField.granularity}`;
           } else {
             groupBySets.push(groupField.column);
             selectFields.push(groupField.column);
-            appliedGroups[groupField.column] = "none";
+            appliedGroups[groupField.column] = groupField.column;
           }
         }
       }
