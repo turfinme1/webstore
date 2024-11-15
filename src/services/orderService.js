@@ -10,7 +10,7 @@ class OrderService {
     this.createOrderByStaff = this.createOrderByStaff.bind(this);
     this.updateOrderByStaff = this.updateOrderByStaff.bind(this);
     this.getOrder = this.getOrder.bind(this);
-    this.completeOrder = this.completeOrder.bind(this);
+    this.addOrderAddress = this.addOrderAddress.bind(this);
     this.capturePaypalPayment = this.capturePaypalPayment.bind(this);
     this.verifyCartPricesAreUpToDate = this.verifyCartPricesAreUpToDate.bind(this);
     this.deleteOrder = this.deleteOrder.bind(this);
@@ -80,32 +80,36 @@ class OrderService {
     const emailObject = { ...data, order, cartItems };
     await this.emailService.sendOrderCreatedConfirmationEmail(emailObject);
 
-    // const request = new paypal.orders.OrdersCreateRequest();
-    // request.prefer("return=representation");
-    // request.requestBody({
-    //   intent: "CAPTURE",
-    //   purchase_units: [
-    //     {
-    //       amount: {
-    //         currency_code: "USD",
-    //         // value: order.total_price,
-    //         value: "2078.25",
-    //       },
-    //     },
-    //   ],
-    //   application_context: {
-    //     return_url: 'http://localhost:3000/order',
-    //     cancel_url: 'http://localhost:3000/order/cancel-order',
-    //     shipping_preference: 'NO_SHIPPING',
-    //     user_action: 'PAY_NOW'
-    //   }
-    // });
+    const vatResult = await data.dbConnection.query(`SELECT * FROM app_settings`);
+    const vatPercentage = parseFloat(vatResult.rows[0].vat_percentage);
+    const vatRate = vatPercentage / 100;
+    const subtotal = parseFloat(order.total_price);
+    const vatAmount = Math.floor((subtotal * vatRate) * 100) / 100;
+    const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
 
-    // const paypalOrder = await this.paypalClient.execute(request);
-    // const approvalUrl = paypalOrder.result.links.find(link => link.rel === "approve").href;
-    // return { approvalUrl, paypalOrder };
+    const request = new paypal.orders.OrdersCreateRequest();
+    request.prefer("return=representation");
+    request.requestBody({
+      intent: "CAPTURE",
+      purchase_units: [
+        {
+          amount: {
+            currency_code: "USD",
+            value: totalPriceWithVAT,
+          },
+        },
+      ],
+      application_context: {
+        return_url: `http://localhost:3000/api/paypal/capture/${order.id}`,
+        cancel_url: 'http://localhost:3000/order/cancel-order',
+        shipping_preference: 'NO_SHIPPING',
+        user_action: 'PAY_NOW'
+      }
+    });
 
-    return { order, message: "Order placed successfully" };
+    const paypalOrder = await this.paypalClient.execute(request);
+    const approvalUrl = paypalOrder.result.links.find(link => link.rel === "approve").href;
+    return { approvalUrl, paypalOrder, message: "Order placed successfully" };
   }
   
   async createOrderByStaff(data){
@@ -308,8 +312,7 @@ class OrderService {
     return { order, items: orderItemsResult.rows };
   }
 
-  async completeOrder(data) {
-    // Create or insert address for the order
+  async addOrderAddress(data) {
     const addressResult = await data.dbConnection.query(
       `
     INSERT INTO addresses (user_id, street, city, country_id) 
@@ -342,67 +345,42 @@ class OrderService {
       [data.session.user_id]
     );
     ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
-    const order = orderResult.rows[0];
+    
+    return { message: "Order completed successfully" };
+  }
 
-    const orderItemsResult = await data.dbConnection.query(`
-      SELECT oi.*, p.name AS product_name
-      FROM order_items oi
-      JOIN products p ON oi.product_id = p.id
-      WHERE order_id = $1`,
-      [order.id]
-    );
-    const orderItems = orderItemsResult.rows;
+  async capturePaypalPayment(data) {
+    const request = new paypal.orders.OrdersCaptureRequest(data.query.token);
+    
+    const {order, items} = await this.getOrder(data);
 
-    const paymentResult = await fetch("http://10.20.3.224:5002/api/payments", { 
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        client_id: data.session.user_id,
-        amount: order.total_price,
-      }),
-    });
-
-    ASSERT_USER(paymentResult.ok, "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
-    const paymentData = await paymentResult.json();
-
-    // Update the order status to 'Complete'
-    const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
-    const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
+    const vatResult = await data.dbConnection.query(`SELECT * FROM app_settings`);
+    const vatPercentage = parseFloat(vatResult.rows[0].vat_percentage);
     const vatRate = vatPercentage / 100;
     const subtotal = parseFloat(order.total_price);
     const vatAmount = Math.floor((subtotal * vatRate) * 100) / 100;
     const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
 
-    await data.dbConnection.query(
-      `
-      UPDATE orders 
-      SET status = 'Paid', paid_amount = $1
-      WHERE user_id = $2 AND status = 'Pending'`,
-      [totalPriceWithVAT, data.session.user_id]
+    const paymentResult = await data.dbConnection.query(`
+      INSERT INTO payments (order_id, payment_provider, provider_payment_id, paid_amount)
+      VALUES ($1, 'PayPal', $2, $3)
+      RETURNING *`,
+      [data.params.orderId, data.query.token, totalPriceWithVAT]
     );
-
-    const emailObject = { ...data, orderItems, order: order, paymentNumber: paymentData.payment_number };
-    await this.emailService.sendOrderPaidConfirmationEmail(emailObject);
+    const payment = paymentResult.rows[0];
     
-    await data.dbConnection.query("COMMIT");
-    return { message: "Order completed successfully" };
-  }
-
-  async capturePaypalPayment(data) {
-    const request = new paypal.orders.OrdersCaptureRequest(data.body.orderID);
-
     await data.dbConnection.query(`
       UPDATE orders
-      SET status = 'Paid', paid_amount = total_price
-      WHERE id = $1`,
-      [data.params.orderId]
+      SET status = 'Paid', paid_amount = $1, payment_id = $2
+      WHERE id = $3`,
+      [totalPriceWithVAT, payment.id, data.params.orderId]
     );
-
+    
     const capture = await this.paypalClient.execute(request);
-    ASSERT_USER(capture.result.status === "COMPLETED", "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
+    ASSERT(capture.result.status === "COMPLETED", "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
 
+    const emailObject = { ...data, orderItems: items, order: order, paymentNumber: payment.payment_hash };
+    await this.emailService.sendOrderPaidConfirmationEmail(emailObject);
     return { message: "Payment completed successfully" };
   }
 

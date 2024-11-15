@@ -44,6 +44,7 @@ const routeTable = {
     "/api/cart": cartController.getCart,
     "/api/orders": orderController.getOrders,
     "/api/orders/:orderId": orderController.getOrder,
+    "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
   },
   post: {
     "/auth/register": authController.register,
@@ -54,8 +55,7 @@ const routeTable = {
     "/api/products/:id/ratings": productController.createRating,
     "/api/cart": cartController.updateItem,
     "/api/orders": orderController.createOrder,
-    "/api/orders/complete": orderController.completeOrder,
-    "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
+    "/api/orders/address": orderController.addOrderAddress,
   },
   put: {
     "/auth/profile": authController.updateProfile,

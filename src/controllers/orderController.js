@@ -10,7 +10,7 @@ class OrderController {
       this.updateOrderByStaff = this.updateOrderByStaff.bind(this);
       this.deleteOrder = this.deleteOrder.bind(this);
       this.getOrder = this.getOrder.bind(this);
-      this.completeOrder = this.completeOrder.bind(this);
+      this.addOrderAddress = this.addOrderAddress.bind(this);
       this.capturePaypalPayment = this.capturePaypalPayment.bind(this);
     }
   
@@ -61,14 +61,14 @@ class OrderController {
       res.status(200).json(result);
     }
   
-    async completeOrder(req, res) {
+    async addOrderAddress(req, res) {
       ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
       const data = {
         body: req.body,
         session: req.session,
         dbConnection: req.dbConnection,
       };
-      const result = await this.orderService.completeOrder(data);
+      const result = await this.orderService.addOrderAddress(data);
       res.status(200).json(result);
 
       await req.logger.info({ code: STATUS_CODES.ORDER_COMPLETE_SUCCESS, short_description: `Order completed successfully`, long_description: `Order for user ${req.session.user_id} completed successfully` });
@@ -78,12 +78,13 @@ class OrderController {
       ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
       const data = {
         body: req.body,
+        query: req.query,
         params: req.params,
         session: req.session,
         dbConnection: req.dbConnection,
       };
       const result = await this.orderService.capturePaypalPayment(data);
-      res.status(200).json(result);
+      res.redirect(`/order-complete?orderId=${req.params.orderId}`);
     }
 
     async deleteOrder(req, res) {

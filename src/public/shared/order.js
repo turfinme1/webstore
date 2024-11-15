@@ -3,118 +3,56 @@ import { createNavigation } from "./navigation.js";
 
 const state = {
   userStatus: null,
+  paymentOrderId: null,
 };
 
 const elements = {
   orderForm: document.getElementById("order-form"),
+  paypalButton: document.getElementById("pay-with-paypal"),
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    state.userStatus = await getUserStatus();
+    createNavigation(state.userStatus, document.getElementById("navigation-container"));
+    attachLogoutHandler();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get("orderId");
+    state.paymentOrderId = orderId;
     
-  
-  state.userStatus = await getUserStatus();
-  createNavigation(state.userStatus, document.getElementById("navigation-container"));
-  attachLogoutHandler();
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const orderId = urlParams.get("orderId");
-
-  /// get current order
-  // async getOrder(req, res) {
-  //   ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
-  //   const data = {
-  //     params: req.params,
-  //     session: req.session,
-  //     dbConnection: req.dbConnection,
-  //   };
-  //   const result = await this.orderService.getOrder(data);
-  //   res.status(200).json(result);
-  // }
-  const response = await fetch(`/api/orders/${orderId}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch order: ${response.status}`);
+    renderOrderForm(elements.orderForm);
+    await attachEventListeners();
+  } catch (error) {
+    console.error("Error loading order:", error);
+    alert("Failed to load order");
   }
-  const { order } = await response.json();
-  console.log("Order:", order);
-  
-  renderOrderForm(elements.orderForm);
-  attachEventListeners(order);
-} catch (error) {
-  console.error("Error loading order:", error);
-  alert("Failed to load order");
-}
 });
 
-function attachEventListeners(order) {
-  elements.orderForm.addEventListener("submit", handleOrderSubmit);
-  paypal.Buttons({
-    createOrder: (data, actions) => actions.order.create({
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          amount: {
-            value: order.total_price,
-            currency_code: "USD",
-          },
-        },
-      ],
-      application_context: {
-        return_url: 'http://localhost:3000/order',
-        cancel_url: 'http://localhost:3000/order/cancel-order',
-        shipping_preference: 'NO_SHIPPING',
-        user_action: 'PAY_NOW'
-      }
-    }),
-    onApprove: async (data, actions) => {
-      // await actions.order.capture();
-      const captureResult = await fetch(`/api/paypal/capture/${order.id}`,{
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderID: data.orderID }),
-      });
-      
-      if (!captureResult.ok) {
-        const data = await captureResult.json();
-        alert(`Payment failed: ${data.error}`);
-        return;
-      }
+function togglePayButton() {
+  const country = document.getElementById("country").value;
+  const street = document.getElementById("street").value;
+  const city = document.getElementById("city").value;
+  const payButton = document.getElementById("pay-with-paypal");
 
-      alert("Payment Successful");
-      window.location.href = "/index";
-    },
-    onError: (err) => console.error("PayPal error:", err)
-  }).render("#paypal-button-container");
+  const isValid = country && street && city && /^[a-zA-Z0-9 .\\-]+$/.test(street) && /^[a-zA-Z0-9 .\\-]+$/.test(city);
+  payButton.disabled = !isValid;
 }
 
-async function initializePayPalButton(order) {
-  paypal.Buttons({
-    createOrder: (data, actions) => actions.order.create({
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          amount: {
-            value: order.total_price,
-            currency_code: "USD",
-          },
-        },
-      ],
-      application_context: {
-        return_url: 'http://localhost:3000/order',
-        cancel_url: 'http://localhost:3000/order/cancel-order',
-        shipping_preference: 'NO_SHIPPING',
-        user_action: 'PAY_NOW'
-      }
-    }),
-    onApprove: async (data, actions) => {
-      alert("Payment Successful");
-      window.location.href = "/index";
-    },
-    onError: (err) => console.error("PayPal error:", err)
-  }).render("#paypal-button-container");
+async function attachEventListeners() {
+  // Attach input event listeners to address fields
+  const addressFields = ["country", "street", "city"].map(id => document.getElementById(id));
+  addressFields.forEach(field => field.addEventListener("input", togglePayButton));
+
+  // Attach click handler to the Pay with PayPal button
+  const payButton = document.getElementById("pay-with-paypal");
+  payButton.addEventListener("click", handlePayWithPayPal);
+
+  // Initial toggle for the button
+  togglePayButton();
 }
 
-async function handleOrderSubmit(event) {
+async function handlePayWithPayPal(event) {
   event.preventDefault();
 
   if (state.userStatus.session_type !== "Authenticated") {
@@ -129,19 +67,23 @@ async function handleOrderSubmit(event) {
   };
 
   try {
-    const response = await fetch("/api/orders/complete", {
+    const response = await fetch("/api/orders/address", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ address: addressData }),
     });
 
     if (response.ok) {
-      alert("Order placed successfully!");
-      window.location.href = "/index";
+      alert("Navigating to PayPal for payment...");
+      
     } else {
       const data = await response.json();
       alert(`Order failed: ${data.error}`);
+      return;
     }
+
+    const paypalPaymentUrl = `https://www.sandbox.paypal.com/checkoutnow?token=${state.paymentOrderId}`;
+    window.location.href = paypalPaymentUrl;
   } catch (error) {
     console.error("Error placing order:", error);
     alert("Order failed.");
@@ -157,15 +99,14 @@ function renderOrderForm(container) {
     </div>
     <div>
       <label for="street">Street</label>
-      <input type="text" id="street" class="form-control" required />
+      <input type="text" id="street" class="form-control" required pattern="^[a-zA-Z0-9 .\\-]+$"/>
     </div>
     <div>
       <label for="city">City</label>
-      <input type="text" id="city" class="form-control" required />
+      <input type="text" id="city" class="form-control" required pattern="^[a-zA-Z0-9 .\\-]+$"/>
     </div>
 
-    <div id="paypal-button-container" class="mt-4"></div>
-    <button type="submit" class="btn btn-primary mt-3">Submit Order</button>
+    <button id="pay-with-paypal" class="btn btn-primary mt-4" disabled>Pay with PayPal</button>
   `;
 
   container.innerHTML = formHTML;

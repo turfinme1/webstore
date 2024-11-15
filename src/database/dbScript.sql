@@ -235,8 +235,20 @@ CREATE TABLE orders (
     paid_amount NUMERIC(12, 2) NULL CHECK (paid_amount >= 0),
     total_price NUMERIC(12, 2) NOT NULL CHECK (total_price >= 0),
     shipping_address_id BIGINT NULL REFERENCES addresses(id),
+    payment_id BIGINT NULL REFERENCES payments(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+ALTER TABLE orders ADD COLUMN payment_id BIGINT NULL REFERENCES payments(id);
+
+CREATE TABLE payments (
+    id BIGSERIAL PRIMARY KEY,
+    payment_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    order_id BIGINT UNIQUE NOT NULL REFERENCES orders(id),
+    payment_provider TEXT NOT NULL CHECK (payment_provider IN ('PayPal', 'Bobi')),
+    provider_payment_id TEXT NOT NULL,
+    paid_amount NUMERIC(12, 2) NOT NULL CHECK (paid_amount >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE order_items (

@@ -98,8 +98,8 @@ async function handleCheckout() {
     });
 
     if (response.ok) {
-      const { order } = await response.json();
-      window.location.href = `/order?orderId=${order.id}`; 
+      const { paypalOrder } = await response.json();
+      window.location.href = `/order?orderId=${paypalOrder.result.id}`; 
     } else {
       const data = await response.json();
       alert(`Checkout failed: ${data.error}`); 
