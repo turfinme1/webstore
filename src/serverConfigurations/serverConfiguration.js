@@ -1,6 +1,8 @@
+const cron = require("node-cron");
 const pool = require("../database/dbConfig");
 const { UserError } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
+const { checkPendingPayments } = require("./cronJobs");
 
 const paypalClient = require("./paypalClient");
 const CrudService = require("../services/crudService");
@@ -135,6 +137,10 @@ async function sessionMiddleware(req, res) {
 
   req.session = anonymousSession;
 }
+
+cron.schedule("*/10 * * * *", async () => {
+  await checkPendingPayments(pool, paypalClient, orderService);
+});
 
 process.on('uncaughtException', async (error) => {
   try {
