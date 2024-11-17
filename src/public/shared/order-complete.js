@@ -8,6 +8,7 @@ const state = {
 
 // Elements
 const elements = {
+  mainContainer: document.getElementById("main-container"),
   orderDetailsContainer: document.getElementById("order-details-container"),
   orderNumberDisplay: document.getElementById("order-number"),
   orderDateDisplay: document.getElementById("order-date"),
@@ -54,10 +55,25 @@ async function fetchOrderDetails(orderId) {
 
 // Display order details
 function displayOrderDetails() {
-  elements.orderNumberDisplay.textContent = `Order Number: ${state.order.id}`;
+  const h1Status = document.createElement("h1");
+  h1Status.textContent = `Order ${state.order.status}`;
+  elements.mainContainer.prepend(h1Status);
   elements.orderDateDisplay.textContent = `Order Date: ${new Date(
     state.order.created_at
   ).toLocaleDateString()}`;
-//   elements.orderTotalDisplay.textContent = `Total: $${state.order.total_price}`;
-  elements.orderTotalDisplay.textContent = `Check your email for more information.`;
+
+  if(state.order.status === 'Cancelled') {
+    elements.orderNumberDisplay.textContent = `Order Number: ${state.order.id}`;
+  } else if(state.order.status === 'Pending') {
+    elements.orderNumberDisplay.textContent = `Order Number: ${state.order.id}`;
+    elements.orderTotalDisplay.textContent = `Total: $${state.order.total_price_with_vat}`;
+    elements.orderTotalDisplay.textContent = `Check your email for more information.`;
+  } else if(state.order.status === 'Paid') {
+    elements.orderNumberDisplay.textContent = `Order Number: ${state.order.id}`;
+    elements.orderDateDisplay.textContent = `Order Date: ${new Date(
+      state.order.created_at
+    ).toLocaleDateString()}`;
+    // elements.orderTotalDisplay.textContent = `Total: $${state.order.total_price_with_vat}`;
+    elements.orderTotalDisplay.textContent = `Check your email for more information.`;
+  }
 }

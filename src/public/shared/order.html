@@ -13,11 +13,28 @@
 
   <div class="container mt-5">
     <h2 class="mb-4">Complete Your Order</h2>
+    <h2 class="mb-4">Order Details</h2>
 
-    <!-- Order Form -->
+    <div class="container mt-5 mb-4">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Code</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Total Price</th>
+          </tr>
+        </thead>
+        <tbody id="cart-container">
+          <!-- Cart items will be rendered here -->
+        </tbody>
+      </table>
+    </div>
+
     <form id="order-form">
-     
     </form>
+
   </div>
 
 </body>

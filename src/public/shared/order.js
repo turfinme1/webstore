@@ -4,11 +4,14 @@ import { createNavigation } from "./navigation.js";
 const state = {
   userStatus: null,
   paymentOrderId: null,
+  cart: null,
+  items: [],
 };
 
 const elements = {
   orderForm: document.getElementById("order-form"),
   paypalButton: document.getElementById("pay-with-paypal"),
+  spinner: null,
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -20,7 +23,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get("orderId");
     state.paymentOrderId = orderId;
-    
+
+    const cartData = await getCartItems();
+    state.items = cartData.items;
+    state.cart = cartData;
+    updateCartDisplayReadOnly();
+
     renderOrderForm(elements.orderForm);
     await attachEventListeners();
   } catch (error) {
@@ -67,24 +75,26 @@ async function handlePayWithPayPal(event) {
   };
 
   try {
-    const response = await fetch("/api/orders/address", {
-      method: "POST",
+    elements.spinner.style.display = "inline-block";
+    const response = await fetch('/api/orders', {
+      method: 'POST',
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ address: addressData }),
     });
 
-    if (response.ok) {
-      alert("Navigating to PayPal for payment...");
-      
-    } else {
+   elements.spinner.style.display = "none";
+    if (!response.ok) {
       const data = await response.json();
       alert(`Order failed: ${data.error}`);
       return;
     }
+    const data = await response.json();
 
-    const paypalPaymentUrl = `https://www.sandbox.paypal.com/checkoutnow?token=${state.paymentOrderId}`;
-    window.location.href = paypalPaymentUrl;
+    alert("Navigating to PayPal for payment...");
+
+    window.location.href = data.approvalUrl;
   } catch (error) {
+    elements.spinner.style.display = "none";
     console.error("Error placing order:", error);
     alert("Order failed.");
   }
@@ -106,10 +116,16 @@ function renderOrderForm(container) {
       <input type="text" id="city" class="form-control" required pattern="^[a-zA-Z0-9 .\\-]+$"/>
     </div>
 
-    <button id="pay-with-paypal" class="btn btn-primary mt-4" disabled>Pay with PayPal</button>
+    <div class="d-flex justify-content-start align-items-center mb-3 gap-3 mt-3">
+      <button id="pay-with-paypal" class="btn btn-primary" disabled>Pay with PayPal</button>
+      <div id="spinner" class="spinner-border text-primary" role="status" style="display: none;">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
   `;
 
   container.innerHTML = formHTML;
+  elements.spinner = document.getElementById("spinner");
   populateCountryDropdown();
 }
 
@@ -129,4 +145,70 @@ async function getCountries() {
   const response = await fetch("/crud/iso-country-codes");
   if (!response.ok) throw new Error("Failed to fetch countries");
   return await response.json();
+}
+
+async function getCartItems() {
+  const response = await fetch('/api/cart');
+  if (!response.ok) throw new Error('Failed to fetch cart items');
+  return await response.json();
+}
+
+function renderCartItemReadOnly(item) {
+  const itemRow = document.createElement('tr');
+  itemRow.classList.add('cart-item');
+  itemRow.innerHTML = `
+    <td style="vertical-align: middle;">
+      <img src="${item.product_image}" alt="${item.product_name}" class="img-fluid" style="width: 100px; height: auto; margin-right: 10px;" />
+      ${item.product_name}
+    </td>
+    <td style="vertical-align: middle;">${item.product_code}</td>
+    <td style="vertical-align: middle; text-align: center;">${item.quantity}</td>
+    <td style="vertical-align: middle; text-align: right;">$${item.unit_price}</td>
+    <td style="vertical-align: middle; text-align: right;">$${item.total_price}</td>
+  `;
+  return itemRow;
+}
+
+function renderCartTotalRowReadOnly() {
+  const fragment = document.createDocumentFragment();
+
+  const subtotalRow = document.createElement('tr');
+  subtotalRow.innerHTML = `
+    <td colspan="4" style="text-align: right; font-weight: bold;">Subtotal:</td>
+    <td style="text-align: right; font-weight: bold;">$${state.cart.totalPrice}</td>
+  `;
+  fragment.appendChild(subtotalRow);
+
+  const vatRow = document.createElement('tr');
+  vatRow.innerHTML = `
+    <td colspan="4" style="text-align: right; font-weight: bold;">VAT (${state.cart.vatPercentage}%):</td>
+    <td style="text-align: right; font-weight: bold;">$${state.cart.vatAmount}</td>
+  `;
+  fragment.appendChild(vatRow);
+
+  const totalRow = document.createElement('tr');
+  totalRow.innerHTML = `
+    <td colspan="4" style="text-align: right; font-weight: bold;">Total:</td>
+    <td style="text-align: right; font-weight: bold;">$${state.cart.totalPriceWithVat}</td>
+  `;
+  fragment.appendChild(totalRow);
+
+  return fragment;
+}
+
+function updateCartDisplayReadOnly() {
+  const cartContainer = document.getElementById('cart-container');
+  cartContainer.innerHTML = '';
+
+  if (state.items.length === 0) {
+    cartContainer.innerHTML = '<tr><td colspan="5" style="text-align: center;">You dont have active order</td></tr>';
+    elements.orderForm.style.display = 'none';
+    return;
+  }
+
+  state.items.forEach((item) => {
+    cartContainer.appendChild(renderCartItemReadOnly(item));
+  });
+
+  cartContainer.appendChild(renderCartTotalRowReadOnly());
 }
