@@ -19,6 +19,8 @@ const EmailController = require("../controllers/emailController");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const AppConfigService = require("../services/appConfigService");
 const AppConfigController = require("../controllers/appConfigController");
+const ReportService = require("../services/reportService");
+const ReportController = require("../controllers/reportController");
 const Logger = require("./logger");
 
 const entitySchemaCollection = loadEntitySchemas("admin");
@@ -36,6 +38,8 @@ const orderService = new OrderService(emailService);
 const orderController = new OrderController(orderService, authService);
 const exportService = new ExportService(crudService);
 const exportController = new ExportController(exportService);
+const reportService = new ReportService();
+const reportController = new ReportController(reportService);
 
 const routeTable = {
   get: {
@@ -67,6 +71,7 @@ const routeTable = {
     "/api/products/:id/images": productController.uploadImages,
     "/api-back/orders": orderController.createOrderByStaff,
     '/api/products/upload': productController.uploadProducts,
+    "/api/reports/orders-by-user": reportController.getOrdersByUserReport,
   },
   put: {
     "/crud/:entity/:id": crudController.update,

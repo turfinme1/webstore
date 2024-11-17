@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orders Report by User</title>
+    <script defer src="/report-order-by-user.js"></script>
+</head>
+<body>
+    <h1>Orders Report by User</h1>
+    <form id="report-form">
+        <label for="user_name">User Name:</label>
+        <input type="text" id="user_name" name="user_name"><br><br>
+
+        <label for="user_id">User ID:</label>
+        <input type="number" id="user_id" name="user_id"><br><br>
+
+        <label for="order_total_min">Order Total Min:</label>
+        <input type="number" id="order_total_min" name="order_total_min" step="0.01"><br><br>
+
+        <label for="order_total_max">Order Total Max:</label>
+        <input type="number" id="order_total_max" name="order_total_max" step="0.01"><br><br>
+
+        <button type="submit">Generate Report</button>
+    </form>
+
+    <h2>Report Results:</h2>
+    <table id="report-table">
+        <thead>
+            <tr>
+                <th>User Name</th>
+                <th>User ID</th>
+                <th>Orders Last Day</th>
+                <th>Total Last Day</th>
+                <th>Orders Last Week</th>
+                <th>Total Last Week</th>
+                <th>Orders Last Month</th>
+                <th>Total Last Month</th>
+                <th>Orders Last Year</th>
+                <th>Total Last Year</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Report data will be inserted here -->
+        </tbody>
+    </table>
+</body>
+</html>
