@@ -96,15 +96,6 @@ class CrudService {
       data.query.pageSize,
       offset,
     ]);
-
-    if(data.params.entity === 'orders' && data.query?.groupParams?.length === 0) {
-      const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
-      const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
-
-      for (const element of result.rows) {
-        element.total_price_with_vat = (parseFloat(element.total_price) * (1 + vatPercentage / 100)).toFixed(2);
-      }
-    }
     
     return {
       result: result.rows,
