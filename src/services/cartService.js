@@ -81,11 +81,28 @@ class CartService {
       ORDER BY ci.created_at`,
       [cart.id]
     );
+    
+    const cartTotalPriceResult = await data.dbConnection.query(`
+      WITH vat AS (
+        SELECT vat_percentage FROM app_settings LIMIT 1
+      )
+      SELECT
+        vat.vat_percentage,
+        SUM(ci.total_price) AS total_price,
+        ROUND(SUM(ci.total_price) * vat.vat_percentage / 100, 2) AS vat_amount,
+        ROUND(SUM(ci.total_price) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat
+      FROM cart_items ci, vat
+      WHERE ci.cart_id = $1
+      GROUP BY vat.vat_percentage`,
+      [cart.id]
+    );
 
-    const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
-    const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
+    const vatPercentage = cartTotalPriceResult.rows[0]?.vat_percentage || 0;
+    const totalPrice = cartTotalPriceResult.rows[0]?.total_price || 0;
+    const totalPriceWithVat = cartTotalPriceResult.rows[0]?.total_price_with_vat || 0;
+    const vatAmount = cartTotalPriceResult.rows[0]?.vat_amount || 0;
 
-    return { cart, items: cartItemsResult.rows, vatPercentage };
+    return { cart, items: cartItemsResult.rows, vatPercentage, totalPrice, vatAmount, totalPriceWithVat };
   }
 
   async updateItem(data) {

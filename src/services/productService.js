@@ -78,13 +78,6 @@ class ProductService {
     const totalCount = await data.dbConnection.query(`SELECT COUNT(*) FROM ${schema.views} ${combinedConditions}`, searchValues); 
     const result = await data.dbConnection.query(query, [...searchValues, data.query.pageSize , offset]);
 
-    const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
-    const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
-
-    for (const product of result.rows) {
-      product.price_with_vat = (parseFloat(product.price) * (1 + vatPercentage / 100)).toFixed(2);
-    }
-
     return { result: result.rows, count: totalCount.rows[0].count };
   }
 

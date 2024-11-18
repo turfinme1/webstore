@@ -1,7 +1,10 @@
+const cron = require("node-cron");
 const pool = require("../database/dbConfig");
 const { UserError } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
+const { checkPendingPayments } = require("./cronJobs");
 
+const paypalClient = require("./paypalClient");
 const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
 const ProductService = require("../services/productService");
@@ -26,7 +29,7 @@ const productService = new ProductService();
 const productController = new ProductController(productService);
 const cartService = new CartService();
 const cartController = new CartController(cartService);
-const orderService = new OrderService(emailService);
+const orderService = new OrderService(emailService, paypalClient);
 const orderController = new OrderController(orderService);
 
 const routeTable = {
@@ -41,8 +44,9 @@ const routeTable = {
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
     "/api/cart": cartController.getCart,
-    "/api/orders": orderController.getOrders,
     "/api/orders/:orderId": orderController.getOrder,
+    "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
+    "/api/paypal/cancel/:orderId": orderController.cancelPaypalPayment,
   },
   post: {
     "/auth/register": authController.register,
@@ -53,7 +57,6 @@ const routeTable = {
     "/api/products/:id/ratings": productController.createRating,
     "/api/cart": cartController.updateItem,
     "/api/orders": orderController.createOrder,
-    "/api/orders/complete": orderController.completeOrder,
   },
   put: {
     "/auth/profile": authController.updateProfile,
@@ -134,6 +137,10 @@ async function sessionMiddleware(req, res) {
 
   req.session = anonymousSession;
 }
+
+cron.schedule("*/10 * * * *", async () => {
+  await checkPendingPayments(pool, paypalClient, orderService);
+});
 
 process.on('uncaughtException', async (error) => {
   try {

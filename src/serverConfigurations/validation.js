@@ -1,6 +1,6 @@
 const { default: Ajv } = require("ajv");
 const { ASSERT_USER } = require("./assert");
-const STATUS_CODES = require("./constants");
+const { STATUS_CODES }  = require("./constants");
 
 function validateQueryParams(req, schema) { 
   ASSERT_USER(schema, "Invalid query parameters", { code: STATUS_CODES.INVALID_QUERY_PARAMS, long_description: "Invalid query parameters" });

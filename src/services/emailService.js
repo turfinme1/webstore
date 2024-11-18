@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
-const STATUS_CODES = require("../serverConfigurations/constants");
+const { STATUS_CODES }  = require("../serverConfigurations/constants");
 
 const transporter = nodemailer.createTransport({
   host: "localhost",
@@ -65,9 +65,6 @@ class EmailService {
     const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
     const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
     const vatRate = vatPercentage / 100;
-    const subtotal = data.cartItems.reduce((sum, item) => sum + parseFloat(item.total_price), 0);
-    const vatAmount = Math.floor((subtotal * vatRate) * 100) / 100;
-    const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
 
     let orderTable = `
       <table style="border-collapse: collapse; width: 100%; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">
@@ -96,15 +93,15 @@ class EmailService {
     orderTable += `
       <tr>
         <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Subtotal:</td>
-        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(subtotal.toFixed(2))}</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price)}</td>
       </tr>
       <tr>
         <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">VAT (${(vatRate * 100).toFixed(2)}%):</td>
-        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(vatAmount)}</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(parseFloat(data.order.total_price_with_vat)-parseFloat(data.order.total_price))}</td>
       </tr>
       <tr>
         <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Total:</td>
-        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(totalPriceWithVAT)}</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price_with_vat)}</td>
       </tr>
     `;
 
@@ -153,9 +150,6 @@ class EmailService {
     const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
     const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
     const vatRate = vatPercentage / 100;
-    const subtotal = parseFloat(data.order.total_price);
-    const vatAmount = Math.floor((subtotal * vatRate) * 100) / 100;
-    const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
 
     let orderTable = `
       <table style="border-collapse: collapse; width: 100%; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">
@@ -173,7 +167,7 @@ class EmailService {
     data.orderItems.forEach((item) => {
       orderTable += `
         <tr>
-          <td style="padding: 8px; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">${item.product_name}</td>
+          <td style="padding: 8px; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">${item.name}</td>
           <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">${item.quantity}</td>
           <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">${this.formatCurrency(item.unit_price)}</td>
           <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color};">${this.formatCurrency(item.total_price)}</td>
@@ -184,15 +178,15 @@ class EmailService {
     orderTable += `
       <tr>
         <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Subtotal:</td>
-        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(subtotal.toFixed(2))}</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price)}</td>
       </tr>
       <tr>
         <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">VAT (${(vatRate * 100).toFixed(2)}%):</td>
-        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(vatAmount)}</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(parseFloat(data.order.total_price_with_vat)-parseFloat(data.order.total_price))}</td>
       </tr>
       <tr>
         <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Total:</td>
-        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(totalPriceWithVAT)}</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price_with_vat)}</td>
       </tr>
     `;
 
@@ -295,7 +289,6 @@ class EmailService {
     }
     return `$${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(number)).replace(',', '.')}`;
   }
-  
 }
 
 module.exports = { EmailService, transporter };

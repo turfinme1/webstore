@@ -3,11 +3,9 @@ import { createNavigation } from "./navigation.js";
 
 // Centralized state for the cart
 const state = {
-  cart_id: null,
-  items: [],
-  total: 0,
   userStatus: null,
-  vatPercentage: 0,
+  cart: null,
+  items: [],
 };
 
 // DOM elements
@@ -22,11 +20,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   state.userStatus = await getUserStatus();
   createNavigation(state.userStatus);
   await attachLogoutHandler();
-  const cart = await getCartItems();
-  state.items = cart.items;
-  state.cart_id = cart.cart_id;
-  state.vatPercentage = cart.vatPercentage;
-  state.total = parseFloat(cart.items.reduce((sum, item) => sum + parseFloat(item.total_price), 0).toFixed(2));
+  const cartData = await getCartItems();
+  state.items = cartData.items;
+  state.cart = cartData;
   updateCartDisplay(state);
   attachEventListeners();
 });
@@ -56,11 +52,10 @@ async function updateCartItemQuantity(productId, newQuantity) {
   try {
     await updateCartItem(productId, newQuantity);
     
-    const cart = await getCartItems();
-    state.items = cart.items;
-    state.cart_id = cart.cart_id;
-    state.total = parseFloat(cart.items.reduce((sum, item) => sum + parseFloat(item.total_price), 0).toFixed(2));
-    state.vatPercentage = cart.vatPercentage;
+    const cartData = await getCartItems();
+    state.items = cartData.items;
+    state.cart = cartData;
+
     updateCartDisplay(state);
   } catch (error) {
     console.error('Error updating cart item:', error);
@@ -71,11 +66,11 @@ async function updateCartItemQuantity(productId, newQuantity) {
 async function removeItemFromCart(itemId) {
   try {
     await removeCartItem(itemId);
-    const cart = await getCartItems();
-    state.items = cart.items;
-    state.cart_id = cart.cart_id;
-    state.total = parseFloat(cart.items.reduce((sum, item) => sum + parseFloat(item.total_price), 0).toFixed(2));
-    state.vatPercentage = cart.vatPercentage;
+
+    const cartData = await getCartItems();
+    state.items = cartData.items;
+    state.cart = cartData;
+
     updateCartDisplay(state);
   } catch (error) {
     console.error('Error removing cart item:', error);
@@ -92,18 +87,8 @@ async function handleCheckout() {
       return;
     }
 
-    // Proceed with checkout if authenticated
-    const response = await fetch('/api/orders', {
-      method: 'POST',
-    });
+    window.location.href = '/order';
 
-    if (response.ok) {
-      window.location.href = '/order'; 
-    } else {
-      const data = await response.json();
-      alert(`Checkout failed: ${data.error}`);
-      window.location.reload();
-    }
   } catch (error) {
     console.log(error);
     alert(`Checkout failed`);
@@ -163,18 +148,13 @@ function renderCartItem(item) {
 }
 
 function renderCartTotalRow() {
-  const vatRate = state.vatPercentage / 100;
-  const subtotal = state.total;
-  const vatAmount = Math.floor((subtotal * vatRate) * 100) / 100;
-  const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
-
   const fragment = document.createDocumentFragment();
 
   const subtotalRow = document.createElement('tr');
   subtotalRow.classList.add('cart-subtotal');
   subtotalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Subtotal:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${subtotal.toFixed(2)}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPrice}</td>
     <td></td>
   `;
   fragment.appendChild(subtotalRow);
@@ -182,8 +162,8 @@ function renderCartTotalRow() {
   const vatRow = document.createElement('tr');
   vatRow.classList.add('cart-vat');
   vatRow.innerHTML = `
-    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">VAT (${(vatRate * 100).toFixed(2)}%):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${vatAmount}</td>
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">VAT (${state.cart.vatPercentage}%):</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.vatAmount}</td>
     <td></td>
   `;
   fragment.appendChild(vatRow);
@@ -192,7 +172,7 @@ function renderCartTotalRow() {
   totalRow.classList.add('cart-total');
   totalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${totalPriceWithVAT}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPriceWithVat}</td>
     <td></td>
   `;
   fragment.appendChild(totalRow);
@@ -215,7 +195,7 @@ function updateCartDisplay(state) {
     return;
   }
   elements.checkoutButton.disabled = false;
-  cartContainer.appendChild(renderCartTotalRow(state.total));
+  cartContainer.appendChild(renderCartTotalRow());
 
   for (const item of state.items) {
     if (parseInt(item.quantity) === 1) {

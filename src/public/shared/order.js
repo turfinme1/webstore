@@ -1,34 +1,66 @@
 import { getUserStatus, attachLogoutHandler } from "./auth.js";
 import { createNavigation } from "./navigation.js";
 
-// Centralized state for the order page
 const state = {
   userStatus: null,
+  paymentOrderId: null,
+  cart: null,
+  items: [],
 };
 
-// DOM elements
 const elements = {
   orderForm: document.getElementById("order-form"),
-  submitOrderButton: document.getElementById("submit-order-btn"),
+  paypalButton: document.getElementById("pay-with-paypal"),
+  spinner: null,
 };
 
-// Initialize order page and attach event listeners
 document.addEventListener("DOMContentLoaded", async () => {
-  state.userStatus = await getUserStatus();
-  createNavigation(state.userStatus);
-  await attachLogoutHandler();
+  try {
+    state.userStatus = await getUserStatus();
+    createNavigation(state.userStatus, document.getElementById("navigation-container"));
+    attachLogoutHandler();
 
-  renderOrderForm(elements.orderForm);
-  attachEventListeners();
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get("orderId");
+    state.paymentOrderId = orderId;
+
+    const cartData = await getCartItems();
+    state.items = cartData.items;
+    state.cart = cartData;
+    updateCartDisplayReadOnly();
+
+    renderOrderForm(elements.orderForm);
+    await attachEventListeners();
+  } catch (error) {
+    console.error("Error loading order:", error);
+    alert("Failed to load order");
+  }
 });
 
-// Attach event listeners
-function attachEventListeners() {
-  elements.orderForm.addEventListener("submit", handleOrderSubmit);
+function togglePayButton() {
+  const country = document.getElementById("country").value;
+  const street = document.getElementById("street").value;
+  const city = document.getElementById("city").value;
+  const payButton = document.getElementById("pay-with-paypal");
+
+  const isValid = country && street && city && /^[a-zA-Z0-9 .\\-]+$/.test(street) && /^[a-zA-Z0-9 .\\-]+$/.test(city);
+  payButton.disabled = !isValid;
 }
 
-// Handle order submission
-async function handleOrderSubmit(event) {
+async function attachEventListeners() {
+  // Attach input event listeners to address fields
+  const addressFields = ["country", "street", "city"].map(id => document.getElementById(id));
+  addressFields.forEach(field => field.addEventListener("input", togglePayButton));
+
+  // Attach click handler to the Pay with PayPal button
+  const payButton = document.getElementById("pay-with-paypal");
+  payButton.addEventListener("click", handlePayWithPayPal);
+
+  // Initial toggle for the button
+  togglePayButton();
+}
+
+async function handlePayWithPayPal(event) {
   event.preventDefault();
 
   if (state.userStatus.session_type !== "Authenticated") {
@@ -36,43 +68,38 @@ async function handleOrderSubmit(event) {
     return;
   }
 
-  // Gather address and payment details from the form
   const addressData = {
     country_id: document.getElementById("country").value,
     street: document.getElementById("street").value,
     city: document.getElementById("city").value,
   };
 
-  // const paymentData = {
-  //   card_number: document.getElementById("card-number").value,
-  //   expiry_date: document.getElementById("expiry-date").value,
-  //   cvv: document.getElementById("cvv").value,
-  // };
-
-  // Proceed with submitting the order
   try {
-    const response = await fetch("/api/orders/complete", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+    elements.spinner.style.display = "inline-block";
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ address: addressData }),
     });
 
-    if (response.ok) {
-      alert("Order placed successfully!");
-      window.location.href = "/index";
-    } else {
+   elements.spinner.style.display = "none";
+    if (!response.ok) {
       const data = await response.json();
       alert(`Order failed: ${data.error}`);
+      return;
     }
+    const data = await response.json();
+
+    alert("Navigating to PayPal for payment...");
+
+    window.location.href = data.approvalUrl;
   } catch (error) {
+    elements.spinner.style.display = "none";
     console.error("Error placing order:", error);
     alert("Order failed.");
   }
 }
 
-// Renders the combined address and payment form
 function renderOrderForm(container) {
   const formHTML = `
     <h3>Address Information</h3>
@@ -82,21 +109,26 @@ function renderOrderForm(container) {
     </div>
     <div>
       <label for="street">Street</label>
-      <input type="text" id="street" class="form-control" required />
+      <input type="text" id="street" class="form-control" required pattern="^[a-zA-Z0-9 .\\-]+$"/>
     </div>
     <div>
       <label for="city">City</label>
-      <input type="text" id="city" class="form-control" required />
+      <input type="text" id="city" class="form-control" required pattern="^[a-zA-Z0-9 .\\-]+$"/>
     </div>
 
-    <button type="submit" class="btn btn-primary mt-3">Submit Order</button>
+    <div class="d-flex justify-content-start align-items-center mb-3 gap-3 mt-3">
+      <button id="pay-with-paypal" class="btn btn-primary" disabled>Pay with PayPal</button>
+      <div id="spinner" class="spinner-border text-primary" role="status" style="display: none;">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
   `;
 
   container.innerHTML = formHTML;
+  elements.spinner = document.getElementById("spinner");
   populateCountryDropdown();
 }
 
-// Populate the country dropdown with data from the server
 async function populateCountryDropdown() {
   const countrySelect = document.getElementById("country");
   const countries = await getCountries();
@@ -109,9 +141,74 @@ async function populateCountryDropdown() {
   });
 }
 
-// Fetch countries from the server
 async function getCountries() {
   const response = await fetch("/crud/iso-country-codes");
   if (!response.ok) throw new Error("Failed to fetch countries");
   return await response.json();
+}
+
+async function getCartItems() {
+  const response = await fetch('/api/cart');
+  if (!response.ok) throw new Error('Failed to fetch cart items');
+  return await response.json();
+}
+
+function renderCartItemReadOnly(item) {
+  const itemRow = document.createElement('tr');
+  itemRow.classList.add('cart-item');
+  itemRow.innerHTML = `
+    <td style="vertical-align: middle;">
+      <img src="${item.product_image}" alt="${item.product_name}" class="img-fluid" style="width: 100px; height: auto; margin-right: 10px;" />
+      ${item.product_name}
+    </td>
+    <td style="vertical-align: middle;">${item.product_code}</td>
+    <td style="vertical-align: middle; text-align: center;">${item.quantity}</td>
+    <td style="vertical-align: middle; text-align: right;">$${item.unit_price}</td>
+    <td style="vertical-align: middle; text-align: right;">$${item.total_price}</td>
+  `;
+  return itemRow;
+}
+
+function renderCartTotalRowReadOnly() {
+  const fragment = document.createDocumentFragment();
+
+  const subtotalRow = document.createElement('tr');
+  subtotalRow.innerHTML = `
+    <td colspan="4" style="text-align: right; font-weight: bold;">Subtotal:</td>
+    <td style="text-align: right; font-weight: bold;">$${state.cart.totalPrice}</td>
+  `;
+  fragment.appendChild(subtotalRow);
+
+  const vatRow = document.createElement('tr');
+  vatRow.innerHTML = `
+    <td colspan="4" style="text-align: right; font-weight: bold;">VAT (${state.cart.vatPercentage}%):</td>
+    <td style="text-align: right; font-weight: bold;">$${state.cart.vatAmount}</td>
+  `;
+  fragment.appendChild(vatRow);
+
+  const totalRow = document.createElement('tr');
+  totalRow.innerHTML = `
+    <td colspan="4" style="text-align: right; font-weight: bold;">Total:</td>
+    <td style="text-align: right; font-weight: bold;">$${state.cart.totalPriceWithVat}</td>
+  `;
+  fragment.appendChild(totalRow);
+
+  return fragment;
+}
+
+function updateCartDisplayReadOnly() {
+  const cartContainer = document.getElementById('cart-container');
+  cartContainer.innerHTML = '';
+
+  if (state.items.length === 0) {
+    cartContainer.innerHTML = '<tr><td colspan="5" style="text-align: center;">You dont have active order</td></tr>';
+    elements.orderForm.style.display = 'none';
+    return;
+  }
+
+  state.items.forEach((item) => {
+    cartContainer.appendChild(renderCartItemReadOnly(item));
+  });
+
+  cartContainer.appendChild(renderCartTotalRowReadOnly());
 }

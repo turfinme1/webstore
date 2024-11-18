@@ -1,30 +1,48 @@
-const { ASSERT_USER } = require("../serverConfigurations/assert");
-const STATUS_CODES = require("../serverConfigurations/constants");
+const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
+const {STATUS_CODES, ENV} = require("../serverConfigurations/constants");
+const paypal = require("@paypal/checkout-server-sdk");
 
 class OrderService {
-  constructor(emailService) {
+  constructor(emailService, paypalClient) {
     this.emailService = emailService;
+    this.paypalClient = paypalClient;
     this.createOrder = this.createOrder.bind(this);
     this.createOrderByStaff = this.createOrderByStaff.bind(this);
     this.updateOrderByStaff = this.updateOrderByStaff.bind(this);
     this.getOrder = this.getOrder.bind(this);
-    this.completeOrder = this.completeOrder.bind(this);
+    this.capturePaypalPayment = this.capturePaypalPayment.bind(this);
+    this.cancelPaypalPayment = this.cancelPaypalPayment.bind(this);
     this.verifyCartPricesAreUpToDate = this.verifyCartPricesAreUpToDate.bind(this);
     this.deleteOrder = this.deleteOrder.bind(this);
   }
   
   async createOrder(data) {
     await this.verifyCartPricesAreUpToDate(data);
+
+    const addressResult = await data.dbConnection.query(
+      `
+      INSERT INTO addresses (user_id, street, city, country_id) 
+      VALUES ($1, $2, $3, $4) 
+      RETURNING id`,
+      [
+        data.session.user_id,
+        data.body.address.street,
+        data.body.address.city,
+        data.body.address.country_id,
+      ]
+    );
+    const shippingAddressId = addressResult.rows[0].id;
+
     const orderResult = await data.dbConnection.query(
       `
-      INSERT INTO orders (user_id, status, total_price) 
-      VALUES ($1, 'Pending', 
+      INSERT INTO orders (user_id, status, shipping_address_id, total_price) 
+      VALUES ($1, 'Pending', $2,
           (SELECT SUM(ci.quantity * p.price) 
               FROM cart_items ci 
               JOIN products p ON ci.product_id = p.id 
               WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE))) 
       RETURNING *`,
-      [data.session.user_id]
+      [data.session.user_id, shippingAddressId]
     );
     const order = orderResult.rows[0];
 
@@ -37,7 +55,6 @@ class OrderService {
       [data.session.user_id]
     );
     const cartItems = cartResult.rows;
-
     ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", { code: STATUS_CODES.INVALID_INPUT, long_description: "Cart is empty" });
 
     for (const item of cartItems) {
@@ -74,9 +91,46 @@ class OrderService {
       [data.session.user_id]
     );
 
-    const emailObject = { ...data, order, cartItems };
+    const orderViewResult = await data.dbConnection.query(`
+      SELECT * FROM orders_view WHERE id = $1`,
+      [order.id]
+    );
+    const orderView = orderViewResult.rows[0];
+
+    const request = new paypal.orders.OrdersCreateRequest();
+    request.prefer("return=representation");
+    request.requestBody({
+      intent: "CAPTURE",
+      purchase_units: [
+        {
+          amount: {
+            currency_code: "USD",
+            value: orderView.total_price_with_vat,
+          },
+        },
+      ],
+      application_context: {
+        return_url: `${ENV.DEVELOPMENT_URL}/api/paypal/capture/${order.id}`,
+        cancel_url: `${ENV.DEVELOPMENT_URL}/api/paypal/cancel/${order.id}`,
+        shipping_preference: 'NO_SHIPPING',
+        user_action: 'PAY_NOW'
+      }
+    });
+    
+    const paypalOrder = await this.paypalClient.execute(request);
+    const approvalUrl = paypalOrder.result.links.find(link => link.rel === "approve").href;
+
+    const paymentResult = await data.dbConnection.query(
+      `INSERT INTO payments (order_id, payment_provider, provider_payment_id, status)
+      VALUES ($1, 'PayPal', $2, 'Pending')
+      RETURNING *`,
+      [order.id, paypalOrder.result.id]
+    );
+
+    const emailObject = { ...data, order: orderView, cartItems };
     await this.emailService.sendOrderCreatedConfirmationEmail(emailObject);
-    return { order, message: "Order placed successfully" };
+
+    return { approvalUrl, paypalOrder, message: "Order placed successfully" };
   }
   
   async createOrderByStaff(data){
@@ -255,13 +309,8 @@ class OrderService {
   async getOrder(data) {
     const orderResult = await data.dbConnection.query(
       `
-      SELECT o.*, 
-        a.street AS shipping_address, a.city AS shipping_city, c.name AS country_name,
-        pm.method AS payment_method
+      SELECT o.*
       FROM orders o
-      LEFT JOIN addresses a ON o.shipping_address_id = a.id
-      LEFT JOIN iso_country_codes c ON a.country_id = c.id
-      LEFT JOIN payment_methods pm ON o.payment_method_id = pm.id
       WHERE o.id = $1 AND o.user_id = $2`,
       [data.params.orderId, data.session.user_id]
     );
@@ -284,86 +333,73 @@ class OrderService {
     return { order, items: orderItemsResult.rows };
   }
 
-  async completeOrder(data) {
-    // Create or insert address for the order
-    const addressResult = await data.dbConnection.query(
-      `
-    INSERT INTO addresses (user_id, street, city, country_id) 
-    VALUES ($1, $2, $3, $4) 
-    RETURNING id`,
-      [
-        data.session.user_id,
-        data.body.address.street,
-        data.body.address.city,
-        data.body.address.country_id,
-      ]
+  async capturePaypalPayment(data) {
+    const request = new paypal.orders.OrdersCaptureRequest(data.query.token);
+    
+    const orderViewResult = await data.dbConnection.query(`
+      SELECT * FROM orders_view WHERE id = (SELECT order_id FROM payments WHERE provider_payment_id = $1 LIMIT 1)`,
+      [data.query.token]
     );
-    const shippingAddressId = addressResult.rows[0].id;
+    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    const order = orderViewResult.rows[0];
+    
+    const paymentResult = await data.dbConnection.query(`
+      UPDATE payments
+      SET status = 'Paid', payment_provider = 'PayPal', paid_amount = $1
+      WHERE provider_payment_id = $2
+      RETURNING *`,
+      [order.total_price_with_vat, data.query.token]
+    );
+    ASSERT_USER(paymentResult.rows.length > 0, "Payment not found", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment not found" });
 
-    // Update the order with the shipping address
-    await data.dbConnection.query(
-      `
-    UPDATE orders 
-    SET shipping_address_id = $1 
-    WHERE user_id = $2 AND status = 'Pending'`,
-      [shippingAddressId, data.session.user_id]
+    const payment = paymentResult.rows[0];
+    
+    await data.dbConnection.query(`
+      UPDATE orders
+      SET status = 'Paid', paid_amount = $1
+      WHERE id = $2`,
+      [order.total_price_with_vat, order.id]
     );
     
-    // Check if order exists
-    const orderResult = await data.dbConnection.query(
-      `
-    SELECT * 
-    FROM orders 
-    WHERE user_id = $1 AND status = 'Pending'`,
-      [data.session.user_id]
-    );
-    ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
-    const order = orderResult.rows[0];
+    const capture = await this.paypalClient.execute(request);
+    ASSERT(capture.result.status === "COMPLETED", "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
+    // await data.dbConnection.query("COMMIT");
+    
+    const emailObject = { ...data, orderItems: order.order_items, order: order, paymentNumber: payment.payment_hash };
+    await this.emailService.sendOrderPaidConfirmationEmail(emailObject);
+    return { message: "Payment completed successfully" };
+  }
 
-    const orderItemsResult = await data.dbConnection.query(`
-      SELECT oi.*, p.name AS product_name
-      FROM order_items oi
-      JOIN products p ON oi.product_id = p.id
-      WHERE order_id = $1`,
+  async cancelPaypalPayment(data) {
+    const paymentResult = await data.dbConnection.query(`
+      SELECT * FROM payments WHERE provider_payment_id = $1`,
+      [data.query.token]
+    );
+    ASSERT_USER(paymentResult.rows.length === 1, "Payment not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Payment not found" });
+    ASSERT_USER(paymentResult.rows[0].status === "Pending", "Payment status cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Payment status cannot be changed" });
+
+    const orderViewResult = await data.dbConnection.query(`
+      SELECT * FROM orders_view WHERE id = (SELECT order_id FROM payments WHERE provider_payment_id = $1 LIMIT 1)`,
+      [data.query.token]
+    );
+    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    const order = orderViewResult.rows[0];
+
+    await data.dbConnection.query(`
+      UPDATE orders
+      SET status = 'Cancelled'
+      WHERE id = $1`,
       [order.id]
     );
-    const orderItems = orderItemsResult.rows;
 
-    const paymentResult = await fetch("http://10.20.3.224:5002/api/payments", { 
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        client_id: data.session.user_id,
-        amount: order.total_price,
-      }),
-    });
-
-    ASSERT_USER(paymentResult.ok, "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
-    const paymentData = await paymentResult.json();
-
-    // Update the order status to 'Complete'
-    const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
-    const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
-    const vatRate = vatPercentage / 100;
-    const subtotal = parseFloat(order.total_price);
-    const vatAmount = Math.floor((subtotal * vatRate) * 100) / 100;
-    const totalPriceWithVAT = (subtotal + parseFloat(vatAmount)).toFixed(2);
-
-    await data.dbConnection.query(
-      `
-      UPDATE orders 
-      SET status = 'Paid', paid_amount = $1
-      WHERE user_id = $2 AND status = 'Pending'`,
-      [totalPriceWithVAT, data.session.user_id]
+    await data.dbConnection.query(`
+      UPDATE payments
+      SET status = 'Expired'
+      WHERE provider_payment_id = $1`,
+      [data.query.token]
     );
 
-    const emailObject = { ...data, orderItems, order: order, paymentNumber: paymentData.payment_number };
-    await this.emailService.sendOrderPaidConfirmationEmail(emailObject);
-    
-    await data.dbConnection.query("COMMIT");
-    return { message: "Order completed successfully" };
+    return { message: "Payment cancelled successfully" };
   }
 
   async verifyCartPricesAreUpToDate(data) {

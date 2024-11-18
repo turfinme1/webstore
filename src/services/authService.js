@@ -2,7 +2,7 @@ const bcrypt = require("bcrypt");
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
 const { createCanvas } = require('canvas');
 const { Readable } = require("nodemailer/lib/xoauth2");
-const STATUS_CODES = require("../serverConfigurations/constants");
+const { STATUS_CODES }  = require("../serverConfigurations/constants");
 
 class AuthService {
   constructor(mailService) {

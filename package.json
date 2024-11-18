@@ -12,6 +12,7 @@
   "author": "Borislav Angelov",
   "license": "ISC",
   "dependencies": {
+    "@paypal/checkout-server-sdk": "^1.0.3",
     "ajv": "^8.17.1",
     "bcrypt": "^5.1.1",
     "busboy": "^1.6.0",

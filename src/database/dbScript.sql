@@ -235,8 +235,21 @@ CREATE TABLE orders (
     paid_amount NUMERIC(12, 2) NULL CHECK (paid_amount >= 0),
     total_price NUMERIC(12, 2) NOT NULL CHECK (total_price >= 0),
     shipping_address_id BIGINT NULL REFERENCES addresses(id),
+    payment_id BIGINT NULL REFERENCES payments(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+ALTER TABLE orders ADD COLUMN payment_id BIGINT NULL REFERENCES payments(id);
+
+CREATE TABLE payments (
+    id BIGSERIAL PRIMARY KEY,
+    payment_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    order_id BIGINT UNIQUE NOT NULL REFERENCES orders(id),
+    payment_provider TEXT NULL CHECK (payment_provider IN ('PayPal', 'Bobi')),
+    provider_payment_id TEXT NOT NULL,
+    paid_amount NUMERIC(12, 2) NULL CHECK (paid_amount >= 0),
+    status TEXT NOT NULL CHECK (status IN ('Pending', 'Paid', 'Failed', 'Expired')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE order_items (
@@ -249,7 +262,26 @@ CREATE TABLE order_items (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE VIEW orders_view AS
+CREATE OR REPLACE VIEW orders_view AS
+WITH vat AS (
+    SELECT vat_percentage FROM app_settings LIMIT 1
+),
+order_items_agg AS (
+    SELECT
+        oi.order_id,
+        json_agg(
+            json_build_object(
+                'product_id', oi.product_id,
+                'name', p.name,
+                'quantity', oi.quantity,
+                'unit_price', oi.unit_price,
+                'total_price', oi.total_price
+            )
+        ) AS order_items
+    FROM order_items oi
+    JOIN products p ON oi.product_id = p.id
+    GROUP BY oi.order_id
+)
 SELECT
     o.id,
     o.order_hash,
@@ -257,6 +289,7 @@ SELECT
     u.email,
     o.status,
     o.total_price,
+    ROUND(o.total_price * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
     o.paid_amount,
     o.is_active,
     o.created_at,
@@ -267,25 +300,14 @@ SELECT
         'country_id', a.country_id,
         'country_name', c.country_name
     ) AS shipping_address,
-    (
-        SELECT json_agg(
-            json_build_object(
-                'product_id', oi.product_id,
-                'name', p.name,
-                'quantity', oi.quantity,
-                'unit_price', oi.unit_price,
-                'total_price', oi.total_price
-            )
-        )
-        FROM order_items oi
-        JOIN products p ON oi.product_id = p.id
-        WHERE oi.order_id = o.id
-    ) AS order_items
+    oi_agg.order_items
 FROM
     orders o
+CROSS JOIN vat
 LEFT JOIN addresses a ON o.shipping_address_id = a.id
 LEFT JOIN iso_country_codes c ON a.country_id = c.id
-LEFT JOIN users u ON o.user_id = u.id;
+LEFT JOIN users u ON o.user_id = u.id
+LEFT JOIN order_items_agg oi_agg ON o.id = oi_agg.order_id;
 
 CREATE VIEW orders_export_view AS
 SELECT
@@ -337,6 +359,9 @@ EXECUTE FUNCTION validate_status_transition();
 
 
 CREATE OR REPLACE VIEW products_view AS
+WITH vat AS (
+    SELECT vat_percentage FROM app_settings LIMIT 1
+)
 SELECT
     p.id,
     p.code,
@@ -346,14 +371,16 @@ SELECT
     p.long_description,
     ARRAY_AGG(DISTINCT i.url) AS images,
     ARRAY_AGG(DISTINCT c.name) AS categories,
-	COALESCE(AVG(r.rating), 0) AS rating,
-    COALESCE(COUNT(r.id), 0) AS rating_count 
+    COALESCE(AVG(r.rating), 0) AS rating,
+    COALESCE(COUNT(r.id), 0) AS rating_count,
+    ROUND(p.price * (1 + vat.vat_percentage / 100), 2) AS price_with_vat
 FROM products p
 LEFT JOIN images i ON p.id = i.product_id
 LEFT JOIN products_categories pc ON p.id = pc.product_id
 LEFT JOIN categories c ON pc.category_id = c.id
 LEFT JOIN ratings r ON p.id = r.product_id
-GROUP BY p.id;
+CROSS JOIN vat
+GROUP BY p.id, vat.vat_percentage;
 
 CREATE OR REPLACE VIEW country_codes_view AS
 SELECT
