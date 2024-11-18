@@ -28,4 +28,9 @@ const STATUS_CODES = {
   PERMISSION_CHANGE_SUCCESS: 27,
 };
 
-module.exports = STATUS_CODES;
+const ENV = {
+  DEVELOPMENT_URL: 'http://localhost:3000',
+  PRODUCTION_URL: 'http://localhost:3002',
+}
+
+module.exports = {STATUS_CODES, ENV};

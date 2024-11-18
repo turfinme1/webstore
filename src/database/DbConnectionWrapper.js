@@ -1,4 +1,4 @@
-const STATUS_CODES = require("../serverConfigurations/constants");
+const { STATUS_CODES }  = require("../serverConfigurations/constants");
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
 
 class DbConnectionWrapper {

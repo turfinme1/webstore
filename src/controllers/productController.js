@@ -1,7 +1,6 @@
-const STATUS_CODES = require("../serverConfigurations/constants");
+const { STATUS_CODES }  = require("../serverConfigurations/constants");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateQueryParams } = require("../serverConfigurations/validation");
-const { th } = require("@faker-js/faker");
 
 class ProductController {
   constructor(productService, authService) {
