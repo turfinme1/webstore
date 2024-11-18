@@ -8,12 +8,13 @@ class ReportService {
       order_total_minimum_filter_value: data.body.order_total_min || "0",
       order_total_maximum_filter_value: data.body.order_total_max || "9999999",
     };
+    let insertValues = [];
 
     const reportFilters = [
         {
             key: "user_name",
             grouping_expression: "U.email",
-            filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( '$FILTER_VALUE$' )) > 0",
+            filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
         },
         {
@@ -55,7 +56,10 @@ class ReportService {
             AND $user_id_filter_expression$
             AND $order_total_minimum_filter_expression$
             AND $order_total_maximum_filter_expression$
-        GROUP BY 1, 2
+        GROUP BY GROUPING SETS (
+            (1, 2),
+            ()
+        )
         ORDER BY $user_name_grouping_expression$ ASC`;
 
     for (let reportFilter of reportFilters) {
@@ -69,6 +73,7 @@ class ReportService {
             let filterExpr = reportFilter.filter_expression;
             let filterValue = INPUT_DATA[`${reportFilter.key}_filter_value`];
             let filterExprReplaced;
+            insertValues.push(filterValue);
 
             if (reportFilter.type === 'timestamp'){
                 let [beginTimestampValue, endTimestampValue] = filterValue.split('|||');
@@ -76,7 +81,7 @@ class ReportService {
                     .replace('$FILTER_VALUE_START$', beginTimestampValue)
                     .replace('$FILTER_VALUE_END$', endTimestampValue);
             } else {
-                filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', filterValue);
+                filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
             }
 
             sql = sql.replace(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
@@ -85,9 +90,8 @@ class ReportService {
         }
     }
 
-    const result = await data.dbConnection.query(sql);
+    const result = await data.dbConnection.query(sql, insertValues);
     return result.rows;
-    // return { rows: result.rows, filterSchema: reportFilters };
   }
 }
 

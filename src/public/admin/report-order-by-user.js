@@ -54,8 +54,19 @@ async function handleFilterFormSubmit(event) {
     if (response.ok) {
       const tbody = document.querySelector("#report-table tbody");
       tbody.innerHTML = "";
-      data.forEach((row) => {
+      elements.rowCount.textContent = "";
+      if (data?.length <= 1) {
+        elements.rowCount.textContent = "No rows found";
+        return;
+      }; 
+
+      for (const row of data) {
         const tr = document.createElement("tr");
+        if(row.user_name === null) {
+          row.user_name = "Totals:";
+          row.user_id = '---';
+        }
+        
         tr.innerHTML = `
                 <td>${row.user_name}</td>
                 <td style="text-align: right">${row.user_id}</td>
@@ -69,8 +80,9 @@ async function handleFilterFormSubmit(event) {
                 <td style="text-align: right">${formatCurrency(row.total_last_year)}</td>
             `;
         tbody.appendChild(tr);
-      });
-      elements.rowCount.textContent = `Showing ${data.length} rows`;
+      };
+
+      elements.rowCount.textContent = `Showing ${data.length-1} rows`;
     } else {
       alert("Error: " + data.error);
     }
