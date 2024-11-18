@@ -1,5 +1,5 @@
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
-const STATUS_CODES = require("../serverConfigurations/constants");
+const {STATUS_CODES, ENV} = require("../serverConfigurations/constants");
 const paypal = require("@paypal/checkout-server-sdk");
 
 class OrderService {
@@ -110,8 +110,8 @@ class OrderService {
         },
       ],
       application_context: {
-        return_url: `http://localhost:3000/api/paypal/capture/${order.id}`,
-        cancel_url: `http://localhost:3000/api/paypal/cancel/${order.id}`,
+        return_url: `${ENV.DEVELOPMENT_URL}/api/paypal/capture/${order.id}`,
+        cancel_url: `${ENV.DEVELOPMENT_URL}/api/paypal/cancel/${order.id}`,
         shipping_preference: 'NO_SHIPPING',
         user_action: 'PAY_NOW'
       }
