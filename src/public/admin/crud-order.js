@@ -308,7 +308,10 @@ function handleFilterOrders(event) {
     delete filterParams["total_price_max"];
   }
 
-  state.orderParams.push(["created_at","desc"])
+  const orderBy = formData.get("order_by");
+  delete filterParams["order_by"];
+  state.orderParams = [orderBy.split("-")];
+
   state.filterParams = filterParams;
   loadOrders(state.currentPage);
 }
