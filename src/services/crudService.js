@@ -1,5 +1,5 @@
 const bcrypt = require("bcrypt");
-const STATUS_CODES = require("../serverConfigurations/constants");
+const { STATUS_CODES }  = require("../serverConfigurations/constants");
 
 class CrudService {
   constructor() {

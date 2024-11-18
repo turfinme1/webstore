@@ -1,5 +1,5 @@
 const { ASSERT_USER } = require("../serverConfigurations/assert");
-const STATUS_CODES = require("../serverConfigurations/constants");
+const { STATUS_CODES }  = require("../serverConfigurations/constants");
 
 class OrderController {
     constructor(orderService, authService) {

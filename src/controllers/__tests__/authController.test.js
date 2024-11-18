@@ -1,4 +1,4 @@
-const STATUS_CODES = require("../../serverConfigurations/constants");
+const { STATUS_CODES }  = require("../../serverConfigurations/constants");
 const AuthController = require("../authController");
 
 describe("AuthController", () => {

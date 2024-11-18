@@ -1,6 +1,6 @@
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateBody } = require("../serverConfigurations/validation");
-const STATUS_CODES = require("../serverConfigurations/constants");
+const { STATUS_CODES }  = require("../serverConfigurations/constants");
 
 class AuthController {
   constructor(authService) {

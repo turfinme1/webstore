@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
-const STATUS_CODES = require("../serverConfigurations/constants");
+const { STATUS_CODES }  = require("../serverConfigurations/constants");
 
 const transporter = nodemailer.createTransport({
   host: "localhost",

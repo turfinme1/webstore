@@ -1,5 +1,5 @@
 const CrudController = require('../crudController');
-const STATUS_CODES = require('../../serverConfigurations/constants');
+const { STATUS_CODES }  = require('../../serverConfigurations/constants');
 
 jest.mock("../../serverConfigurations/assert");
 
