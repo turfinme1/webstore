@@ -6,6 +6,7 @@ const state = {
   currentPage: 1,
   pageSize: 10,
   filterParams: {},
+  orderParams: [],
   productsInOrder: [],
   countries: [],
   orderToUpdateId: null,
@@ -307,6 +308,7 @@ function handleFilterOrders(event) {
     delete filterParams["total_price_max"];
   }
 
+  state.orderParams.push(["created_at","desc"])
   state.filterParams = filterParams;
   loadOrders(state.currentPage);
 }
@@ -317,6 +319,7 @@ async function loadOrders(page) {
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(state.filterParams),
       pageSize: state.pageSize.toString(),
+      orderParams: JSON.stringify(state.orderParams),
       page: page.toString(),
     });
 
