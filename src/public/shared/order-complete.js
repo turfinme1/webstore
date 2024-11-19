@@ -67,13 +67,14 @@ function displayOrderDetails() {
   } else if(state.order.status === 'Pending') {
     elements.orderNumberDisplay.textContent = `Order Number: ${state.order.id}`;
     elements.orderTotalDisplay.textContent = `Total: $${state.order.total_price_with_vat}`;
-    elements.orderTotalDisplay.textContent = `Check your email for more information.`;
   } else if(state.order.status === 'Paid') {
     elements.orderNumberDisplay.textContent = `Order Number: ${state.order.id}`;
     elements.orderDateDisplay.textContent = `Order Date: ${new Date(
       state.order.created_at
     ).toLocaleDateString()}`;
-    // elements.orderTotalDisplay.textContent = `Total: $${state.order.total_price_with_vat}`;
-    elements.orderTotalDisplay.textContent = `Check your email for more information.`;
   }
+  elements.orderTotalDisplay.textContent = `Navigating to home page ...`;
+  setTimeout(() => {
+    window.location.href = "/index";
+  }, 5000);
 }

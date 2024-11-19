@@ -74,6 +74,15 @@
                                     <option value="Cancelled">Cancelled</option>
                                 </select>
                             </div>
+                            <div class="mb-3">
+                                <label for="order_by_filter" class="form-label">Order By</label>
+                                <select id="order_by_filter" name="order_by" class="form-select">
+                                    <option value="created_at-DESC">Created At (DESC)</option>
+                                    <option value="created_at-ASC">Created At (ASC)</option>
+                                    <option value="total_price-DESC">Total Price (DESC)</option>
+                                    <option value="total_price-ASC">Total Price (ASC)</option>
+                                </select>
+                            </div>
                             <button type="submit" class="btn btn-primary">Apply Filters</button>
                             <button type="button" class="btn btn-secondary" id="cancel-filter-btn">Cancel</button>
                         </form>
