@@ -10,8 +10,6 @@ class ExportService {
     }
 
     async exportToExcel(data) {
-        const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
-        const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
         let totalPriceWithVAT = 0;
         const parameters = this.crudService.buildFilteredPaginatedQuery(data, true);
         const dataParams = {
@@ -34,7 +32,7 @@ class ExportService {
         worksheet.addRow(['Field', 'Criteria']).commit();
         for (const [key, value] of Object.entries(parameters.appliedFilters)) {
             if (typeof value === 'object') {
-                worksheet.addRow([`${key}`, `${value.min} - ${value.max}`]).commit();
+                worksheet.addRow([`${key}`, `${value.min || "-"} - ${value.max || "-"}`]).commit();
             } else if (typeof value === 'string') {
                 worksheet.addRow([`${key}`, value]).commit();
             }
@@ -48,15 +46,15 @@ class ExportService {
 
         const rowGenerator = await this.executeQueryWithCursor(dataParams);
 
-        let headers = null;
+        let headers = [];
         for await (const rows of rowGenerator) {
             for (const row of rows) {
-                if (!headers) {
+                if ( ! headers.length) {
                     headers = Object.keys(row).filter(key => this.isPrimitive(row[key]));
-                    headers.push("total_price_with_vat");
+                    // headers.push("total_price_with_vat");
                     worksheet.addRow(headers).commit();
                 }
-                row.total_price_with_vat = (row.total_price * (1 + vatPercentage / 100)).toFixed(2);
+                // row.total_price_with_vat = (row.total_price * (1 + vatPercentage / 100)).toFixed(2);
                 totalPriceWithVAT += parseFloat(row.total_price_with_vat);
                 let rowValues = headers.map(header => row[header]);
                 
@@ -117,8 +115,6 @@ class ExportService {
     
     async* generateCsvRows(data) {
         const rowGenerator = await this.executeQueryWithCursor(data);
-        const appSettings = await data.dbConnection.query(`SELECT * FROM app_settings`);
-        const vatPercentage = parseFloat(appSettings.rows[0].vat_percentage);
         let totalPriceWithVAT = 0;
 
         let headers = null;
@@ -128,7 +124,7 @@ class ExportService {
         yield "Field,Criteria\n";
         for (const [key, value] of Object.entries(data.appliedFilters)) {
             if (typeof value === 'object') {
-                yield `${key},${value.min} - ${value.max}\n`;
+                yield `${key},${value.min || "-"} - ${value.max || "-"}\n`;
             }
             else if (typeof value === 'string') {
                 yield `${key},${value}\n`;
@@ -146,12 +142,12 @@ class ExportService {
             for (const row of rows) {
                 if (!headers) {
                     headers = Object.keys(row).filter(key => this.isPrimitive(row[key]));
-                    headers.push("total_price_with_vat");
+                    // headers.push("total_price_with_vat");
 
                     yield `${headers.join(",")}\n`;
                 }
 
-                row.total_price_with_vat = (row.total_price * (1 + vatPercentage / 100)).toFixed(2);
+                // row.total_price_with_vat = (row.total_price * (1 + vatPercentage / 100)).toFixed(2);
                 totalPriceWithVAT += parseFloat(row.total_price_with_vat);
 
                 const rowValues = Object.values(row)

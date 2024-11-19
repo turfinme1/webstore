@@ -337,28 +337,34 @@ LEFT JOIN iso_country_codes c ON a.country_id = c.id
 LEFT JOIN users u ON o.user_id = u.id
 LEFT JOIN order_items_agg oi_agg ON o.id = oi_agg.order_id;
 
-CREATE VIEW orders_export_view AS
+CREATE OR REPLACE VIEW orders_export_view AS
+WITH vat AS (
+    SELECT vat_percentage FROM app_settings LIMIT 1
+),
+largest_discount AS (
+    SELECT COALESCE(MAX(discount_percentage), 0) AS discount_percentage
+    FROM promotions
+    WHERE is_active = TRUE
+      AND NOW() BETWEEN start_date AND end_date
+)
 SELECT
-    o.id,
+    o.created_at,
+	o.id,
     o.order_hash,
-    o.user_id,
     u.email,
     o.status,
     o.total_price,
+	ld.discount_percentage,
+    ROUND(o.total_price * ld.discount_percentage / 100, 2) AS discount_amount,
+    ROUND(o.total_price * (1 - ld.discount_percentage / 100), 2) AS total_price_after_discount,
+    vat.vat_percentage,
+    ROUND(o.total_price * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
+    ROUND(o.total_price * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
     o.paid_amount,
-    o.is_active,
-    o.created_at,
-    json_build_object(
-        'id', a.id,
-        'street', a.street,
-        'city', a.city,
-        'country_id', a.country_id,
-        'country_name', c.country_name
-    ) AS shipping_address
-FROM
-    orders o
-LEFT JOIN addresses a ON o.shipping_address_id = a.id
-LEFT JOIN iso_country_codes c ON a.country_id = c.id
+    o.is_active
+FROM orders o
+CROSS JOIN vat
+CROSS JOIN largest_discount ld
 LEFT JOIN users u ON o.user_id = u.id;
 
 CREATE OR REPLACE FUNCTION validate_status_transition()

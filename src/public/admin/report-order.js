@@ -17,6 +17,10 @@ const state = {
     { key: "email", label: "User Email" },
     { key: "status", label: "Status" },
     { key: "total_price", label: "Total Price" },
+    { key: "discount_percentage", label: "Discount percentage" },
+    { key: "discount_amount", label: "Discount amount" },
+    { key: "vat_percentage", label: "VAT percentage" },
+    { key: "vat_amount", label: "VAT amount" },
     { key: "total_price_with_vat", label: "Total Price (VAT)" },
     { key: "paid_amount", label: "Paid Amount" },
     { key: "is_active", label: "Is Active" },
@@ -225,7 +229,7 @@ function renderOrderList(orders, aggregationResults) {
 
     state.columnsToDisplay.forEach(({ key }) => {
       let cellValue = order[key];
-      cellValue = cellValue && ["total_price", "paid_amount", "total_price_with_vat"].includes(key) ? formatCurrency(cellValue) : cellValue;
+      cellValue = cellValue && ["total_price", "paid_amount", "total_price_with_vat", "discount_amount", "vat_amount"].includes(key) ? formatCurrency(cellValue) : cellValue;
 
       // Handle date formatting
       if (key.includes("created_at") && cellValue) {
@@ -242,8 +246,12 @@ function renderOrderList(orders, aggregationResults) {
           }
         }
       }
+
+      if (cellValue && (key === "discount_percentage" || key === "vat_percentage")) {
+        cellValue = `${cellValue}%`;
+      }
       
-      if (key === "shipping_address" && cellValue) {
+      if (cellValue && key === "shipping_address") {
         cellValue = `${cellValue?.country_name}, ${cellValue?.city}, ${cellValue?.street}`;
       }
 
@@ -252,7 +260,7 @@ function renderOrderList(orders, aggregationResults) {
         cellValue = "---";
       }
 
-      const direction = ["count", "total_price", "paid_amount", "total_price_with_vat"].includes(key) ? "right" : "left";
+      const direction = ["count", "total_price", "paid_amount", "total_price_with_vat", "discount_amount", "vat_amount", "discount_percentage", "vat_percentage"].includes(key) ? "right" : "left";
       orderRow.appendChild(createTableCell(cellValue, direction));
     });
 
