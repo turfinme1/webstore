@@ -320,11 +320,20 @@ SELECT
     o.paid_amount,
     o.is_active,
     o.created_at,
+	json_build_object(
+        'id', a.id,
+        'street', a.street,
+        'city', a.city,
+        'country_id', a.country_id,
+        'country_name', c.country_name
+    ) AS shipping_address,
     oi_agg.order_items
 FROM
     orders o
 CROSS JOIN vat
 CROSS JOIN largest_discount ld
+LEFT JOIN addresses a ON o.shipping_address_id = a.id
+LEFT JOIN iso_country_codes c ON a.country_id = c.id
 LEFT JOIN users u ON o.user_id = u.id
 LEFT JOIN order_items_agg oi_agg ON o.id = oi_agg.order_id;
 

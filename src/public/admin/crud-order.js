@@ -353,6 +353,8 @@ function renderOrders(orders) {
     // row.appendChild(createTableCell(order.user_id));
     row.appendChild(createTableCell(order.status));
     row.appendChild(createTableCell(formatCurrency(order.total_price), "right"));
+    row.appendChild(createTableCell(`${order.discount_percentage}%`, "right"));
+    row.appendChild(createTableCell(formatCurrency(order.discount_amount), "right"));
     row.appendChild(createTableCell(formatCurrency(order.total_price_with_vat), "right"));
     row.appendChild(createTableCell(formatCurrency(order.paid_amount), "right"));
     row.appendChild(createTableCell(order.is_active));
