@@ -1,9 +1,9 @@
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
-const {STATUS_CODES, ENV} = require("../serverConfigurations/constants");
+const { STATUS_CODES, ENV} = require("../serverConfigurations/constants");
 const paypal = require("@paypal/checkout-server-sdk");
 
 class OrderService {
-  constructor(emailService, paypalClient) {
+  constructor(emailService, paypalClient) { 
     this.emailService = emailService;
     this.paypalClient = paypalClient;
     this.createOrder = this.createOrder.bind(this);

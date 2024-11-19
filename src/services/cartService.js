@@ -85,24 +85,36 @@ class CartService {
     const cartTotalPriceResult = await data.dbConnection.query(`
       WITH vat AS (
         SELECT vat_percentage FROM app_settings LIMIT 1
+      ),
+      largest_discount AS (
+        SELECT COALESCE(MAX(discount_percentage), 0) AS discount_percentage
+        FROM promotions
+        WHERE is_active = TRUE
+          AND NOW() BETWEEN start_date AND end_date
       )
       SELECT
-        vat.vat_percentage,
         SUM(ci.total_price) AS total_price,
-        ROUND(SUM(ci.total_price) * vat.vat_percentage / 100, 2) AS vat_amount,
-        ROUND(SUM(ci.total_price) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat
-      FROM cart_items ci, vat
+        ld.discount_percentage,
+        ROUND(SUM(ci.total_price) * ld.discount_percentage / 100, 2) AS discount_amount,
+        ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100), 2) AS total_price_after_discount,
+        vat.vat_percentage,
+        ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
+        ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat
+      FROM cart_items ci, vat, largest_discount ld
       WHERE ci.cart_id = $1
-      GROUP BY vat.vat_percentage`,
+      GROUP BY vat.vat_percentage, ld.discount_percentage`,
       [cart.id]
     );
 
-    const vatPercentage = cartTotalPriceResult.rows[0]?.vat_percentage || 0;
     const totalPrice = cartTotalPriceResult.rows[0]?.total_price || 0;
-    const totalPriceWithVat = cartTotalPriceResult.rows[0]?.total_price_with_vat || 0;
+    const discountPercentage = cartTotalPriceResult.rows[0]?.discount_percentage || 0;
+    const discountAmount = cartTotalPriceResult.rows[0]?.discount_amount || 0;
+    const totalPriceAfterDiscount = cartTotalPriceResult.rows[0]?.total_price_after_discount || 0;
+    const vatPercentage = cartTotalPriceResult.rows[0]?.vat_percentage || 0;
     const vatAmount = cartTotalPriceResult.rows[0]?.vat_amount || 0;
+    const totalPriceWithVat = cartTotalPriceResult.rows[0]?.total_price_with_vat || 0;
 
-    return { cart, items: cartItemsResult.rows, vatPercentage, totalPrice, vatAmount, totalPriceWithVat };
+    return { cart, items: cartItemsResult.rows, totalPrice, discountPercentage, discountAmount, totalPriceAfterDiscount, vatPercentage, vatAmount, totalPriceWithVat };
   }
 
   async updateItem(data) {

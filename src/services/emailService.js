@@ -96,6 +96,15 @@ class EmailService {
         <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price)}</td>
       </tr>
       <tr>
+        <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Discount (${data.order.discount_percentage}%):</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.discount_amount)}</td>
+      </tr>
+      /// price after discount
+      <tr>
+        <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Price after discount:</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(parseFloat(data.order.total_price_after_discount))}</td>
+      </tr>
+      <tr>
         <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">VAT (${(vatRate * 100).toFixed(2)}%):</td>
         <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(parseFloat(data.order.total_price_with_vat)-parseFloat(data.order.total_price))}</td>
       </tr>
@@ -179,6 +188,15 @@ class EmailService {
       <tr>
         <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Subtotal:</td>
         <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price)}</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Discount (${data.order.discount_percentage}%):</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.discount_amount)}</td>
+      </tr>
+      /// price after discount
+      <tr>
+        <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">Price after discount:</td>
+        <td style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(parseFloat(data.order.total_price_after_discount))}</td>
       </tr>
       <tr>
         <td colspan="3" style="padding: 8px; text-align: right; border: ${emailTemplate.table_border_width}px solid ${emailTemplate.table_border_color}; font-weight: bold;">VAT (${(vatRate * 100).toFixed(2)}%):</td>
