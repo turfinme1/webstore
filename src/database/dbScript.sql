@@ -262,6 +262,22 @@ CREATE TABLE order_items (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE promotions (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    discount_percentage NUMERIC(5, 2) NOT NULL CHECK (discount_percentage >= 0),
+    start_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE OR REPLACE VIEW promotions_view AS
+SELECT
+    promotions.*
+FROM promotions
+WHERE promotions.is_active = TRUE
+ORDER BY promotions.id DESC;
+
 CREATE OR REPLACE VIEW orders_view AS
 WITH vat AS (
     SELECT vat_percentage FROM app_settings LIMIT 1

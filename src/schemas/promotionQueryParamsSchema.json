@@ -1,0 +1,85 @@
+{
+    "type": "object",
+    "name": "promotionQueryParamsSchema",
+    "searchParams": {
+        "type": "object",
+        "properties": {
+            "keyword": {
+                "type": "string"
+            }
+        }
+    },
+    "filterParams": {
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string"
+            },
+            "discount_percentage": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "number"
+                    },
+                    "max": {
+                        "type": "number"
+                    }
+                }
+            },
+            "start_date": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "max": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                }
+            },
+            "end_date": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "max": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                }
+            }
+        }
+    },
+    "orderParams": {
+        "type": "array",
+        "properties": {
+            "name": {
+                "type": "string"
+            },
+            "discount_percentage": {
+                "type": "string"
+            },
+            "start_date": {
+                "type": "string",
+                "format": "date"
+            },
+            "end_date": {
+                "type": "string",
+                "format": "date"
+            }
+        }
+    },
+    "pageSize": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 100
+    },
+    "page": {
+        "type": "number",
+        "minimum": 1
+    }
+}

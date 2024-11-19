@@ -1,0 +1,87 @@
+{
+    "type": "object",
+    "name": "promotions",
+    "table": "promotions",
+    "views": "promotions_view",
+    "queryValidationSchema": "promotionQueryParamsSchema",
+    "properties": {
+        "name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z_-]+$",
+            "label": "Promotion Name",
+            "placeholder": "Enter Promotion Name",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for promotion name."
+            }
+        },
+        "discount_percentage": {
+            "type": "number",
+            "label": "Discount Percentage",
+            "placeholder": "Enter Discount Percentage",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "minimum": "0",
+                "maximum": "100",
+                "step": "0.01"
+            },
+            "errorMessage": {
+                "type": "Invalid value for discount percentage."
+            }
+        },
+        "start_date": {
+            "type": "string",
+            "label": "Start Date",
+            "placeholder": "Enter Start Date",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "type": "date"
+            },
+            "errorMessage": {
+                "type": "Invalid value for start date."
+            }
+        },
+        "end_date": {
+            "type": "string",
+            "label": "End Date",
+            "placeholder": "Enter End Date",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "type": "date",
+                "setHoursToEndOfDay": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for end date."
+            }
+        }
+    },
+    "table_display_columns": ["name", "discount_percentage", "start_date", "end_date"],
+    "required": ["name", "discount_percentage", "start_date", "end_date"],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "name": "Name is required.",
+            "discount_percentage": "Discount Percentage is required.",
+            "start_date": "Start Date is required.",
+            "end_date": "End Date is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

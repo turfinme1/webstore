@@ -178,6 +178,8 @@ class CrudPageBuilder {
       if (data[field] !== undefined) {
         if (input.type === "checkbox") {
           input.checked = data[field];
+        } if(input.type === "date") {
+          input.value = dayjs(data[field]).format('YYYY-MM-DD');
         } else {
           input.value = data[field];
         }
@@ -341,6 +343,34 @@ class CrudPageBuilder {
           (checkbox) => checkbox.value
         ),
       }));
+    } else if (property?.renderConfig?.type === "date") {
+      input = document.createElement("input");
+      input.classList.add("form-control");
+      input.id = field;
+      input.name = field;
+      input.type = "date";
+
+      if (property?.required?.[formType]) {
+        input.required = true;
+        label.innerHTML = `${label.textContent} <span style="color:red;">*</span>`;
+      }
+
+      if (formType && property?.renderConfig?.setHoursToEndOfDay) {
+        /// giga custom because there are 3 fields and the callback cant get the right one
+        this.state.collectValuesCallbacks[formType].push(() => {
+          const elements = document.querySelectorAll(`[id="${field}"]`);
+          let input;
+          if(formType === "create") {
+            input = elements[1];
+          } else {
+            input = elements[2];
+          }
+          const date = new Date(input.value);
+          date.setHours(23, 59, 59);
+          return { [field]: date.toISOString() };
+        });
+      }
+      
     } else if (property.type === "boolean" || property.options) {
       // Check if the field should be a select dropdown (e.g., boolean)
       input = document.createElement("select");
@@ -373,6 +403,16 @@ class CrudPageBuilder {
       input.placeholder = property.placeholder || "";
       input.type = this.getInputType(property.type); // Set the input type based on the schema
       
+      if(property?.renderConfig?.minimum) {
+        input.min = property.renderConfig.minimum;
+      }
+      if(property?.renderConfig?.maximum) {
+        input.max = property.renderConfig.maximum;
+      }
+      if(property?.renderConfig?.step) {
+        input.step = property.renderConfig.step;
+      }
+
       if (property.minLength) {
         input.minLength = property.minLength;
       }
@@ -381,27 +421,7 @@ class CrudPageBuilder {
       }
       if (property?.required?.[formType]) {
         input.required = true;
-
-        // Add asterisk to label for required fields
-        // label.textContent = `${label.textContent} <span style="color:red;">*</span>`;
         label.innerHTML = `${label.textContent} <span style="color:red;">*</span>`;
-        // Add validation message for required fields
-        // const validationMessage = document.createElement("div");
-        // validationMessage.classList.add("invalid-feedback");
-
-        // input.addEventListener("invalid", () => {
-        //   if (!input.validity.valid) {
-        //     input.classList.add("is-invalid");
-        //     validationMessage.textContent = "This field is required.";
-        //     input.parentNode.appendChild(validationMessage);
-        //   }
-        // }
-        // );
-        // input.addEventListener("input", () => {
-        //   input.classList.remove("is-invalid");
-        //   validationMessage.textContent = "";
-        // });
-        // formGroup.appendChild(validationMessage);
       }
     }
 
@@ -493,6 +513,8 @@ class CrudPageBuilder {
         return "checkbox";
       case "date":
         return "date";
+      case "number":
+        return "number";
       default:
         return "text";
     }
@@ -607,12 +629,17 @@ class CrudPageBuilder {
       const row = document.createElement("tr");
       this.schema.table_display_columns.forEach((key) => {
         const td = document.createElement("td");
+        const property = this.schema.properties[key];
 
-        if (Array.isArray(record[key])) {
+        if (property?.renderConfig?.type === "date") {
+          td.textContent = new Date(record[key]).toLocaleDateString();
+          // td.textContent = new Date(record[key]).toLocaleString();
+        } else if (Array.isArray(record[key])) {
           td.textContent = record[key].map((item) => item.name).join(", ");
         } else {
           td.textContent = record[key];
         }
+
         row.appendChild(td);
       });
 
@@ -629,14 +656,6 @@ class CrudPageBuilder {
           this.createActionButton("Delete", () => this.deleteRecord(record.id))
         );
       }
-      // actionTd.appendChild(
-      //   this.createActionButton("Edit", async () =>
-      //     this.populateUpdateForm(record)
-      //   )
-      // );
-      // actionTd.appendChild(
-      //   this.createActionButton("Delete", () => this.deleteRecord(record.id))
-      // );
       row.appendChild(actionTd);
 
       tbody.appendChild(row);
