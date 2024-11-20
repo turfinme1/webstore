@@ -41,7 +41,8 @@ const elements = {
   productSelect: document.getElementById("product-select"),
   productSelectUpdate: document.getElementById("product-select_update"),
   spinner: document.getElementById("spinner"),
-  createdAtMin : document.getElementById("created_at_min")
+  createdAtMin : document.getElementById("created_at_min"),
+  orderBySelect: document.getElementById("order_by"),
 };
 
 // Initialize page and attach event listeners
@@ -232,6 +233,11 @@ function attachEventListeners() {
   elements.filterForm.addEventListener("submit", handleFilterOrders);
   elements.createForm.addEventListener("submit", handleCreateOrder);
   elements.updateForm.addEventListener("submit", handleUpdateOrder);
+  elements.orderBySelect.addEventListener("change", async (e)=> {
+    state.currentPage = 1;
+    await loadOrders(state.currentPage);
+    handleFilterOrders(e);
+  });
 }
 
 function hideForm() {
@@ -308,9 +314,11 @@ function handleFilterOrders(event) {
     delete filterParams["total_price_max"];
   }
 
-  const orderBy = formData.get("order_by");
-  delete filterParams["order_by"];
-  state.orderParams = [orderBy.split("-")];
+  if(elements.orderBySelect.value) {
+    state.orderParams = [ elements.orderBySelect.value.split(" ") ];
+  } else {
+    state.orderParams = [];
+  }
 
   state.filterParams = filterParams;
   loadOrders(state.currentPage);
@@ -325,6 +333,7 @@ async function loadOrders(page) {
       orderParams: JSON.stringify(state.orderParams),
       page: page.toString(),
     });
+    console.log(queryParams);
 
     toggleExportLoadingState();
     const response = await fetch(`/crud/orders/filtered?${queryParams}`);
