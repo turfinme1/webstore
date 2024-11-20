@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const maxPriceInput = document.getElementById("max-price-input");
   const categoryFilterInput = document.getElementById("category-filter-input");
   const searchInput = document.getElementById("search-input");
+  const orderbyInput = document.getElementById("order_by");
 
   let categories;
   let categoryChoices;
@@ -70,6 +71,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentPage = 1;
     formContainer.style.display = "none";
     formUpdateContainer.style.display = "none";
+    loadProducts(currentPage);
+  });
+
+  orderbyInput.addEventListener("change", () => {
+    currentPage = 1;
     loadProducts(currentPage);
   });
 
@@ -208,7 +214,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (Object.keys(filterParams).length > 0) {
         queryParams.append("filterParams", JSON.stringify(filterParams));
       }
-      queryParams.append("orderParams", JSON.stringify([["id", "DESC"]]));
+      if (orderbyInput.value) {
+        queryParams.append("orderParams", JSON.stringify([ orderbyInput.value.split(" ") ]));
+      } else {
+        queryParams.append("orderParams", JSON.stringify([["id", "DESC"]]));
+      }
       queryParams.append("pageSize", pageSize.toString());
       queryParams.append("page", currentPage.toString());
 

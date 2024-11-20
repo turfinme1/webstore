@@ -26,7 +26,16 @@
 
                 <!-- Search and Create Order -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <button id="show-filter-btn" class="btn btn-primary">Filter Orders</button>
+                    <div>
+                        <button id="show-filter-btn" class="btn btn-primary">Filter Orders</button>
+                        <select id="order_by" class="btn btn-primary">
+                            <option value="">Sort Orders</option>
+                            <option value="created_at desc">Created At (DESC)</option>
+                            <option value="created_at asc">Created At (ASC)</option>
+                            <option value="total_price desc">Total Price (DESC)</option>
+                            <option value="total_price asc">Total Price (ASC)</option>
+                        </select>
+                    </div>
                     <div id="spinner" class="spinner-border text-primary ms-3" role="status" style="display: none;">
                         <span class="visually-hidden">Loading...</span>
                     </div>
@@ -72,15 +81,6 @@
                                     <option value="Paid">Paid</option>
                                     <option value="Delivered">Delivered</option>
                                     <option value="Cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="order_by_filter" class="form-label">Order By</label>
-                                <select id="order_by_filter" name="order_by" class="form-select">
-                                    <option value="created_at-DESC">Created At (DESC)</option>
-                                    <option value="created_at-ASC">Created At (ASC)</option>
-                                    <option value="total_price-DESC">Total Price (DESC)</option>
-                                    <option value="total_price-ASC">Total Price (ASC)</option>
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-primary">Apply Filters</button>
@@ -223,6 +223,10 @@
                                 <th>User Email</th>
                                 <th>Status</th>
                                 <th>Total Price</th>
+                                <th>Discount percentage</th>
+                                <th>Discount amount</th>
+                                <th>VAT percentage</th>
+                                <th>VAT amount</th>
                                 <th>Total Price (VAT)</th>
                                 <th>Paid Amount</th>
                                 <th>Is Order Active</th>

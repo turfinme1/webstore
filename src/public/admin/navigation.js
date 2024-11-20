@@ -94,6 +94,13 @@ function createBackofficeNavigation(userStatus) {
       interface: "roles",
     },
     {
+      id:"promotion-link",
+      text: "CRUD Promotions",
+      href: "/crud-promotion",
+      permission: "view",
+      interface: "promotions",
+    },
+    {
       id: "logs-link",
       text: "Report Logs",
       href: "/logs",

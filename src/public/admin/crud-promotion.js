@@ -8,9 +8,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   createNavigation(userStatus);
   await attachLogoutHandler();
   createBackofficeNavigation(userStatus);
-  const schema = await fetch("/roleSchema.json").then((res) => res.json());
-  const querySchema = await fetch("/roleQueryParamsSchema.json").then((res) => res.json());
-  const apiEndpoint = "/crud/roles";
+  const schema = await fetch("/promotionSchema.json").then((res) => res.json());
+  const querySchema = await fetch("/promotionQueryParamsSchema.json").then((res) => res.json());
+  const apiEndpoint = "/crud/promotions";
   const crudPageBuilder = new CrudPageBuilder(
     schema,
     apiEndpoint,

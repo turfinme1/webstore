@@ -159,6 +159,24 @@ function renderCartTotalRow() {
   `;
   fragment.appendChild(subtotalRow);
 
+  const discountRow = document.createElement('tr');
+  discountRow.classList.add('cart-discount');
+  discountRow.innerHTML = `
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Discount (${state.cart.discountPercentage}%):</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.discountAmount}</td>
+    <td></td>
+  `;
+  fragment.appendChild(discountRow);
+
+  const priceAfterDiscountRow = document.createElement('tr');
+  priceAfterDiscountRow.classList.add('cart-price-after-discount');
+  priceAfterDiscountRow.innerHTML = `
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Price after discount:</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPriceAfterDiscount}</td>
+    <td></td>
+  `;
+  fragment.appendChild(priceAfterDiscountRow);
+
   const vatRow = document.createElement('tr');
   vatRow.classList.add('cart-vat');
   vatRow.innerHTML = `

@@ -36,19 +36,16 @@
         "type": "array",
         "properties": {
             "first_name": {
-                "type": "string"
+                "type": "string",
+                "label": "First Name"
             },
             "last_name": {
-                "type": "string"
+                "type": "string",
+                "label": "Last Name"
             },
             "email": {
-                "type": "string"
-            },
-            "country_id": {
-                "type": "number"
-            },
-            "iso_counry_code_id": {
-                "type": "number"
+                "type": "string",
+                "label": "Email"
             }
         }
     },

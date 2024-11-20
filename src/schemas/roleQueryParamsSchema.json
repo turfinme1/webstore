@@ -34,10 +34,12 @@
     "type": "array",
     "properties": {
       "name": {
-        "type": "string"
+        "type": "string",
+        "label": "Name"
       },
       "created_at": {
         "type": "string",
+        "label": "Created At",
         "format": "date-time"
       }
     }
