@@ -1,6 +1,7 @@
 const { Readable } = require("nodemailer/lib/xoauth2");
 const AuthService = require("../authService");
 const bcrypt = require("bcrypt");
+const { fa } = require("@faker-js/faker");
 
 describe("AuthService", () => {
   let authService;
@@ -332,6 +333,39 @@ describe("AuthService", () => {
       // Assertions
       expect(containsQueryString(actualQuery, expectedQuery)).toBe(true);
       expect(result).toEqual(mockStatus);
+    });
+
+    it("should change has_first_login to true if it is false", async () => {
+      const mockStatus = {
+        email: "test@example.com",
+        name: "Test User",
+        phone: "1234567890",
+        session_type: "authenticated",
+        has_first_login: false,
+      };
+
+      // Mock database query result
+      mockDbConnection.query.mockResolvedValueOnce({ rows: [mockStatus] });
+
+      const result = await authService.getStatus(data);
+
+      // Expected query
+      const expectedQuery = `
+        SELECT u.first_name, u.last_name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.country_id, u.address, u.has_first_login, st.type as session_type
+        FROM sessions s
+        JOIN session_types st ON s.session_type_id = st.id
+        LEFT JOIN users u ON s.user_id = u.id
+        WHERE s.session_hash = $1`;
+      
+      const expectedUpdateQuery = `
+        UPDATE users u SET has_first_login = TRUE WHERE u.id = $1`;
+      
+      // Capture the actual query called in the function
+      const actualQuery = mockDbConnection.query.mock.calls[0][0];
+      const updateQuery = mockDbConnection.query.mock.calls[1][0];
+      // Assertions
+      expect(containsQueryString(actualQuery, expectedQuery)).toBe(true);
+      expect(containsQueryString(updateQuery, expectedUpdateQuery)).toBe(true);
     });
 
     it("should throw an error if session is invalid", async () => {
@@ -855,6 +889,53 @@ describe("AuthService", () => {
           query: { token: "invalidToken" },
         })
       ).rejects.toThrow("Invalid or expired token");
+    });
+
+    describe("requirePermission", () => {
+      it("should allow action if the user has the required permission", () => {
+        const req = {
+          session: {
+            role_permissions: [
+              { permission: "read", interface: "user" },
+              { permission: "write", interface: "admin" },
+            ],
+          },
+        };
+        const permission = "read";
+        const interfaceName = "user";
+
+        expect(() => authService.requirePermission(req, permission, interfaceName)).not.toThrow();
+      });
+
+      it("should throw an error if the user does not have the required permission", () => {
+        const req = {
+          session: {
+            role_permissions: [
+              { permission: "read", interface: "user" },
+              { permission: "write", interface: "admin" },
+            ],
+          },
+        };
+        const permission = "delete";
+        const interfaceName = "user";
+
+        expect(() => authService.requirePermission(req, permission, interfaceName)).toThrow("You do not have permission to perform this action");
+      });
+
+      it("should throw an error if the user does not have the required interface", () => {
+        const req = {
+          session: {
+            role_permissions: [
+              { permission: "read", interface: "user" },
+              { permission: "write", interface: "admin" },
+            ],
+          },
+        };
+        const permission = "read";
+        const interfaceName = "admin";
+
+        expect(() => authService.requirePermission(req, permission, interfaceName)).toThrow("You do not have permission to perform this action");
+      });
     });
   });
 });
