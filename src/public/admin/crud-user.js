@@ -7,6 +7,7 @@ const state = {
   pageSize: 10,
   searchParams: {},
   filterParams: {},
+  orderParams: [],
   countries: [],
   userToUpdateId: null,
   userStatus: null,
@@ -38,6 +39,7 @@ const elements = {
   filterContainer: document.getElementById("filter-container"),
   countryFilterSelect: document.getElementById("country_id_filter"),
   filterForm: document.getElementById("filter-form"),
+  orderBySelect: document.getElementById("order_by"),
 };
 
 // Initialize page and attach event listeners
@@ -70,6 +72,7 @@ function attachEventListeners() {
   elements.userForm.addEventListener("submit", handleCreateUser);
   elements.userUpdateForm.addEventListener("submit", handleUpdateUser);
   elements.filterForm.addEventListener("submit", handleFilterUsers);
+  elements.orderBySelect.addEventListener("change", handleFilterUsers);
 }
 
 // Show and hide functions
@@ -140,6 +143,7 @@ async function loadUsers(page) {
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(state.filterParams),
       pageSize: state.pageSize.toString(),
+      orderParams: JSON.stringify(state.orderParams),
       page: page.toString(),
     });
 
@@ -346,9 +350,13 @@ async function handleFilterUsers(event) {
     formData.delete("country_id");
   }
   const filterParams = Object.fromEntries(formData);
-
-  // Update state with filter parameters
   state.filterParams = filterParams;
+
+  if(elements.orderBySelect.value){
+    state.orderParams = [elements.orderBySelect.value.split(" ")];
+  } else {
+    state.orderParams = [];
+  }
 
   // Reload users with the new filters
   state.currentPage = 1;

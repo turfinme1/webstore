@@ -58,17 +58,21 @@
         "type": "array",
         "properties": {
             "name": {
-                "type": "string"
+                "type": "string",
+                "label": "Name"
             },
             "discount_percentage": {
-                "type": "string"
+                "type": "string",
+                "label": "Discount Percentage"
             },
             "start_date": {
                 "type": "string",
+                "label": "Start Date",
                 "format": "date"
             },
             "end_date": {
                 "type": "string",
+                "label": "End Date",
                 "format": "date"
             }
         }

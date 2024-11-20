@@ -9,12 +9,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   await attachLogoutHandler();
   createBackofficeNavigation(userStatus);
   const schema = await fetch("/roleSchema.json").then((res) => res.json());
+  const querySchema = await fetch("/roleQueryParamsSchema.json").then((res) => res.json());
   const apiEndpoint = "/crud/roles";
   const crudPageBuilder = new CrudPageBuilder(
     schema,
     apiEndpoint,
     "crud-container",
-    userStatus
+    userStatus,
+    querySchema
   );
   crudPageBuilder.initialize();
 });

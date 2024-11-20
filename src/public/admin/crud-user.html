@@ -33,7 +33,18 @@
                         <input type="text" class="form-control" id="search-input" placeholder="Search users...">
                         <button class="btn btn-primary" id="search-btn">Search</button>
                     </div> -->
-                    <button id="show-filter-btn" class="btn btn-primary">Filter Users</button>
+                    <div>
+                        <button id="show-filter-btn" class="btn btn-primary">Filter Users</button>
+                        <select id="order_by" class="btn btn-primary">
+                            <option value="">Sort Users</option>
+                            <option value="first_name asc">First Name (ASC)</option>
+                            <option value="first_name desc">First Name (DESC)</option>
+                            <option value="last_name asc">Last Name (ASC)</option>
+                            <option value="last_name desc">Last Name (DESC)</option>
+                            <option value="email asc">Email (ASC)</option>
+                            <option value="email desc">Email (DESC)</option>
+                        </select>
+                    </div>
                     <button id="show-form-btn" class="btn btn-success">Create New User</button>
                 </div>
         

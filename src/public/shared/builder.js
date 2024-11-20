@@ -1,11 +1,12 @@
 import { hasPermission } from "./auth.js";
 
 class CrudPageBuilder {
-  constructor(schema, apiEndpoint, rootContainerId, userStatus) {
+  constructor(schema, apiEndpoint, rootContainerId, userStatus, querySchema) {
     this.schema = schema;
     this.apiEndpoint = apiEndpoint;
     this.rootContainer = document.getElementById(rootContainerId); // Main container for everything
     this.userStatus = userStatus;
+    this.querySchema = querySchema;
 
     // State and element references
     this.state = {
@@ -13,6 +14,7 @@ class CrudPageBuilder {
       currentPage: 1,
       pageSize: 10,
       filterParams: {},
+      orderParams: [],
       updateEntityId: null,
       collectValuesCallbacks: {
         create: [],
@@ -33,6 +35,7 @@ class CrudPageBuilder {
       currentPageDisplay: null,
       showFilterButton: null,
       showCreateFormButton: null,
+      orderSelect: null,
     };
   }
 
@@ -63,14 +66,44 @@ class CrudPageBuilder {
     );
     this.rootContainer.appendChild(buttonContainer);
 
+    const filterDiv = document.createElement("div");
+
     const showFilterButton = document.createElement("button");
     showFilterButton.id = "show-filter-btn";
     showFilterButton.classList.add("btn", "btn-primary");
     showFilterButton.textContent = `FILTER`;
     this.elements.showFilterButton = showFilterButton;
     if (hasPermission(this.userStatus, "read", this.schema.name)) {
-      buttonContainer.appendChild(showFilterButton);
+      filterDiv.appendChild(showFilterButton);
     }
+
+    const orderSelect = document.createElement("select");
+    orderSelect.id = "order-select";
+    orderSelect.classList.add("btn", "btn-primary", "ms-2");
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.text = "Order records";
+    orderSelect.appendChild(emptyOption);
+    for (const [key, value] of Object.entries(this.querySchema.orderParams.properties)) {
+      const option = document.createElement("option");
+      option.value = `${key} asc`;
+      option.text = `${value.label} (ASC)`;
+      orderSelect.appendChild(option);
+
+      const optionDesc = document.createElement("option");
+      optionDesc.value = `${key} desc`;
+      optionDesc.text = `${value.label} (DESC)`;
+      orderSelect.appendChild(optionDesc);
+    }
+    this.elements.orderSelect = orderSelect;
+    
+    // orderSelect.addEventListener("change", (event) => {
+    //   this.state.filterParams.orderBy = event.target.value;
+    //   this.loadRecords();
+    // });
+
+    filterDiv.appendChild(orderSelect);
+    buttonContainer.appendChild(filterDiv);
 
     const showCreateFormButton = document.createElement("button");
     showCreateFormButton.id = "show-form-btn";
@@ -588,6 +621,7 @@ class CrudPageBuilder {
 
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(this.state.filterParams),
+      orderParams: JSON.stringify(this.state.orderParams),
       page: this.state.currentPage,
       pageSize: this.state.pageSize,
     });
@@ -805,6 +839,17 @@ class CrudPageBuilder {
         this.loadRecords();
       });
     }
+
+    this.elements.orderSelect.addEventListener("change", async (event) => {
+      if(event.target.value) {
+          this.state.currentPage = 1;
+          this.state.orderParams = [ event.target.value.split(" ") ];
+      } else {
+        this.state.orderParams = [];
+      }
+
+      await this.loadRecords();
+    });
 
     this.elements.showCreateFormButton.addEventListener("click", () => {
       this.elements.filterContainer.style.display = "none";
