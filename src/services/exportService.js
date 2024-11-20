@@ -10,7 +10,13 @@ class ExportService {
     }
 
     async exportToExcel(data) {
+        let totalPrice = 0;
+        let discountAmount = 0;
+        let totalPriceAfterDiscount = 0;
+        let vatAmount = 0; 
         let totalPriceWithVAT = 0;
+        let paidAmount = 0;
+
         const parameters = this.crudService.buildFilteredPaginatedQuery(data, true);
         const dataParams = {
             ...data,
@@ -51,11 +57,17 @@ class ExportService {
             for (const row of rows) {
                 if ( ! headers.length) {
                     headers = Object.keys(row).filter(key => this.isPrimitive(row[key]));
-                    // headers.push("total_price_with_vat");
+
                     worksheet.addRow(headers).commit();
                 }
-                // row.total_price_with_vat = (row.total_price * (1 + vatPercentage / 100)).toFixed(2);
+                totalPrice += parseFloat(row.total_price);
                 totalPriceWithVAT += parseFloat(row.total_price_with_vat);
+                discountAmount += parseFloat(row.discount_amount);
+                totalPriceAfterDiscount += parseFloat(row.total_price_after_discount);
+                vatAmount += parseFloat(row.vat_amount);
+                if(row.paid_amount){
+                    paidAmount += parseFloat(row.paid_amount);
+                }
                 let rowValues = headers.map(header => row[header]);
                 
                 worksheet.addRow(rowValues).commit();
@@ -64,7 +76,12 @@ class ExportService {
 
         const totalsResult = await data.dbConnection.query(dataParams.aggregatedTotalQuery, dataParams.searchValues);
         const totalsRow = totalsResult.rows[0];
+        totalsRow.total_total_price = totalPrice.toFixed(2);
+        totalsRow.total_discount_amount = discountAmount.toFixed(2);
+        totalsRow.total_total_price_after_discount = totalPriceAfterDiscount.toFixed(2);
+        totalsRow.total_vat_amount = vatAmount.toFixed(2);
         totalsRow.total_total_price_with_vat = totalPriceWithVAT.toFixed(2); 
+        totalsRow.total_paid_amount = paidAmount.toFixed(2);
 
         const footerRow = headers.map(header => {
             const totalKey = `total_${header}`;
@@ -115,7 +132,12 @@ class ExportService {
     
     async* generateCsvRows(data) {
         const rowGenerator = await this.executeQueryWithCursor(data);
+        let totalPrice = 0;
+        let discountAmount = 0;
+        let totalPriceAfterDiscount = 0;
+        let vatAmount = 0; 
         let totalPriceWithVAT = 0;
+        let paidAmount = 0;
 
         let headers = null;
         yield "\uFEFF";
@@ -142,12 +164,17 @@ class ExportService {
             for (const row of rows) {
                 if (!headers) {
                     headers = Object.keys(row).filter(key => this.isPrimitive(row[key]));
-                    // headers.push("total_price_with_vat");
 
                     yield `${headers.join(",")}\n`;
                 }
 
-                // row.total_price_with_vat = (row.total_price * (1 + vatPercentage / 100)).toFixed(2);
+                totalPrice += parseFloat(row.total_price);
+                discountAmount += parseFloat(row.discount_amount);
+                totalPriceAfterDiscount += parseFloat(row.total_price_after_discount);
+                vatAmount += parseFloat(row.vat_amount);
+                if(row.paid_amount){
+                    paidAmount += parseFloat(row.paid_amount);
+                }
                 totalPriceWithVAT += parseFloat(row.total_price_with_vat);
 
                 const rowValues = Object.values(row)
@@ -170,7 +197,13 @@ class ExportService {
 
         const totalsResult = await data.dbConnection.query(data.aggregatedTotalQuery, data.searchValues);
         let totalsRow = totalsResult.rows[0];
+        totalsRow.total_total_price = totalPrice.toFixed(2);
+        totalsRow.total_discount_amount = discountAmount.toFixed(2);
+        totalsRow.total_total_price_after_discount = totalPriceAfterDiscount.toFixed(2);
+        totalsRow.total_vat_amount = vatAmount.toFixed(2);
         totalsRow.total_total_price_with_vat = totalPriceWithVAT.toFixed(2);
+        totalsRow.total_paid_amount = paidAmount.toFixed(2);
+
         const footerRow = headers.map(header => {
             const totalKey = `total_${header}`;
             return totalsRow[totalKey] || '';  
