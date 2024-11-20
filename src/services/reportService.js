@@ -25,13 +25,13 @@ class ReportService {
         },
         {
             key: "order_total_minimum",
-            grouping_expression: "NULL",
+            grouping_expression: "",
             filter_expression: "O.total_price >= $FILTER_VALUE$",
             type: "number",
         },
         {
             key: "order_total_maximum",
-            grouping_expression: "NULL",
+            grouping_expression: "",
             filter_expression: "O.total_price <= $FILTER_VALUE$",
             type: "number",
         },
@@ -75,14 +75,14 @@ class ReportService {
             let filterExprReplaced;
             insertValues.push(filterValue);
 
-            if (reportFilter.type === 'timestamp'){
-                let [beginTimestampValue, endTimestampValue] = filterValue.split('|||');
-                filterExprReplaced = filterExpr
-                    .replace('$FILTER_VALUE_START$', beginTimestampValue)
-                    .replace('$FILTER_VALUE_END$', endTimestampValue);
-            } else {
+            // if (reportFilter.type === 'timestamp'){
+            //     let [beginTimestampValue, endTimestampValue] = filterValue.split('|||');
+            //     filterExprReplaced = filterExpr
+            //         .replace('$FILTER_VALUE_START$', beginTimestampValue)
+            //         .replace('$FILTER_VALUE_END$', endTimestampValue);
+            // } else {
                 filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
-            }
+            // }
 
             sql = sql.replace(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
         } else {
