@@ -69,6 +69,7 @@ CREATE TABLE users (
     last_name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     phone TEXT NOT NULL,
+    birth_date DATE NULL,
     iso_country_code_id BIGINT NOT NULL REFERENCES iso_country_codes(id), 
 	country_id BIGINT NULL REFERENCES iso_country_codes(id),
     gender_id BIGINT NULL REFERENCES genders(id),
@@ -78,6 +79,7 @@ CREATE TABLE users (
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE users ADD COLUMN birth_date DATE NULL;
 
 CREATE TABLE session_types (
     id BIGSERIAL PRIMARY KEY,
@@ -459,6 +461,7 @@ SELECT
     cc.country_name AS country_name,
 	users.country_id,
     genders.type AS gender,
+    users.birth_date,
     users.gender_id,
     users.address,
     users.is_email_verified,

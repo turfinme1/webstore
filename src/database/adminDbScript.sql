@@ -29,6 +29,7 @@ CREATE TABLE admin_users (
     last_name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     phone TEXT NOT NULL,
+    birth_date DATE NULL,
     iso_country_code_id BIGINT NOT NULL REFERENCES iso_country_codes(id),
     country_id BIGINT NULL REFERENCES iso_country_codes(id), 
     gender_id BIGINT NULL REFERENCES genders(id),
@@ -37,6 +38,7 @@ CREATE TABLE admin_users (
     has_first_login BOOLEAN NOT NULL DEFAULT TRUE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
+ALTER TABLE admin_users ADD COLUMN birth_date DATE NULL;
 
 CREATE TABLE admin_sessions (
     id BIGSERIAL PRIMARY KEY,

@@ -67,6 +67,15 @@
         "pattern": "Phone number can only contain digits."
       }
     },
+    "birth_date": {
+      "type": ["string", "null"],
+      "format": "date",
+      "label": "Birth Date",
+      "placeholder": "Enter Birth Date",
+      "errorMessage": {
+        "format": "Birth date must be a valid date."
+      }
+    },
     "gender_id": {
       "type": ["integer", "null"],
       "label": "Gender",
