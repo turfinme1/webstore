@@ -1,0 +1,57 @@
+{
+    "type": "object",
+    "name": "target_groups",
+    "table": "target_groups",
+    "views": "target_groups_view",
+    "queryValidationSchema": "targetGroupQueryParamsSchema",
+    "properties": {
+        "name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z_-]+$",
+            "label": "Target Group Name",
+            "placeholder": "Enter Target Group Name",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for target group name."
+            }
+        },
+        "users": {
+            "type": "array",
+            "label": "Members",
+            "placeholder": "Select Members",
+            "hideInCreate": true,
+            "renderConfig": {
+                "type": "table_multi_select",
+                "selectSearchKey": "name",
+                "selectDisplayKey": ["name", "email"],
+                "multiple": true
+            },
+            "insertConfig": {
+                "type": "mapping_table",
+                "table": "target_group_users",
+                "foreignKey": "user_id",
+                "mappingKey": "target_group_id"
+            }
+        }
+    },
+    "table_display_columns": ["name","created_at", "user_count", "filters"],
+    "relationships": {
+        "target_group_members": {
+            "table": "target_group_members",
+            "foreign_key": "target_group_id"
+        }
+    },
+    "required": ["name"],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "name": "Name is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}
