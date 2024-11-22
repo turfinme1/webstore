@@ -27,9 +27,9 @@ async function saveUsers(recordCount, batchSize = 3000) {
   const client = await pool.connect();
 
   try {
-    await client.query("BEGIN");
-
     for (let offset = 0; offset < recordCount; offset += batchSize) {
+      await client.query("BEGIN");
+
       const currentBatchSize = Math.min(batchSize, recordCount - offset);
       const users = generateUsers(currentBatchSize);
       const values = [];
@@ -61,7 +61,8 @@ async function saveUsers(recordCount, batchSize = 3000) {
         VALUES ${values.join(", ")}`;
 
       await client.query(query, params);
-      
+      await client.query("COMMIT");
+
       console.log(
           `Inserted batch ${
               Math.floor(offset / batchSize) + 1
@@ -69,7 +70,6 @@ async function saveUsers(recordCount, batchSize = 3000) {
         );
     }
     
-    await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
     console.error(error);
@@ -78,5 +78,5 @@ async function saveUsers(recordCount, batchSize = 3000) {
   }
 }
 
-const numUsers = 50;
+const numUsers = 1;
 saveUsers(numUsers).catch(console.error);
