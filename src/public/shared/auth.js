@@ -97,6 +97,16 @@ async function createForm(schema, formId, formType) {
       wrapper.appendChild(label);
       wrapper.appendChild(captchaImage);
       wrapper.appendChild(input);
+    } else if (key === "birth_date") {
+      const input = document.createElement("input");
+      input.type = "date";
+      input.id = key;
+      input.name = key;
+      input.className = "form-control";
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(input);
+
     } else {
       const input = document.createElement("input");
       input.type = key === "password" ? "password" : "text";

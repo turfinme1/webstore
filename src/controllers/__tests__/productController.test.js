@@ -23,6 +23,8 @@ describe("ProductController", () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      uploadImages: jest.fn(),
+      uploadProducts: jest.fn(),
     };
 
     authService = {
@@ -252,6 +254,48 @@ describe("ProductController", () => {
       expect(productService.update).toHaveBeenCalledWith(requestObject);
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(updatedProduct);
+    });
+  });
+
+  describe('uploadImages', () => {
+    it('should call productService.uploadImages and respond with status 200', async () => {
+      const req = {
+        params: { entity: 'testEntity', id: 1 },
+        body: { images: ['image1.jpg', 'image2.jpg'] },
+        session: { admin_user_id: 1 }
+      };
+      const requestObject = { body: req.body, req, params: req.params, dbConnection: req.dbConnection, entitySchemaCollection: req.entitySchemaCollection };
+
+      const uploadedImages = { message: 'Images uploaded successfully' };
+
+      productService.uploadImages.mockResolvedValue(uploadedImages);
+
+      await productController.uploadImages(req, mockRes, mockNext);
+
+      expect(productService.uploadImages).toHaveBeenCalledWith(req);
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(uploadedImages);
+    });
+  });
+
+  describe('uploadProducts', () => {
+    it('should call productService.uploadProducts and respond with status 200', async () => {
+      const req = {
+        params: { entity: 'testEntity' },
+        body: { products: [{ name: 'Product 1' }, { name: 'Product 2' }] },
+        session: { admin_user_id: 1 }
+      };
+      const requestObject = { body: req.body, req, params: req.params, dbConnection: req.dbConnection, entitySchemaCollection: req.entitySchemaCollection };
+
+      const uploadedProducts = { message: 'Products uploaded successfully' };
+
+      productService.uploadProducts.mockResolvedValue(uploadedProducts);
+
+      await productController.uploadProducts(req, mockRes, mockNext);
+
+      expect(productService.uploadProducts).toHaveBeenCalledWith(req);
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(uploadedProducts);
     });
   });
 

@@ -31,7 +31,7 @@ describe("Logger", () => {
         error_code_id: "404",
         timestamp: new Date().toISOString(),
         short_description: "Test short description",
-        long_description: "Test long description",
+        long_description: "",
       };
 
       await logger.logToDatabase(logObject);

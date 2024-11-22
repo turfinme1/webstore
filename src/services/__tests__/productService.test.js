@@ -555,5 +555,55 @@ describe("ProductService", () => {
       );
       expect(result).toEqual(expectedResponse);
     });
+
+    describe("delete", () => {
+      it("should delete the product and return the deleted entity", async () => {
+        const expectedResponse = {
+          id: 1,
+          name: "Test Product",
+          price: 100.5,
+          short_description: "Short description",
+          long_description: "Long description",
+        };
+
+        mockDbConnection.query.mockResolvedValueOnce({ rows: [expectedResponse] });
+
+        const result = await productService.delete(req);
+
+        expect(mockDbConnection.query).toHaveBeenCalledWith(
+          "DELETE FROM products WHERE id = $1 RETURNING *",
+          ["1"]
+        );
+        expect(result).toEqual(expectedResponse);
+      });
+
+      it("should delete related entities if relationships are defined", async () => {
+        mockEntitySchemaCollection.products.relationships = {
+          categories: { table: "products_categories", foreign_key: "product_id" },
+        };
+
+        const expectedResponse = {
+          id: 1,
+          name: "Test Product",
+          price: 100.5,
+          short_description: "Short description",
+          long_description: "Long description",
+        };
+
+        mockDbConnection.query
+          .mockResolvedValueOnce({ rows: [] }) // Mock the delete from related table
+          .mockResolvedValueOnce({ rows: [expectedResponse] }); // Mock the delete from main table
+
+        const result = await productService.delete(req);
+
+        expect(result).toEqual(expectedResponse);
+      });
+
+      it("should throw an error if the database query fails", async () => {
+        mockDbConnection.query.mockRejectedValue(new Error("Database error"));
+
+        await expect(productService.delete(req)).rejects.toThrow("Database error");
+      });
+    });
   });
 });

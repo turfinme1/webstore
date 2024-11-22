@@ -173,6 +173,7 @@ function renderUserList(users) {
     userRow.appendChild(createTableCell(user.phone_code));
     userRow.appendChild(createTableCell(user.phone));
     userRow.appendChild(createTableCell(user.country_name));
+    userRow.appendChild(createTableCell(user.birth_date ? new Date(user.birth_date).toLocaleDateString() : ""));
     userRow.appendChild(createTableCell(user.gender));
     userRow.appendChild(createTableCell(user.address));
     userRow.appendChild(createTableCell(user.is_email_verified));
@@ -318,6 +319,9 @@ function populateUpdateForm(user) {
   elements.userUpdateForm["iso_country_code_id"].value =
     user.iso_country_code_id;
   elements.userUpdateForm["phone"].value = user.phone;
+  if(user.birth_date){
+    elements.userUpdateForm["birth_date"].value = dayjs(user.birth_date).format("YYYY-MM-DD");
+  }
   elements.userUpdateForm["country_id"].value = user.country_id;
   elements.userUpdateForm["gender_id"].value = user.gender_id;
   elements.userUpdateForm["address"].value = user.address;

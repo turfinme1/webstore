@@ -89,6 +89,11 @@ function populateFormFields(formId, userData) {
           );
           if (option) input.value = userData[key];
           break;
+        case "date":
+          if(userData[key]){
+            input.value = dayjs(userData[key]).format('YYYY-MM-DD');
+          }
+          break;
         default:
           input.value = userData[key] ?? "";
       }
