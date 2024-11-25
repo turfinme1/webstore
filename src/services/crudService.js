@@ -124,15 +124,10 @@ class CrudService {
 
         if (Array.isArray(filterValue)) {
           const filterPlaceholders = filterValue
-            .map((_, index) => `$${searchValues.length + index + 1}`)
-            .join(", ");
+          .map((_, index) => `STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length + index + 1})) > 0`)
+          .join(" OR ");
           searchValues.push(...filterValue);
-          conditions.push(`${filterField} IN (${filterPlaceholders})`);
-        } else if (typeof filterValue === "string") {
-          searchValues.push(`${filterValue}`);
-          conditions.push(
-            `STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length})) > 0`
-          );
+          conditions.push(`(${filterPlaceholders})`);
         } else if (schema.properties[filterField]?.format === "date-time") {
           if (filterValue.min && filterValue.max) {
             searchValues.push(filterValue.min);
@@ -154,7 +149,17 @@ class CrudService {
             conditions.push(
               `DATE_TRUNC('day', ${filterField}) <= $${searchValues.length}`
             );
+          } else {
+            searchValues.push(filterValue);
+            conditions.push(
+              `DATE_TRUNC('day', ${filterField}) = $${searchValues.length}`
+            );
           }
+        } else if (typeof filterValue === "string") {
+          searchValues.push(`${filterValue}`);
+          conditions.push(
+            `STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length})) > 0`
+          ); 
         } else if (typeof filterValue === "object") {
           if (filterValue.min) {
             searchValues.push(filterValue.min);
