@@ -4,7 +4,8 @@ import { createNavigation, createBackofficeNavigation } from "./navigation.js";
 // Centralized state object
 const state = {
   currentPage: 1,
-  pageSize: 10,
+  currentTargetGroupPage: 1,
+  pageSize: 1000,
   searchParams: {},
   filterParams: {},
   orderParams: [],
@@ -29,14 +30,19 @@ const elements = {
   cancelUpdateButton: document.getElementById("cancel-update-btn"),
   searchInput: document.getElementById("search-input"),
   showFormButton: document.getElementById("show-form-btn"),
-  countryCodeUpdateSelect: document.getElementById(
-    "iso_country_code_id_update"
-  ),
+  countryCodeUpdateSelect: document.getElementById("iso_country_code_id_update"),
   countryUpdateSelect: document.getElementById("country_id_update"),
   showFilterButton: document.getElementById("show-filter-btn"),
   cancelFilterButton: document.getElementById("cancel-filter-btn"),
   filterContainer: document.getElementById("filter-container"),
   filterForm: document.getElementById("filter-form"),
+
+  targetGroupListContainer: document.getElementById("target-group-list"),
+  targetGroupPaginationContainer: document.getElementById("pagination-container-groups"),
+  targetGroupCurrentPageDisplay: document.getElementById("current-page-display-groups"),
+  targetGroupResultCountDisplay: document.getElementById("result-count-groups"),
+  showTargetGroupListButton: document.getElementById("show-groups"),
+
 };
 
 // Initialize page and attach event listeners
@@ -69,6 +75,10 @@ function attachEventListeners() {
   elements.targetGroupCreateForm.addEventListener("submit", handleCreateTargetGroup);
   elements.targetGroupUpdateForm.addEventListener("submit", handleUpdateUser);
   elements.filterForm.addEventListener("submit", handleFilterUsers);
+
+  elements.showTargetGroupListButton.addEventListener("click", () => {
+    loadTargetGroups(state.currentTargetGroupPage);
+  });
 }
 
 // Show and hide functions
@@ -102,37 +112,6 @@ function hideFilterForm() {
   elements.filterContainer.style.display = "none";
 }
 
-// Fetch countries
-async function loadCountryCodes() {
-  try {
-    const response = await fetch("/crud/iso-country-codes");
-    if (!response.ok) throw new Error("Failed to fetch country codes");
-    state.countries = await response.json();
-
-    const allCountriesOption = document.createElement("option");
-    allCountriesOption.value = "";
-    allCountriesOption.innerText = "All Countries";
-    elements.countryFilterSelect.appendChild(allCountriesOption);
-
-    state.countries.forEach((country) => {
-      const phoneOption = document.createElement("option");
-      phoneOption.value = country.id;
-      phoneOption.innerText = `${country.country_name} (${country.phone_code})`;
-      elements.countryCodeSelect.appendChild(phoneOption);
-      elements.countryCodeUpdateSelect.appendChild(phoneOption.cloneNode(true));
-
-      const countryOption = document.createElement("option");
-      countryOption.value = country.id;
-      countryOption.innerText = `${country.country_name}`;
-      elements.countrySelect.appendChild(countryOption);
-      elements.countryUpdateSelect.appendChild(countryOption.cloneNode(true));
-      elements.countryFilterSelect.appendChild(countryOption.cloneNode(true));
-    });
-  } catch (error) {
-    console.error("Error fetching country codes:", error);
-  }
-}
-
 // Fetch and render users
 async function loadUsers(page) {
   try {
@@ -150,7 +129,12 @@ async function loadUsers(page) {
     
     state.userIds = result.map(user => user.id);
     renderUserList(result);
-    updatePagination(count, page);
+
+    if(parseInt(count) > state.pageSize){
+      alert("Only the first 1000 users are displayed.");
+    }
+
+    // updatePagination(count, page);
   } catch (error) {
     console.error("Error loading users:", error);
   }
@@ -168,28 +152,27 @@ function renderUserList(users) {
     userRow.appendChild(createTableCell(user.first_name));
     userRow.appendChild(createTableCell(user.last_name));
     userRow.appendChild(createTableCell(user.email));
-    userRow.appendChild(createTableCell(user.country_name));
     userRow.appendChild(createTableCell(user.birth_date ? new Date(user.birth_date).toLocaleDateString() : ""));
     userRow.appendChild(createTableCell(user.gender));
 
     // Actions (Update/Delete)
-    const actionCell = createTableCell("");
-    if (hasPermission(state.userStatus, "update", "users")) {
-      actionCell.appendChild(
-        createActionButton("Edit", "btn-warning", () =>
-          displayUpdateForm(user.id)
-        )
-      );
-    }
+    // const actionCell = createTableCell("");
+    // if (hasPermission(state.userStatus, "update", "users")) {
+    //   actionCell.appendChild(
+    //     createActionButton("Edit", "btn-warning", () =>
+    //       displayUpdateForm(user.id)
+    //     )
+    //   );
+    // }
 
-    if (hasPermission(state.userStatus, "delete", "users")) {
-      actionCell.appendChild(
-        createActionButton("Delete", "btn-danger", () =>
-          handleDeleteUser(user.id)
-        )
-      );
-    }
-    userRow.appendChild(actionCell);
+    // if (hasPermission(state.userStatus, "delete", "users")) {
+    //   actionCell.appendChild(
+    //     createActionButton("Delete", "btn-danger", () =>
+    //       handleDeleteUser(user.id)
+    //     )
+    //   );
+    // }
+    // userRow.appendChild(actionCell);
 
     elements.userListContainer.appendChild(userRow);
   });
@@ -241,7 +224,7 @@ function createPaginationButton(text, enabled, onClick) {
   return button;
 }
 
-// Handle user creation
+// Handle target group creation
 async function handleCreateTargetGroup(event) {
   event.preventDefault();
   const formData = new FormData(elements.targetGroupCreateForm);
@@ -406,4 +389,104 @@ async function handleFilterUsers(event) {
   // Reload users with the new filters
   state.currentPage = 1;
   loadUsers(state.currentPage);
+}
+
+
+// target group list
+async function loadTargetGroups(page) {
+  try {
+    const queryParams = new URLSearchParams({
+      pageSize: "100",
+      page: page.toString(),
+    });
+
+    const response = await fetch(
+      `/crud/target-groups/filtered?${queryParams.toString()}`
+    );
+    const { result, count } = await response.json();
+    renderTargetGroupList(result);
+    updateTargetGroupPagination(count, page);
+  } catch (error) {
+    console.error("Error loading target groups:", error);
+  }
+}
+
+// Render target group list
+function renderTargetGroupList(targetGroups) {
+  elements.targetGroupListContainer.innerHTML = ""; // Clear previous list
+  targetGroups.forEach((targetGroup) => {
+    const targetGroupRow = document.createElement("tr");
+
+    // Create cells for target group attributes
+    targetGroupRow.appendChild(createTableCell(targetGroup.id));
+    targetGroupRow.appendChild(createTableCell(targetGroup.name));
+    targetGroupRow.appendChild(createTableCell(targetGroup.user_count));
+    targetGroupRow.appendChild(createTableCell(new Date(targetGroup.created_at).toLocaleDateString()));
+
+    // Actions (Update/Delete)
+    const actionCell = createTableCell("");
+    actionCell.appendChild(
+      createActionButton("View Users", "btn-warning", () =>
+        renderUserList(targetGroup.users)
+      )
+    );
+    actionCell.appendChild(
+      createActionButton("Export to CSV", "btn-warning", () =>
+        handleExportCsv(targetGroup.id)
+      )
+    );
+    targetGroupRow.appendChild(actionCell);
+
+    elements.targetGroupListContainer.appendChild(targetGroupRow);
+  });
+}
+
+// Update target group pagination
+function updateTargetGroupPagination(totalTargetGroups, page) {
+  const totalPages = Math.ceil(totalTargetGroups / state.pageSize);
+  elements.targetGroupPaginationContainer.innerHTML = "";
+  elements.targetGroupCurrentPageDisplay.innerHTML = `Page ${page} of ${totalPages}`;
+  elements.targetGroupResultCountDisplay.textContent = `Found ${totalTargetGroups} results`;
+
+  if (totalTargetGroups == 0) {
+    elements.targetGroupCurrentPageDisplay.innerHTML = "";
+    return;
+  }
+
+  elements.targetGroupPaginationContainer.appendChild(
+    createPaginationButton("Previous", page > 1, () => loadTargetGroups(page - 1))
+  );
+  elements.targetGroupPaginationContainer.appendChild(
+    createPaginationButton("Next", page < totalPages, () => loadTargetGroups(page + 1))
+  );
+}
+
+// Handle target group deletion
+async function handleExportCsv(targetGroupId) {
+  try {
+    // updateAciveFilters();
+    // toggleExportLoadingState();
+
+    const queryParams = new URLSearchParams({
+      filterParams: JSON.stringify({id: targetGroupId}),
+    });
+    const response = await fetch(`/api/target-groups/filtered/export/csv?${queryParams.toString()}`);
+    if (!response.ok) {
+      throw new Error("Failed to export orders");
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "orders.csv";
+    a.click();
+
+    URL.revokeObjectURL(url);
+    // toggleExportLoadingState();
+  } catch (error) {
+    console.log(error);
+    alert("Error exporting orders");
+    // toggleExportLoadingState();
+  }
 }

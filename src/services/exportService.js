@@ -131,6 +131,11 @@ class ExportService {
     }
     
     async* generateCsvRows(data) {
+        if(data.params.entity === 'target-groups'){
+            yield* this.generateTargetGroupRows(data);
+            return;
+        }
+
         const rowGenerator = await this.executeQueryWithCursor(data);
         let totalPrice = 0;
         let discountAmount = 0;
@@ -211,6 +216,42 @@ class ExportService {
 
         footerRow[0] = `Total ${totalsRow?.total_rows || 0} rows`;
         yield footerRow.join(",") + "\n";
+    }
+
+
+    async* generateTargetGroupRows(data) {
+        const rowGenerator = await this.executeQueryWithCursor(data);
+        let headers = null;
+
+        yield "\uFEFF";
+
+        for await (const rows of rowGenerator) {
+            for (const row of rows) {
+                if (!headers) {
+                    headers = Object.keys(row).filter(key => this.isPrimitive(row[key]));
+
+                    yield `${headers.join(",")}\n`;
+                }
+                
+
+                const rowValues = Object.values(row)
+                .filter(value => this.isPrimitive(value))
+                .map(value => {
+                    if (Array.isArray(value)) {
+                        return value.join(':');
+                    }
+                    if (typeof value === 'object' && value !== null) {
+                        return JSON.stringify(value);
+                    }
+
+                    return value;
+                })
+                .join(",") + "\n";
+
+                yield rowValues;
+            }
+        }
+
     }
 
     isPrimitive(value) {

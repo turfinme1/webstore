@@ -33,7 +33,7 @@
                         <button id="show-filter-btn" class="btn btn-primary">Filter Users</button>
                     </div>
                     <div>
-                        <button id="show-form-groups" class="btn btn-primary">Show Target Groups</button>
+                        <button id="show-groups" class="btn btn-primary">Show Target Groups</button>
                         <button id="show-form-btn" class="btn btn-success">Create New Target Group</button>
                     </div>
                 </div>
@@ -148,33 +148,6 @@
                         </form>
                     </div>
                 </div>
-        
-                <!-- User List -->
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>First Name</th>
-                                <th>Last Name</th>
-                                <th>Email</th>
-                                <th>Country</th>
-                                <th>Birth Date</th>
-                                <th>Gender</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="user-list"></tbody>
-                    </table>
-                </div>
-        
-                <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center">
-                    <span id="current-page-display"></span>
-                    <div id="pagination-container" class="d-flex"></div>
-                    <span id="result-count"></span>
-                </div>
-                
 
                 <div id="target-groups-container" class="table-responsive">
                     <table class="table table-bordered table-hover">
@@ -190,6 +163,38 @@
                         <tbody id="target-group-list"></tbody>
                     </table>
                 </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <span id="current-page-display-groups"></span>
+                    <div id="pagination-container-groups" class="d-flex"></div>
+                    <span id="result-count-groups"></span>
+                </div>
+        
+                <!-- User List -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Email</th>
+                                <th>Birth Date</th>
+                                <th>Gender</th>
+                                <!-- <th>Actions</th> -->
+                            </tr>
+                        </thead>
+                        <tbody id="user-list"></tbody>
+                    </table>
+                </div>
+        
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <span id="current-page-display"></span>
+                    <div id="pagination-container" class="d-flex"></div>
+                    <span id="result-count"></span>
+                </div>
+                
 
             </div>
         </div>

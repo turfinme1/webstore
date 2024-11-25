@@ -294,22 +294,40 @@ SELECT
     tg.id,
     tg.name,
     tg.created_at,
-	tg.filters,
+    tg.filters,
     count(utg.user_id) AS user_count,
     json_agg(
         json_build_object(
             'id', u.id,
             'first_name', u.first_name,
             'last_name', u.last_name,
-            'email', u.email
+            'email', u.email,
+            'birth_date', COALESCE(u.birth_date::text, null),
+            'gender', g.type
         )
     ) AS users
 FROM target_groups tg
 JOIN user_target_groups utg ON tg.id = utg.target_group_id
 JOIN users u ON utg.user_id = u.id
+JOIN genders g ON u.gender_id = g.id
 WHERE tg.is_active = TRUE
 GROUP BY tg.id;
 
+CREATE OR REPLACE VIEW target_groups_export_view AS
+SELECT
+    tg.id AS id,
+	u.id AS user_id,
+    u.first_name,
+    u.last_name,
+    u.email,
+    COALESCE(u.birth_date::text, '') AS birth_date,
+    g.type AS gender
+FROM target_groups tg
+JOIN user_target_groups utg ON tg.id = utg.target_group_id
+JOIN users u ON utg.user_id = u.id
+JOIN genders g ON u.gender_id = g.id
+WHERE tg.is_active = TRUE
+ORDER BY tg.id, u.id
 
 CREATE OR REPLACE VIEW promotions_view AS
 SELECT

@@ -3,6 +3,7 @@
     "name": "target-groups",
     "table": "target_groups",
     "views": "target_groups_view",
+    "export_view": "target_groups_export_view",
     "queryValidationSchema": "targetGroupQueryParamsSchema",
     "properties": {
         "name": {
