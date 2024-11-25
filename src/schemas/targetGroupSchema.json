@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "name": "target_groups",
+    "name": "target-groups",
     "table": "target_groups",
     "views": "target_groups_view",
     "queryValidationSchema": "targetGroupQueryParamsSchema",
@@ -20,6 +20,19 @@
                 "type": "Invalid value for target group name."
             }
         },
+        "filters": {
+            "type": "object",
+            "label": "Filters",
+            "placeholder": "Enter Filters",
+            "hideInCreate": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for filters."
+            }
+        },
         "users": {
             "type": "array",
             "label": "Members",
@@ -33,9 +46,9 @@
             },
             "insertConfig": {
                 "type": "mapping_table",
-                "table": "target_group_users",
-                "foreignKey": "user_id",
-                "mappingKey": "target_group_id"
+                "table": "user_target_groups",
+                "mappingKey": "user_id",
+                "foreignKey": "target_group_id"
             }
         }
     },
@@ -46,11 +59,13 @@
             "foreign_key": "target_group_id"
         }
     },
-    "required": ["name"],
+    "required": ["name", "filters", "users"],
     "additionalProperties": false,
     "errorMessage": {
         "required": {
-            "name": "Name is required."
+            "name": "Name is required.",
+            "filters": "Filters are required.",
+            "users": "Users are required."
         },
         "additionalProperties": "No additional properties are allowed."
     }

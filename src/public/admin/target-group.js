@@ -11,6 +11,7 @@ const state = {
   countries: [],
   userToUpdateId: null,
   userStatus: null,
+  userIds: [],
 };
 
 // DOM elements
@@ -22,14 +23,12 @@ const elements = {
   paginationContainer: document.getElementById("pagination-container"),
   currentPageDisplay: document.getElementById("current-page-display"),
   resultCountDisplay: document.getElementById("result-count"),
-  userForm: document.getElementById("user-form"),
-  userUpdateForm: document.getElementById("user-update-form"),
+  targetGroupCreateForm: document.getElementById("user-form"),
+  targetGroupUpdateForm: document.getElementById("user-update-form"),
   cancelButton: document.getElementById("cancel-btn"),
   cancelUpdateButton: document.getElementById("cancel-update-btn"),
   searchInput: document.getElementById("search-input"),
   showFormButton: document.getElementById("show-form-btn"),
-  countryCodeSelect: document.getElementById("iso_country_code_id"),
-  countrySelect: document.getElementById("country_id"),
   countryCodeUpdateSelect: document.getElementById(
     "iso_country_code_id_update"
   ),
@@ -37,7 +36,6 @@ const elements = {
   showFilterButton: document.getElementById("show-filter-btn"),
   cancelFilterButton: document.getElementById("cancel-filter-btn"),
   filterContainer: document.getElementById("filter-container"),
-  countryFilterSelect: document.getElementById("country_id_filter"),
   filterForm: document.getElementById("filter-form"),
 };
 
@@ -57,7 +55,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   attachEventListeners();
 //   loadUsers(state.currentPage);
-  loadCountryCodes();
+  // loadCountryCodes();
 });
 
 // Attach event listeners
@@ -68,8 +66,8 @@ function attachEventListeners() {
   elements.showFilterButton.addEventListener("click", showFilterForm);
   elements.cancelFilterButton.addEventListener("click", hideFilterForm);
 
-  elements.userForm.addEventListener("submit", handleCreateUser);
-  elements.userUpdateForm.addEventListener("submit", handleUpdateUser);
+  elements.targetGroupCreateForm.addEventListener("submit", handleCreateTargetGroup);
+  elements.targetGroupUpdateForm.addEventListener("submit", handleUpdateUser);
   elements.filterForm.addEventListener("submit", handleFilterUsers);
 }
 
@@ -149,6 +147,8 @@ async function loadUsers(page) {
       `/crud/users/filtered?${queryParams.toString()}`
     );
     const { result, count } = await response.json();
+    
+    state.userIds = result.map(user => user.id);
     renderUserList(result);
     updatePagination(count, page);
   } catch (error) {
@@ -168,14 +168,9 @@ function renderUserList(users) {
     userRow.appendChild(createTableCell(user.first_name));
     userRow.appendChild(createTableCell(user.last_name));
     userRow.appendChild(createTableCell(user.email));
-    userRow.appendChild(createTableCell(user.phone_code));
-    userRow.appendChild(createTableCell(user.phone));
     userRow.appendChild(createTableCell(user.country_name));
     userRow.appendChild(createTableCell(user.birth_date ? new Date(user.birth_date).toLocaleDateString() : ""));
     userRow.appendChild(createTableCell(user.gender));
-    userRow.appendChild(createTableCell(user.address));
-    userRow.appendChild(createTableCell(user.is_email_verified));
-    userRow.appendChild(createTableCell(user.has_first_login));
 
     // Actions (Update/Delete)
     const actionCell = createTableCell("");
@@ -247,19 +242,22 @@ function createPaginationButton(text, enabled, onClick) {
 }
 
 // Handle user creation
-async function handleCreateUser(event) {
+async function handleCreateTargetGroup(event) {
   event.preventDefault();
-  const formData = new FormData(elements.userForm);
-  console.log(JSON.stringify(formData));
+  const formData = new FormData(elements.targetGroupCreateForm);
+  const data = Object.fromEntries(formData);
+  data.filters = getFilters();
+  data.users = state.userIds;
+  console.log(JSON.stringify(data));
   try {
-    const response = await fetch("/crud/users", {
+    const response = await fetch("/crud/target-groups", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(formData)),
+      body: JSON.stringify(data),
     });
     if (response.ok) {
-      alert("User created successfully!");
-      elements.userForm.reset();
+      alert("Record created successfully!");
+      elements.targetGroupCreateForm.reset();
       hideForm();
       loadUsers(state.currentPage);
     } else {
@@ -273,7 +271,7 @@ async function handleCreateUser(event) {
 
 async function handleUpdateUser(event) {
   event.preventDefault();
-  const formData = new FormData(elements.userUpdateForm);
+  const formData = new FormData(elements.targetGroupUpdateForm);
   console.log(JSON.stringify(formData));
   try {
     const response = await fetch(`/crud/users/${state.userToUpdateId}`, {
@@ -282,8 +280,8 @@ async function handleUpdateUser(event) {
       body: JSON.stringify(Object.fromEntries(formData)),
     });
     if (response.ok) {
-      alert("User updated successfully!");
-      elements.userUpdateForm.reset();
+      alert("Record updated successfully!");
+      elements.targetGroupUpdateForm.reset();
       state.filterParams = {};
       state.currentPage = 1;
       hideUpdateForm();
@@ -311,19 +309,18 @@ async function displayUpdateForm(userId) {
 
 // Populate update form
 function populateUpdateForm(user) {
-  elements.userUpdateForm["first_name"].value = user.first_name;
-  elements.userUpdateForm["last_name"].value = user.last_name;
-  elements.userUpdateForm["email"].value = user.email;
-  elements.userUpdateForm["iso_country_code_id"].value =
+  elements.targetGroupUpdateForm["first_name"].value = user.first_name;
+  elements.targetGroupUpdateForm["last_name"].value = user.last_name;
+  elements.targetGroupUpdateForm["email"].value = user.email;
+  elements.targetGroupUpdateForm["iso_country_code_id"].value =
     user.iso_country_code_id;
-  elements.userUpdateForm["phone"].value = user.phone;
+  elements.targetGroupUpdateForm["phone"].value = user.phone;
   if(user.birth_date){
-    elements.userUpdateForm["birth_date"].value = dayjs(user.birth_date).format("YYYY-MM-DD");
+    elements.targetGroupUpdateForm["birth_date"].value = dayjs(user.birth_date).format("YYYY-MM-DD");
   }
-  elements.userUpdateForm["country_id"].value = user.country_id;
-  elements.userUpdateForm["gender_id"].value = user.gender_id;
-  elements.userUpdateForm["address"].value = user.address;
-  elements.userUpdateForm["is_email_verified"].value = user.is_email_verified;
+  elements.targetGroupUpdateForm["country_id"].value = user.country_id;
+  elements.targetGroupUpdateForm["gender_id"].value = user.gender_id;
+  elements.targetGroupUpdateForm["is_email_verified"].value = user.is_email_verified;
 }
 
 // Handle user deletion
@@ -345,13 +342,65 @@ async function handleDeleteUser(userId) {
   }
 }
 
+function getFilters() {
+  const formData = new FormData(elements.filterForm);
+  const filterParams = Object.fromEntries(formData);
+
+
+  if(filterParams.birth_date){
+    filterParams.birth_date = dayjs(filterParams.birth_date).format("YYYY-MM-DD");
+  } else {
+    filterParams.birth_date = "All";
+  }
+
+  let firstNameFilter = filterParams.first_name.replace(/\s/g, "").split(",");
+  if(firstNameFilter.length > 1){
+    filterParams.first_name = firstNameFilter;
+  } else {
+    filterParams.first_name = "All";
+  }
+
+  if(filterParams.gender_id){
+    const genderSelect = document.getElementById('gender_id'); // Replace with your select element's ID
+    const selectedOption = genderSelect.options[genderSelect.selectedIndex];
+    filterParams.gender = selectedOption.text;
+  } else {
+    filterParams.gender = "All";
+  }
+  delete filterParams.gender_id;
+
+  return filterParams;
+}
+
 async function handleFilterUsers(event) {
-  event.preventDefault();
+  if (event){
+    event.preventDefault();
+  }
   const formData = new FormData(elements.filterForm);
   if (formData.get("country_id") === "") {
     formData.delete("country_id");
   }
   const filterParams = Object.fromEntries(formData);
+
+  if(filterParams.birth_date){
+    filterParams.birth_date = dayjs(filterParams.birth_date).format("YYYY-MM-DD");
+  } else {
+    delete filterParams.birth_date;
+  }
+
+  let firstNameFilter = filterParams.first_name.replace(/\s/g, "").split(",");
+  if(firstNameFilter.length > 0){
+    filterParams.first_name = firstNameFilter;
+  } else {
+    delete filterParams.first_name;
+  }
+
+  if(filterParams.gender_id){
+    filterParams.gender_id = parseInt(filterParams.gender_id);
+  } else {
+    delete filterParams.gender_id;
+  }
+
   state.filterParams = filterParams;
 
   // Reload users with the new filters

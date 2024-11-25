@@ -133,7 +133,7 @@ function createBackofficeNavigation(userStatus) {
       text: "Target Groups",
       href: "/target-group",
       permission: "create",
-      interface: "users",
+      interface: "target-groups",
     },
     {
       id: "email-templates-link",
