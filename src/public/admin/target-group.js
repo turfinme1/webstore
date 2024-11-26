@@ -134,6 +134,8 @@ async function loadUsers(page) {
       alert("Only the first 1000 users are displayed.");
     }
 
+    const userTableSection = document.getElementById("user-table-section");
+    userTableSection.scrollIntoView({ behavior: "smooth" });
     // updatePagination(count, page);
   } catch (error) {
     console.error("Error loading users:", error);
@@ -144,6 +146,11 @@ async function loadUsers(page) {
 function renderUserList(users) {
   console.log(users);
   elements.userListContainer.innerHTML = ""; // Clear previous list
+  elements.resultCountDisplay.textContent = "";
+
+  if(users?.length){
+    elements.resultCountDisplay.textContent = `Displaying ${users.length} results`;
+  }
   users.forEach((user) => {
     const userRow = document.createElement("tr");
 
@@ -230,6 +237,20 @@ async function handleCreateTargetGroup(event) {
   const formData = new FormData(elements.targetGroupCreateForm);
   const data = Object.fromEntries(formData);
   data.filters = getFilters();
+
+  const queryParams = new URLSearchParams({
+    filterParams: JSON.stringify(state.filterParams),
+    pageSize: state.pageSize.toString(),
+    orderParams: JSON.stringify(state.orderParams),
+    page: "1",
+  });
+
+  const response = await fetch(
+    `/crud/users/filtered?${queryParams.toString()}`
+  );
+  const { result, count } = await response.json();
+  state.userIds = result.map(user => user.id);
+
   data.users = state.userIds;
   console.log(JSON.stringify(data));
   try {
@@ -426,9 +447,11 @@ function renderTargetGroupList(targetGroups) {
     // Actions (Update/Delete)
     const actionCell = createTableCell("");
     actionCell.appendChild(
-      createActionButton("View Users", "btn-warning", () =>
-        renderUserList(targetGroup.users)
-      )
+      createActionButton("View Users", "btn-warning", () => {
+        renderUserList(targetGroup.users);
+        const userTableSection = document.getElementById("user-table-section");
+        userTableSection.scrollIntoView({ behavior: "smooth" });
+      })
     );
     actionCell.appendChild(
       createActionButton("Export to CSV", "btn-warning", () =>
@@ -479,7 +502,7 @@ async function handleExportCsv(targetGroupId) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "orders.csv";
+    a.download = `targetGroup.csv`;
     a.click();
 
     URL.revokeObjectURL(url);

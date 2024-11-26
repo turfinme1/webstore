@@ -39,7 +39,7 @@
                 </div>
         
                 <!-- Filters Section -->
-                <div id="filter-container" class="card mt-4">
+                <div id="filter-container" class="card mt-4 mb-4">
                     <div class="card-body">
                         <h5 class="card-title">Filter Users</h5>
                         <form id="filter-form">
@@ -67,7 +67,7 @@
                 </div>
         
         
-                <div id="form-container" class="card mt-4" style="display: none;">
+                <div id="form-container" class="card mt-4 mb-4" style="display: none;">
                     <div class="card-body">
                         <h5 class="card-title">Create Target Group</h5>
                         <form id="user-form">
@@ -84,7 +84,7 @@
         
         
                 <!-- Update User Form -->
-                <div id="form-update-container" class="card mt-4" style="display: none;">
+                <div id="form-update-container" class="card mt-4 mb-4" style="display: none;">
                     <div class="card-body">
                         <h5 class="card-title">Update User</h5>
                         <form id="user-update-form">
@@ -149,7 +149,8 @@
                     </div>
                 </div>
 
-                <div id="target-groups-container" class="table-responsive">
+                <h2 class="mt-4 mb-3">Target Groups</h2>
+                <div id="target-groups-container" class="table-responsive mb-4">
                     <table class="table table-bordered table-hover">
                         <thead>
                             <tr>
@@ -164,14 +165,19 @@
                     </table>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-center mb-4">
                     <span id="current-page-display-groups"></span>
                     <div id="pagination-container-groups" class="d-flex"></div>
                     <span id="result-count-groups"></span>
                 </div>
-        
+                
+                <br>
                 <!-- User List -->
-                <div class="table-responsive">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mt-4 mb-3">Users</h2>
+                    <span id="result-count"></span>
+                </div>
+                <div id="user-table-section" class="table-responsive mb-4">
                     <table class="table table-bordered table-hover">
                         <thead>
                             <tr>
@@ -189,7 +195,7 @@
                 </div>
         
                 <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-center mb-4">
                     <span id="current-page-display"></span>
                     <div id="pagination-container" class="d-flex"></div>
                     <span id="result-count"></span>

@@ -69,7 +69,7 @@
     },
     "birth_date": {
       "type": ["string", "null"],
-      "format": "date",
+      "format": "date-time-no-year",
       "label": "Birth Date",
       "placeholder": "Enter Birth Date",
       "errorMessage": {
