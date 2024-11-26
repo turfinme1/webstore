@@ -129,6 +129,13 @@ function createBackofficeNavigation(userStatus) {
       interface: "products",
     },
     {
+      id: "target-groups-link",
+      text: "Target Groups",
+      href: "/target-group",
+      permission: "create",
+      interface: "target-groups",
+    },
+    {
       id: "email-templates-link",
       text: "Email Templates",
       href: "/email-templates",

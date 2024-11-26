@@ -149,7 +149,8 @@ INSERT INTO interfaces (name) VALUES
 ('roles'),
 ('site-settings'),
 ('email-templates'),
-('promotions');
+('promotions'),
+('target-groups');
 
 INSERT INTO permissions (name, interface_id) VALUES
 ('view', 1),
@@ -201,7 +202,12 @@ INSERT INTO permissions (name, interface_id) VALUES
 ('create', 10),
 ('read', 10),
 ('update', 10),
-('delete', 10);
+('delete', 10),
+('view', 11),
+('create', 11),
+('read', 11),
+('update', 11),
+('delete', 11);
 
 INSERT INTO role_permissions (role_id, permission_id) VALUES
     (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),   -- crud_products

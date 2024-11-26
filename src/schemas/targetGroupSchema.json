@@ -1,0 +1,73 @@
+{
+    "type": "object",
+    "name": "target-groups",
+    "table": "target_groups",
+    "views": "target_groups_view",
+    "export_view": "target_groups_export_view",
+    "queryValidationSchema": "targetGroupQueryParamsSchema",
+    "properties": {
+        "name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z_-]+$",
+            "label": "Target Group Name",
+            "placeholder": "Enter Target Group Name",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for target group name."
+            }
+        },
+        "filters": {
+            "type": "object",
+            "label": "Filters",
+            "placeholder": "Enter Filters",
+            "hideInCreate": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for filters."
+            }
+        },
+        "users": {
+            "type": "array",
+            "label": "Members",
+            "placeholder": "Select Members",
+            "hideInCreate": true,
+            "renderConfig": {
+                "type": "table_multi_select",
+                "selectSearchKey": "name",
+                "selectDisplayKey": ["name", "email"],
+                "multiple": true
+            },
+            "insertConfig": {
+                "type": "mapping_table",
+                "table": "user_target_groups",
+                "mappingKey": "user_id",
+                "foreignKey": "target_group_id"
+            }
+        }
+    },
+    "table_display_columns": ["name","created_at", "user_count", "filters"],
+    "relationships": {
+        "target_group_members": {
+            "table": "target_group_members",
+            "foreign_key": "target_group_id"
+        }
+    },
+    "required": ["name", "filters", "users"],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "name": "Name is required.",
+            "filters": "Filters are required.",
+            "users": "Users are required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

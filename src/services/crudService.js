@@ -55,27 +55,39 @@ class CrudService {
     for (const key of keys) {
       const property = schema.properties[key];
 
-      if (property?.insertConfig?.type === "mapping_table" && data.body[key]) {
+      if (property?.insertConfig?.type === "mapping_table" && data.body[key] && Array.isArray(data.body[key]) && data.body[key].length > 0) {
         const { insertConfig } = property;
         const mappingTable = insertConfig.table;
         const foreignKey = insertConfig.foreignKey;
         const mappingKey = insertConfig.mappingKey;
 
-        // Prepare the data to insert into the mapping table
-        const mappingValues = data.body[key].map((value) => ({
-          [foreignKey]: mainEntityId,
-          [mappingKey]: value,
-        }));
+        // // Prepare the data to insert into the mapping table
+        // const mappingValues = data.body[key].map((value) => ({
+        //   [foreignKey]: mainEntityId,
+        //   [mappingKey]: value,
+        // }));
 
-        // Insert each entry into the mapping table
-        for (const mapping of mappingValues) {
-          const columns = Object.keys(mapping).join(", ");
-          const values = Object.values(mapping);
-          const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
+        // // Insert each entry into the mapping table
+        // for (const mapping of mappingValues) {
+        //   const columns = Object.keys(mapping).join(", ");
+        //   const values = Object.values(mapping);
+        //   const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
 
-          const mappingQuery = `INSERT INTO ${mappingTable} (${columns}) VALUES (${placeholders})`;
-          await data.dbConnection.query(mappingQuery, values);
-        }
+        //   const mappingQuery = `INSERT INTO ${mappingTable} (${columns}) VALUES (${placeholders})`;
+        //   await data.dbConnection.query(mappingQuery, values);
+        // }
+
+        // Create arrays for each column
+        const foreignKeys = Array(data.body[key].length).fill(mainEntityId);
+        const mappingValues = data.body[key];
+
+        // Build UNNEST query for bulk insert
+        const query = `
+          INSERT INTO ${mappingTable} (${foreignKey}, ${mappingKey})
+          SELECT * FROM UNNEST ($1::bigint[], $2::bigint[])
+        `;
+
+        await data.dbConnection.query(query, [foreignKeys, mappingValues]);
       }
     }
   }
@@ -124,15 +136,10 @@ class CrudService {
 
         if (Array.isArray(filterValue)) {
           const filterPlaceholders = filterValue
-            .map((_, index) => `$${searchValues.length + index + 1}`)
-            .join(", ");
+          .map((_, index) => `STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length + index + 1})) > 0`)
+          .join(" OR ");
           searchValues.push(...filterValue);
-          conditions.push(`${filterField} IN (${filterPlaceholders})`);
-        } else if (typeof filterValue === "string") {
-          searchValues.push(`${filterValue}`);
-          conditions.push(
-            `STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length})) > 0`
-          );
+          conditions.push(`(${filterPlaceholders})`);
         } else if (schema.properties[filterField]?.format === "date-time") {
           if (filterValue.min && filterValue.max) {
             searchValues.push(filterValue.min);
@@ -154,7 +161,23 @@ class CrudService {
             conditions.push(
               `DATE_TRUNC('day', ${filterField}) <= $${searchValues.length}`
             );
+          } else {
+            searchValues.push(filterValue);
+            conditions.push(
+              `DATE_TRUNC('day', ${filterField}) = $${searchValues.length}`
+            );
           }
+        } else if (schema.properties[filterField]?.format === "date-time-no-year") {
+          searchValues.push(filterValue);
+          conditions.push(
+            `(EXTRACT(MONTH FROM ${filterField}), EXTRACT(DAY FROM ${filterField})) = 
+            (EXTRACT(MONTH FROM $${searchValues.length}::date), EXTRACT(DAY FROM $${searchValues.length}::date))`
+          );
+        } else if (typeof filterValue === "string") {
+          searchValues.push(`${filterValue}`);
+          conditions.push(
+            `STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length})) > 0`
+          ); 
         } else if (typeof filterValue === "object") {
           if (filterValue.min) {
             searchValues.push(filterValue.min);
