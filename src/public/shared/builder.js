@@ -383,6 +383,11 @@ class CrudPageBuilder {
       input.name = field;
       input.type = "date";
 
+      if(!formType){
+        // when the form is not create or update => filter form default value
+        input.value = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+      }
+
       if (property?.required?.[formType]) {
         input.required = true;
         label.innerHTML = `${label.textContent} <span style="color:red;">*</span>`;

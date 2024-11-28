@@ -41,7 +41,8 @@ const elements = {
   productSelect: document.getElementById("product-select"),
   productSelectUpdate: document.getElementById("product-select_update"),
   spinner: document.getElementById("spinner"),
-  createdAtMin : document.getElementById("created_at_min"),
+  createdAtMin: document.getElementById("created_at_min"),
+  createdAtMax: document.getElementById("created_at_max"), 
   orderBySelect: document.getElementById("order_by"),
 };
 
@@ -50,6 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   elements.createdAtMin.value = yesterday.toISOString().split("T")[0];
+  elements.createdAtMax.value = new Date().toISOString().split("T")[0];
 
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
