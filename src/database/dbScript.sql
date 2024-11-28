@@ -345,22 +345,6 @@ largest_discount AS (
     FROM promotions
     WHERE is_active = TRUE
       AND NOW() BETWEEN start_date AND end_date
-),
-order_items_agg AS (
-    SELECT
-        oi.order_id,
-        json_agg(
-            json_build_object(
-                'product_id', oi.product_id,
-                'name', p.name,
-                'quantity', oi.quantity,
-                'unit_price', oi.unit_price,
-                'total_price', oi.total_price
-            )
-        ) AS order_items
-    FROM order_items oi
-    JOIN products p ON oi.product_id = p.id
-    GROUP BY oi.order_id
 )
 SELECT
     o.id,
@@ -384,16 +368,14 @@ SELECT
         'city', a.city,
         'country_id', a.country_id,
         'country_name', c.country_name
-    ) AS shipping_address,
-    oi_agg.order_items
+    ) AS shipping_address
 FROM
     orders o
 CROSS JOIN vat
 CROSS JOIN largest_discount ld
 LEFT JOIN addresses a ON o.shipping_address_id = a.id
 LEFT JOIN iso_country_codes c ON a.country_id = c.id
-LEFT JOIN users u ON o.user_id = u.id
-LEFT JOIN order_items_agg oi_agg ON o.id = oi_agg.order_id;
+LEFT JOIN users u ON o.user_id = u.id;
 
 CREATE OR REPLACE VIEW orders_export_view AS
 WITH vat AS (
