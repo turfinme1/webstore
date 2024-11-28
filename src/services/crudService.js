@@ -145,6 +145,30 @@ class CrudService {
             searchValues.push(filterValue.min);
             searchValues.push(filterValue.max);
             conditions.push(
+              `${filterField} >= $${searchValues.length - 1} 
+              AND ${filterField} <= $${searchValues.length}`
+            );
+          } else if (filterValue.min) {
+            searchValues.push(filterValue.min);
+            conditions.push(
+              `${filterField} >= $${searchValues.length}`
+            );
+          } else if (filterValue.max) {
+            searchValues.push(filterValue.max);
+            conditions.push(
+              `${filterField} <= $${searchValues.length}`
+            );
+          } else {
+            searchValues.push(filterValue);
+            conditions.push(
+              `${filterField} = $${searchValues.length}`
+            );
+          }
+        } else if (schema.properties[filterField]?.format === "date-time") {
+          if (filterValue.min && filterValue.max) {
+            searchValues.push(filterValue.min);
+            searchValues.push(filterValue.max);
+            conditions.push(
               `DATE_TRUNC('day', ${filterField}) >= $${
                 searchValues.length - 1
               } AND DATE_TRUNC('day', ${filterField}) <= $${
@@ -173,6 +197,8 @@ class CrudService {
             `(EXTRACT(MONTH FROM ${filterField}), EXTRACT(DAY FROM ${filterField})) = 
             (EXTRACT(MONTH FROM $${searchValues.length}::date), EXTRACT(DAY FROM $${searchValues.length}::date))`
           );
+        } else if (schema.properties[filterField]?.format === "date-range-overlap") {
+          
         } else if (typeof filterValue === "string") {
           searchValues.push(`${filterValue}`);
           conditions.push(
