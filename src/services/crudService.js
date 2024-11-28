@@ -329,7 +329,7 @@ class CrudService {
     const schema = data.entitySchemaCollection[data.params.entity];
 
     const result = await data.dbConnection.query(
-      `SELECT * FROM ${schema.views} WHERE id = $1`,
+      `SELECT * FROM ${schema.detail_view || schema.views} WHERE id = $1`,
       [data.params.id]
     );
 
