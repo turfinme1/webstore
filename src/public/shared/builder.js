@@ -82,7 +82,7 @@ class CrudPageBuilder {
     orderSelect.classList.add("btn", "btn-primary", "ms-2");
     const emptyOption = document.createElement("option");
     emptyOption.value = "";
-    emptyOption.text = "Order records";
+    emptyOption.text = `Order ${this.schema.name}`;
     orderSelect.appendChild(emptyOption);
     for (const [key, value] of Object.entries(this.querySchema.orderParams.properties)) {
       const option = document.createElement("option");

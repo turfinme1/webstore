@@ -36,6 +36,7 @@ const elements = {
   cancelFilterButton: document.getElementById("cancel-filter-btn"),
   filterContainer: document.getElementById("filter-container"),
   filterForm: document.getElementById("filter-form"),
+  orderBySelect: document.getElementById("order_by"),
 
   targetGroupListContainer: document.getElementById("target-group-list"),
   targetGroupPaginationContainer: document.getElementById("pagination-container-groups"),
@@ -76,6 +77,9 @@ function attachEventListeners() {
   elements.targetGroupUpdateForm.addEventListener("submit", handleUpdateUser);
   elements.filterForm.addEventListener("submit", handleFilterUsers);
 
+  elements.orderBySelect.addEventListener("change", () => {
+    loadTargetGroups(state.currentTargetGroupPage);
+  });
   elements.showTargetGroupListButton.addEventListener("click", () => {
     loadTargetGroups(state.currentTargetGroupPage);
   });
@@ -118,7 +122,7 @@ async function loadUsers(page) {
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(state.filterParams),
       pageSize: state.pageSize.toString(),
-      orderParams: JSON.stringify(state.orderParams),
+      // orderParams: JSON.stringify(state.orderParams),
       page: page.toString(),
     });
 
@@ -416,7 +420,14 @@ async function handleFilterUsers(event) {
 // target group list
 async function loadTargetGroups(page) {
   try {
+    if(elements.orderBySelect.value){
+      state.orderParams = [elements.orderBySelect.value.split(" ")];
+    } else {
+      state.orderParams = [];
+    }
+
     const queryParams = new URLSearchParams({
+      orderParams: JSON.stringify(state.orderParams),
       pageSize: "100",
       page: page.toString(),
     });
