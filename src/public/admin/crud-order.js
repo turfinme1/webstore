@@ -50,8 +50,8 @@ const elements = {
 document.addEventListener("DOMContentLoaded", async () => {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  elements.createdAtMin.value = yesterday.toISOString().split("T")[0];
-  elements.createdAtMax.value = new Date().toISOString().split("T")[0];
+  elements.createdAtMin.value = yesterday.toISOString().slice(0, 19);
+  elements.createdAtMax.value = new Date().toISOString().slice(0, 19);
 
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
@@ -373,7 +373,7 @@ function renderOrders(orders) {
     row.appendChild(createTableCell(order.is_active));
     row.appendChild(
       createTableCell(
-        `${order.shipping_address.country_name}, ${order.shipping_address.city}, ${order.shipping_address.street}`
+        `${order.shipping_address.country_name || "--"}, ${order.shipping_address.city|| "--"}, ${order.shipping_address.street|| "--"}`
       )
     );
 
