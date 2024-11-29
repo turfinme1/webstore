@@ -27,7 +27,7 @@ CREATE TABLE admin_users (
     password_hash TEXT NOT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
+    email TEXT NOT NULL,
     phone TEXT NOT NULL,
     birth_date DATE NULL,
     iso_country_code_id BIGINT NOT NULL REFERENCES iso_country_codes(id),
@@ -39,6 +39,9 @@ CREATE TABLE admin_users (
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 ALTER TABLE admin_users ADD COLUMN birth_date DATE NULL;
+ALTER TABLE admin_users DROP CONSTRAINT IF EXISTS admin_users_email_key;
+CREATE UNIQUE INDEX admin_users_active_email_idx ON admin_users (email) 
+WHERE is_active = TRUE;
 
 CREATE TABLE admin_sessions (
     id BIGSERIAL PRIMARY KEY,

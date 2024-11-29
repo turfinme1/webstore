@@ -40,6 +40,7 @@
         },
         "start_date": {
             "type": "string",
+            "format": "date-range-overlap-start",
             "label": "Start Date",
             "placeholder": "Enter Start Date",
             "filterable": true,
@@ -56,6 +57,7 @@
         },
         "end_date": {
             "type": "string",
+            "format": "date-range-overlap-end",
             "label": "End Date",
             "placeholder": "Enter End Date",
             "filterable": true,

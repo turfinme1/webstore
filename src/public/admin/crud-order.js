@@ -41,7 +41,8 @@ const elements = {
   productSelect: document.getElementById("product-select"),
   productSelectUpdate: document.getElementById("product-select_update"),
   spinner: document.getElementById("spinner"),
-  createdAtMin : document.getElementById("created_at_min"),
+  createdAtMin: document.getElementById("created_at_min"),
+  createdAtMax: document.getElementById("created_at_max"), 
   orderBySelect: document.getElementById("order_by"),
 };
 
@@ -49,7 +50,8 @@ const elements = {
 document.addEventListener("DOMContentLoaded", async () => {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  elements.createdAtMin.value = yesterday.toISOString().split("T")[0];
+  elements.createdAtMin.value = yesterday.toISOString().slice(0, 19);
+  elements.createdAtMax.value = new Date().toISOString().slice(0, 19);
 
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
@@ -350,75 +352,110 @@ async function loadOrders(page) {
 // Render orders in the table
 function renderOrders(orders) {
   elements.orderListContainer.innerHTML = "";
+  const totalColumns = 15;
 
   orders.forEach((order) => {
-    const row = document.createElement("tr");
-    row.appendChild(
+    const mainRow = document.createElement("tr");
+    mainRow.id = `order-row-${order.id}`;
+    mainRow.appendChild(
       createTableCell(new Date(order.created_at).toLocaleString())
     );
-    row.appendChild(createTableCell(order.id, "right"));
+    mainRow.appendChild(createTableCell(order.id, "right"));
     // row.appendChild(createTableCell(order.order_hash));
-    row.appendChild(createTableCell(order.email));
+    mainRow.appendChild(createTableCell(order.email));
     // row.appendChild(createTableCell(order.user_id));
-    row.appendChild(createTableCell(order.status));
-    row.appendChild(createTableCell(formatCurrency(order.total_price), "right"));
-    row.appendChild(createTableCell(`${order.discount_percentage}%`, "right"));
-    row.appendChild(createTableCell(formatCurrency(order.discount_amount), "right"));
-    row.appendChild(createTableCell(`${order.vat_percentage}%`, "right"));
-    row.appendChild(createTableCell(formatCurrency(order.vat_amount), "right"));
-    row.appendChild(createTableCell(formatCurrency(order.total_price_with_vat), "right"));
-    row.appendChild(createTableCell(formatCurrency(order.paid_amount), "right"));
-    row.appendChild(createTableCell(order.is_active));
-    row.appendChild(
+    mainRow.appendChild(createTableCell(order.status));
+    mainRow.appendChild(createTableCell(formatCurrency(order.total_price), "right"));
+    mainRow.appendChild(createTableCell(`${order.discount_percentage}%`, "right"));
+    mainRow.appendChild(createTableCell(formatCurrency(order.discount_amount), "right"));
+    mainRow.appendChild(createTableCell(`${order.vat_percentage}%`, "right"));
+    mainRow.appendChild(createTableCell(formatCurrency(order.vat_amount), "right"));
+    mainRow.appendChild(createTableCell(formatCurrency(order.total_price_with_vat), "right"));
+    mainRow.appendChild(createTableCell(formatCurrency(order.paid_amount), "right"));
+    mainRow.appendChild(createTableCell(order.is_active));
+    mainRow.appendChild(
       createTableCell(
-        `${order.shipping_address.country_name}, ${order.shipping_address.city}, ${order.shipping_address.street}`
+        `${order.shipping_address.country_name || "--"}, ${order.shipping_address.city|| "--"}, ${order.shipping_address.street|| "--"}`
       )
     );
 
     // Create order items cell with toggle button
     const itemsCell = createTableCell("");
-
-    // Create a div to hold the order items
-    const itemsDiv = document.createElement("div");
-    itemsDiv.style.display = "none"; // Initially hidden
-
-    // Format the order items in a list
-    const itemsList = document.createElement("ul");
-    itemsList.classList.add("order-items-list");
-    if (order?.order_items) {
-      for (const item of order?.order_items) {
-        const listItem = document.createElement("li");
-        listItem.textContent = `${item.name} - ${item.quantity} item/s`;
-        itemsList.appendChild(listItem);
-      }
-    }
-
-    itemsDiv.appendChild(itemsList);
-    const toggleButton = createActionButton("Show Items", "btn-secondary", () =>
-      toggleDisplay()
-    );
-
-    // Toggle the display of the items when the button is clicked
-    function toggleDisplay() {
-      if (itemsDiv.style.display === "none") {
-        itemsDiv.style.display = "block";
-        toggleButton.textContent = "Hide Items";
-      } else {
-        itemsDiv.style.display = "none";
+    const toggleButton = createActionButton("Toggle item list", "btn-secondary", async (e) => {
+      e.preventDefault(); // Prevent default button behavior
+      const detailsRow = document.getElementById(`order-details-${order.id}`);
+      const itemsContainer = detailsRow.querySelector('.items-container');
+      
+      if (detailsRow.classList.contains('show')) {
         toggleButton.textContent = "Show Items";
+        // If open, just hide
+        bootstrap.Collapse.getOrCreateInstance(detailsRow).hide();
+      } else {
+        // If closed, load data first
+        toggleButton.disabled = true;
+        toggleButton.textContent = "Loading...";
+        
+        try {
+          const response = await fetch(`/crud/orders/${order.id}`);
+          if (!response.ok) throw new Error('Failed to fetch items');
+          const orderDetails = await response.json();
+          
+          if (orderDetails?.order_items?.length > 0) {
+            // First clear and append content
+            itemsContainer.innerHTML = '';
+            itemsContainer.appendChild(createItemsTable(orderDetails.order_items));
+            
+            // Then initialize collapse and show
+            await new Promise(resolve => setTimeout(resolve, 0)); // Let DOM update
+            const collapse = bootstrap.Collapse.getOrCreateInstance(detailsRow);
+            collapse.show();
+            
+            toggleButton.textContent = "Toggle item list";
+          } else {
+            alert('No items found for this order');
+            toggleButton.textContent = "Show Items";
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Failed to load order items');
+          toggleButton.textContent = "Show Items";
+        } finally {
+          toggleButton.disabled = false;
+        }
       }
-    }
+    });
 
-    // Append the button and items div to the cell
+    toggleButton.setAttribute('data-bs-toggle', 'collapse');
+    toggleButton.setAttribute('data-bs-target', `#order-details-${order.id}`);
+    toggleButton.setAttribute('aria-expanded', 'false');
+    toggleButton.setAttribute('aria-controls', `order-details-${order.id}`);
+    
     itemsCell.appendChild(toggleButton);
-    itemsCell.appendChild(itemsDiv);
-    row.appendChild(itemsCell);
+    mainRow.appendChild(itemsCell);
+    
+    // Add main row
+    elements.orderListContainer.appendChild(mainRow);
+    
+    // Create details row
+    const detailsRow = document.createElement("tr");
+    detailsRow.id = `order-details-${order.id}`;
+    detailsRow.classList.add('collapse');
+    
+    const detailsCell = document.createElement("td");
+    detailsCell.colSpan = totalColumns;
+    detailsCell.classList.add('p-0');
+    
+    const itemsContainer = document.createElement("div");
+    itemsContainer.classList.add('items-container', 'p-3', 'bg-light');
+    
+    detailsCell.appendChild(itemsContainer);
+    detailsRow.appendChild(detailsCell);
 
     const actionCell = createTableCell("");
     if (hasPermission(state.userStatus, "update", "orders")) {
       actionCell.appendChild(
         createActionButton("Edit", "btn-warning", () =>
-          displayUpdateForm(user.id)
+          displayUpdateForm(order.id)
         )
       );
     }
@@ -426,14 +463,45 @@ function renderOrders(orders) {
     if (hasPermission(state.userStatus, "delete", "orders")) {
       actionCell.appendChild(
         createActionButton("Delete", "btn-danger", () =>
-          handleDeleteOrder(user.id)
+          handleDeleteOrder(order.id)
         )
       );
     }
-    row.appendChild(actionCell);
+    mainRow.appendChild(actionCell);
 
-    elements.orderListContainer.appendChild(row);
+    elements.orderListContainer.appendChild(detailsRow);
   });
+}
+
+function createItemsTable(items) {
+  const table = document.createElement('table');
+  table.classList.add('table', 'table-sm', 'mb-0');
+  
+  const thead = document.createElement('thead');
+  thead.innerHTML = `
+    <tr>
+      <th>Product Name</th>
+      <th class="text-end">Quantity</th>
+      <th class="text-end">Unit Price</th>
+      <th class="text-end">Total Price</th>
+    </tr>
+  `;
+  
+  const tbody = document.createElement('tbody');
+  items.forEach(item => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${item.name}</td>
+      <td class="text-end">${item.quantity}</td>
+      <td class="text-end">${formatCurrency(item.unit_price)}</td>
+      <td class="text-end">${formatCurrency(item.total_price)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  return table;
 }
 
 function createTableCell(text, align = "left") {
@@ -641,7 +709,7 @@ async function displayUpdateForm(orderId) {
     console.log(order);
     state.orderToUpdateId = orderId;
     state.productsInOrder = order.order_items;
-    showUpdateForm();
+    showUpdateForm(); 
     populateUpdateForm(order);
     renderSelectedProductsUpdate();
   } catch (error) {

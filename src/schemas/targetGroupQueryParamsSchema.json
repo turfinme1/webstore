@@ -40,6 +40,10 @@
                 "type": "string",
                 "label": "Name"
             },
+            "user_count": {
+                "type": "string",
+                "label": "Count"
+            },
             "created_at": {
                 "type": "string",
                 "label": "Created At",

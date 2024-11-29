@@ -110,7 +110,8 @@ function requestMiddleware(handler) {
 }
 
 async function sessionMiddleware(req, res) {
-  let sessionId = req.cookies.session_id;
+  const cookieName = req.entitySchemaCollection.userManagementSchema.cookie_name;
+  let sessionId = req.cookies[cookieName];
 
   if (sessionId) {
     const data = { entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, sessionHash : sessionId };
@@ -118,7 +119,7 @@ async function sessionMiddleware(req, res) {
 
     if (session && new Date(session.expires_at) > new Date()) {
       const refreshedSession = await authService.refreshSessionExpiry(data);
-      res.cookie('session_id', refreshedSession.session_hash, {
+      res.cookie(cookieName, refreshedSession.session_hash, {
         expires: refreshedSession.expires_at,
         secure: false, httpOnly: false
       });
@@ -130,7 +131,7 @@ async function sessionMiddleware(req, res) {
 
   const data = {entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, userId: null, ipAddress: req.ip, sessionType: 'Anonymous' };
   const anonymousSession = await authService.createSession(data);
-  res.cookie('session_id', anonymousSession.session_hash, {
+  res.cookie(cookieName, anonymousSession.session_hash, {
     expires: anonymousSession.expires_at,
     secure: false, httpOnly: false
   });

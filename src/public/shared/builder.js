@@ -82,7 +82,7 @@ class CrudPageBuilder {
     orderSelect.classList.add("btn", "btn-primary", "ms-2");
     const emptyOption = document.createElement("option");
     emptyOption.value = "";
-    emptyOption.text = "Order records";
+    emptyOption.text = `Order ${this.schema.name}`;
     orderSelect.appendChild(emptyOption);
     for (const [key, value] of Object.entries(this.querySchema.orderParams.properties)) {
       const option = document.createElement("option");
@@ -382,6 +382,11 @@ class CrudPageBuilder {
       input.id = field;
       input.name = field;
       input.type = "date";
+
+      if(!formType){
+        // when the form is not create or update => filter form default value
+        input.value = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+      }
 
       if (property?.required?.[formType]) {
         input.required = true;
