@@ -6,7 +6,8 @@
     "session_table": "admin_sessions",
     "captcha_table": "admin_captchas",
     "failed_attempts_table": "admin_failed_attempts",
-    "session_id": "admin_session_id"
+    "session_id": "admin_session_id",
+    "cookie_name": "admin_session_id"
   },
   "user": {
     "user_id": "user_id",
@@ -14,6 +15,7 @@
     "session_table": "sessions",
     "captcha_table": "captchas",
     "failed_attempts_table": "failed_attempts",
-    "session_id": "session_id"
+    "session_id": "session_id",
+    "cookie_name": "session_id"
   }
 }
