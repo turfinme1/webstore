@@ -13,7 +13,7 @@ class CrudService {
   }
 
   async create(data) {
-    const schema = data.entitySchemaCollection[data.params.entity];
+    const schema = data.entitySchemaCollection[data.params.entity]; 
 
     // Hash the password if it exists
     if (data.body.password_hash) {
@@ -197,8 +197,18 @@ class CrudService {
             `(EXTRACT(MONTH FROM ${filterField}), EXTRACT(DAY FROM ${filterField})) = 
             (EXTRACT(MONTH FROM $${searchValues.length}::date), EXTRACT(DAY FROM $${searchValues.length}::date))`
           );
-        } else if (schema.properties[filterField]?.format === "date-range-overlap") {
-          
+        } else if (schema.properties[filterField]?.format === "date-range-overlap-start") {
+          searchValues.push(filterValue);
+          const endField = Object.keys(schema.properties).find(key => schema.properties[key]?.format === "date-range-overlap-end");
+          conditions.push(
+            `$${searchValues.length} <= ${endField}`
+          );
+        } else if (schema.properties[filterField]?.format === "date-range-overlap-end") {
+          searchValues.push(filterValue);
+          const startField = Object.keys(schema.properties).find(key => schema.properties[key]?.format === "date-range-overlap-start");
+          conditions.push(
+            `${startField} <= $${searchValues.length}`
+          );
         } else if (typeof filterValue === "string") {
           searchValues.push(`${filterValue}`);
           conditions.push(
