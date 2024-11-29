@@ -1,5 +1,7 @@
 const fs = require("fs");
-const paypal = require("@paypal/checkout-server-sdk");
+// const paypal = require("@paypal/checkout-server-sdk");
+const paypal = require("../serverConfigurations/paypalClient");
+
 const Logger = require("./logger");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const STATUS_CODES = require("./constants");

@@ -4,7 +4,8 @@ const { UserError } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
 const { checkPendingPayments } = require("./cronJobs");
 
-const paypalClient = require("./paypalClient");
+// const paypalClient = require("./paypalClient");
+const { ENV } = require("./constants");
 const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
 const ProductService = require("../services/productService");
@@ -18,7 +19,9 @@ const OrderController = require("../controllers/orderController");
 const { EmailService, transporter } = require("../services/emailService");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const Logger = require("./logger");
+const paypalClientWrapper = require("./paypalClient");
 
+const paypalClient = new paypalClientWrapper.core.PayPalHttpClient(ENV.PAYPAL_CLIENT_ID, ENV.PAYPAL_CLIENT_SECRET);
 const entitySchemaCollection = loadEntitySchemas("user");
 const emailService = new EmailService(transporter);
 const authService = new AuthService(emailService);
