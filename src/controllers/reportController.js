@@ -1,17 +1,17 @@
 class ReportController {
   constructor(reportService) {
     this.reportService = reportService;
-    this.getOrdersByUserReport = this.getOrdersByUserReport.bind(this);
+    this.getReport = this.getReport.bind(this);
   }
 
-  async getOrdersByUserReport(req, res, next) {
+  async getReport(req, res, next) {
     const data = {
       body: req.body,
       params: req.params,
       session: req.session,
       dbConnection: req.dbConnection,
     };
-    const result = await this.reportService.getOrdersByUserReport(data);
+    const result = await this.reportService.getReport(data);
     res.status(200).json(result);
   }
 }

@@ -71,7 +71,7 @@ const routeTable = {
     "/api/products/:id/images": productController.uploadImages,
     "/api-back/orders": orderController.createOrderByStaff,
     '/api/products/upload': productController.uploadProducts,
-    "/api/reports/orders-by-user": reportController.getOrdersByUserReport,
+    "/api/reports/:report": reportController.getReport,
   },
   put: {
     "/crud/:entity/:id": crudController.update,
