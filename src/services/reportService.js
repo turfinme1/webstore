@@ -6,6 +6,7 @@ class ReportService {
     this.reports = {
         "report-orders-by-user": this.getOrdersByUserReport.bind(this),
         "report-logs": this.getLogsReport.bind(this),
+        "report-orders": this.getOrdersReport.bind(this),
     }
   }
 
@@ -93,8 +94,8 @@ class ReportService {
     const INPUT_DATA = {
       user_email_filter_value: data.body.user_email || "",
       user_id_filter_value: data.body.user_id || "",
-      order_total_minimum_filter_value: data.body.order_total_min || "0",
-      order_total_maximum_filter_value: data.body.order_total_max || "9999999",
+      order_total_minimum_filter_value: data.body.order_total_minimum || "0",
+      order_total_maximum_filter_value: data.body.order_total_maximum || "9999999",
     };
 
     const reportFilters = [
@@ -160,28 +161,27 @@ class ReportService {
         dataEndpoint: '/api/reports/report-logs',
         filters: [
             {
-                key: 'user_id',
-                label: 'User ID',
-                type: 'number_single',
-                placeholder: 'Enter user ID'
+                key: 'created_at',
+                label: 'Period',
+                type: 'timestamp'
             },
             {
                 key: 'status_code',
                 label: 'Status Code',
-                type: 'text',
-                placeholder: 'Enter status code'
+                type: 'select',
+                placeholder: 'Enter status code',
+                options: Object.keys(STATUS_CODES).map(key => ({ value: STATUS_CODES[key], label: `${key} (${STATUS_CODES[key]})` }))
             },
             {
                 key: 'log_level',
                 label: 'Log Level',
-                type: 'text',
-                placeholder: 'Enter log level'
+                type: 'select',
+                placeholder: 'Enter log level',
+                options: [
+                    { value: 'INFO', label: 'INFO' },
+                    { value: 'ERROR', label: 'ERROR' },
+                ]
             },
-            {
-                key: 'date_range',
-                label: 'Log Date',
-                type: 'timestamp'
-            }
         ],
         tableTemplate: 'groupedHeaders',
         headerGroups: [
@@ -226,8 +226,11 @@ class ReportService {
         short_description_filter_value: data.body.short_description || "",
         long_description_filter_value: data.body.long_description || "",
         debug_info_filter_value: data.body.debug_info || "",
-        created_at_minimum_filter_value: data.body.created_at_min || "",
-        created_at_maximum_filter_value: data.body.created_at_max || "",
+        created_at_minimum_filter_value: data.body.created_at_minimum || "",
+        created_at_maximum_filter_value: data.body.created_at_maximum || "",
+        created_at_grouping_select_value: data.body.created_at_grouping_select,
+        status_code_grouping_select_value: data.body.status_code_grouping_select,
+        log_level_grouping_select_value: data.body.log_level_grouping_select,
     };
 
     const reportFilters = [
@@ -327,15 +330,244 @@ class ReportService {
     const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
     return { rows: result.rows, filters: reportFilters };
   }
+
+  async getOrdersReport(data) {
+    const reportUIConfig = {
+        title: 'Orders Report',
+        dataEndpoint: '/api/reports/report-orders',
+        filters: [
+            {
+                key: 'created_at',
+                label: 'Period',
+                type: 'timestamp'
+            },
+            {
+                key: 'status',
+                label: 'Status',
+                type: 'select',
+                options: [
+                    { value: 'Pending', label: 'Pending' },
+                    { value: 'Paid', label: 'Paid' },
+                    { value: 'Delivered', label: 'Delivered' },
+                    { value: 'Cancelled', label: 'Cancelled' }
+                ]
+            },
+            {
+                key: "price",
+                label: "Price",
+                type: "number",
+            }
+        ],
+        groupings: [
+            {
+                key: 'created_at',
+                label: 'Created At',
+                options: [
+                    { value: 'year', label: 'Year' },
+                    { value: 'month', label: 'Month' },
+                    { value: 'day', label: 'Day' }
+                ]
+            },
+            {
+                key: 'status',
+                label: 'Status'
+            }
+        ],
+        tableTemplate: 'groupedHeaders',
+        headerGroups: [
+            [
+                { label: 'Created At', rowspan: 2 },
+                { label: 'Order Hash', rowspan: 2 },
+                { label: 'User Email', rowspan: 2 },
+                { label: 'Status', rowspan: 2 },
+                { label: 'Total Price', rowspan: 2 },
+                { label: 'Discount %', rowspan: 2 },
+                { label: 'Discount', rowspan: 2 },
+                { label: 'VAT %', rowspan: 2 },
+                { label: 'VAT', rowspan: 2 },
+                { label: 'Total With VAT', rowspan: 2 },
+                { label: 'Count', rowspan: 2 }
+            ]
+        ],
+        columns: [
+            { key: 'created_at', label: 'Created At', format: 'date_time' },
+            { key: 'order_hash', label: 'Order Hash' },
+            { key: 'user_email', label: 'User Email' },
+            { key: 'status', label: 'Status' },
+            { key: 'total_price', label: 'Total Price', align: 'right', format: 'currency' },
+            { key: 'discount_percentage', label: 'Discount %', align: 'right', format: 'percentage' },
+            { key: 'discount_amount', label: 'Discount', align: 'right', format: 'currency' },
+            { key: 'vat_percentage', label: 'VAT %', align: 'right', format: 'percentage' },
+            { key: 'vat_amount', label: 'VAT', align: 'right', format: 'currency' },
+            { key: 'total_price_with_vat', label: 'Total With VAT', align: 'right', format: 'currency' },
+            { key: 'count', label: 'Count', align: 'right', format: 'number' }
+        ]
+    };
+
+    if (data.body.metadataRequest === true) {
+        return reportUIConfig;
+    }
+
+    const INPUT_DATA = {
+        created_at_minimum_filter_value: data.body.created_at_minimum || "",
+        created_at_maximum_filter_value: data.body.created_at_maximum || "",
+        status_filter_value: data.body.status || "",
+        total_price_minimum_filter_value: data.body.order_total_minimum || "0",
+        total_price_maximum_filter_value: data.body.order_total_maximum || "9999999",
+    };
+
+    const reportFilters = [
+        {
+            key: "created_at",
+            grouping_expression: "O.created_at",
+            filter_expression: "O.created_at = $FILTER_VALUE$",
+            type: "timestamp",
+        },
+        {
+            key: "order_hash",
+            grouping_expression: "O.order_hash",
+            filter_expression: "O.order_hash = $FILTER_VALUE$",
+            type: "text",
+        },
+        {
+            key: "user_email",
+            grouping_expression: "U.email",
+            filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+        },
+        {
+            key: "status",
+            grouping_expression: "O.status",
+            filter_expression: "O.status = $FILTER_VALUE$",
+            type: "text",
+        },
+        {
+            key: "total_price",
+            grouping_expression: "SUM(O.total_price)",
+            filter_expression: "O.total_price = $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "discount_percentage",
+            grouping_expression: "ld.discount_percentage",
+            filter_expression: "O.discount_percentage = $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "discount_amount",
+            grouping_expression: "ROUND(O.total_price * ld.discount_percentage / 100, 2)",
+            filter_expression: "O.discount_amount = $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "vat_percentage",
+            grouping_expression: "vat.vat_percentage",
+            filter_expression: "O.vat_percentage = $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "vat_amount",
+            grouping_expression: "ROUND(O.total_price * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2)",
+            filter_expression: "O.vat_amount = $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "total_price_with_vat",
+            grouping_expression: "ROUND(O.total_price * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2)",
+            filter_expression: "O.total_price_with_vat = $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "paid_amount",
+            grouping_expression: "O.paid_amount",
+            filter_expression: "O.paid_amount = $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "created_at_minimum",
+            grouping_expression: "DATE_TRUNC('day', O.created_at)",
+            filter_expression: "O.created_at >= $FILTER_VALUE$",
+            type: "timestamp",
+        },
+        {
+            key: "created_at_maximum",
+            grouping_expression: "DATE_TRUNC('day', O.created_at)",
+            filter_expression: "O.created_at <= $FILTER_VALUE$",
+            type: "timestamp",
+        },
+        {
+            key:"total_price_minimum",
+            grouping_expression: "",
+            filter_expression: "O.total_price >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key:"total_price_maximum",
+            grouping_expression: "",
+            filter_expression: "O.total_price <= $FILTER_VALUE$",
+            type: "number",
+        }
+    ];
+
+    let sql = `
+        WITH vat AS (
+            SELECT vat_percentage FROM app_settings LIMIT 1
+        ),
+        largest_discount AS (
+            SELECT COALESCE(MAX(discount_percentage), 0) AS discount_percentage
+            FROM promotions
+            WHERE is_active = TRUE
+              AND NOW() BETWEEN start_date AND end_date
+        )
+        SELECT
+            $created_at_grouping_expression$ AS "created_at",
+            $order_hash_grouping_expression$ AS "order_hash",
+            $user_email_grouping_expression$ AS "user_email",
+            $status_grouping_expression$ AS "status",
+            $discount_percentage_grouping_expression$ AS "discount_percentage",
+            $discount_amount_grouping_expression$ AS "discount_amount",
+            $vat_percentage_grouping_expression$ AS "vat_percentage",
+            $vat_amount_grouping_expression$ AS "vat_amount",
+            $total_price_with_vat_grouping_expression$ AS "total_price_with_vat",
+            $paid_amount_grouping_expression$ AS "paid_amount",
+            $total_price_grouping_expression$ AS "total_price",
+            COUNT(*) as count
+        FROM orders O
+        CROSS JOIN vat
+        CROSS JOIN largest_discount ld
+        JOIN users U ON U.id = O.user_id
+        WHERE TRUE
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
+            AND $status_filter_expression$
+            AND $total_price_minimum_filter_expression$
+            AND $total_price_maximum_filter_expression$
+        GROUP BY GROUPING SETS (
+            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+            ()
+        )
+        ORDER BY 1 DESC
+        LIMIT 1000`;
+
+    const replacedQueryData = this.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
+    const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
+    return { rows: result.rows, filters: reportFilters };
+  }
   
   replaceFilterExpressions(sql, reportFilters, INPUT_DATA) {
     let insertValues = [];
     for (let reportFilter of reportFilters) {
-        if ( ! reportFilter.grouping_expression) {
-            sql = sql.replaceAll(`$${reportFilter.key}_grouping_expression$`, '');
+        if (INPUT_DATA[`${reportFilter.key}_grouping_select_value`] === "all") {
+            sql = sql.replaceAll(`$${reportFilter.key}_grouping_expression$`, "'All'");
         } else {
             sql = sql.replaceAll(`$${reportFilter.key}_grouping_expression$`, reportFilter.grouping_expression);
         }
+
+        // if ( ! reportFilter.grouping_expression) {
+        //     sql = sql.replaceAll(`$${reportFilter.key}_grouping_expression$`, '');
+        // } else {
+        //     sql = sql.replaceAll(`$${reportFilter.key}_grouping_expression$`, reportFilter.grouping_expression);
+        // }
 
         if (INPUT_DATA[`${reportFilter.key}_filter_value`]) {
             let filterExpr = reportFilter.filter_expression;

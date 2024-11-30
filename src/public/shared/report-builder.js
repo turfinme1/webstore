@@ -198,6 +198,12 @@ class ReportBuilder {
                 return '---';
             }
             return `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(value)).replace(',', '.').replace(".00", "")}`;
+        },
+        percentage: (value) => {
+            if(!value) {
+                return '---';
+            }
+            return `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(value)).replace(',', '.').replace(".00", "")}%`;
         }
     };
 
