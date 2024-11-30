@@ -26,10 +26,10 @@ class ReportBuilder {
             template: (filter) => `
                 <div class="row g-3">
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_min" class="form-label">${filter.label} Min</label>
+                        <label for="${filter.key}_minimum" class="form-label">${filter.label} Min</label>
                         <input type="number" 
-                               id="${filter.key}_min" 
-                               name="${filter.key}_min" 
+                               id="${filter.key}_minimum" 
+                               name="${filter.key}_minimum" 
                                class="form-control" 
                                step="${filter.step || '1'}"
                                min="${filter.min || '0'}"
@@ -37,10 +37,10 @@ class ReportBuilder {
                                placeholder="Min">
                     </div>
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_max" class="form-label">${filter.label} Max</label>
+                        <label for="${filter.key}_maximum" class="form-label">${filter.label} Max</label>
                         <input type="number" 
-                               id="${filter.key}_max" 
-                               name="${filter.key}_max" 
+                               id="${filter.key}_maximum"   
+                               name="${filter.key}_maximum" 
                                class="form-control" 
                                step="${filter.step || '1'}"
                                min="${filter.min || '0'}"
@@ -70,22 +70,38 @@ class ReportBuilder {
             template: (filter) => `
                 <div class="row g-3">
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_start" class="form-label">${filter.label} Start</label>
-                        <input type="date" 
-                               id="${filter.key}_start" 
-                               name="${filter.key}_start" 
+                        <label for="${filter.key}_minimum" class="form-label">${filter.label} Start</label>
+                        <input type="datetime-local" step="1" 
+                               id="${filter.key}_minimum"
+                               value="${new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0, 16)}"
+                               name="${filter.key}_minimum" 
                                class="form-control">
                     </div>
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_end" class="form-label">${filter.label} End</label>
-                        <input type="date" 
-                               id="${filter.key}_end" 
-                               name="${filter.key}_end" 
+                        <label for="${filter.key}_maximum" class="form-label">${filter.label} End</label>
+                        <input type="datetime-local" step="1" 
+                               id="${filter.key}_maximum"
+                               value="${new Date().toISOString().slice(0, 16)}" 
+                               name="${filter.key}_maximum" 
                                class="form-control">
                     </div>
                 </div>
             `
-        }
+        },
+        select: {
+            template: (filter) => `
+                <div class="mb-3">
+                    <label for="${filter.key}" class="form-label">${filter.label}</label>
+                    <select id="${filter.key}"
+                            name="${filter.key}"
+                            class="form-select"
+                            ${filter.required ? 'required' : ''}>
+                        <option value="">Select ${filter.label}</option>
+                        ${filter.options.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+                    </select>
+                </div>
+            `
+        },
     };
 
     static tableTemplates = {
@@ -167,7 +183,15 @@ class ReportBuilder {
             if(!value) {
                 return '---';
             }
-            return new Date(value).toLocaleString();
+            return new Date(value).toLocaleString('en-US', {
+                timeZone: 'UTC',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+            })
         },
         number: (value) => {
             if(!value) {
