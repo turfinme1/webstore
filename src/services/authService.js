@@ -2,11 +2,11 @@ const bcrypt = require("bcrypt");
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
 const { createCanvas } = require('canvas');
 const { Readable } = require("nodemailer/lib/xoauth2");
-const { STATUS_CODES }  = require("../serverConfigurations/constants");
+const { STATUS_CODES, ENV }  = require("../serverConfigurations/constants");
 
 class AuthService {
-  constructor(mailService) {
-    this.mailService = mailService;
+  constructor(emailService) {
+    this.emailService = emailService;
     this.register = this.register.bind(this);
     this.login = this.login.bind(this);
     this.logout = this.logout.bind(this);
@@ -56,8 +56,17 @@ class AuthService {
     const requestData = { entitySchemaCollection: data.entitySchemaCollection, dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Email Verification", userId: user.id };
     const session = await this.changeSessionType(requestData);
     
-    const emailObject = { ...data, user, verifyToken };
-    await this.mailService.sendVerificationEmail(emailObject);
+    const emailObject = {
+      dbConnection: data.dbConnection,
+      emailData: {
+        templateType: "Email verification",
+        recipient: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        address: `<a href="${ENV.DEVELOPMENT_URL}/auth/verify-mail?token=${verifyToken}">Verify Email</a>`
+      }
+    }
+    await this.emailService.queueEmail(emailObject);
 
     return session;
   }
@@ -398,7 +407,15 @@ class AuthService {
       [user.id]
     );
 
-    await this.mailService.sendResetPasswordEmail(user.email, createResetTokenResult.rows[0].token_hash);
+    const emailObject = {
+      dbConnection: data.dbConnection,
+      emailData: {
+        templateType: "Forgot password",
+        recipient: user.email,
+        address: `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=${createResetTokenResult.rows[0].token_hash}">Reset Password</a>`
+      }
+    }
+    await this.emailService.queueEmail(emailObject);
 
     return { message: "If the email exists, a password reset link will be sent"};
   }
