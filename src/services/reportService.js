@@ -163,14 +163,16 @@ class ReportService {
             {
                 key: 'created_at',
                 label: 'Period',
-                type: 'timestamp'
+                type: 'timestamp',
+                groupable: true
             },
             {
                 key: 'status_code',
                 label: 'Status Code',
                 type: 'select',
                 placeholder: 'Enter status code',
-                options: Object.keys(STATUS_CODES).map(key => ({ value: STATUS_CODES[key], label: `${key} (${STATUS_CODES[key]})` }))
+                options: Object.keys(STATUS_CODES).map(key => ({ value: STATUS_CODES[key], label: `${key} (${STATUS_CODES[key]})` })),
+                groupable: true
             },
             {
                 key: 'log_level',
@@ -180,7 +182,8 @@ class ReportService {
                 options: [
                     { value: 'INFO', label: 'INFO' },
                     { value: 'ERROR', label: 'ERROR' },
-                ]
+                ],
+                groupable: true
             },
         ],
         tableTemplate: 'groupedHeaders',
@@ -339,7 +342,8 @@ class ReportService {
             {
                 key: 'created_at',
                 label: 'Period',
-                type: 'timestamp'
+                type: 'timestamp',
+                groupable: true
             },
             {
                 key: 'status',
@@ -350,27 +354,13 @@ class ReportService {
                     { value: 'Paid', label: 'Paid' },
                     { value: 'Delivered', label: 'Delivered' },
                     { value: 'Cancelled', label: 'Cancelled' }
-                ]
+                ],
+                groupable: true
             },
             {
                 key: "price",
                 label: "Price",
                 type: "number",
-            }
-        ],
-        groupings: [
-            {
-                key: 'created_at',
-                label: 'Created At',
-                options: [
-                    { value: 'year', label: 'Year' },
-                    { value: 'month', label: 'Month' },
-                    { value: 'day', label: 'Day' }
-                ]
-            },
-            {
-                key: 'status',
-                label: 'Status'
             }
         ],
         tableTemplate: 'groupedHeaders',

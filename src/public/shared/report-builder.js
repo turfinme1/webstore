@@ -104,6 +104,45 @@ class ReportBuilder {
         },
     };
 
+    static groupTypes = {
+        select: {
+            template: (filter) => `
+                <div class="mb-3">
+                    <label for="${filter.key}_grouping_select_value" class="form-label">${filter.label}</label>
+                    <select 
+                            id="${filter.key}_grouping_select_value"
+                            name="${filter.key}_grouping_select_value"
+                            class="form-select"
+                            ${filter.required ? 'required' : ''}
+                    >
+                        <option value="">No grouping</option>
+                        <option value="group">Group by ${filter.label}</option>
+                    </select>
+                </div>
+            `
+        },
+        timestamp: {
+            template: (filter) => `
+                <div class="mb-3">
+                    <label for="${filter.key}_grouping_select_value" class="form-label">${filter.label}</label>
+                    <select 
+                            id="${filter.key}_grouping_select_value"
+                            name="${filter.key}_grouping_select_value"
+                            class="form-select"
+                            ${filter.required ? 'required' : ''}
+                    >
+                        <option value="">No grouping</option>
+                        <option value="hour">Group by Hour</option>
+                        <option value="day">Group by Day</option>
+                        <option value="week">Group by Week</option>
+                        <option value="month">Group by Month</option>
+                        <option value="year">Group by Year</option>
+                    </select>
+                </div>
+            `
+        }
+    }
+
     static tableTemplates = {
         default: {
             header: (columns) => `
@@ -220,10 +259,18 @@ class ReportBuilder {
             return filterType.template(filter);
         }).join('');
 
+        const groupHTML = this.config.filters.filter(filter=> filter?.groupable).map(filter => {
+            const filterType = ReportBuilder.groupTypes[filter.type];
+            return filterType.template(filter);
+        }).join('');
+
         form.innerHTML = `
             <div class="row">
                 <div class="col-md-6">
                     ${filterHTML}
+                </div>
+                <div class="col-md-6">
+                    ${groupHTML}
                 </div>
             </div>
             <div class="d-flex justify-content-start align-items-center mb-3">
