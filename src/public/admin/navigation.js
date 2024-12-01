@@ -142,6 +142,28 @@ function createBackofficeNavigation(userStatus) {
       permission: "view",
       interface: "email-templates",
     },
+    {
+      id: "report-link",
+      text: "Report Order By User",
+      href: "/report?report=report-orders-by-user",
+      permission: "view",
+      // to be changed to the correct interface
+      interface: "report-orders",
+    },
+    {
+      id: "report-link",
+      text: "Report Logs",
+      href: "/report?report=report-logs",
+      permission: "view",
+      interface: "report-logs",
+    },
+    {
+      id: "report-link",
+      text: "Report Orders",
+      href: "/report?report=report-orders",
+      permission: "view",
+      interface: "report-orders",
+    },
   ];
 
   navItems.forEach((item) => {
