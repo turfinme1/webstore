@@ -200,26 +200,32 @@ class ReportBuilder {
     };
 
     static formatters = {
+        text: (value) => {
+            if(!value || value ==="All") {
+                return '---';
+            }
+            return value;
+        },
         currency: (value) => {
-            if(!value) {
-                return '$0.00';
+            if(!value || value ==="All") {
+                return '---';
             }
             return `$${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(value)).replace(',', '.')}`;
         },
         date: (value) => {
-            if(!value) {
+            if(!value || value ==="All") {
                 return '---';
             }
             return new Date(value).toLocaleDateString('en-US');
         },
         time: (value) => {
-            if(!value) {
+            if(!value || value ==="All") {
                 return '---';
             }
             return new Date(value).toLocaleTimeString('en-US');
         },
         date_time: (value) => {
-            if(!value) {
+            if(!value || value ==="All") {
                 return '---';
             }
             return new Date(value).toLocaleString('en-US', {
@@ -233,13 +239,13 @@ class ReportBuilder {
             })
         },
         number: (value) => {
-            if(!value) {
+            if(!value || value ==="All") {
                 return '---';
             }
             return `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(value)).replace(',', '.').replace(".00", "")}`;
         },
         percentage: (value) => {
-            if(!value) {
+            if(!value || value ==="All") {
                 return '---';
             }
             return `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(value)).replace(',', '.').replace(".00", "")}%`;

@@ -46,11 +46,6 @@ class ReportService {
               type: "number_single",
               placeholder: 'Enter user ID'
             },
-            // {
-            //     key: 'date_range',
-            //     label: 'Order Date',
-            //     type: 'timestamp'
-            // }
         ],
         tableTemplate: 'groupedHeaders',
         headerGroups: [
@@ -74,9 +69,9 @@ class ReportService {
             ]
         ],
         columns: [
-          { key: 'user_email', label: 'User Email' },
-          { key: 'user_id', label: 'User ID', align: 'right' },
-          { key: 'orders_last_day', label: 'Count', align: 'right' },
+          { key: 'user_email', label: 'User Email', format: 'text' },
+          { key: 'user_id', label: 'User ID', align: 'right', format: 'text' },
+          { key: 'orders_last_day', label: 'Count', align: 'right', format: 'number' },
           { key: 'total_last_day', label: 'Total Order Amount', align: 'right', format: 'currency' },
           { key: 'orders_last_week', label: 'Count', align: 'right', format: 'number' },
           { key: 'total_last_week', label: 'Total Order Amount', align: 'right', format: 'currency' },
@@ -95,7 +90,7 @@ class ReportService {
       user_email_filter_value: data.body.user_email || "",
       user_id_filter_value: data.body.user_id || "",
       order_total_minimum_filter_value: data.body.order_total_minimum || "0",
-      order_total_maximum_filter_value: data.body.order_total_maximum || "9999999",
+      order_total_maximum_filter_value: data.body.order_total_maximum || "99999999999",
     };
 
     const reportFilters = [
@@ -148,7 +143,7 @@ class ReportService {
             (1, 2),
             ()
         )
-        ORDER BY $user_email_grouping_expression$ ASC`;
+        ORDER BY 1 ASC`;
 
     const replacedQueryData = this.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
     const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
@@ -191,27 +186,27 @@ class ReportService {
             [
                 { label: 'ID', rowspan: 2 },
                 { label: 'Created At', rowspan: 2 },
-                { label: 'Admin User ID', rowspan: 2 },
-                { label: 'User ID', rowspan: 2 },
                 { label: 'Status Code', rowspan: 2 },
                 { label: 'Log Level', rowspan: 2 },
                 { label: 'Short Description', rowspan: 2 },
                 { label: 'Long Description', rowspan: 2 },
                 { label: 'Debug Info', rowspan: 2 },
+                { label: 'User ID', rowspan: 2 },
+                { label: 'Admin User ID', rowspan: 2 },
                 { label: 'Count', rowspan: 2 }
             ]
         ],
         columns: [
-          { key: 'id', label: 'ID', align: 'right' },
+          { key: 'id', label: 'ID', align: 'right', format: 'text' },
           { key: 'created_at', label: 'Created At', align: 'right', format: 'date_time' },
-          { key: 'admin_user_id', label: 'Admin User ID', align: 'right' },
-          { key: 'user_id', label: 'User ID', align: 'right' },
-          { key: 'status_code', label: 'Status Code', align: 'right' },
-          { key: 'log_level', label: 'Log Level', align: 'right' },
-          { key: 'short_description', label: 'Short Description', align: 'right' },
-          { key: 'long_description', label: 'Long Description', align: 'right' },
-          { key: 'debug_info', label: 'Debug Info', align: 'right' },
-          { key: 'count', label: 'Count', align: 'right' }
+          { key: 'status_code', label: 'Status Code', align: 'right', format: 'text' },
+          { key: 'log_level', label: 'Log Level', align: 'right', format: 'text' },
+          { key: 'short_description', label: 'Short Description', align: 'right', format: 'text' },
+          { key: 'long_description', label: 'Long Description', align: 'right', format: 'text' },
+          { key: 'debug_info', label: 'Debug Info', align: 'right', format: 'text' },
+          { key: 'user_id', label: 'User ID', align: 'right', format: 'text' },
+          { key: 'admin_user_id', label: 'Admin User ID', align: 'right', format: 'text' },
+          { key: 'count', label: 'Count', align: 'right', format: 'number' }
         ]
     };
 
@@ -220,27 +215,20 @@ class ReportService {
     }
 
     const INPUT_DATA = {
-        id_filter_value: data.body.id || "",
-        created_at_filter_value: data.body.created_at || "",
-        admin_user_id_filter_value: data.body.admin_user_id || "",
-        user_id_filter_value: data.body.user_id || "",
-        status_code_filter_value: data.body.status_code || "",
-        log_level_filter_value: data.body.log_level || "",
-        short_description_filter_value: data.body.short_description || "",
-        long_description_filter_value: data.body.long_description || "",
-        debug_info_filter_value: data.body.debug_info || "",
-        created_at_minimum_filter_value: data.body.created_at_minimum || "",
-        created_at_maximum_filter_value: data.body.created_at_maximum || "",
-        created_at_grouping_select_value: data.body.created_at_grouping_select,
-        status_code_grouping_select_value: data.body.status_code_grouping_select,
-        log_level_grouping_select_value: data.body.log_level_grouping_select,
+      created_at_minimum_filter_value: data.body.created_at_minimum || "",
+      created_at_maximum_filter_value: data.body.created_at_maximum || "",
+      status_code_filter_value: data.body.status_code || "",
+      log_level_filter_value: data.body.log_level || "",
+      created_at_grouping_select_value: data.body.created_at_grouping_select_value,
+      status_code_grouping_select_value: data.body.status_code_grouping_select_value,
+      log_level_grouping_select_value: data.body.log_level_grouping_select_value,
     };
 
     const reportFilters = [
         {
             key: "id",
             grouping_expression: "L.id",
-            filter_expression: "L.id = $FILTER_VALUE$",
+            filter_expression: "",
             type: "number",
         },
         {
@@ -282,7 +270,7 @@ class ReportService {
         {
             key: "status_code",
             grouping_expression: "L.status_code",
-            filter_expression: "STRPOS(LOWER(CAST( L.status_code AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            filter_expression: "L.status_code = $FILTER_VALUE$",
             type: "text",
         },
         {
@@ -293,13 +281,13 @@ class ReportService {
         },
         {
             key: "created_at_minimum",
-            grouping_expression: "DATE_TRUNC('day', L.created_at)",
+            grouping_expression: "",
             filter_expression: "L.created_at >= $FILTER_VALUE$",
             type: "timestamp",
         },
         {
             key: "created_at_maximum",
-            grouping_expression: "DATE_TRUNC('day', L.created_at)",
+            grouping_expression: "",
             filter_expression: "L.created_at <= $FILTER_VALUE$",
             type: "timestamp",
         },
@@ -327,7 +315,7 @@ class ReportService {
             (1, 2, 3, 4, 5, 6, 7, 8, 9),
             ()
         )
-        ORDER BY $id_grouping_expression$ DESC`;
+        ORDER BY 1 DESC`;
     
     const replacedQueryData = this.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
     const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
@@ -358,9 +346,12 @@ class ReportService {
                 groupable: true
             },
             {
-                key: "price",
-                label: "Price",
+                key: "total_price",
+                label: "Total Price",
                 type: "number",
+                step: '0.01',
+                min: 0,
+                max: 100000000
             }
         ],
         tableTemplate: 'groupedHeaders',
@@ -381,9 +372,9 @@ class ReportService {
         ],
         columns: [
             { key: 'created_at', label: 'Created At', format: 'date_time' },
-            { key: 'order_hash', label: 'Order Hash' },
-            { key: 'user_email', label: 'User Email' },
-            { key: 'status', label: 'Status' },
+            { key: 'order_hash', label: 'Order Hash', format: 'text' },
+            { key: 'user_email', label: 'User Email', format: 'text' },
+            { key: 'status', label: 'Status', format: 'text' },
             { key: 'total_price', label: 'Total Price', align: 'right', format: 'currency' },
             { key: 'discount_percentage', label: 'Discount %', align: 'right', format: 'percentage' },
             { key: 'discount_amount', label: 'Discount', align: 'right', format: 'currency' },
@@ -402,8 +393,10 @@ class ReportService {
         created_at_minimum_filter_value: data.body.created_at_minimum || "",
         created_at_maximum_filter_value: data.body.created_at_maximum || "",
         status_filter_value: data.body.status || "",
-        total_price_minimum_filter_value: data.body.order_total_minimum || "0",
-        total_price_maximum_filter_value: data.body.order_total_maximum || "9999999",
+        total_price_minimum_filter_value: data.body.total_price_minimum || "0",
+        total_price_maximum_filter_value: data.body.total_price_maximum || "99999999999",
+        created_at_grouping_select_value: data.body.created_at_grouping_select_value,
+        status_grouping_select_value: data.body.status_grouping_select_value,
     };
 
     const reportFilters = [
@@ -416,13 +409,13 @@ class ReportService {
         {
             key: "order_hash",
             grouping_expression: "O.order_hash",
-            filter_expression: "O.order_hash = $FILTER_VALUE$",
+            filter_expression: "",
             type: "text",
         },
         {
             key: "user_email",
             grouping_expression: "U.email",
-            filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            filter_expression: "",
             type: "text",
         },
         {
@@ -432,56 +425,26 @@ class ReportService {
             type: "text",
         },
         {
-            key: "total_price",
-            grouping_expression: "SUM(O.total_price)",
-            filter_expression: "O.total_price = $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "discount_percentage",
             grouping_expression: "ld.discount_percentage",
-            filter_expression: "O.discount_percentage = $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "discount_amount",
-            grouping_expression: "ROUND(O.total_price * ld.discount_percentage / 100, 2)",
-            filter_expression: "O.discount_amount = $FILTER_VALUE$",
+            filter_expression: "",
             type: "number",
         },
         {
             key: "vat_percentage",
             grouping_expression: "vat.vat_percentage",
-            filter_expression: "O.vat_percentage = $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "vat_amount",
-            grouping_expression: "ROUND(O.total_price * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2)",
-            filter_expression: "O.vat_amount = $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "total_price_with_vat",
-            grouping_expression: "ROUND(O.total_price * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2)",
-            filter_expression: "O.total_price_with_vat = $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "paid_amount",
-            grouping_expression: "O.paid_amount",
-            filter_expression: "O.paid_amount = $FILTER_VALUE$",
+            filter_expression: "",
             type: "number",
         },
         {
             key: "created_at_minimum",
-            grouping_expression: "DATE_TRUNC('day', O.created_at)",
+            grouping_expression: "",
             filter_expression: "O.created_at >= $FILTER_VALUE$",
             type: "timestamp",
         },
         {
             key: "created_at_maximum",
-            grouping_expression: "DATE_TRUNC('day', O.created_at)",
+            grouping_expression: "",
             filter_expression: "O.created_at <= $FILTER_VALUE$",
             type: "timestamp",
         },
@@ -510,17 +473,17 @@ class ReportService {
               AND NOW() BETWEEN start_date AND end_date
         )
         SELECT
-            $created_at_grouping_expression$ AS "created_at",
-            $order_hash_grouping_expression$ AS "order_hash",
-            $user_email_grouping_expression$ AS "user_email",
-            $status_grouping_expression$ AS "status",
+            $created_at_grouping_expression$  AS "created_at",
+            $order_hash_grouping_expression$  AS "order_hash",
+            $user_email_grouping_expression$  AS "user_email",
+            $status_grouping_expression$  AS "status",
             $discount_percentage_grouping_expression$ AS "discount_percentage",
-            $discount_amount_grouping_expression$ AS "discount_amount",
-            $vat_percentage_grouping_expression$ AS "vat_percentage",
-            $vat_amount_grouping_expression$ AS "vat_amount",
-            $total_price_with_vat_grouping_expression$ AS "total_price_with_vat",
-            $paid_amount_grouping_expression$ AS "paid_amount",
-            $total_price_grouping_expression$ AS "total_price",
+            $vat_percentage_grouping_expression$  AS "vat_percentage",
+            SUM(ROUND(O.total_price * ld.discount_percentage / 100, 2)) AS "discount_amount",
+            SUM(ROUND(O.total_price * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2))  AS "vat_amount",
+            SUM(ROUND(O.total_price * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2))  AS "total_price_with_vat",
+            SUM(paid_amount) AS "paid_amount",
+            SUM(O.total_price) AS "total_price",
             COUNT(*) as count
         FROM orders O
         CROSS JOIN vat
@@ -533,7 +496,7 @@ class ReportService {
             AND $total_price_minimum_filter_expression$
             AND $total_price_maximum_filter_expression$
         GROUP BY GROUPING SETS (
-            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+            (1, 2, 3, 4, 5, 6),
             ()
         )
         ORDER BY 1 DESC
@@ -546,38 +509,35 @@ class ReportService {
   
   replaceFilterExpressions(sql, reportFilters, INPUT_DATA) {
     let insertValues = [];
+    const hasAnyGrouping = reportFilters.some(filter =>INPUT_DATA[`${filter.key}_grouping_select_value`]);
+
     for (let reportFilter of reportFilters) {
-        if (INPUT_DATA[`${reportFilter.key}_grouping_select_value`] === "all") {
-            sql = sql.replaceAll(`$${reportFilter.key}_grouping_expression$`, "'All'");
+      const groupingValue = INPUT_DATA[`${reportFilter.key}_grouping_select_value`];
+      let groupingExpr = "'All'"; // default
+
+      if (groupingValue) {
+        if (reportFilter.type === 'timestamp') {
+          ASSERT_USER(groupingValue.match(/minute|hour|day|week|month|year/), `Invalid grouping value ${groupingValue}`, { code: STATUS_CODES.INVALID_BODY, long_description: `Invalid grouping value ${groupingValue}` });
+          groupingExpr = `DATE_TRUNC('${groupingValue}', ${reportFilter.grouping_expression})`;
         } else {
-            sql = sql.replaceAll(`$${reportFilter.key}_grouping_expression$`, reportFilter.grouping_expression);
+          groupingExpr = reportFilter.grouping_expression;
         }
+      } else if ( ! hasAnyGrouping) {
+        groupingExpr = reportFilter.grouping_expression;
+      }
+      sql = sql.replace(`$${reportFilter.key}_grouping_expression$`, groupingExpr);
 
-        // if ( ! reportFilter.grouping_expression) {
-        //     sql = sql.replaceAll(`$${reportFilter.key}_grouping_expression$`, '');
-        // } else {
-        //     sql = sql.replaceAll(`$${reportFilter.key}_grouping_expression$`, reportFilter.grouping_expression);
-        // }
+      if (INPUT_DATA[`${reportFilter.key}_filter_value`]) {
+        let filterExpr = reportFilter.filter_expression;
+        let filterValue = INPUT_DATA[`${reportFilter.key}_filter_value`];
+        let filterExprReplaced;
 
-        if (INPUT_DATA[`${reportFilter.key}_filter_value`]) {
-            let filterExpr = reportFilter.filter_expression;
-            let filterValue = INPUT_DATA[`${reportFilter.key}_filter_value`];
-            let filterExprReplaced;
-            insertValues.push(filterValue);
-
-            // if (reportFilter.type === 'timestamp'){
-            //     let [beginTimestampValue, endTimestampValue] = filterValue.split('|||');
-            //     filterExprReplaced = filterExpr
-            //         .replace('$FILTER_VALUE_START$', beginTimestampValue)
-            //         .replace('$FILTER_VALUE_END$', endTimestampValue);
-            // } else {
-                filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
-            // }
-
-            sql = sql.replace(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
-        } else {
-            sql = sql.replace(`$${reportFilter.key}_filter_expression$`, 'TRUE');
-        }
+        insertValues.push(filterValue);
+        filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
+        sql = sql.replace(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
+      } else {
+        sql = sql.replace(`$${reportFilter.key}_filter_expression$`, 'TRUE');
+      }
     }
 
     return {sql, insertValues};
