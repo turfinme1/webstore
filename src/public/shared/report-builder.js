@@ -294,17 +294,22 @@ class ReportBuilder {
     buildTable() {
         const tableContainer = document.createElement('div');
         tableContainer.className = 'table-responsive bg-white p-3 rounded shadow-sm';
+
+        const totalRowCountDiv = document.createElement('div');
+        totalRowCountDiv.id = 'total-row-count';
+        totalRowCountDiv.className = 'text-end mb-3';
+        totalRowCountDiv.textContent = 'Total rows: 0';
+        tableContainer.appendChild(totalRowCountDiv);
         
         const table = document.createElement('table');
         table.className = 'table table-bordered table-striped table-hover';
-        
         const template = ReportBuilder.tableTemplates[this.config.tableTemplate || 'default'];
         table.innerHTML = `
             ${template.header(this.config.headerGroups)}
             <tbody id="report-table-body"></tbody>
         `;
-
         tableContainer.appendChild(table);
+
         return tableContainer;
     }
 
@@ -317,6 +322,9 @@ class ReportBuilder {
         title.className = 'text-start mb-4';
         title.textContent = this.config.title;
         container.appendChild(title);
+
+        // Add export section
+        container.appendChild(this.buildExportSection(this.config.exportConfig));
 
         // Add filter form
         container.appendChild(this.buildFilterForm());
@@ -351,6 +359,9 @@ class ReportBuilder {
             });
             
             const data = await response.json();
+            if(data.overRowDisplayLimit){
+                alert("The row limit has been reached. Please refine your search criteria.");
+            }
             this.renderTableData(data);
         } catch (error) {
             console.error('Error fetching report data:', error);
@@ -362,7 +373,10 @@ class ReportBuilder {
 
     renderTableData(data) {
         const tbody = document.getElementById('report-table-body');
-        if( data?.rows?.length <= 1) {
+        const totalRowCountDiv = document.getElementById('total-row-count');
+        totalRowCountDiv.textContent = `Total rows: ${data?.rows?.length > 1 ? data.rows.length - 1 : 0}`;
+
+        if (data?.rows?.length <= 1) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="${this.config.columns.length}" class="text-center">
@@ -376,6 +390,56 @@ class ReportBuilder {
             ReportBuilder.tableTemplates[this.config.tableTemplate || 'default']
                 .row(row, this.config.columns)
         ).join('');
+    }
+
+    buildExportSection(exportConfig) {
+        const exportContainer = document.createElement('div');
+        // exportContainer.className = 'mt-5';
+        exportContainer.className = 'mb-3';
+
+        if(exportConfig?.csv) {
+            const exportButton = document.createElement('button');
+            exportButton.className = 'btn btn-primary';
+            exportButton.textContent = 'Export to CSV';
+            exportButton.addEventListener('click', async () => this.handleExport(exportConfig.csv.endpoint));
+            exportContainer.appendChild(exportButton);
+        }
+
+        if(exportConfig?.excel) {
+            const exportButton = document.createElement('button');
+            exportButton.className = 'btn btn-primary ms-3';
+            exportButton.textContent = 'Export to Excel';
+            exportButton.addEventListener('click', async () => this.handleExport(exportConfig.excel.endpoint));
+            exportContainer.appendChild(exportButton);
+        }
+
+        return exportContainer;
+    }
+
+    async handleExport(endpoint){
+        try {
+            const formData = new FormData(document.getElementById('report-form'));
+            const filters = Object.fromEntries(formData);
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filters)
+            });
+
+            if(! response.ok){
+                throw new Error('Export failed');
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = response.headers.get('Content-Disposition')?.split('filename=')[1] || 'export.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            alert('Export failed');
+        }
     }
 }
 

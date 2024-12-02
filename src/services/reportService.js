@@ -143,11 +143,13 @@ class ReportService {
             (1, 2),
             ()
         )
-        ORDER BY 1 ASC`;
+        ORDER BY 1 ASC
+        LIMIT 1001`;
 
     const replacedQueryData = this.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
     const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
-    return { rows: result.rows, filters: reportFilters };
+    const overRowDisplayLimit = result.rows.length === 1001;
+    return { rows: result.rows, filters: reportFilters, overRowDisplayLimit };
   }
 
   async getLogsReport(data) {
@@ -315,17 +317,29 @@ class ReportService {
             (1, 2, 3, 4, 5, 6, 7, 8, 9),
             ()
         )
-        ORDER BY 1 DESC`;
+        ORDER BY 1 DESC
+        LIMIT 1001`;
     
     const replacedQueryData = this.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
     const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
-    return { rows: result.rows, filters: reportFilters };
+    const overRowDisplayLimit = result.rows.length === 1001;
+    return { rows: result.rows, filters: reportFilters, overRowDisplayLimit };
   }
 
   async getOrdersReport(data) {
     const reportUIConfig = {
         title: 'Orders Report',
         dataEndpoint: '/api/reports/report-orders',
+        exportConfig: {
+            csv: {
+                endpoint: '/api/reports/report-orders/export/csv',
+                label: 'Export to CSV'
+            },
+            excel: {
+                endpoint: '/api/reports/report-orders/export/excel',
+                label: 'Export to Excel'
+            }
+        },
         filters: [
             {
                 key: 'created_at',
@@ -500,11 +514,12 @@ class ReportService {
             ()
         )
         ORDER BY 1 DESC
-        LIMIT 1000`;
+        LIMIT 1001`;
 
     const replacedQueryData = this.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
     const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
-    return { rows: result.rows, filters: reportFilters };
+    const overRowDisplayLimit = result.rows.length === 1001;
+    return { rows: result.rows, filters: reportFilters, overRowDisplayLimit };
   }
   
   replaceFilterExpressions(sql, reportFilters, INPUT_DATA) {
