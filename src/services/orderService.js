@@ -1,6 +1,7 @@
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
 const { STATUS_CODES, ENV} = require("../serverConfigurations/constants");
-const paypal = require("@paypal/checkout-server-sdk");
+// const paypal = require("@paypal/checkout-server-sdk");
+const paypal = require("../serverConfigurations/paypalClient");
 
 class OrderService {
   constructor(emailService, paypalClient) { 
@@ -337,7 +338,7 @@ class OrderService {
     const request = new paypal.orders.OrdersCaptureRequest(data.query.token);
     
     const orderViewResult = await data.dbConnection.query(`
-      SELECT * FROM orders_view WHERE id = (SELECT order_id FROM payments WHERE provider_payment_id = $1 LIMIT 1)`,
+      SELECT * FROM orders_detail_view WHERE id = (SELECT order_id FROM payments WHERE provider_payment_id = $1 LIMIT 1)`,
       [data.query.token]
     );
     ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
@@ -363,7 +364,7 @@ class OrderService {
     
     const capture = await this.paypalClient.execute(request);
     ASSERT(capture.result.status === "COMPLETED", "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
-    // await data.dbConnection.query("COMMIT");
+    await data.dbConnection.query("COMMIT");
     
     const emailObject = { ...data, orderItems: order.order_items, order: order, paymentNumber: payment.payment_hash };
     await this.emailService.sendOrderPaidConfirmationEmail(emailObject);

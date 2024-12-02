@@ -453,7 +453,7 @@ describe('OrderService', () => {
             const result = await orderService.capturePaypalPayment(data);
     
             expect(result).toEqual({ message: 'Payment completed successfully' });
-            expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
+            expect(mockDbConnection.query).toHaveBeenCalledTimes(4);
             expect(mockEmailService.sendOrderPaidConfirmationEmail).toHaveBeenCalledWith(
                 expect.objectContaining({
                     order: mockOrder,
