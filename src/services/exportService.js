@@ -1,6 +1,8 @@
 const { Readable } = require("stream");
 const { pipeline } = require("stream/promises");
 const ExcelJS = require("exceljs");
+const { ASSERT } = require("../serverConfigurations/assert");
+const { STATUS_CODES } = require("../serverConfigurations/constants");
 
 class ExportService {
     constructor(crudService) {
@@ -129,6 +131,22 @@ class ExportService {
 
         return fetchRows();
     }
+
+    async fetchRowsWithCursor(data){
+        await data.dbConnection.query(`DECLARE export_cursor CURSOR FOR ${data.query}`, data.values);
+
+        async function* fetchRows() {
+            let result = await data.dbConnection.query("FETCH 10000 FROM export_cursor");
+            while (result.rows.length > 0) {
+                yield result.rows;
+                result = await data.dbConnection.query("FETCH 10000 FROM export_cursor");
+            }
+
+            await data.dbConnection.query("CLOSE export_cursor");
+        }
+
+        return fetchRows();
+    }
     
     async* generateCsvRows(data) {
         if(data.params.entity === 'target-groups'){
@@ -218,7 +236,6 @@ class ExportService {
         yield footerRow.join(",") + "\n";
     }
 
-
     async* generateTargetGroupRows(data) {
         const rowGenerator = await this.executeQueryWithCursor(data);
         let headers = null;
@@ -252,6 +269,83 @@ class ExportService {
             }
         }
 
+    }
+
+    async exportReport(data){
+        ASSERT(data.format, "Missing export format", { code: STATUS_CODES.INVALID_INPUT, long_description: "Missing export format" });
+        ASSERT(data.query, "Missing query", { code: STATUS_CODES.INVALID_INPUT, long_description: "Missing query" });
+        ASSERT(data.values, "Missing query values", { code: STATUS_CODES.INVALID_INPUT, long_description: "Missing query values" });
+        ASSERT(data.filename, "Missing filename", { code: STATUS_CODES.INVALID_INPUT, long_description: "Missing filename" });
+
+        if (data.format === 'csv') {
+            await this.exportReportToCsv(data);
+        } else if (data.format === 'excel') {
+            // await this.exportReportToExcel(data);
+        } else {
+            ASSERT(false, "Invalid export format", { code: STATUS_CODES.INVALID_INPUT, long_description: "Invalid export format" });
+        }
+    }
+
+    async exportReportToCsv(data) {
+        data.res.writeHead(200, {
+            "Content-Type": "text/csv",
+            "Content-Disposition": `attachment; filename=${data.filename}.csv`,
+        });
+
+        const dbRowGenerator = this.fetchRowsWithCursor;
+        async function* csvRowGenerator() {
+            yield "\uFEFF"; 
+
+            if (data.filters || data.groupings) {
+                
+                if (data.filters) {
+                    yield '\n# Applied Filters:\n';
+                    for (const [key, value] of Object.entries(data.filters)) {
+                    if (value) {
+                        yield `${key},${value}\n`;
+                    }
+                    }
+                }
+            
+                if (data.groupings) {
+                    yield '\n# Applied Grouping:\n';
+                    for (const [key, value] of Object.entries(data.groupings)) {
+                    if (value) {
+                        yield `${key},${value}\n`;
+                    }
+                    }
+                }
+                yield "\n";
+            }
+
+            let headers = null;
+            for await (const rows of await dbRowGenerator(data)) {
+                for (const row of rows) {
+                    if (!headers) {
+                        headers = Object.keys(row)
+                        yield `${headers.join(",")}\n`;
+                    }
+
+                    const rowValues = Object.values(row)
+                        .map(value => {
+                            if (Array.isArray(value)) {
+                                return value.join(':');
+                            }
+                            if (typeof value === 'object' && value !== null) {
+                                return JSON.stringify(value);
+                            }
+
+                            return value;
+                        })
+                        .join(",") + "\n";
+
+                    yield rowValues;
+                }
+            }
+        }
+
+        const csvStream = Readable.from(csvRowGenerator());
+        await pipeline(csvStream, data.res);
     }
 
     isPrimitive(value) {

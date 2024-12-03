@@ -399,7 +399,7 @@ class ReportBuilder {
 
         if(exportConfig?.csv) {
             const exportButton = document.createElement('button');
-            exportButton.className = 'btn btn-primary';
+            exportButton.className = 'btn btn-primary export';
             exportButton.textContent = 'Export to CSV';
             exportButton.addEventListener('click', async () => this.handleExport(exportConfig.csv.endpoint));
             exportContainer.appendChild(exportButton);
@@ -407,7 +407,7 @@ class ReportBuilder {
 
         if(exportConfig?.excel) {
             const exportButton = document.createElement('button');
-            exportButton.className = 'btn btn-primary ms-3';
+            exportButton.className = 'btn btn-primary ms-3 export';
             exportButton.textContent = 'Export to Excel';
             exportButton.addEventListener('click', async () => this.handleExport(exportConfig.excel.endpoint));
             exportContainer.appendChild(exportButton);
@@ -417,6 +417,12 @@ class ReportBuilder {
     }
 
     async handleExport(endpoint){
+        const spinner = document.getElementById('spinner');
+        spinner.style.display = 'block';
+        const exportButtons = document.querySelectorAll('.export');
+        const button = document.querySelector('button[type="submit"]');
+        button.disabled = true;
+        exportButtons.forEach(button => button.disabled = true);
         try {
             const formData = new FormData(document.getElementById('report-form'));
             const filters = Object.fromEntries(formData);
@@ -439,6 +445,10 @@ class ReportBuilder {
         } catch (error) {
             console.error('Error exporting data:', error);
             alert('Export failed');
+        } finally {
+            button.disabled = false;
+            exportButtons.forEach(button => button.disabled = false);
+            spinner.style.display = 'none';
         }
     }
 }

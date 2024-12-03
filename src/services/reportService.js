@@ -2,26 +2,57 @@ const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { STATUS_CODES } = require("../serverConfigurations/constants");
 
 class ReportService {
-  constructor() {
+  constructor(exportService) {
+    this.exportService = exportService;
     this.reports = {
-        "report-orders-by-user": this.getOrdersByUserReport.bind(this),
-        "report-logs": this.getLogsReport.bind(this),
-        "report-orders": this.getOrdersReport.bind(this),
+        "report-orders-by-user": this.ordersByUserReportDefinition.bind(this),
+        "report-logs": this.logsReportDefinition.bind(this),
+        "report-orders": this.ordersReportDefinition.bind(this),
     }
   }
 
   async getReport(data) {
-    ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, 
-        { 
-            code: STATUS_CODES.INVALID_QUERY_PARAMS, 
-            long_description: `Report ${data.params.report} not found` 
-        }
-    );
-
-    return await this.reports[data.params.report](data);
-  }
+    ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
+        code: STATUS_CODES.INVALID_QUERY_PARAMS, 
+        long_description: `Report ${data.params.report} not found` 
+    });
     
-  async getOrdersByUserReport(data) {
+    const reportDefinition = await this.reports[data.params.report](data);
+    if(data.body.metadataRequest === true) {
+        return reportDefinition;
+    }
+
+    const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
+    const result = await data.dbConnection.query(`${replacedQueryData.sql} LIMIT 1001`, replacedQueryData.insertValues);
+    const overRowDisplayLimit = result.rows.length === 1001;
+    return { rows: result.rows, filters: reportDefinition.reportFilters, overRowDisplayLimit };
+  }
+
+  async exportReport(data) {
+    ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
+        code: STATUS_CODES.INVALID_QUERY_PARAMS, 
+        long_description: `Report ${data.params.report} not found` 
+    });
+
+    const reportDefinition = await this.reports[data.params.report](data);
+    const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
+    const reportMetadata = this.formatReportMetadata(reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
+    const exportData = {
+        res : data.res,
+        format: data.params.format,
+        filename: `report`,
+        query: replacedQueryData.sql,
+        values: replacedQueryData.insertValues,
+        filters: reportMetadata.filters,
+        groupings: reportMetadata.groupings,
+        params: data.params,
+        dbConnection: data.dbConnection,
+    };
+
+    await this.exportService.exportReport(exportData);
+  }
+
+  async ordersByUserReportDefinition(data) {
     const reportUIConfig =  {
         title: 'Orders Report by User',
         dataEndpoint: '/api/reports/report-orders-by-user',
@@ -82,15 +113,11 @@ class ReportService {
         ]
     };
 
-    if(data.body.metadataRequest === true) {
-        return reportUIConfig;
-    }
-
     const INPUT_DATA = {
-      user_email_filter_value: data.body.user_email || "",
-      user_id_filter_value: data.body.user_id || "",
-      order_total_minimum_filter_value: data.body.order_total_minimum || "0",
-      order_total_maximum_filter_value: data.body.order_total_maximum || "99999999999",
+      user_email_filter_value: data.body.user_email,
+      user_id_filter_value: data.body.user_id,
+      order_total_minimum_filter_value: data.body.order_total_minimum,
+      order_total_maximum_filter_value: data.body.order_total_maximum,
     };
 
     const reportFilters = [
@@ -143,16 +170,12 @@ class ReportService {
             (1, 2),
             ()
         )
-        ORDER BY 1 ASC
-        LIMIT 1001`;
+        ORDER BY 1 ASC`;
 
-    const replacedQueryData = this.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
-    const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
-    const overRowDisplayLimit = result.rows.length === 1001;
-    return { rows: result.rows, filters: reportFilters, overRowDisplayLimit };
+    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
   }
 
-  async getLogsReport(data) {
+  async logsReportDefinition(data) {
     const reportUIConfig =  {
         title: 'Logs Report',
         dataEndpoint: '/api/reports/report-logs',
@@ -212,15 +235,11 @@ class ReportService {
         ]
     };
 
-    if(data.body.metadataRequest === true) {
-        return reportUIConfig;
-    }
-
     const INPUT_DATA = {
-      created_at_minimum_filter_value: data.body.created_at_minimum || "",
-      created_at_maximum_filter_value: data.body.created_at_maximum || "",
-      status_code_filter_value: data.body.status_code || "",
-      log_level_filter_value: data.body.log_level || "",
+      created_at_minimum_filter_value: data.body.created_at_minimum,
+      created_at_maximum_filter_value: data.body.created_at_maximum,
+      status_code_filter_value: data.body.status_code,
+      log_level_filter_value: data.body.log_level,
       created_at_grouping_select_value: data.body.created_at_grouping_select_value,
       status_code_grouping_select_value: data.body.status_code_grouping_select_value,
       log_level_grouping_select_value: data.body.log_level_grouping_select_value,
@@ -317,16 +336,12 @@ class ReportService {
             (1, 2, 3, 4, 5, 6, 7, 8, 9),
             ()
         )
-        ORDER BY 1 DESC
-        LIMIT 1001`;
+        ORDER BY 1 DESC`;
     
-    const replacedQueryData = this.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
-    const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
-    const overRowDisplayLimit = result.rows.length === 1001;
-    return { rows: result.rows, filters: reportFilters, overRowDisplayLimit };
+    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
   }
 
-  async getOrdersReport(data) {
+  async ordersReportDefinition(data) {
     const reportUIConfig = {
         title: 'Orders Report',
         dataEndpoint: '/api/reports/report-orders',
@@ -399,16 +414,12 @@ class ReportService {
         ]
     };
 
-    if (data.body.metadataRequest === true) {
-        return reportUIConfig;
-    }
-
     const INPUT_DATA = {
-        created_at_minimum_filter_value: data.body.created_at_minimum || "",
-        created_at_maximum_filter_value: data.body.created_at_maximum || "",
-        status_filter_value: data.body.status || "",
-        total_price_minimum_filter_value: data.body.total_price_minimum || "0",
-        total_price_maximum_filter_value: data.body.total_price_maximum || "99999999999",
+        created_at_minimum_filter_value: data.body.created_at_minimum,
+        created_at_maximum_filter_value: data.body.created_at_maximum,
+        status_filter_value: data.body.status,
+        total_price_minimum_filter_value: data.body.total_price_minimum,
+        total_price_maximum_filter_value: data.body.total_price_maximum,
         created_at_grouping_select_value: data.body.created_at_grouping_select_value,
         status_grouping_select_value: data.body.status_grouping_select_value,
     };
@@ -513,13 +524,9 @@ class ReportService {
             (1, 2, 3, 4, 5, 6),
             ()
         )
-        ORDER BY 1 DESC
-        LIMIT 1001`;
+        ORDER BY 1 DESC`;
 
-    const replacedQueryData = this.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
-    const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
-    const overRowDisplayLimit = result.rows.length === 1001;
-    return { rows: result.rows, filters: reportFilters, overRowDisplayLimit };
+    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
   }
   
   replaceFilterExpressions(sql, reportFilters, INPUT_DATA) {
@@ -556,6 +563,59 @@ class ReportService {
     }
 
     return {sql, insertValues};
+  }
+
+  formatReportMetadata(reportFilters, INPUT_DATA) {
+    const filters = {};
+    const groupings = {};
+  
+    // Helper for formatting date ranges
+    const formatDateRange = (min, max) => {
+      if (min && max) return `${min} to ${max}`;
+      if (min) return `From ${min}`;
+      if (max) return `To ${max}`;
+      return null;
+    };
+  
+    // Process each filter
+    reportFilters.forEach(filter => {
+      const baseKey = filter.key;
+      
+      // Handle date ranges
+      if (baseKey.endsWith('_minimum')) {
+        const baseFieldName = baseKey.replace('_minimum', '');
+        const minValue = INPUT_DATA[`${baseFieldName}_minimum_filter_value`];
+        const maxValue = INPUT_DATA[`${baseFieldName}_maximum_filter_value`];
+        
+        if (minValue || maxValue) {
+          const label = baseFieldName.split('_').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ');
+          filters[label] = formatDateRange(minValue, maxValue);
+        }
+      }
+      // Handle regular filters
+      else if (!baseKey.endsWith('_maximum')) {
+        const filterValue = INPUT_DATA[`${baseKey}_filter_value`];
+        const groupValue = INPUT_DATA[`${baseKey}_grouping_select_value`];
+        
+        if (filterValue) {
+          const label = baseKey.split('_').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ');
+          filters[label] = filterValue;
+        }
+        
+        if (groupValue && groupValue !== 'all') {
+            const label = baseKey.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+          groupings[label] = groupValue.charAt(0).toUpperCase() + groupValue.slice(1);
+        }
+      }
+    });
+  
+    return { filters, groupings };
   }
 }
 
