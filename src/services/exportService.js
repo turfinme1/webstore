@@ -278,9 +278,9 @@ class ExportService {
         ASSERT(data.filename, "Missing filename", { code: STATUS_CODES.INVALID_INPUT, long_description: "Missing filename" });
 
         if (data.format === 'csv') {
-            await this.exportReportToCsv(data);
+            await this. exportReportToCsv(data);
         } else if (data.format === 'excel') {
-            // await this.exportReportToExcel(data);
+            await this.exportReportToExcel(data);
         } else {
             ASSERT(false, "Invalid export format", { code: STATUS_CODES.INVALID_INPUT, long_description: "Invalid export format" });
         }
@@ -346,6 +346,58 @@ class ExportService {
 
         const csvStream = Readable.from(csvRowGenerator());
         await pipeline(csvStream, data.res);
+    }
+
+    async exportReportToExcel(data) {
+        data.res.writeHead(200, {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename=${data.filename}.xlsx`,
+        });
+    
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ 
+            stream: data.res,
+            useStyles: true 
+        });
+        
+        const worksheet = workbook.addWorksheet('Report');
+    
+        if (data.filters || data.groupings) {
+            if (data.filters) {
+                worksheet.addRow(['Applied Filters:']).commit();
+                worksheet.addRow(['Field', 'Value']).commit();
+                for (const [key, value] of Object.entries(data.filters)) {
+                    if (value) {
+                        worksheet.addRow([key, value]).commit();
+                    }
+                }
+                worksheet.addRow([]).commit();
+            }
+    
+            if (data.groupings) {
+                worksheet.addRow(['Applied Grouping:']).commit();
+                worksheet.addRow(['Field', 'Value']).commit();
+                for (const [key, value] of Object.entries(data.groupings)) {
+                    if (value) {
+                        worksheet.addRow([key, value]).commit();
+                    }
+                }
+                worksheet.addRow([]).commit(); 
+            }
+        }
+    
+        let headers;
+        const dbRowGenerator = this.fetchRowsWithCursor;
+        for await (const rows of await dbRowGenerator(data)) {
+            for (const row of rows) {
+                if (!headers) {
+                    headers = Object.keys(row);
+                    worksheet.addRow(headers).commit();
+                }
+                worksheet.addRow(Object.values(row)).commit();
+            }
+        }
+    
+        await workbook.commit();
     }
 
     isPrimitive(value) {
