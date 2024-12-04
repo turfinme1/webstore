@@ -2,6 +2,7 @@ const { Readable } = require("nodemailer/lib/xoauth2");
 const AuthService = require("../authService");
 const bcrypt = require("bcrypt");
 const { fa } = require("@faker-js/faker");
+const { ENV } = require("../../serverConfigurations/constants");
 
 describe("AuthService", () => {
   let authService;
@@ -13,7 +14,7 @@ describe("AuthService", () => {
     // Mock dependencies
     mockMailService = {
       sendVerificationEmail: jest.fn(),
-      sendResetPasswordEmail: jest.fn(),
+      queueEmail: jest.fn(),
     };
 
     mockDbConnection = {
@@ -78,10 +79,15 @@ describe("AuthService", () => {
       // Assertions
       expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
       expect(bcrypt.hash).toHaveBeenCalledWith("password123", 10);
-      expect(mockMailService.sendVerificationEmail).toHaveBeenCalledWith({
-        ...data,
-        user: mockUser,
-        verifyToken: "token123",
+      expect(mockMailService.queueEmail).toHaveBeenCalledWith({
+        dbConnection: mockDbConnection,
+        emailData: {
+          address: `<a href="${ENV.DEVELOPMENT_URL}/auth/verify-mail?token=token123">Verify Email</a>`,
+          first_name: undefined,
+          last_name: undefined,
+          recipient: "test@example.com",
+          templateType: "Email verification",
+        },
       });
       expect(result).toEqual(mockSession);
     });
@@ -842,10 +848,14 @@ describe("AuthService", () => {
       const result = await authService.forgotPassword(data);
 
       expect(mockDbConnection.query).toHaveBeenCalledTimes(4);
-      expect(mockMailService.sendResetPasswordEmail).toHaveBeenCalledWith(
-        "test@example.com",
-        "resetToken123"
-      );
+      expect(mockMailService.queueEmail).toHaveBeenCalledWith({
+        dbConnection: mockDbConnection,
+        emailData: {
+          address: `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=resetToken123">Reset Password</a>`,
+          recipient: "test@example.com",
+          templateType: "Forgot password",
+        },
+      });
       expect(result.message).toBe(
         "If the email exists, a password reset link will be sent"
       );

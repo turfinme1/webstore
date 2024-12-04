@@ -174,7 +174,7 @@ describe("CrudService", () => {
       const result = await crudService.getFilteredPaginated(req);
 
       expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("STRPOS(LOWER(CAST(categories AS text)), LOWER($1)) > 0"),
+        expect.stringContaining("LOWER(CAST(categories AS text)) = LOWER($1)"),
         expect.arrayContaining([1, 2, 3])
       );
 

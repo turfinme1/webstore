@@ -14,6 +14,7 @@ describe('OrderService', () => {
         mockEmailService = {
             sendOrderCreatedConfirmationEmail: jest.fn(),
             sendOrderPaidConfirmationEmail: jest.fn(),
+            queueEmail: jest.fn(),
         };
         mockPaypalClient = {
             execute: jest.fn(),
@@ -48,7 +49,8 @@ describe('OrderService', () => {
                 .mockResolvedValueOnce({ rows: []}) // Update
                 .mockResolvedValueOnce({ rows: []}) // Update
                 .mockResolvedValueOnce({ rows: [{ id: 1, total_price_with_vat: 22 }] }) // orderViewResult
-                .mockResolvedValueOnce({ rows: [{ id: 1 }] }); // paymentResult
+                .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // paymentResult
+                .mockResolvedValueOnce({ rows: [{ email: 'abv@abv.bg', first_name: 'Ivan', last_name: 'Ivanov' }] });
 
             mockPaypalClient.execute.mockResolvedValue({
                 result: {
@@ -73,8 +75,8 @@ describe('OrderService', () => {
                 message: 'Order placed successfully',
             });
 
-            expect(mockDbConnection.query).toHaveBeenCalledTimes(9);
-            expect(mockEmailService.sendOrderCreatedConfirmationEmail).toHaveBeenCalledTimes(1);
+            expect(mockDbConnection.query).toHaveBeenCalledTimes(10);
+            expect(mockEmailService.queueEmail).toHaveBeenCalledTimes(1);
         });
 
         it('should throw an error if cart is empty', async () => {
@@ -427,7 +429,8 @@ describe('OrderService', () => {
         it('should capture payment successfully', async () => {
             const data = {
                 query: { token: 'TEST_TOKEN' },
-                dbConnection: mockDbConnection
+                dbConnection: mockDbConnection,
+                session: { user_id: 1 }
             };
     
             const mockOrder = {
@@ -444,7 +447,10 @@ describe('OrderService', () => {
             mockDbConnection.query
                 .mockResolvedValueOnce({ rows: [mockOrder] }) // orderViewResult
                 .mockResolvedValueOnce({ rows: [mockPayment] }) // paymentResult
-                .mockResolvedValueOnce({ rows: [] }); // Update orders
+                .mockResolvedValueOnce({ rows: [] }) // Update orders
+                .mockResolvedValueOnce({ rows: [] }) // Update orders
+                .mockResolvedValueOnce({ rows: [{ email: 'abv@abv.bg', first_name: 'Ivan', last_name: 'Ivanov' }] });
+
     
             mockPaypalClient.execute.mockResolvedValueOnce({
                 result: { status: 'COMPLETED' }
@@ -453,12 +459,18 @@ describe('OrderService', () => {
             const result = await orderService.capturePaypalPayment(data);
     
             expect(result).toEqual({ message: 'Payment completed successfully' });
-            expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
-            expect(mockEmailService.sendOrderPaidConfirmationEmail).toHaveBeenCalledWith(
+            expect(mockDbConnection.query).toHaveBeenCalledTimes(5);
+            expect(mockEmailService.queueEmail).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    order: mockOrder,
-                    orderItems: mockOrder.order_items,
-                    paymentNumber: 'PAYMENT123'
+                    emailData: {
+                        first_name: 'Ivan',
+                        last_name: 'Ivanov',
+                        order_number: 1,
+                        order_table: mockOrder,
+                        payment_number: 'PAYMENT123',
+                        recipient: undefined,
+                        templateType: 'Order paid'
+                    }
                 })
             );
         });
