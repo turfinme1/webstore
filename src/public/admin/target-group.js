@@ -361,6 +361,19 @@ function getFilters() {
     filterParams.birth_date = "All";
   }
 
+  if(filterParams.birth_day){
+    if(filterParams.birth_month) {
+      filterParams.birth_date = dayjs().set('month', filterParams.birth_month - 1).set('date', filterParams.birth_day).format("YYYY-MM-DD");
+    } else {
+      alert("Please select a month.");
+      return;
+    }
+  } else {
+    delete filterParams.birth_day;
+    delete filterParams.birth_month;
+    filterParams.birth_date = "All";
+  }
+
   let firstNameFilter = filterParams.first_name.replace(/\s/g, "").split(",");
   if(firstNameFilter.length > 1){
     filterParams.first_name = firstNameFilter;
@@ -395,6 +408,20 @@ async function handleFilterUsers(event) {
   } else {
     delete filterParams.birth_date;
   }
+
+  if(filterParams.birth_day || filterParams.birth_month){
+    if(!filterParams.birth_day){
+      alert("Please select a day.");
+      return;
+    }
+    if(!filterParams.birth_month){
+      alert("Please select a month.");
+      return;
+    }
+    filterParams.birth_date = dayjs().set('month', filterParams.birth_month - 1).set('date', filterParams.birth_day).format("YYYY-MM-DD");
+  }
+  delete filterParams.birth_day;
+  delete filterParams.birth_month;
 
   let firstNameFilter = filterParams.first_name.replace(/\s/g, "").split(",");
   if(firstNameFilter.length > 0){
