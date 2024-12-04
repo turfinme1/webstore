@@ -11,6 +11,7 @@ class ReportController {
       params: req.params,
       session: req.session,
       dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
     };
     const result = await this.reportService.getReport(data);
     res.status(200).json(result);

@@ -1,5 +1,6 @@
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { STATUS_CODES } = require("../serverConfigurations/constants");
+const { validateObject } = require("../serverConfigurations/validation");
 
 class ReportService {
   constructor(exportService) {
@@ -18,6 +19,7 @@ class ReportService {
     });
     
     const reportDefinition = await this.reports[data.params.report](data);
+    validateObject(reportDefinition.reportUIConfig, data.entitySchemaCollection["reportUI"]);
     if(data.body.metadataRequest === true) {
         return reportDefinition;
     }
@@ -25,7 +27,7 @@ class ReportService {
     const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
     const result = await data.dbConnection.query(`${replacedQueryData.sql} LIMIT 1001`, replacedQueryData.insertValues);
     const overRowDisplayLimit = result.rows.length === 1001;
-    return { rows: result.rows, filters: reportDefinition.reportFilters, overRowDisplayLimit };
+    return { rows: result.rows, overRowDisplayLimit };
   }
 
   async exportReport(data) {
