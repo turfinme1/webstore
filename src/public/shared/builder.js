@@ -211,8 +211,9 @@ class CrudPageBuilder {
       if (data[field] !== undefined) {
         if (input.type === "checkbox") {
           input.checked = data[field];
-        } if(input.type === "date") {
-          input.value = dayjs(data[field]).format('YYYY-MM-DD');
+        } if(input.type === "datetime-local") {
+          // input.value = dayjs(data[field]).format('YYYY-MM-DD');
+          input.value = dayjs(data[field]).format('YYYY-MM-DDTHH:mm:ss');
         } else {
           input.value = data[field];
         }
@@ -381,11 +382,13 @@ class CrudPageBuilder {
       input.classList.add("form-control");
       input.id = field;
       input.name = field;
-      input.type = "date";
+      input.type = "datetime-local";
+      input.step = "1";
 
       if(!formType){
         // when the form is not create or update => filter form default value
-        input.value = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+        // input.value = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+        input.value = dayjs().subtract(1, 'day').format('YYYY-MM-DDTHH:mm:ss');
       }
 
       if (property?.required?.[formType]) {
@@ -393,21 +396,21 @@ class CrudPageBuilder {
         label.innerHTML = `${label.textContent} <span style="color:red;">*</span>`;
       }
 
-      if (formType && property?.renderConfig?.setHoursToEndOfDay) {
-        /// giga custom because there are 3 fields and the callback cant get the right one
-        this.state.collectValuesCallbacks[formType].push(() => {
-          const elements = document.querySelectorAll(`[id="${field}"]`);
-          let input;
-          if(formType === "create") {
-            input = elements[1];
-          } else {
-            input = elements[2];
-          }
-          const date = new Date(input.value);
-          date.setHours(23, 59, 59);
-          return { [field]: date.toISOString() };
-        });
-      }
+      // if (formType && property?.renderConfig?.setHoursToEndOfDay) {
+      //   /// giga custom because there are 3 fields and the callback cant get the right one
+      //   this.state.collectValuesCallbacks[formType].push(() => {
+      //     const elements = document.querySelectorAll(`[id="${field}"]`);
+      //     let input;
+      //     if(formType === "create") {
+      //       input = elements[1];
+      //     } else {
+      //       input = elements[2];
+      //     }
+      //     const date = new Date(input.value);
+      //     date.setHours(23, 59, 59);
+      //     return { [field]: date.toISOString() };
+      //   });
+      // }
       
     } else if (property.type === "boolean" || property.options) {
       // Check if the field should be a select dropdown (e.g., boolean)
@@ -672,6 +675,7 @@ class CrudPageBuilder {
 
         if (property?.renderConfig?.type === "date") {
           td.textContent = new Date(record[key]).toLocaleDateString();
+          td.textContent = new Date(record[key]).toLocaleString();
           // td.textContent = new Date(record[key]).toLocaleString();
         } else if (Array.isArray(record[key])) {
           td.textContent = record[key].map((item) => item.name).join(", ");
