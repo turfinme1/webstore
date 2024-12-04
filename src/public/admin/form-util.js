@@ -127,8 +127,8 @@ export function createNumberField(key, field) {
   input.type = "number";
   input.id = key;
   input.name = key;
-  input.minLength = field.minLength || 0;
-  input.maxLength = field.maxLength || 100;
+  input.min = field.minimum || 0;
+  input.max = field.maximum || 100;
   input.step = field.step || 0.01;
   input.placeholder = field.placeholder || "";
   input.className = "form-control";
@@ -445,7 +445,8 @@ export async function populateFormFields(formId, url) {
       const timeValue = timeObject[timeUnit]; // This should be the numeric value
 
       // Set the input value in the form (adjust according to how you're displaying the time)
-      input.value = `${timeValue} ${timeUnit}`;
+      // input.value = `${timeValue} ${timeUnit}`;
+      input.value = timeValue;
     } else if (input) {
       switch (input.type) {
         case "checkbox":
