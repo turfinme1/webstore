@@ -66,8 +66,7 @@
                 "update": true
             },
             "renderConfig": {
-                "type": "date",
-                "setHoursToEndOfDay": true
+                "type": "date"
             },
             "errorMessage": {
                 "type": "Invalid value for end date."

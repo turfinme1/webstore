@@ -38,7 +38,7 @@ const orderService = new OrderService(emailService);
 const orderController = new OrderController(orderService, authService);
 const exportService = new ExportService(crudService);
 const exportController = new ExportController(exportService);
-const reportService = new ReportService();
+const reportService = new ReportService(exportService);
 const reportController = new ReportController(reportService);
 
 const routeTable = {
@@ -71,7 +71,8 @@ const routeTable = {
     "/api/products/:id/images": productController.uploadImages,
     "/api-back/orders": orderController.createOrderByStaff,
     '/api/products/upload': productController.uploadProducts,
-    "/api/reports/orders-by-user": reportController.getOrdersByUserReport,
+    "/api/reports/:report": reportController.getReport,
+    "/api/reports/:report/export/:format": reportController.exportReport,
   },
   put: {
     "/crud/:entity/:id": crudController.update,
