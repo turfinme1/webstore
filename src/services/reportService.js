@@ -223,12 +223,12 @@ class ReportService {
         ],
         columns: [
           { key: 'id', label: 'ID', align: 'right', format: 'text' },
-          { key: 'created_at', label: 'Created At', align: 'right', format: 'date_time' },
+          { key: 'created_at', label: 'Created At', format: 'date_time' },
           { key: 'status_code', label: 'Status Code', align: 'right', format: 'text' },
-          { key: 'log_level', label: 'Log Level', align: 'right', format: 'text' },
-          { key: 'short_description', label: 'Short Description', align: 'right', format: 'text' },
-          { key: 'long_description', label: 'Long Description', align: 'right', format: 'text' },
-          { key: 'debug_info', label: 'Debug Info', align: 'right', format: 'text' },
+          { key: 'log_level', label: 'Log Level', format: 'text' },
+          { key: 'short_description', label: 'Short Description', format: 'text' },
+          { key: 'long_description', label: 'Long Description', format: 'text' },
+          { key: 'debug_info', label: 'Debug Info', format: 'text' },
           { key: 'user_id', label: 'User ID', align: 'right', format: 'text' },
           { key: 'admin_user_id', label: 'Admin User ID', align: 'right', format: 'text' },
           { key: 'count', label: 'Count', align: 'right', format: 'number' }
