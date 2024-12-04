@@ -12,8 +12,8 @@ class AppConfigService {
 
     const result = await data.dbConnection.query(query, [
       data.body.request_limit,
-      data.body.request_window,
-      data.body.request_block_duration,
+      `${data.body.request_window} minutes`,
+      `${data.body.request_block_duration} minutes`,
       data.body.password_require_digit || false,
       data.body.password_require_lowercase || false,
       data.body.password_require_uppercase || false,
