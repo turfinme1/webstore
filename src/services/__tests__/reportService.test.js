@@ -1,80 +1,129 @@
+const { STATUS_CODES } = require('../../serverConfigurations/constants');
 const ReportService = require('../reportService');
+
 describe('ReportService', () => {
-    describe('getOrdersByUserReport', () => {
-        let reportService;
-        let mockDbConnection;
+    let reportService;
+    let mockDbConnection;
+    let mockExportService;
 
-        beforeEach(() => {
-            reportService = new ReportService();
-            mockDbConnection = {
-                query: jest.fn()
-            };
-        });
+    beforeEach(() => {
+        mockExportService = {
+            exportReport: jest.fn()
+        };
+        reportService = new ReportService(mockExportService);
+        mockDbConnection = {
+            query: jest.fn()
+        };
+    });
 
-        it('should generate correct SQL with no filters', async () => {
+    describe('getReport', () => {
+        const mockEntitySchema = {
+            reportUI: {
+                type: 'object',
+                properties: {
+                    title: { type: 'string' },
+                    dataEndpoint: { type: 'string' },
+                    filters: { type: 'array' },
+                    tableTemplate: { type: 'string' },
+                    headerGroups: { type: 'array' },
+                    columns: { type: 'array' }
+                }
+            }
+        };
+
+        it('should return metadata for report when metadataRequest is true', async () => {
             const data = {
-                body: {},
-                dbConnection: mockDbConnection
+                body: { metadataRequest: true },
+                params: { report: 'report-orders' },
+                dbConnection: mockDbConnection,
+                entitySchemaCollection: mockEntitySchema
             };
 
-            mockDbConnection.query.mockResolvedValue({ rows: [] });
+            const result = await reportService.getReport(data);
 
-            await reportService.getOrdersByUserReport(data);
-
-            expect(mockDbConnection.query).toHaveBeenCalledWith(
-                expect.stringContaining('SELECT'),
-                ['0', '9999999']
-            );
+            expect(result).toHaveProperty('reportUIConfig');
+            expect(result).toHaveProperty('sql');
+            expect(result).toHaveProperty('reportFilters');
+            expect(result).toHaveProperty('INPUT_DATA');
         });
 
-        it('should generate correct SQL with all filters', async () => {
-            const data = {
-                body: {
-                    user_name: 'test@email.com',
-                    user_id: '1',
-                    order_total_min: '100',
-                    order_total_max: '1000'
-                },
-                dbConnection: mockDbConnection
-            };
-
-            mockDbConnection.query.mockResolvedValue({ rows: [] });
-
-            await reportService.getOrdersByUserReport(data);
-
-            expect(mockDbConnection.query).toHaveBeenCalledWith(
-                expect.stringContaining('SELECT'),
-                ['test@email.com', '1', '100', '1000']
-            );
-        });
-
-        it('should return query results', async () => {
+        it('should execute query and return results when metadataRequest is false', async () => {
             const mockRows = [{ id: 1 }];
             mockDbConnection.query.mockResolvedValue({ rows: mockRows });
 
-            const result = await reportService.getOrdersByUserReport({
-                body: {},
-                dbConnection: mockDbConnection
-            });
-
-            expect(result).toEqual(mockRows);
-        });
-
-        it('should handle filters with no grouping expression', async () => {
             const data = {
-                body: {
-                    order_total_min: '100'
-                },
-                dbConnection: mockDbConnection
+                body: {},
+                params: { report: 'report-orders' },
+                dbConnection: mockDbConnection,
+                entitySchemaCollection: mockEntitySchema
             };
 
+            const result = await reportService.getReport(data);
+
+            expect(result).toHaveProperty('rows', mockRows);
+            expect(result).toHaveProperty('overRowDisplayLimit');
+            expect(mockDbConnection.query).toHaveBeenCalledWith(
+                expect.stringContaining('SELECT'),
+                expect.any(Array)
+            );
+        });
+
+        it('should handle filters correctly', async () => {
             mockDbConnection.query.mockResolvedValue({ rows: [] });
 
-            await reportService.getOrdersByUserReport(data);
+            const data = {
+                body: {
+                    status: 'Paid',
+                    created_at_minimum: '2024-01-01',
+                    created_at_maximum: '2024-12-31'
+                },
+                params: { report: 'report-orders' },
+                dbConnection: mockDbConnection,
+                entitySchemaCollection: mockEntitySchema
+            };
+
+            await reportService.getReport(data);
 
             expect(mockDbConnection.query).toHaveBeenCalledWith(
                 expect.stringContaining('SELECT'),
-                ['100', '9999999']
+                expect.arrayContaining(['Paid', '2024-01-01', '2024-12-31'])
+            );
+        });
+
+        it('should throw error for invalid report type', async () => {
+            const data = {
+                body: {},
+                params: { report: 'invalid-report' },
+                dbConnection: mockDbConnection,
+                entitySchemaCollection: mockEntitySchema
+            };
+
+            await expect(reportService.getReport(data)).rejects.toThrow();
+        });
+    });
+
+    describe('exportReport', () => {
+        it('should call exportService with correct data', async () => {
+            const data = {
+                body: {},
+                params: { 
+                    report: 'report-orders',
+                    format: 'csv'
+                },
+                dbConnection: mockDbConnection,
+                res: {}
+            };
+
+            await reportService.exportReport(data);
+
+            expect(mockExportService.exportReport).toHaveBeenCalled();
+            expect(mockExportService.exportReport).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    format: 'csv',
+                    filename: 'report',
+                    query: expect.any(String),
+                    values: expect.any(Array)
+                })
             );
         });
     });

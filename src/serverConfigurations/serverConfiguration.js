@@ -146,6 +146,10 @@ cron.schedule("*/10 * * * *", async () => {
   await checkPendingPayments(pool, paypalClient, orderService);
 });
 
+cron.schedule("* * * * *", async () => {
+  await emailService.processEmailQueue(pool);
+});
+
 process.on('uncaughtException', async (error) => {
   try {
     const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });

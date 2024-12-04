@@ -86,7 +86,7 @@ CREATE TABLE logs (
 
 CREATE TABLE email_templates (
     id BIGSERIAL PRIMARY KEY,
-    type TEXT UNIQUE NOT NULL CHECK (type IN ('Email verification', 'Order created', 'Order paid')),
+    type TEXT UNIQUE NOT NULL CHECK (type IN ('Email verification', 'Order created', 'Order paid', 'Forgot password')),
     subject TEXT NOT NULL,
 	placeholders JSONB NULL,
     template TEXT NULL,
@@ -94,11 +94,16 @@ CREATE TABLE email_templates (
     table_border_color TEXT NULL CHECK (table_border_color IN ('black', 'green', 'red', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE email_templates DROP CONSTRAINT email_templates_type_check;
+ALTER TABLE email_templates
+ADD CONSTRAINT email_templates_type_check
+CHECK (type IN ('Email verification', 'Order created', 'Order paid', 'Forgot password'));
 
 INSERT INTO email_templates (type, subject, placeholders, template, table_border_width, table_border_color) VALUES
 ('Email verification', 'Email verification', '["{first_name}", "{last_name}", "{address}"]', 'Hello, {first_name} {last_name}! Please verify your email address by clicking the link below: {address}', NULL, NULL),
 ('Order created', 'Order created', '["{first_name}", "{last_name}", "{order_table}", "{order_number}"]', 'Hello, {first_name} {last_name}! Your order has been created. Your order number is {order_number}: {order_table}', 2, 'black'),
-('Order paid', 'Order paid', '["{first_name}", "{last_name}", "{order_table}", "{order_number}", "{payment_number}"]', 'Hello, {first_name} {last_name}! Your order has been paid. Your order number is {order_number} and your payment number is {payment_number}: {order_table} ', 2, 'green');
+('Order paid', 'Order paid', '["{first_name}", "{last_name}", "{order_table}", "{order_number}", "{payment_number}"]', 'Hello, {first_name} {last_name}! Your order has been paid. Your order number is {order_number} and your payment number is {payment_number}: {order_table} ', 2, 'green'),
+('Forgot password', 'Forgot password', '["{address}"]', 'Hello! Please reset your password by clicking the link below: {address}', NULL, NULL);
 
 CREATE TABLE roles (
     id BIGSERIAL PRIMARY KEY,

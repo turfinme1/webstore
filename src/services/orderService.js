@@ -93,7 +93,7 @@ class OrderService {
     );
 
     const orderViewResult = await data.dbConnection.query(`
-      SELECT * FROM orders_view WHERE id = $1`,
+      SELECT * FROM orders_detail_view WHERE id = $1`,
       [order.id]
     );
     const orderView = orderViewResult.rows[0];
@@ -128,8 +128,20 @@ class OrderService {
       [order.id, paypalOrder.result.id]
     );
 
-    const emailObject = { ...data, order: orderView, cartItems };
-    await this.emailService.sendOrderCreatedConfirmationEmail(emailObject);
+    const userResult = await data.dbConnection.query(`SELECT * FROM users WHERE id = $1`, [data.session.user_id]);
+    const user = userResult.rows[0];
+    const emailObject = { 
+      dbConnection: data.dbConnection,
+      emailData: {
+        templateType: "Order created",
+        recipient: orderView.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        order_table: orderView,
+        order_number: orderView.id,
+      }
+    };
+    await this.emailService.queueEmail(emailObject);
 
     return { approvalUrl, paypalOrder, message: "Order placed successfully" };
   }
@@ -366,8 +378,22 @@ class OrderService {
     ASSERT(capture.result.status === "COMPLETED", "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
     await data.dbConnection.query("COMMIT");
     
-    const emailObject = { ...data, orderItems: order.order_items, order: order, paymentNumber: payment.payment_hash };
-    await this.emailService.sendOrderPaidConfirmationEmail(emailObject);
+    const userResult = await data.dbConnection.query(`SELECT * FROM users WHERE id = $1`, [data.session.user_id]);
+    const user = userResult.rows[0];
+    const emailObject = {
+      dbConnection: data.dbConnection,
+      emailData: {
+        templateType: "Order paid",
+        recipient: order.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        order_table: order,
+        order_number: order.id,
+        payment_number: payment.payment_hash,
+      }
+    };
+    await this.emailService.queueEmail(emailObject);
+
     return { message: "Payment completed successfully" };
   }
 

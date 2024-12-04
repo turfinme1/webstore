@@ -31,6 +31,18 @@ DROP TABLE IF EXISTS target_groups;
 DROP TABLE IF EXISTS inventories;
 DROP TABLE IF EXISTS cart_items;
 DROP TABLE IF EXISTS carts;
+DROP TABLE IF EXISTS emails;
+
+CREATE table emails (
+    id BIGSERIAL PRIMARY KEY,
+    template_type TEXT NOT NULL CHECK (template_type IN ('Email verification', 'Order created', 'Order paid', 'Forgot password')),
+    data_object JSONB NOT NULL,
+    attempts INT NOT NULL DEFAULT 0,
+    last_attempt TIMESTAMPTZ NULL,
+    sent_at TIMESTAMPTZ NULL,
+    status TEXT NOT NULL CHECK (status IN ('queued', 'sent')) DEFAULT 'queued',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)
 
 CREATE TABLE file_uploads (
     id BIGSERIAL PRIMARY KEY,

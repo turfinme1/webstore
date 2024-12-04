@@ -1,6 +1,6 @@
-function ASSERT(condition, message) {
+function ASSERT(condition, message, params) {
   if (!condition) {
-    throw new ApplicationError(message);
+    throw new ApplicationError(message, params);
   }
 }
 

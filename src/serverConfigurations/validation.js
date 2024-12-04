@@ -1,5 +1,5 @@
 const { default: Ajv } = require("ajv");
-const { ASSERT_USER } = require("./assert");
+const { ASSERT_USER, ASSERT } = require("./assert");
 const { STATUS_CODES }  = require("./constants");
 
 function validateQueryParams(req, schema) { 
@@ -108,4 +108,28 @@ function validateBody(req, schema) {
   ASSERT_USER(isValid, "Invalid body data", { code: STATUS_CODES.INVALID_BODY, long_description: "Invalid body data" });
 }
 
-module.exports = { validateQueryParams, validateBody };
+function validateObject(object, schema) {
+  const ajv = new Ajv({ allErrors: true, strict: false });
+  const validate = ajv.compile(schema);
+  const isValid = validate(object);
+  let errors = {};  
+
+  if (!isValid) {
+    for (const error of validate.errors) {
+      const key = error.instancePath.replace("/", "");
+
+      if (!errors[key]) {
+        errors[key] = [];
+      }
+
+      errors[key].push(error.message);
+    }
+  }
+  let formattedErrors = "";
+  for (const key in errors) {
+    formattedErrors += `${errors[key].join(", ")}\n`;
+  }
+  ASSERT(isValid, `Validation error for ${schema.name} object`, { code: STATUS_CODES.INVALID_INPUT, long_description: `Validation error for ${schema.name}: ${formattedErrors}` });
+}
+
+module.exports = { validateQueryParams, validateBody, validateObject };

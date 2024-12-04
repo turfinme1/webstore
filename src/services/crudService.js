@@ -136,7 +136,8 @@ class CrudService {
 
         if (Array.isArray(filterValue)) {
           const filterPlaceholders = filterValue
-          .map((_, index) => `STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length + index + 1})) > 0`)
+          // .map((_, index) => `STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length + index + 1})) > 0`)
+          .map((_, index) => `LOWER(CAST(${filterField} AS text)) = LOWER($${searchValues.length + index + 1})`)
           .join(" OR ");
           searchValues.push(...filterValue);
           conditions.push(`(${filterPlaceholders})`);
