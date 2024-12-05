@@ -375,7 +375,7 @@ function getFilters() {
   }
 
   let firstNameFilter = filterParams.first_name.replace(/\s/g, "").split(",");
-  if(firstNameFilter.length > 1){
+  if(firstNameFilter.length > 1 && firstNameFilter[0]){
     filterParams.first_name = firstNameFilter;
   } else {
     filterParams.first_name = "All";
@@ -424,7 +424,7 @@ async function handleFilterUsers(event) {
   delete filterParams.birth_month;
 
   let firstNameFilter = filterParams.first_name.replace(/\s/g, "").split(",");
-  if(firstNameFilter.length > 0){
+  if(firstNameFilter.length > 0 && firstNameFilter[0]){
     filterParams.first_name = firstNameFilter;
   } else {
     delete filterParams.first_name;
