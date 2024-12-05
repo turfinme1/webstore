@@ -55,6 +55,9 @@ describe('ReportService', () => {
                 body: {},
                 params: { report: 'report-orders' },
                 dbConnection: mockDbConnection,
+                context: {
+                    settings: { report_row_limit_display: 10 }
+                },
                 entitySchemaCollection: mockEntitySchema
             };
 
@@ -79,6 +82,9 @@ describe('ReportService', () => {
                 },
                 params: { report: 'report-orders' },
                 dbConnection: mockDbConnection,
+                context: {
+                    settings: { report_row_limit_display: 10 }
+                },
                 entitySchemaCollection: mockEntitySchema
             };
 
