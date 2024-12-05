@@ -12,6 +12,7 @@ class EmailService {
     constructor(transporter) {
         this.transporter = transporter;
         this.sendTestEmail = this.sendTestEmail.bind(this);
+        this.previewEmail = this.previewEmail.bind(this);
     }
 
     async sendEmail(data) {
@@ -24,17 +25,31 @@ class EmailService {
     }
 
     async sendTestEmail(data) {
+        const emailOptions = await this.prepareTestEmailData(data);
+        await this.sendEmail(emailOptions);
+        return { message: "Test email sent successfully" };
+    }
+
+    async previewEmail(data) {
+        const emailOptions = await this.prepareTestEmailData(data);
+        return emailOptions.html;
+    }
+
+    async prepareTestEmailData(data){
+        let emailData = {
+            templateType: null,
+            recipient: null,
+            first_name: null,
+            last_name: null,
+        };
+
         const userResult = await data.dbConnection.query(
             `SELECT * FROM admin_users WHERE id = $1`,
             [data.session.admin_user_id]
         );
-        const user = userResult.rows[0];
-        let emailData = {
-            templateType: '',
-            recipient: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name
-        };
+        emailData.recipient = userResult.rows[0].email;
+        emailData.first_name = userResult.rows[0].first_name;
+        emailData.last_name = userResult.rows[0].last_name;
 
         if (data.params.type === "email-verification") {
             emailData.templateType = "Email verification";
@@ -65,9 +80,7 @@ class EmailService {
         }
 
         const emailOptions = await this.processTemplate({ emailData, dbConnection: data.dbConnection });
-        await this.sendEmail(emailOptions);
-
-        return { message: "Test email sent successfully" };
+        return emailOptions;
     }
 
     async queueEmail(data) {
