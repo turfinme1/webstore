@@ -76,7 +76,7 @@ function attachEventListeners() {
   elements.templateForm.addEventListener("submit", handleTemplateFormSubmit);
   elements.templateTypeSelect.addEventListener("change", loadCurrentTemplate);
   elements.sendTestEmailButton.addEventListener("click", handleSendTestEmail);
-  // elements.previewEmailButton.addEventListener("click", handlePreviewEmail);
+  elements.previewEmailButton.addEventListener("click", handlePreviewEmail);
 }
 
 async function handleTemplateFormSubmit(event) {
@@ -163,5 +163,44 @@ async function handleSendTestEmail() {
     alert("Test email sent!");
   } else {
     alert("Error sending test email");
+  }
+}
+
+async function handlePreviewEmail() {
+  const emailType = elements.templateTypeSelect.value.replace(/\s/g, "-").toLowerCase();
+  const response = await fetch(`/api/preview-email/${emailType}`);
+
+  try {
+    if (response.ok) {
+      const email = await response.json();
+      const modal = document.createElement("div");
+      modal.style.position = "fixed";
+      modal.style.top = "0";
+      modal.style.left = "0";
+      modal.style.width = "100vw";
+      modal.style.height = "100vh";
+      modal.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+      modal.style.display = "flex";
+      modal.style.justifyContent = "center";
+      modal.style.alignItems = "center";
+      modal.addEventListener("click", () => {
+        modal.remove();
+      });
+      
+      const iframe = document.createElement("iframe");
+      iframe.style.width = "80%";
+      iframe.style.height = "80%";
+      iframe.style.backgroundColor = "white";
+      iframe.style.border = "none";
+      iframe.srcdoc = email;
+
+      modal.appendChild(iframe);
+      document.body.appendChild(modal);
+    } else {
+      alert("Error previewing email");
+    }
+  }
+  catch (error) {
+    console.error("fetch error", error);
   }
 }
