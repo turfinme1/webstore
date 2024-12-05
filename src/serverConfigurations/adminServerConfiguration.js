@@ -135,6 +135,9 @@ async function sessionMiddleware(req, res) {
   const cookieName = req.entitySchemaCollection.userManagementSchema.cookie_name;
   let sessionId = req.cookies[cookieName];
 
+  const settings = await req.dbConnection.query("SELECT * FROM app_settings WHERE id = 1 LIMIT 1");
+  req.context = { settings: settings.rows[0] };
+
   if (sessionId) {
     const data = { entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, sessionHash : sessionId };
     const session = await authService.getSession(data);

@@ -25,9 +25,10 @@ class ReportService {
     }
 
     const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
-    const result = await data.dbConnection.query(`${replacedQueryData.sql} LIMIT 1001`, replacedQueryData.insertValues);
-    const overRowDisplayLimit = result.rows.length === 1001;
-    return { rows: result.rows, overRowDisplayLimit };
+    let displayRowLimit = parseInt(data.context.settings.report_row_limit_display);
+    const result = await data.dbConnection.query(`${replacedQueryData.sql} LIMIT ${displayRowLimit + 1}`, replacedQueryData.insertValues);
+    const overRowDisplayLimit = result.rows.length === displayRowLimit + 1;
+    return { rows: result.rows, overRowDisplayLimit  };
   }
 
   async exportReport(data) {

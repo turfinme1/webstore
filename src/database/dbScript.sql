@@ -61,8 +61,11 @@ CREATE TABLE app_settings (
     password_require_digit BOOLEAN NOT NULL DEFAULT FALSE,
     password_require_lowercase BOOLEAN NOT NULL DEFAULT FALSE,
     password_require_uppercase BOOLEAN NOT NULL DEFAULT FALSE,
-    password_require_special BOOLEAN NOT NULL DEFAULT FALSE
+    password_require_special BOOLEAN NOT NULL DEFAULT FALSE,
+    report_row_limit_display BIGINT NOT NULL DEFAULT 1000
 );
+ALTER TABLE app_settings ADD COLUMN report_row_limit_display BIGINT NOT NULL DEFAULT 1000;
+
 
 CREATE TABLE iso_country_codes (
     id BIGSERIAL PRIMARY KEY,

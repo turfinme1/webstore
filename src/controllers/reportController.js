@@ -10,6 +10,7 @@ class ReportController {
       body: req.body,
       params: req.params,
       session: req.session,
+      context: req.context,
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
     };
@@ -23,6 +24,7 @@ class ReportController {
       body: req.body,
       params: req.params,
       session: req.session,
+      context: req.context,
       dbConnection: req.dbConnection,
     };
     const result = await this.reportService.exportReport(data);
