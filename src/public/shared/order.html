@@ -1,0 +1,41 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Page</title>
+  <link rel="stylesheet" href="/bootstrap.min.css">
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://sandbox.paypal.com/sdk/js?client-id=Aa3N2FW_E6sIybxEbJ5ioVPY8Z9x8do7NEy1CjJ6TW08FR4dSVi7fj7wsP-V5D23wTu5yVh1P4L3-Nzr"></script>
+  <script defer type="module" src="/order.js"></script> 
+</head>
+<body>
+
+  <div class="container mt-5">
+    <h2 class="mb-4">Complete Your Order</h2>
+    <h2 class="mb-4">Order Details</h2>
+
+    <div class="container mt-5 mb-4">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Code</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Total Price</th>
+          </tr>
+        </thead>
+        <tbody id="cart-container">
+          <!-- Cart items will be rendered here -->
+        </tbody>
+      </table>
+    </div>
+
+    <form id="order-form">
+    </form>
+
+  </div>
+
+</body>
+</html>

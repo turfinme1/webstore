@@ -1,0 +1,61 @@
+{
+  "type": "object",
+  "name": "roles",
+  "table": "roles",
+  "views": "roles_view",
+  "queryValidationSchema": "roleQueryParamsSchema",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^[a-zA-Z_-]+$",
+      "label": "Role Name",
+      "placeholder": "Enter Role Name",
+      "filterable": true,
+      "required": {
+        "create": true,
+        "update": true
+      },
+      "errorMessage": {
+        "type": "Invalid value for role name."
+      }
+    },
+    "role_permissions": {
+      "type": "array",
+      "label": "Permissions",
+      "placeholder": "Select Permissions",
+      "hideInCreate": true,
+      "renderConfig": {
+        "type": "table_multi_select",
+        "selectSearchKey": "name",
+        "selectDisplayKey": ["name", "interface_name"],
+        "multiple": true
+      },
+      "insertConfig": {
+        "type": "mapping_table",
+        "table": "role_permissions",
+        "foreignKey": "role_id",
+        "mappingKey": "permission_id"
+      }
+    }
+  },
+  "table_display_columns": ["name"],
+  "relationships": {
+    "role_permissions": {
+      "table": "role_permissions",
+      "foreign_key": "role_id"
+    },
+    "admin_user_roles": {
+      "table": "admin_user_roles",
+      "foreign_key": "role_id"
+    }
+  },
+  "required": ["name"],
+  "additionalProperties": false,
+  "errorMessage": {
+    "required": {
+      "name": "Name is required."
+    },
+    "additionalProperties": "No additional properties are allowed."
+  }
+}

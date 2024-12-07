@@ -1,0 +1,152 @@
+{
+    "type": "object",
+    "name": "userUpdateSchema",
+    "routeName": "users",
+    "views": "users_view",
+    "properties": {
+        "first_name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z]+$",
+            "label": "First Name",
+            "placeholder": "Enter First Name",
+            "errorMessage": {
+                "minLength": "Name must be at least 3 characters long.",
+                "pattern": "Name can only contain letters and spaces."
+            }
+        },
+        "last_name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z]+$",
+            "label": "Last Name",
+            "placeholder": "Enter Last Name",
+            "errorMessage": {
+                "minLength": "Name must be at least 3 characters long.",
+                "pattern": "Name can only contain letters and spaces."
+            }
+        },
+        "email": {
+            "type": "string",
+            "minLength": 6,
+            "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+            "label": "Email",
+            "placeholder": "Enter Email",
+            "errorMessage": {
+                "minLength": "Email must be at least 6 characters long.",
+                "pattern": "Email must be a valid email address."
+            }
+        },
+        "iso_country_code_id": {
+            "type": "integer",
+            "label": "Country Code",
+            "placeholder": "Enter Country Code",
+            "fetchFrom": "/crud/iso-country-codes",
+            "errorMessage": {
+                "type": "Invalid country code ID."
+            }
+        },
+        "phone": {
+            "type": "string",
+            "minLength": 7,
+            "pattern": "^[0-9]+$",
+            "label": "Phone Number",
+            "placeholder": "Enter Phone Number",
+            "errorMessage": {
+                "minLength": "Phone number must be at least 7 digits long.",
+                "pattern": "Phone number can only contain digits."
+            }
+        },
+        "birth_date": {
+            "type": "string",
+            "label": "Birth Date",
+            "placeholder": "Enter Birth Date",
+            "errorMessage": {
+                "format": "Birth date must be a valid date."
+            }
+        },
+        "gender_id": {
+            "type": [
+                "integer",
+                "null"
+            ],
+            "label": "Gender",
+            "enumValues": [
+                {
+                    "label": "Not Specified",
+                    "value": null
+                },
+                {
+                    "label": "Male",
+                    "value": 1
+                },
+                {
+                    "label": "Female",
+                    "value": 2
+                }
+            ],
+            "placeholder": "Select Gender",
+            "errorMessage": {
+                "type": "Invalid value for gender."
+            }
+        },
+        "country_id": {
+            "type": ["integer", "null"],
+            "label": "Country",
+            "placeholder": "Enter Country",
+            "fetchFrom": "/crud/iso-country-codes",
+            "errorMessage": {
+                "type": "Invalid country code ID."
+            }
+        },
+        "address": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "label": "Address",
+            "placeholder": "Enter Address",
+            "errorMessage": {
+                "type": "Address must be text."
+            }
+        },
+        "old_password": {
+            "type": "string",
+            "minLength": 6,
+            "label": "Old Password",
+            "placeholder": "Enter Old password",
+            "errorMessage": {
+                "minLength": "Password must be at least 6 characters long."
+            }
+        },
+        "password": {
+            "type": ["string", "null"],
+            "minLength": 6,
+            "label": "New Password",
+            "placeholder": "Enter New password",
+            "errorMessage": {
+                "minLength": "Password must be at least 6 characters long."
+            }
+        }
+    },
+    "required": [
+        "first_name",
+        "last_name",
+        "email",
+        "iso_country_code_id",
+        "phone",
+        "old_password"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "first_name": "First Name is required.",
+            "last_name": "Last Name is required.",
+            "email": "Email is required.",
+            "phone": "Phone number is required.",
+            "iso_country_code_id": "Country code is required.",
+            "old_password": "Old password is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

@@ -1,0 +1,154 @@
+{
+    "type": "object",
+    "name": "userRegisterSchema",
+    "routeName": "users",
+    "views": "users_view",
+    "properties": {
+        "first_name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z]+$",
+            "label": "First Name",
+            "placeholder": "Enter First Name",
+            "errorMessage": {
+                "minLength": "Name must be at least 3 characters long.",
+                "pattern": "Name can only contain letters and spaces."
+            }
+        },
+        "last_name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z]+$",
+            "label": "Last Name",
+            "placeholder": "Enter Last Name",
+            "errorMessage": {
+                "minLength": "Name must be at least 3 characters long.",
+                "pattern": "Name can only contain letters and spaces."
+            }
+        },
+        "email": {
+            "type": "string",
+            "minLength": 6,
+            "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+            "label": "Email",
+            "placeholder": "Enter Email",
+            "errorMessage": {
+                "minLength": "Email must be at least 6 characters long.",
+                "pattern": "Email must be a valid email address."
+            }
+        },
+        "password": {
+            "type": "string",
+            "minLength": 6,
+            "label": "Password",
+            "placeholder": "Enter password",
+            "errorMessage": {
+                "minLength": "Password must be at least 6 characters long."
+            }
+        },
+        "iso_country_code_id": {
+            "type": "integer",
+            "label": "Country Code",
+            "placeholder": "Enter Country Code",
+            "fetchFrom": "/crud/iso-country-codes",
+            "errorMessage": {
+                "type": "Invalid country code ID."
+            }
+        },
+        "phone": {
+            "type": "string",
+            "minLength": 7,
+            "pattern": "^[0-9]+$",
+            "label": "Phone Number",
+            "placeholder": "Enter Phone Number",
+            "errorMessage": {
+                "minLength": "Phone number must be at least 7 digits long.",
+                "pattern": "Phone number can only contain digits."
+            }
+        },
+        "birth_date": {
+            "type": "string",
+            "label": "Birth Date",
+            "placeholder": "Enter Birth Date",
+            "errorMessage": {
+                "format": "Birth date must be a valid date."
+            }
+        },
+        "gender_id": {
+            "type": [
+                "integer",
+                "null"
+            ],
+            "label": "Gender",
+            "enumValues": [
+                {
+                    "label": "Not Specified",
+                    "value": null
+                },
+                {
+                    "label": "Male",
+                    "value": 1
+                },
+                {
+                    "label": "Female",
+                    "value": 2
+                }
+            ],
+            "placeholder": "Select Gender",
+            "errorMessage": {
+                "type": "Invalid value for gender."
+            }
+        },
+        "country_id": {
+            "type": ["integer", "null"],
+            "label": "Country",
+            "placeholder": "Enter Country",
+            "fetchFrom": "/crud/iso-country-codes",
+            "errorMessage": {
+                "type": "Invalid country code ID."
+            }
+        },
+        "address": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "label": "Address",
+            "placeholder": "Enter Address",
+            "errorMessage": {
+                "type": "Address must be text."
+            }
+        },
+        "captcha_answer": {
+            "type": "string",
+            "minLength": 1,
+            "label": "Captcha",
+            "placeholder": "Enter Captcha",
+            "errorMessage": {
+                "minLength": "Captcha is required."
+            }
+        }
+    },
+    "required": [
+        "first_name",
+        "last_name",
+        "password",
+        "email",
+        "phone",
+        "iso_country_code_id",
+        "captcha_answer"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "password": "Password is required.",
+            "first_name": "First Name is required.",
+            "last_name": "Last Name is required.",
+            "email": "Email is required.",
+            "phone": "Phone number is required.",
+            "iso_country_code_id": "Country code is required.",
+            "captcha_answer": "Captcha is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

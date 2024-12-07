@@ -1,0 +1,75 @@
+{
+    "name": "logQueryParamsSchema",
+    "routeName": "logsQueryParams",
+    "searchParams": {
+        "type": "object",
+        "properties": {
+            "keyword": {
+                "type": "string"
+            }
+        }
+    },
+    "filterParams": {
+        "type": "object",
+        "properties": {
+            "log_level": {
+                "type": "string"
+            },
+            "status_code": {
+                "type": "integer"
+            },
+            "created_at": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "max": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            }
+        }
+    },
+    "orderParams": {
+        "type": "array",
+        "properties": {
+            "log_level": {
+                "type": "string"
+            },
+            "status_code": {
+                "type": "integer"
+            },
+            "created_at": {
+                "type": "string",
+                "format": "date-time"
+            }
+        }
+    },
+    "groupParams": {
+        "type": "array",
+        "properties": {
+            "log_level": {
+                "type": "string"
+            },
+            "status_code": {
+                "type": "integer"
+            },
+            "created_at": {
+                "type": "string",
+                "format": "date-time"
+            }
+        }
+    },
+    "pageSize": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 1000
+    },
+    "page": {
+        "type": "number",
+        "minimum": 1
+    }
+}

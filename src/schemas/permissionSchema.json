@@ -1,0 +1,52 @@
+{
+    "type": "object",
+    "name": "permissions",
+    "table": "permissions",
+    "views": "permissions_view",
+    "queryValidationSchema": "permissionQueryParamsSchema",
+    "properties": {
+        "name": {
+            "type": "string",
+            "label": "Permission type",
+            "placeholder": "Select permission type",
+            "errorMessage": {
+                "type": "Invalid value for type."
+            }
+        },
+        "interface_id": {
+            "type": "integer",
+            "label": "Interface",
+            "placeholder": "Select Interface",
+            "errorMessage": {
+                "type": "Invalid interface selected."
+            }
+        }
+    },
+    "table_display_columns": [
+        "name",
+        "interface_name"
+    ],
+    "relationships": {
+        "role_permissions": {
+            "table": "role_permissions",
+            "foreign_key": "permission_id"
+        },
+        "interfaces": {
+            "table": "interfaces",
+            "foreign_key": "interface_id"
+        }
+    },
+    "required": [
+        "name",
+        "interface_id"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "name": "Permission type is required.",
+            "role_id": "Role is required.",
+            "interface_id": "Interface is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

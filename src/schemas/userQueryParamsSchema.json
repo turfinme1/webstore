@@ -1,0 +1,64 @@
+{
+    "name": "userQueryParamsSchema",
+    "routeName": "usersQueryParams",
+    "searchParams": {
+        "type": "object",
+        "properties": {
+            "keyword": {
+                "type": "string"
+            }
+        }
+    },
+    "filterParams": {
+        "type": "object",
+        "properties": {
+            "first_name": {
+                "type": "string"
+            },
+            "last_name": {
+                "type": "string"
+            },
+            "email": {
+                "type": "string"
+            },
+            "country_id": {
+                "type": "string"
+            },
+            "birth_date": {
+                "type": "date-time"
+            },
+            "gender_id": {
+                "type": "number"
+            },
+            "is_email_verified": {
+                "type": "boolean"
+            }
+        }
+    },
+    "orderParams": {
+        "type": "array",
+        "properties": {
+            "first_name": {
+                "type": "string",
+                "label": "First Name"
+            },
+            "last_name": {
+                "type": "string",
+                "label": "Last Name"
+            },
+            "email": {
+                "type": "string",
+                "label": "Email"
+            }
+        }
+    },
+    "pageSize": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 1000
+    },
+    "page": {
+        "type": "number",
+        "minimum": 1
+    }
+}

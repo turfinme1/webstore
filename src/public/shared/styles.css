@@ -1,0 +1,145 @@
+body {
+  background-color: #f8f9fa;
+}
+
+.product-card {
+  margin-bottom: 20px;
+}
+
+.product-card .carousel-inner img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.card-body {
+  cursor: pointer;
+}
+
+.custom-multi-select {
+  position: relative;
+  width: 100%;
+}
+
+#category-filter-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.options-list {
+  position: absolute;
+  width: 100%;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  display: none;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000; /* Ensure it appears above other elements */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: to make the dropdown stand out */
+}
+
+.options-list label {
+  display: block;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.options-list label:hover {
+  background-color: #f1f1f1;
+}
+
+.selected-categories {
+  margin-top: 10px;
+}
+
+.selected-categories .category-tag {
+  display: inline-block;
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 12px;
+  margin-right: 5px;
+  margin-top: 5px;
+  cursor: pointer;
+}
+
+.selected-categories .category-tag:hover {
+  background-color: #0056b3;
+}
+
+.captcha-image {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  max-width: 100%;
+}
+
+#result-count {
+  text-align: center;
+  font-weight: bold;
+}
+
+.star-rating {
+  direction: rtl;
+  display: inline-block;
+  padding: 20px;
+}
+
+.star-rating input[type="radio"] {
+  display: none;
+}
+
+.star-rating label {
+  color: #ccc;
+  font-size: 2em;
+  padding: 0;
+  cursor: pointer;
+}
+
+.star-rating input[type="radio"]:checked ~ label {
+  color: #f5b301;
+}
+
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+  color: #f5b301;
+}
+
+.profile-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.profile-sidebar {
+  width: 15%;
+  background-color: #f8f9fa;
+  padding: 20px;
+}
+
+.profile-content {
+  width: 85%;
+  padding: 20px;
+}
+
+.nav-link {
+  cursor: pointer;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.quantity-input {
+  border: 1px solid #ced4da; /* Customize border color */
+  width: 50px;
+  -moz-appearance: textfield; /* Removes spinner in Firefox */
+  text-align: center;
+}
+
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none; /* Removes spinner in Chrome, Safari, Edge */
+  margin: 0;
+}

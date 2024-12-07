@@ -1,0 +1,90 @@
+{
+    "type": "object",
+    "name": "email-templates",
+    "table": "email_templates",
+    "views": "email_templates_view",
+    "properties": {
+        "type": {
+            "type": "string",
+            "enum": [
+                "Email verification",
+                "Order created",
+                "Order paid"
+            ],
+            "label": "Type",
+            "placeholder": "Select Type",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for type."
+            }
+        },
+        "subject": {
+            "type": "string",
+            "label": "Subject",
+            "placeholder": "Enter Subject",
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for subject."
+            }
+        },
+        "template": {
+            "type": "string",
+            "label": "Template",
+            "placeholder": "Enter Template",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "errorMessage": {
+                "type": "Invalid value for template."
+            }
+        },
+        "table_border_width": {
+            "type": "number",
+            "label": "Table Border Width",
+            "placeholder": "Enter Table Border Width",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "errorMessage": {
+                "type": "Invalid value for table border width."
+            }
+        },
+        "table_border_color": {
+            "type": "string",
+            "label": "Table Border Color",
+            "placeholder": "Enter Table Border Color",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "errorMessage": {
+                "type": "Invalid value for table border color."
+            }
+        }
+    },
+    "table_display_columns": [
+        "type",
+        "subject"
+    ],
+    "required": [
+        "type",
+        "subject"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "type": "Type is required.",
+            "subject": "Subject is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

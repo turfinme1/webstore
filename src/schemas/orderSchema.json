@@ -1,0 +1,88 @@
+{
+    "type": "object",
+    "name": "orders",
+    "routeName": "orders",
+    "views": "orders_view",
+    "export_view": "orders_export_view",
+    "detail_view": "orders_detail_view",
+    "queryValidationSchema": "orderQueryParamsSchema",
+    "properties": {
+        "order_hash": {
+            "type": "string",
+            "label": "Order Hash",
+            "placeholder": "Order Hash"
+        },
+        "user_id": {
+            "type": "integer",
+            "label": "User ID",
+            "placeholder": "User ID",
+            "groupable": true
+        },
+        "email": {
+            "type": "string",
+            "label": "Email",
+            "placeholder": "Email"
+        },
+        "status": {
+            "type": "string",
+            "label": "Status",
+            "placeholder": "Order Status",
+            "groupable": true
+        },
+        "total_price": {
+            "type": "number",
+            "format": "aggregate",
+            "label": "Total Price",
+            "placeholder": "Total Price",
+            "group_behavior": "SUM",
+            "groupable": true
+        },
+        "paid_amount": {
+            "type": "number",
+            "label": "Paid Amount",
+            "placeholder": "Paid Amount"
+        },
+        "shipping_address_id": {
+            "type": "integer",
+            "label": "Shipping Address ID",
+            "placeholder": "Shipping Address"
+        },
+        "is_active": {
+            "type": "boolean",
+            "label": "Is Active",
+            "placeholder": "Active Order"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "label": "Created At",
+            "placeholder": "Automatically set at creation",
+            "aggregation": "DATE_TRUNC",
+            "groupable": true
+        }
+    },
+    "relationships": {
+        "order_items": {
+            "table": "order_items",
+            "foreign_key": "order_id",
+            "related_key": "product_id",
+            "related_table": "products"
+        },
+        "shipping_address": {
+            "table": "addresses",
+            "foreign_key": "shipping_address_id"
+        }
+    },
+    "required": [
+        "user_id",
+        "status"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "user_id": "User ID is required.",
+            "status": "Status is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

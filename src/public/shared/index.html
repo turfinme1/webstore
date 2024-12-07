@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Page</title>
+    <link rel="stylesheet" href="/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+    <script defer src="/bootstrap.bundle.min.js"></script>
+    <script defer type="module" src="/script.js"></script>
+</head>
+
+<body>
+    <!-- Main Container -->
+    <div class="container mt-4">
+        <!-- Search and Sort Section -->
+        <div class="search-sort-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="text" id="search-input" class="form-control" placeholder="Search products...">
+                </div>
+                <div class="col-md-2">
+                    <button id="search-btn" class="btn btn-primary">Search</button>
+                </div>
+                <div class="col-md-4">
+                    <select id="sort-price" class="form-select">
+                        <option value="">Sort Products</option>
+                        <option value="price asc">Price: Low to High</option>
+                        <option value="price desc">Price: High to Low</option>
+                        <option value="rating desc">Rating: High to Low</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Filters Section -->
+        <div class="filters-section row mb-4">
+            <div class="col-md-3">
+                <input type="text" id="min-price-input" class="form-control" placeholder="Min Price">
+            </div>
+            <div class="col-md-3">
+                <input type="text" id="max-price-input" class="form-control" placeholder="Max Price">
+            </div>
+            <div class="col-md-4">
+                <div class="custom-multi-select">
+                    <input type="text" id="category-filter-input" placeholder="Select categories..." readonly>
+                    <div id="category-options" class="options-list">
+                       
+                    </div>
+                    <div id="selected-categories" class="selected-categories"></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button id="apply-filters" class="btn btn-primary">Apply Filters</button>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="row mb-2 ">
+            <div id="result-count" class="col-md-12 text-center"></div> <!-- Result count here -->
+        </div>
+
+        <hr>
+
+        <!-- Product Listing Section -->
+        <div class="row" id="product-list">
+            <!-- Products will be dynamically injected here -->
+        </div>
+
+        <!-- Pagination Section (Empty initially, will be filled by JS) -->
+        
+        <div class="row mt-4">
+            <div id="pagination-container" class="col-md-6 d-flex justify-content-center mt-4"></div>
+            <div id="current-page-display" class="col-md-6 d-flex justify-content-center mt-4"></div>
+        </div>
+    </div>
+
+</body>
+
+</html>

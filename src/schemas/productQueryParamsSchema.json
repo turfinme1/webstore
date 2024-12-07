@@ -1,0 +1,57 @@
+{
+  "name": "productQueryParamsSchema",
+  "routeName": "productsQueryParams",
+  "searchParams": {
+    "type": "object",
+    "properties": {
+      "keyword": {
+        "type": "string"
+      }
+    }
+  },
+  "filterParams": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "categories": {
+        "type": "array"
+      },
+      "price": {
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  },
+  "orderParams": {
+    "type": "array",
+    "properties": {
+      "id": {
+        "type": "number"
+      },
+      "price": {
+        "type": "number"
+      },
+      "rating": {
+        "type": "number"
+      }
+    }
+  },
+  "pageSize": {
+    "type": "number",
+    "minimum": 1,
+    "maximum": 100
+  },
+  "page": {
+    "type": "number",
+    "minimum": 1
+  }
+}
