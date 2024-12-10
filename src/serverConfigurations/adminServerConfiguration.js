@@ -2,7 +2,6 @@ const cron = require("node-cron");
 const pool = require("../database/dbConfig");
 const { UserError } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
-const { clearOldFileUploads } = require("./cronJobs");
 
 const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
@@ -174,10 +173,6 @@ async function sessionMiddleware(req, res) {
 
   req.session = anonymousSession;
 }
-
-cron.schedule('0 0 * * *', async () => {
-  await clearOldFileUploads(pool);
-});
 
 process.on('uncaughtException', async (error) => {
   try {
