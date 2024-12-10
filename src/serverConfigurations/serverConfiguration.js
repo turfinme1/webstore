@@ -114,9 +114,10 @@ function requestMiddleware(handler) {
 
 async function sessionMiddleware(req, res) {
   const cookieName = req.entitySchemaCollection.userManagementSchema.cookie_name;
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let sessionId = req.cookies[cookieName];
 
-  if (sessionId) {
+  if (sessionId && UUID_REGEX.test(sessionId)) {
     const data = { entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, sessionHash : sessionId };
     const session = await authService.getSession(data);
 

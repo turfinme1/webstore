@@ -1,4 +1,4 @@
-import { hasPermission } from "./auth.js";
+import { hasPermission, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 
 class CrudPageBuilder {
   constructor(schema, apiEndpoint, rootContainerId, userStatus, querySchema) {
@@ -594,27 +594,21 @@ class CrudPageBuilder {
     const method = type === "create" ? "POST" : "PUT";
 
     console.log("Data to be submitted:", data);
-    const response = await fetch(url, {
+    const response = await fetchWithErrorHandling(url, {
       method: method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     if (response.ok) {
-      alert(
-        type === "create"
-          ? "Record created successfully!"
-          : "Record updated successfully!"
-      );
+      showToastMessage(type === "create" ? "Record created successfully!" : "Record updated successfully!", "success");
       this.elements.createFormContainer.style.display = "none";
       this.elements.updateFormContainer.style.display = "none";
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       this.loadRecords();
       event.target.reset();
     } else {
-      const error = await response.json();
-      const errorMessage =
-        error.error || "An error occurred! Please try again.";
-      alert(`Error: ${errorMessage}`);
+      showToastMessage(response.error, "error");
     }
   }
 
@@ -634,8 +628,12 @@ class CrudPageBuilder {
       pageSize: this.state.pageSize,
     });
 
-    const response = await fetch(`${this.apiEndpoint}/filtered?${queryParams}`);
-    const { result, count } = await response.json();
+    const response = await fetchWithErrorHandling(`${this.apiEndpoint}/filtered?${queryParams}`);
+    if(!response.ok) {
+      showToastMessage(response.error, "error");
+      return;
+    }
+    const { result, count } = await response.data;
 
     this.renderTable(result);
     this.renderPagination(count, this.state.currentPage);
@@ -724,10 +722,10 @@ class CrudPageBuilder {
   async populateUpdateForm(record) {
     try {
       // Fetch the record by ID
-      const response = await fetch(`${this.apiEndpoint}/${record.id}`);
-      const data = await response.json();
-
+      const response = await fetchWithErrorHandling(`${this.apiEndpoint}/${record.id}`);
+      
       if (response.ok) {
+        const data = await response.data;
         // Populate the form with data
         await this.renderForm("update", data);
         this.elements.updateEntityId = data.id;
@@ -737,30 +735,29 @@ class CrudPageBuilder {
         this.elements.createFormContainer.style.display = "none";
       } else {
         this.elements.updateEntityId = null;
-        alert(`Error fetching record: ${data.message}`);
+        showToastMessage(`${response.error}`, "error");
       }
     } catch (error) {
-      console.error("Failed to load record data for update:", error);
-      alert("An error occurred while fetching the record.");
+      showToastMessage("An error occurred while fetching the record.", "error");
     }
   }
 
   async deleteRecord(id) {
     try {
       if (confirm("Are you sure you want to delete this record?")) {
-        const result = await fetch(`${this.apiEndpoint}/${id}`, {
+        const result = await fetchWithErrorHandling(`${this.apiEndpoint}/${id}`, {
           method: "DELETE",
         });
         if (result.ok) {
-          alert("Record deleted successfully!");
+          showToastMessage("Record deleted successfully!", "success");
+          await new Promise((resolve) => setTimeout(resolve, 2000));
           await this.loadRecords();
         } else {
-          const error = await result.json();
-          alert(`Error deleting record: ${error.error}`);
+          showToastMessage(`Error deleting record: ${result.error}`, "error");
         }
       }
     } catch (error) {
-      alert("An error occurred while deleting the record.");
+      showToastMessage("An error occurred while deleting the record.", "error");
     }
   }
 

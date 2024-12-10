@@ -1,3 +1,5 @@
+import { showToastMessage } from "./page-utility.js";
+
 class ReportBuilder {
     constructor(config) {
         this.config = config;
@@ -360,11 +362,16 @@ class ReportBuilder {
             
             const data = await response.json();
             if(data.overRowDisplayLimit){
-                alert("The row limit has been reached. Please refine your search criteria.");
+                showToastMessage("The row limit has been reached. Please refine your search criteria.", "error");
             }
             this.renderTableData(data);
         } catch (error) {
-            console.error('Error fetching report data:', error);
+            console.error('Error fetching data:', error);
+            if (!navigator.onLine) {
+                showToastMessage('No internet connection', 'error');
+            } else {
+                showToastMessage('Error fetching data', 'error');
+            }
         } finally {
             button.disabled = false;
             spinner.style.display = 'none';
@@ -443,8 +450,11 @@ class ReportBuilder {
             a.click();
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Error exporting data:', error);
-            alert('Export failed');
+            if (!navigator.onLine) {
+                showToastMessage('No internet connection', 'error');
+            } else {
+                showToastMessage('Export failed.', 'error');
+            }
         } finally {
             button.disabled = false;
             exportButtons.forEach(button => button.disabled = false);

@@ -1,10 +1,8 @@
-import { createNavigation } from "./navigation.js";
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     createNavigation(await getUserStatus());
-    await attachLogoutHandler();
     const productId = getProductIdFromURL();
 
     if (!productId) {
@@ -61,7 +59,7 @@ function populateProductData(product) {
 
 async function addToCart(productId) {
   try {
-    const response = await fetch(`/api/cart`, {
+    const response = await fetchWithErrorHandling(`/api/cart`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -69,14 +67,14 @@ async function addToCart(productId) {
       body: JSON.stringify({ product_id: productId, quantity: 1 }),
     });
 
-    if (!response.ok) {
-      throw new Error("Failed to add product to cart");
+    if(!response.ok){
+      showToastMessage(response.error, "error");
+    } else {
+      showToastMessage("Product added to cart!", "success");
     }
-
-    alert("Product added to cart!");
   } catch (error) {
     console.error("Error adding to cart:", error);
-    alert("Failed to add product to cart.");
+    showToastMessage("Failed to add product to cart. Please try again", "error");
   }
 }
 
@@ -122,7 +120,6 @@ async function renderRatingSection(product) {
         await renderRatingSection(product);
       } catch (error) {
         console.error("Error submitting rating:", error);
-        alert(error.message);
       }
     });
   });
@@ -172,18 +169,17 @@ async function renderCommentSection(productId) {
       await renderCommentSection(productId); // Refresh comments
     } catch (error) {
       console.error("Error submitting comment:", error);
-      alert(error.message);
     }
   });
 }
 
 async function fetchProductData(productId) {
   try {
-    const response = await fetch(`/crud/products/${productId}`);
-    if (!response.ok) {
-      throw new Error("Failed to fetch product data");
+    const response = await fetchWithErrorHandling(`/crud/products/${productId}`);
+    if(!response.ok){
+      showToastMessage(response.error, "error");
     }
-    return await response.json();
+    return await response.data;
   } catch (error) {
     console.error(error);
     return null;
@@ -191,41 +187,36 @@ async function fetchProductData(productId) {
 }
 
 async function submitRating(productId, rating) {
-  const response = await fetch(`/api/products/${productId}/ratings`, {
+  const response = await fetchWithErrorHandling(`/api/products/${productId}/ratings`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ rating }),
   });
-  const result = await response.json();
+  // const result = await response.json();
   
-  if (!response.ok) {
-    throw new Error(result.error);
+  if(!response.ok){
+    showToastMessage(response.error, "error");
   }
 }
 
 async function submitComment(productId, comment) {
-  const response = await fetch(`/api/products/${productId}/comments`, {
+  const response = await fetchWithErrorHandling(`/api/products/${productId}/comments`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ comment }),
   });
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.error);
-  }
 }
 
 async function fetchProductComments(productId) {
-  const response = await fetch(`/api/products/${productId}/comments`);
+  const response = await fetchWithErrorHandling(`/api/products/${productId}/comments`);
   if (!response.ok) {
-    throw new Error("Failed to fetch comments");
+    showToastMessage(response.error, "error");
   }
-  return await response.json();
+  return await response.data;
 }
 
 function formatDate(dateString) {

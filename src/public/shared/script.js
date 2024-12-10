@@ -1,5 +1,4 @@
-import { attachLogoutHandler, getUserStatus } from "./auth.js";
-import { createNavigation } from "./navigation.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams  } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const productList = document.getElementById("product-list");
@@ -18,17 +17,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let selectedCategories = [];
   let currentPage = 1;
-  const pageSize = 6;
+  let pageSize = 6;
   let sortOption = []; // [field, order]
+  let filterParams = {};
+  let orderParams = [];
   let minPrice = null;
   let maxPrice = null;
   let userStatus = await getUserStatus();
+  const urlParams = getUrlParams();
+  currentPage = urlParams.page || 1;
+  pageSize = urlParams.pageSize || 6;
+  filterParams = urlParams.filterParams || {};
+  orderParams = urlParams.orderParams || [];
 
   // Function to fetch categories from the server
   const fetchCategories = async () => {
-    const response = await fetch("/crud/categories");
-    const categories = await response.json();
-    return categories;
+    const response = await fetchWithErrorHandling("/crud/categories");
+    if(!response.ok){
+      showToastMessage(response.error, "error");
+    }
+    return await response.data;
   };
 
   // Function to render category checkboxes
@@ -90,7 +98,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // Build filterParams with categories and price
-    const filterParams = {};
+    filterParams = filterParams || {};
     if (categories.length > 0) {
       filterParams.categories = categories;
     }
@@ -126,8 +134,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     queryParams.append("page", page.toString());
 
     // Fetch products
-    const response = await fetch(`/api/products?${queryParams.toString()}`);
-    return await response.json();
+    const urlParamData = {
+      searchParams,
+      filterParams,
+      orderParams,
+      pageSize,
+      currentPage: page
+    }
+    updateUrlParams(urlParamData);
+    const response = await fetchWithErrorHandling(`/api/products?${queryParams.toString()}`);
+    if(!response.ok){
+      showToastMessage(response.error, "error");
+    }
+    return response.data;
   };
 
   const renderProducts = (products) => {
@@ -300,5 +319,4 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateProductList();
   createNavigation(userStatus);
   await initializeCategories();
-  await attachLogoutHandler();
 });

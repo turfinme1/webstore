@@ -1,5 +1,4 @@
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
-import { createNavigation } from "./navigation.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 
 const state = {
   userStatus: null,
@@ -18,7 +17,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     state.userStatus = await getUserStatus();
     createNavigation(state.userStatus, document.getElementById("navigation-container"));
-    attachLogoutHandler();
 
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get("orderId");
@@ -33,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await attachEventListeners();
   } catch (error) {
     console.error("Error loading order:", error);
-    alert("Failed to load order");
+    showToastMessage("Failed to load order", "error");
   }
 });
 
@@ -76,7 +74,7 @@ async function handlePayWithPayPal(event) {
 
   try {
     elements.spinner.style.display = "inline-block";
-    const response = await fetch('/api/orders', {
+    const response = await fetchWithErrorHandling('/api/orders', {
       method: 'POST',
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ address: addressData }),
@@ -84,19 +82,19 @@ async function handlePayWithPayPal(event) {
 
    elements.spinner.style.display = "none";
     if (!response.ok) {
-      const data = await response.json();
-      alert(`Order failed: ${data.error}`);
+      showToastMessage(response.error, "error");
       return;
     }
-    const data = await response.json();
+    const data = await response.data;
 
-    alert("Navigating to PayPal for payment...");
+    showToastMessage("Order placed successfully. Navigating to Paypal...", "success");
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     window.location.href = data.approvalUrl;
   } catch (error) {
     elements.spinner.style.display = "none";
     console.error("Error placing order:", error);
-    alert("Order failed.");
+    showToastMessage("Failed to place order", "error");
   }
 }
 

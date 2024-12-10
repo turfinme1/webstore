@@ -1,5 +1,4 @@
-import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation, createBackofficeNavigation, formatCurrency } from "./navigation.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage, formatCurrency, getUrlParams, updateUrlParams  } from "./page-utility.js";
 
 // Centralized state object
 const state = {
@@ -56,8 +55,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
   createNavigation(userStatus);
-  await attachLogoutHandler();
   createBackofficeNavigation(userStatus);
+  const urlParams = getUrlParams();
+  state.currentPage = urlParams.page || 1;
+  state.pageSize = urlParams.pageSize || 10;
+  state.filterParams = urlParams.filterParams || {};
+  state.orderParams = urlParams.orderParams || [];
+
   if (!hasPermission(userStatus, "read", "orders")) {
     elements.mainContainer.innerHTML = "<h1>User Management</h1>";
     return;
@@ -66,8 +70,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     elements.showFormButton.style.display = "none";
   }
   attachEventListeners();
-  // await loadOrders(state.currentPage);
   await loadCountryCodes();
+  await loadOrders(state.currentPage);
 });
 
 $(document).ready(function () {
@@ -237,7 +241,7 @@ function attachEventListeners() {
   elements.updateForm.addEventListener("submit", handleUpdateOrder);
   elements.orderBySelect.addEventListener("change", async (e)=> {
     state.currentPage = 1;
-    await loadOrders(state.currentPage);
+    // await loadOrders(state.currentPage);
     handleFilterOrders(e);
   });
 }
@@ -336,10 +340,15 @@ async function loadOrders(page) {
       page: page.toString(),
     });
     console.log(queryParams);
+    updateUrlParams(state);
 
     toggleExportLoadingState();
-    const response = await fetch(`/crud/orders/filtered?${queryParams}`);
-    const { result, count } = await response.json();
+    const response = await fetchWithErrorHandling(`/crud/orders/filtered?${queryParams}`);
+    if(!response.ok) {
+      showToastMessage(response.error, "error");
+      return;
+    }
+    const { result, count } = await response.data;
     toggleExportLoadingState(true);
     renderOrders(result);
     updatePagination(count, page);
@@ -396,9 +405,11 @@ function renderOrders(orders) {
         toggleButton.textContent = "Loading...";
         
         try {
-          const response = await fetch(`/crud/orders/${order.id}`);
-          if (!response.ok) throw new Error('Failed to fetch items');
-          const orderDetails = await response.json();
+          const response = await fetchWithErrorHandling(`/crud/orders/${order.id}`);
+          if (!response.ok) {
+            showToastMessage(response.error, "error");
+          }
+          const orderDetails = await response.data;
           
           if (orderDetails?.order_items?.length > 0) {
             // First clear and append content
@@ -412,12 +423,11 @@ function renderOrders(orders) {
             
             toggleButton.textContent = "Toggle item list";
           } else {
-            alert('No items found for this order');
+            // alert('No items found for this order');
             toggleButton.textContent = "Show Items";
           }
         } catch (error) {
           console.error('Error:', error);
-          alert('Failed to load order items');
           toggleButton.textContent = "Show Items";
         } finally {
           toggleButton.disabled = false;
@@ -532,10 +542,16 @@ function updatePagination(totalOrders, page) {
   }
 
   elements.paginationContainer.appendChild(
-    createPaginationButton("Previous", page > 1, () => loadOrders(page - 1))
+    createPaginationButton("Previous", page > 1, () => {
+      state.currentPage = page - 1;
+      loadOrders(state.currentPage);
+    })
   );
   elements.paginationContainer.appendChild(
-    createPaginationButton("Next", page < totalPages, () => loadOrders(page + 1))
+    createPaginationButton("Next", page < totalPages, () => {
+      state.currentPage = page + 1;
+      loadOrders(state.currentPage);
+    })
   );
 }
 
@@ -679,22 +695,22 @@ async function handleCreateOrder(event) {
   console.log(orderData);
 
   try {
-    const response = await fetch("/api-back/orders", {
+    const response = await fetchWithErrorHandling("/api-back/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(orderData),
     });
 
     if (!response.ok) {
-      const errorResponseData = await response.json();
-      throw new Error(errorResponseData.error);
+      showToastMessage(response.error, "error");
+    } else {
+      showToastMessage("Order created successfully", "success");
+      elements.createForm.reset();
+      state.productsInOrder = [];
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      window.location.reload();
+      await loadOrders(state.currentPage);
     }
-
-    alert("Order created successfully");
-    elements.createForm.reset();
-    state.productsInOrder = [];
-    window.location.reload();
-    await loadOrders(state.currentPage);
   } catch (error) {
     alert(`Failed to create order: ${error.message}`);
     console.error("Error creating order:", error);
@@ -704,8 +720,12 @@ async function handleCreateOrder(event) {
 /// UPDATE
 async function displayUpdateForm(orderId) {
   try {
-    const orderResponse = await fetch(`/crud/orders/${orderId}`);
-    const order = await orderResponse.json();
+    const orderResponse = await fetchWithErrorHandling(`/crud/orders/${orderId}`);
+    if(!orderResponse.ok) {
+      showToastMessage(orderResponse.error, "error");
+      return;
+    }
+    const order = await orderResponse.data;
     console.log(order);
     state.orderToUpdateId = orderId;
     state.productsInOrder = order.order_items;
@@ -823,22 +843,22 @@ async function handleUpdateOrder(event) {
   orderData.user_id = $("#user_id_update").val();
 
   try {
-    const response = await fetch(`/api-back/orders/${state.orderToUpdateId}`, {
+    const response = await fetchWithErrorHandling(`/api-back/orders/${state.orderToUpdateId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(orderData),
     });
 
     if (!response.ok) {
-      const errorMessage = await response.json();
-      throw new Error(errorMessage.error);
+      showToastMessage(response.error, "error");
+    } else {
+      showToastMessage("Order updated successfully", "success");
+      elements.updateForm.reset();
+      state.productsInOrder = [];
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      window.location.reload();
+      await loadOrders(state.currentPage);
     }
-
-    alert("Order updated successfully");
-    elements.updateForm.reset();
-    state.productsInOrder = [];
-    window.location.reload();
-    await loadOrders(state.currentPage);
   } catch (error) {
     alert(`Failed to update order: ${error.message}`);
     console.error("Error updating order:", error);
@@ -850,20 +870,21 @@ async function handleDeleteOrder(orderId) {
   if (!confirm("Are you sure you want to delete this order?")) return;
 
   try {
-    const response = await fetch(`/api-back/orders/${orderId}`, {
+    const response = await fetchWithErrorHandling(`/api-back/orders/${orderId}`, {
       method: "DELETE",
     });
 
     if (!response.ok) {
-      const errorMessage = await response.text();
-      throw new Error(errorMessage.error);
+      showToastMessage(response.error, "error");
+    } else {
+      showToastMessage("Order deleted successfully", "success");
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await loadOrders(state.currentPage);
     }
 
-    alert("Order deleted successfully");
-    await loadOrders(state.currentPage);
   } catch (error) {
-    alert(`Failed to delete order: ${error.message}`);
     console.error("Error deleting order:", error);
+    showToastMessage("Failed to delete order", "error");
   }
 }
 
