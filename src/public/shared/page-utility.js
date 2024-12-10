@@ -104,6 +104,19 @@ async function createForm(schema, formId, formType) {
 
       wrapper.appendChild(label);
       wrapper.appendChild(input);
+
+    } 
+    else if (schema.properties[key]?.type === "boolean"){
+      const input = document.createElement("input");
+      input.style.display = "block";
+      input.type = "checkbox";
+      input.id = key;
+      input.name = key;
+      input.className = "form-check-input";
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(input);
+
     } else {
       const input = document.createElement("input");
       input.type = key === "password" ? "password" : "text";
@@ -258,7 +271,7 @@ function castFormDataToSchema(data, schema) {
         castedData[key] = parseFloat(data[key]);
         if (isNaN(castedData[key])) castedData[key] = null; // Handle empty or invalid number values
       } else if (expectedType === "boolean") {
-        castedData[key] = data[key] === "true";
+        castedData[key] = data[key] === "on";
       } else if (expectedType === "null") {
         castedData[key] = data[key] === "" ? null : data[key]; // Convert empty string to null
       } else {
