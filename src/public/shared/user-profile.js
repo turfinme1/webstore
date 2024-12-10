@@ -1,14 +1,4 @@
-import {
-  fetchUserSchema,
-  createForm,
-  attachValidationListeners,
-  getFormTypeBasedOnUrl,
-  getUserStatus,
-  loadCaptchaImage,
-  attachCaptchaRefreshHandler,
-  attachLogoutHandler,
-} from "./auth.js";
-import { createNavigation } from "./navigation.js";
+import { fetchUserSchema, createNavigation, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const updateProfile = document.getElementById("change-password-link");
@@ -16,7 +6,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   let userStatus = await getUserStatus();
   createNavigation(userStatus);
-  await attachLogoutHandler();
 
   const links = [
     updateProfile,

@@ -1,5 +1,4 @@
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
-import { createNavigation } from "./navigation.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 
 // Centralized state for the cart
 const state = {
@@ -19,7 +18,6 @@ const elements = {
 document.addEventListener('DOMContentLoaded', async () => {
   state.userStatus = await getUserStatus();
   createNavigation(state.userStatus);
-  await attachLogoutHandler();
   const cartData = await getCartItems();
   state.items = cartData.items;
   state.cart = cartData;
@@ -50,13 +48,22 @@ function handleCartItemActions(event) {
 // Update cart item quantity
 async function updateCartItemQuantity(productId, newQuantity) {
   try {
-    await updateCartItem(productId, newQuantity);
-    
-    const cartData = await getCartItems();
-    state.items = cartData.items;
-    state.cart = cartData;
-
-    updateCartDisplay(state);
+    const response = await fetchWithErrorHandling(`/api/cart`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ product_id: productId, quantity: newQuantity }),
+    });
+    if (!response.ok) {
+      showToastMessage(response.error, "error");
+    } else {
+      const cartData = await getCartItems();
+      state.items = cartData.items;
+      state.cart = cartData;
+      
+      updateCartDisplay(state);
+    }
   } catch (error) {
     console.error('Error updating cart item:', error);
   }
@@ -65,13 +72,19 @@ async function updateCartItemQuantity(productId, newQuantity) {
 // Remove item from cart
 async function removeItemFromCart(itemId) {
   try {
-    await removeCartItem(itemId);
+    const response = await fetchWithErrorHandling(`/api/cart/${itemId}`, {
+      method: 'DELETE',
+    });
 
-    const cartData = await getCartItems();
-    state.items = cartData.items;
-    state.cart = cartData;
-
-    updateCartDisplay(state);
+    if (!response.ok) {
+      showToastMessage(response.error, "error");
+    } else {
+      const cartData = await getCartItems();
+      state.items = cartData.items;
+      state.cart = cartData;
+      
+      updateCartDisplay(state);
+    }
   } catch (error) {
     console.error('Error removing cart item:', error);
   }
@@ -98,27 +111,12 @@ async function handleCheckout() {
 // cartService.js
 
 async function getCartItems() {
-  const response = await fetch('/api/cart');
-  if (!response.ok) throw new Error('Failed to fetch cart items');
-  return await response.json();
-}
-
-async function updateCartItem(productId, quantity) {
-  const response = await fetch(`/api/cart`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ product_id: productId, quantity }),
-    });
-  if (!response.ok) throw new Error('Failed to update cart item');
-}
-
-async function removeCartItem(itemId) {
-  const response = await fetch(`/api/cart/${itemId}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) throw new Error('Failed to remove cart item');
+  const response = await fetchWithErrorHandling('/api/cart');
+  if (!response.ok) {
+    showToastMessage(response.error, "error");
+  } else {
+    return await response.data;
+  }
 }
 
 // cartUI.js

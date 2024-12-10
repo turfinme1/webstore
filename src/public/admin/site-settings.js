@@ -1,17 +1,9 @@
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
-import { createNavigation, createBackofficeNavigation } from "./navigation.js";
-import {
-  createForm,
-  attachValidationListeners,
-  fetchUserSchema,
-  populateFormFields,
-} from "./form-util.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
   createBackofficeNavigation(userStatus);
-  await attachLogoutHandler();
 
   await renderSettings();
 });

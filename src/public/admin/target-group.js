@@ -1,5 +1,4 @@
-import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation, createBackofficeNavigation } from "./navigation.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 
 // Centralized state object
 const state = {
@@ -51,7 +50,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
   createNavigation(userStatus);
-  await attachLogoutHandler();
   createBackofficeNavigation(userStatus);
   if (!hasPermission(userStatus, "read", "users")) {
     elements.mainContainer.innerHTML = "<h1>User Management</h1>";
@@ -126,16 +124,20 @@ async function loadUsers(page) {
       page: page.toString(),
     });
 
-    const response = await fetch(
+    const response = await fetchWithErrorHandling(
       `/crud/users/filtered?${queryParams.toString()}`
     );
-    const { result, count } = await response.json();
+    if(!response.ok){
+      showToastMessage(response.error, 'error');
+      return;
+    }
+    const { result, count } = await response.data;
     
     state.userIds = result.map(user => user.id);
     renderUserList(result);
 
     if(parseInt(count) > state.pageSize){
-      alert("Only the first 1000 users are displayed.");
+      showToastMessage("Only the first 1000 users are displayed.", 'error');
     }
 
     const userTableSection = document.getElementById("user-table-section");
@@ -249,28 +251,31 @@ async function handleCreateTargetGroup(event) {
     page: "1",
   });
 
-  const response = await fetch(
+  const response = await fetchWithErrorHandling(
     `/crud/users/filtered?${queryParams.toString()}`
   );
-  const { result, count } = await response.json();
+  if(!response.ok){
+    showToastMessage(response.error, 'error');
+    return;
+  }
+  const { result, count } = await response.data;
   state.userIds = result.map(user => user.id);
 
   data.users = state.userIds;
   console.log(JSON.stringify(data));
   try {
-    const response = await fetch("/crud/target-groups", {
+    const response = await fetchWithErrorHandling("/crud/target-groups", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
     if (response.ok) {
-      alert("Record created successfully!");
+      showToastMessage('Target group created successfully', 'success');
       elements.targetGroupCreateForm.reset();
       hideForm();
       loadUsers(state.currentPage);
     } else {
-      const error = await response.json();
-      alert(`Failed to create user: ${error.error}`);
+      showToastMessage(response.error, 'error');
     }
   } catch (error) {
     console.error("Error creating user:", error);
@@ -282,21 +287,21 @@ async function handleUpdateUser(event) {
   const formData = new FormData(elements.targetGroupUpdateForm);
   console.log(JSON.stringify(formData));
   try {
-    const response = await fetch(`/crud/users/${state.userToUpdateId}`, {
+    const response = await fetchWithErrorHandling(`/crud/users/${state.userToUpdateId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(Object.fromEntries(formData)),
     });
     if (response.ok) {
-      alert("Record updated successfully!");
+      showToastMessage('User updated successfully', 'success');
       elements.targetGroupUpdateForm.reset();
       state.filterParams = {};
       state.currentPage = 1;
       hideUpdateForm();
+      await new Promise(resolve => setTimeout(resolve, 1000));
       loadUsers(state.currentPage);
     } else {
-      const error = await response.json();
-      alert(`Failed to update user: ${error.error}`);
+      showToastMessage(response.error, 'error');
     }
   } catch (error) {
     console.error("Error updating user:", error);
@@ -459,10 +464,14 @@ async function loadTargetGroups(page) {
       page: page.toString(),
     });
 
-    const response = await fetch(
+    const response = await fetchWithErrorHandling(
       `/crud/target-groups/filtered?${queryParams.toString()}`
     );
-    const { result, count } = await response.json();
+    if(!response.ok){
+      showToastMessage(response.error, 'error');
+      return;
+    }
+    const { result, count } = await response.data;
     renderTargetGroupList(result);
     updateTargetGroupPagination(count, page);
   } catch (error) {
@@ -547,7 +556,11 @@ async function handleExportCsv(targetGroupId) {
     // toggleExportLoadingState();
   } catch (error) {
     console.log(error);
-    alert("Error exporting orders");
+    if (!navigator.onLine) {
+      showToastMessage('No internet connection', 'error');
+    } else {
+        showToastMessage('Export failed.', 'error');
+    }
     // toggleExportLoadingState();
   }
 }
