@@ -30,4 +30,4 @@ class ApplicationError extends Error {
   }
 }
 
-module.exports = { ASSERT, ASSERT_USER, ASSERT_PEER, UserError};
+module.exports = { ASSERT, ASSERT_USER, ASSERT_PEER, UserError, ApplicationError };
