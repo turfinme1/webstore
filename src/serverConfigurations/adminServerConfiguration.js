@@ -1,7 +1,9 @@
+const setTimeout = require("timers/promises").setTimeout;
 const cron = require("node-cron");
 const pool = require("../database/dbConfig");
-const { UserError } = require("../serverConfigurations/assert");
+const { UserError, ASSERT } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
+const { STATUS_CODES } = require("./constants");
 
 const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
@@ -98,25 +100,49 @@ function registerRoutes(routing, app) {
 function requestMiddleware(handler) {
   return async (req, res, next) => {
     try {
+      const cancelTimeout = new AbortController();
+      const cancelTask = new AbortController();
+      req.signal = cancelTask.signal;
       req.pool = pool;
-      req.dbConnection = new DbConnectionWrapper(await req.pool.connect());
+      req.dbConnection = new DbConnectionWrapper(await req.pool.connect(), req.pool);
       req.entitySchemaCollection = entitySchemaCollection;
       req.logger = new Logger(req);
-      
-      req.dbConnection.query("BEGIN");
-      await sessionMiddleware(req, res);
-      await handler(req, res, next);
-      req.dbConnection.query("COMMIT");
 
+      await req.dbConnection.query("BEGIN");
+      await sessionMiddleware(req, res);
+
+      const timeout = async () => {
+        await setTimeout(60000, { signal: cancelTimeout.signal });
+        cancelTask.abort();
+      }
+      const task = async () => {
+        try {
+          await handler(req, res, next);
+        } finally {
+          cancelTimeout.abort();
+        } 
+      }
+      await Promise.race([timeout(), task()]);
+      if(req.signal?.aborted) {
+        await req.dbConnection.cancel();
+        ASSERT(false, "Request aborted", { code: STATUS_CODES.INTERNAL_SERVER_ERROR, long_description: "Request aborted" });
+      }
+
+      await req.dbConnection.query("COMMIT");
     } catch (error) {
       console.error(error);
       
+      if(req.signal?.aborted) {
+        res.status(500).json({ error: "Request aborted" });
+        return;
+      }
+
       if (req.dbConnection) {
-        req.dbConnection.query("ROLLBACK");
+        await req.dbConnection.query("ROLLBACK");
       }
 
       await req.logger.error(error);
-      
+
       if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });
       } else {
@@ -186,7 +212,7 @@ process.on('uncaughtException', async (error) => {
 process.on('unhandledRejection', async (error) => {
   try {
     const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
-  await logger.error(error);
+    await logger.error(error);
   } catch (error) {
     console.error(error);
   }

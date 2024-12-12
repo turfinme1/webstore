@@ -2,10 +2,13 @@ const { STATUS_CODES }  = require("../serverConfigurations/constants");
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
 
 class DbConnectionWrapper {
-  constructor(dbConnection) {
+  constructor(dbConnection, pool) {
     this.dbConnection = dbConnection;
+    this.pool = pool;
+    this.backendPid = dbConnection.processID;
     this.query = this.query.bind(this);
     this.release = this.release.bind(this);
+    this.cancel = this.cancel.bind(this);
   }
 
   async query(queryCommand, values) {
@@ -26,6 +29,11 @@ class DbConnectionWrapper {
       ASSERT_USER(error.code !== "80000", "Order status cannot be reverted", { code: STATUS_CODES.INVALID_INPUT, long_description: "Cannot change the status of the order" });
       ASSERT(false, "Internal server error");
     }
+  }
+
+  async cancel() {
+    const result = await this.pool.query("SELECT pg_cancel_backend($1)", [this.backendPid]);
+    return result;
   }
 
   release() {
