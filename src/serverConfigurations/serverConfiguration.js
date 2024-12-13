@@ -115,6 +115,9 @@ async function sessionMiddleware(req, res) {
   const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let sessionId = req.cookies[cookieName];
 
+  const settings = await req.dbConnection.query("SELECT * FROM app_settings WHERE id = 1 LIMIT 1");
+  req.context = { settings: settings.rows[0] };
+  
   if (sessionId && UUID_REGEX.test(sessionId)) {
     const data = { entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, sessionHash : sessionId };
     const session = await authService.getSession(data);

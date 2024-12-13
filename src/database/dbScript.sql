@@ -254,12 +254,16 @@ CREATE TABLE orders (
     status TEXT NOT NULL CHECK (status IN ('Pending', 'Paid', 'Delivered', 'Cancelled')),
     paid_amount NUMERIC(12, 2) NULL CHECK (paid_amount >= 0),
     total_price NUMERIC(12, 2) NOT NULL CHECK (total_price >= 0),
+    discount_percentage NUMERIC(5, 2) NOT NULL CHECK (discount_percentage >= 0) DEFAULT 0,
+    vat_percentage NUMERIC(5, 2) NOT NULL CHECK (vat_percentage >= 0) DEFAULT 0,
     shipping_address_id BIGINT NULL REFERENCES addresses(id),
     payment_id BIGINT NULL REFERENCES payments(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 ALTER TABLE orders ADD COLUMN payment_id BIGINT NULL REFERENCES payments(id);
+ALTER TABLE orders ADD COLUMN discount_percentage NUMERIC(5, 2) NOT NULL CHECK (discount_percentage >= 0) DEFAULT 0;
+ALTER TABLE orders ADD COLUMN vat_percentage NUMERIC(5, 2) NOT NULL CHECK (vat_percentage >= 0) DEFAULT 0;
 
 CREATE TABLE payments (
     id BIGSERIAL PRIMARY KEY,
@@ -353,15 +357,6 @@ WHERE promotions.is_active = TRUE
 ORDER BY promotions.id DESC;
 
 CREATE OR REPLACE VIEW orders_view AS
-WITH vat AS (
-    SELECT vat_percentage FROM app_settings LIMIT 1
-),
-largest_discount AS (
-    SELECT COALESCE(MAX(discount_percentage), 0) AS discount_percentage
-    FROM promotions
-    WHERE is_active = TRUE
-      AND NOW() BETWEEN start_date AND end_date
-)
 SELECT
     o.id,
     o.order_hash,
@@ -369,12 +364,12 @@ SELECT
     u.email,
     o.status,
     o.total_price,
-    ld.discount_percentage,
-    ROUND(o.total_price * ld.discount_percentage / 100, 2) AS discount_amount,
-    ROUND(o.total_price * (1 - ld.discount_percentage / 100), 2) AS total_price_after_discount,
-    vat.vat_percentage,
-    ROUND(o.total_price * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
-    ROUND(o.total_price * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
+    o.discount_percentage,
+    ROUND(o.total_price * o.discount_percentage / 100, 2) AS discount_amount,
+    ROUND(o.total_price * (1 - o.discount_percentage / 100), 2) AS total_price_after_discount,
+    o.vat_percentage,
+    ROUND(o.total_price * (1 - o.discount_percentage / 100) * o.vat_percentage / 100, 2) AS vat_amount,
+    ROUND(o.total_price * (1 - o.discount_percentage / 100) * (1 + o.vat_percentage / 100), 2) AS total_price_with_vat,
     o.paid_amount,
     o.is_active,
     o.created_at,
@@ -387,53 +382,31 @@ SELECT
     ) AS shipping_address
 FROM
     orders o
-CROSS JOIN vat
-CROSS JOIN largest_discount ld
 LEFT JOIN addresses a ON o.shipping_address_id = a.id
 LEFT JOIN iso_country_codes c ON a.country_id = c.id
 LEFT JOIN users u ON o.user_id = u.id;
 
 CREATE OR REPLACE VIEW orders_export_view AS
-WITH vat AS (
-    SELECT vat_percentage FROM app_settings LIMIT 1
-),
-largest_discount AS (
-    SELECT COALESCE(MAX(discount_percentage), 0) AS discount_percentage
-    FROM promotions
-    WHERE is_active = TRUE
-      AND NOW() BETWEEN start_date AND end_date
-)
 SELECT
     o.created_at,
-	o.id,
+    o.id,
     o.order_hash,
     u.email,
     o.status,
     o.total_price,
-	ld.discount_percentage,
-    ROUND(o.total_price * ld.discount_percentage / 100, 2) AS discount_amount,
-    ROUND(o.total_price * (1 - ld.discount_percentage / 100), 2) AS total_price_after_discount,
-    vat.vat_percentage,
-    ROUND(o.total_price * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
-    ROUND(o.total_price * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
+    o.discount_percentage,
+    ROUND(o.total_price * o.discount_percentage / 100, 2) AS discount_amount,
+    ROUND(o.total_price * (1 - o.discount_percentage / 100), 2) AS total_price_after_discount,
+    o.vat_percentage,
+    ROUND(o.total_price * (1 - o.discount_percentage / 100) * o.vat_percentage / 100, 2) AS vat_amount,
+    ROUND(o.total_price * (1 - o.discount_percentage / 100) * (1 + o.vat_percentage / 100), 2) AS total_price_with_vat,
     o.paid_amount,
     o.is_active
 FROM orders o
-CROSS JOIN vat
-CROSS JOIN largest_discount ld
 LEFT JOIN users u ON o.user_id = u.id;
 
 CREATE OR REPLACE VIEW orders_detail_view AS
-WITH vat AS (
-    SELECT vat_percentage FROM app_settings LIMIT 1
-),
-largest_discount AS (
-    SELECT COALESCE(MAX(discount_percentage), 0) AS discount_percentage
-    FROM promotions
-    WHERE is_active = TRUE
-      AND NOW() BETWEEN start_date AND end_date
-),
-order_items_agg AS (
+WITH order_items_agg AS (
     SELECT
         oi.order_id,
         json_agg(
@@ -456,16 +429,16 @@ SELECT
     u.email,
     o.status,
     o.total_price,
-    ld.discount_percentage,
-    ROUND(o.total_price * ld.discount_percentage / 100, 2) AS discount_amount,
-    ROUND(o.total_price * (1 - ld.discount_percentage / 100), 2) AS total_price_after_discount,
-    vat.vat_percentage,
-    ROUND(o.total_price * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
-    ROUND(o.total_price * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
+    o.discount_percentage,
+    ROUND(o.total_price * o.discount_percentage / 100, 2) AS discount_amount,
+    ROUND(o.total_price * (1 - o.discount_percentage / 100), 2) AS total_price_after_discount,
+    o.vat_percentage,
+    ROUND(o.total_price * (1 - o.discount_percentage / 100) * o.vat_percentage / 100, 2) AS vat_amount,
+    ROUND(o.total_price * (1 - o.discount_percentage / 100) * (1 + o.vat_percentage / 100), 2) AS total_price_with_vat,
     o.paid_amount,
     o.is_active,
     o.created_at,
-	json_build_object(
+    json_build_object(
         'id', a.id,
         'street', a.street,
         'city', a.city,
@@ -475,8 +448,6 @@ SELECT
     oi_agg.order_items
 FROM
     orders o
-CROSS JOIN vat
-CROSS JOIN largest_discount ld
 LEFT JOIN addresses a ON o.shipping_address_id = a.id
 LEFT JOIN iso_country_codes c ON a.country_id = c.id
 LEFT JOIN users u ON o.user_id = u.id
