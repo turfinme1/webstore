@@ -19,6 +19,7 @@ class OrderController {
       const data = {
         body: req.body,
         session: req.session,
+        context: req.context,
         dbConnection: req.dbConnection,
       };
       const result = await this.orderService.createOrder(data);
@@ -31,6 +32,7 @@ class OrderController {
       const data = {
         body: req.body,
         session: req.session,
+        context: req.context,
         dbConnection: req.dbConnection,
       };
       const result = await this.orderService.createOrderByStaff(data);
@@ -44,6 +46,7 @@ class OrderController {
         body: req.body,
         params: req.params,
         session: req.session,
+        context: req.context,
         dbConnection: req.dbConnection,
       };
       const result = await this.orderService.updateOrderByStaff(data);

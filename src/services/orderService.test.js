@@ -38,6 +38,11 @@ describe('OrderService', () => {
                     },
                 },
                 dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
 
             mockDbConnection.query
@@ -90,6 +95,11 @@ describe('OrderService', () => {
                     },
                 },
                 dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
 
             jest.spyOn(orderService, "verifyCartPricesAreUpToDate").mockResolvedValue(true);
@@ -116,6 +126,11 @@ describe('OrderService', () => {
                     },
                 },
                 dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
 
             jest.spyOn(orderService, "verifyCartPricesAreUpToDate").mockResolvedValue(true);
@@ -146,7 +161,12 @@ describe('OrderService', () => {
                     city: 'Anytown',
                     country_id: 1
                 },
-                dbConnection: mockDbConnection
+                dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
     
             mockDbConnection.query
@@ -178,7 +198,12 @@ describe('OrderService', () => {
                     city: 'Anytown',
                     country_id: 1
                 },
-                dbConnection: mockDbConnection
+                dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
     
             mockDbConnection.query
@@ -203,7 +228,12 @@ describe('OrderService', () => {
                     city: 'Anytown',
                     country_id: 1
                 },
-                dbConnection: mockDbConnection
+                dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
     
             mockDbConnection.query
@@ -230,7 +260,12 @@ describe('OrderService', () => {
                     city: 'Anytown',
                     country_id: 1
                 },
-                dbConnection: mockDbConnection
+                dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
     
             mockDbConnection.query
