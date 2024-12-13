@@ -454,13 +454,13 @@ class ReportService {
         },
         {
             key: "discount_percentage",
-            grouping_expression: "ld.discount_percentage",
+            grouping_expression: "O.discount_percentage",
             filter_expression: "",
             type: "number",
         },
         {
             key: "vat_percentage",
-            grouping_expression: "vat.vat_percentage",
+            grouping_expression: "O.vat_percentage",
             filter_expression: "",
             type: "number",
         },
@@ -491,15 +491,6 @@ class ReportService {
     ];
 
     let sql = `
-        WITH vat AS (
-            SELECT vat_percentage FROM app_settings LIMIT 1
-        ),
-        largest_discount AS (
-            SELECT COALESCE(MAX(discount_percentage), 0) AS discount_percentage
-            FROM promotions
-            WHERE is_active = TRUE
-              AND NOW() BETWEEN start_date AND end_date
-        )
         SELECT
             $created_at_grouping_expression$  AS "created_at",
             $order_hash_grouping_expression$  AS "order_hash",
@@ -507,15 +498,13 @@ class ReportService {
             $status_grouping_expression$  AS "status",
             $discount_percentage_grouping_expression$ AS "discount_percentage",
             $vat_percentage_grouping_expression$  AS "vat_percentage",
-            SUM(ROUND(O.total_price * ld.discount_percentage / 100, 2)) AS "discount_amount",
-            SUM(ROUND(O.total_price * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2))  AS "vat_amount",
-            SUM(ROUND(O.total_price * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2))  AS "total_price_with_vat",
+            SUM(ROUND(O.total_price * O.discount_percentage / 100, 2)) AS "discount_amount",
+            SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2))  AS "vat_amount",
+            SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2))  AS "total_price_with_vat",
             SUM(paid_amount) AS "paid_amount",
             SUM(O.total_price) AS "total_price",
             COUNT(*) as count
         FROM orders O
-        CROSS JOIN vat
-        CROSS JOIN largest_discount ld
         JOIN users U ON U.id = O.user_id
         WHERE TRUE
             AND $created_at_minimum_filter_expression$
@@ -577,7 +566,6 @@ class ReportService {
       if (min && max) return `${min} to ${max}`;
       if (min) return `From ${min}`;
       if (max) return `To ${max}`;
-      return null;
     };
   
     // Process each filter

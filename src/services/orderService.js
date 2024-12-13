@@ -1,6 +1,5 @@
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
 const { STATUS_CODES, ENV} = require("../serverConfigurations/constants");
-// const paypal = require("@paypal/checkout-server-sdk");
 const paypal = require("../serverConfigurations/paypalClient");
 
 class OrderService {
@@ -36,14 +35,14 @@ class OrderService {
 
     const orderResult = await data.dbConnection.query(
       `
-      INSERT INTO orders (user_id, status, shipping_address_id, total_price) 
-      VALUES ($1, 'Pending', $2,
+      INSERT INTO orders (user_id, status, shipping_address_id, vat_percentage, discount_percentage, total_price) 
+      VALUES ($1, 'Pending', $2, $3, (SELECT COALESCE(SUM(discount_percentage), 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date),
           (SELECT SUM(ci.quantity * p.price) 
               FROM cart_items ci 
               JOIN products p ON ci.product_id = p.id 
               WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE))) 
       RETURNING *`,
-      [data.session.user_id, shippingAddressId]
+      [data.session.user_id, shippingAddressId, data.context.settings.vat_percentage]
     );
     const order = orderResult.rows[0];
 
@@ -150,15 +149,16 @@ class OrderService {
       // Step 1: Insert the order into the orders table
     const orderResult = await data.dbConnection.query(
       `
-      INSERT INTO orders (user_id, status, total_price) 
-      VALUES ($1, $2, (
+      INSERT INTO orders (user_id, status, vat_percentage, discount_percentage, total_price) 
+      VALUES ($1, $2, $3, (SELECT COALESCE(SUM(discount_percentage), 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date),
+      (
         SELECT SUM(p.price * (oi->>'quantity')::BIGINT)
         FROM products p
-        JOIN jsonb_array_elements($3::jsonb) AS oi ON p.id = (oi->>'id')::BIGINT
+        JOIN jsonb_array_elements($4::jsonb) AS oi ON p.id = (oi->>'id')::BIGINT
       ))
       RETURNING *;
       `,
-      [data.body.user_id, data.body.order_status, JSON.stringify(data.body.order_items)]
+      [data.body.user_id, data.body.order_status, data.context.settings.vat_percentage, JSON.stringify(data.body.order_items)]
     );
     const order = orderResult.rows[0];
 

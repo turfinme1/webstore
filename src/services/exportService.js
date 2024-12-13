@@ -293,59 +293,59 @@ class ExportService {
         });
 
         const dbRowGenerator = this.fetchRowsWithCursor;
-        async function* csvRowGenerator() {
-            yield "\uFEFF"; 
+        const csvStream = Readable.from(this.csvRowGenerator(data, dbRowGenerator));
+        await pipeline(csvStream, data.res);
+    }
 
-            if (data.filters || data.groupings) {
-                
-                if (data.filters) {
-                    yield '\n# Applied Filters:\n';
-                    for (const [key, value] of Object.entries(data.filters)) {
-                    if (value) {
-                        yield `${key},${value}\n`;
-                    }
-                    }
-                }
+    async* csvRowGenerator(data, dbRowGenerator) {
+        yield "\uFEFF"; 
+
+        if (data.filters || data.groupings) {
             
-                if (data.groupings) {
-                    yield '\n# Applied Grouping:\n';
-                    for (const [key, value] of Object.entries(data.groupings)) {
-                    if (value) {
-                        yield `${key},${value}\n`;
-                    }
-                    }
+            if (data.filters) {
+                yield '\n# Applied Filters:\n';
+                for (const [key, value] of Object.entries(data.filters)) {
+                if (value) {
+                    yield `${key},${value}\n`;
                 }
-                yield "\n";
-            }
-
-            let headers = null;
-            for await (const rows of await dbRowGenerator(data)) {
-                for (const row of rows) {
-                    if (!headers) {
-                        headers = Object.keys(row)
-                        yield `${headers.join(",")}\n`;
-                    }
-
-                    const rowValues = Object.values(row)
-                        .map(value => {
-                            if (Array.isArray(value)) {
-                                return value.join(':');
-                            }
-                            if (typeof value === 'object' && value !== null) {
-                                return JSON.stringify(value);
-                            }
-
-                            return value;
-                        })
-                        .join(",") + "\n";
-
-                    yield rowValues;
                 }
             }
+        
+            if (data.groupings) {
+                yield '\n# Applied Grouping:\n';
+                for (const [key, value] of Object.entries(data.groupings)) {
+                if (value) {
+                    yield `${key},${value}\n`;
+                }
+                }
+            }
+            yield "\n";
         }
 
-        const csvStream = Readable.from(csvRowGenerator());
-        await pipeline(csvStream, data.res);
+        let headers = null;
+        for await (const rows of await dbRowGenerator(data)) {
+            for (const row of rows) {
+                if (!headers) {
+                    headers = Object.keys(row)
+                    yield `${headers.join(",")}\n`;
+                }
+
+                const rowValues = Object.values(row)
+                    .map(value => {
+                        if (Array.isArray(value)) {
+                            return value.join(':');
+                        }
+                        if (typeof value === 'object' && value !== null) {
+                            return JSON.stringify(value);
+                        }
+
+                        return value;
+                    })
+                    .join(",") + "\n";
+
+                yield rowValues;
+            }
+        }
     }
 
     async exportReportToExcel(data) {
