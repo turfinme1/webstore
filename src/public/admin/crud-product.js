@@ -573,6 +573,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("Maximum price must be a number.");
       return;
     }
+    
+    if(minPriceValue < 0 || maxPriceValue < 0) {
+      alert("Price cannot be negative.");
+      return;
+    }
 
     minPrice = minPriceValue !== "" ? parseFloat(minPriceValue) : null;
     maxPrice = maxPriceValue !== "" ? parseFloat(maxPriceValue) : null;
