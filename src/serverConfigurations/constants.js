@@ -74,6 +74,30 @@ const ENV = {
   PRODUCTION_URL: 'http://localhost:3002',
   PAYPAL_CLIENT_ID:"Aa3N2FW_E6sIybxEbJ5ioVPY8Z9x8do7NEy1CjJ6TW08FR4dSVi7fj7wsP-V5D23wTu5yVh1P4L3-Nzr",
   PAYPAL_CLIENT_SECRET:"EAe1aPRgNqf7dFVM3440ZeUghaF2SIfEafX3NB-6jS-cw0QVp9hmML14_iJNKUWrspXsiXMtzc4FqQD1",
+
+  DEVELOPMENT : {
+    DB_CONFIG: {
+      user: "postgres",
+      host: "localhost",
+      database: "webstore",
+      password: "postgres",
+      port: "5432",
+      max: 20,
+      idleTimeoutMillis: 6000,
+    }
+  },
+
+  RC:{
+    DB_CONFIG: {
+      user: "postgres",
+      host: "localhost",
+      database: "webstore_rc",
+      password: "postgres",
+      port: "5432",
+      max: 20,
+      idleTimeoutMillis: 6000,
+    }
+  }
 }
 
 module.exports = {STATUS_CODES, ENV};
