@@ -1,13 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
-const readline = require('readline');
 const { ENV } = require('../serverConfigurations/constants');
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
-// const pool = require('./dbConfig');
 
-const migrationsDir = path.join(__dirname, '../migrations');
+const migrationsDir = path.join(__dirname, 'migrations');
 
 class MigrationManager {
     constructor(enviroment, migrationDir) {
@@ -26,7 +24,7 @@ class MigrationManager {
             CREATE TABLE IF NOT EXISTS migrations (
                 id SERIAL PRIMARY KEY,
                 file_name TEXT UNIQUE NOT NULL,
-                applied_at TIMESTAMP DEFAULT NOW()
+                applied_at TIMESTAMPZ DEFAULT NOW()
             );
         `);
     }
@@ -50,12 +48,13 @@ class MigrationManager {
             const appliedMigrations = await client.query('SELECT file_name FROM migrations');
             const appliedFiles = new Set(appliedMigrations.rows.map(row => row.file_name));
 
-            const migrationFiles = (await fs.promises.readdir(this.migrationDir)).filter(file => file.endsWith('.sql'));
+            const migrationFiles = (await fs.promises.readdir(this.migrationDir)).filter(file => file.endsWith('.sql')).sort();
 
             for (const file of migrationFiles) {
                 if (!appliedFiles.has(file)) {
                     const filePath = path.join(this.migrationDir, file);
-                    await this.executeMigrationFileInChunks(client, filePath);
+                    const sql = await fs.promises.readFile(filePath, { encoding: 'utf8' });
+                    await client.query(sql);
                     await client.query('INSERT INTO migrations (file_name) VALUES ($1)', [file]);
                     console.log(`Applied migration: ${file}`);
                 }
@@ -67,28 +66,7 @@ class MigrationManager {
             console.error('Error running migrations:', error);
         } finally {
             client.release();
-        }
-    }
-
-    async executeMigrationFileInChunks(client, filePath) {
-        const readStream = fs.createReadStream(filePath, { encoding: 'utf8' });
-        const rl = readline.createInterface({
-            input: readStream,
-            crlfDelay: Infinity
-        });
-    
-        let sqlChunk = '';
-    
-        for await (const line of rl) {
-            sqlChunk += line + '\n';
-            if (line.trim().endsWith(';')) {
-                await client.query(sqlChunk);
-                sqlChunk = '';
-            }
-        }
-    
-        if (sqlChunk.trim()) {
-            await client.query(sqlChunk);
+            await this.pool.end();
         }
     }
 }
@@ -115,12 +93,11 @@ async function main() {
         .help()
         .argv;
 
-        console.log(argv);
     const enviroment = ENV[argv.env?.toUpperCase()] || ENV.DEVELOPMENT;
     const manager = new MigrationManager(enviroment, migrationsDir);
 
     try {
-        await manager.initialize();
+        // await manager.initialize();
         if (argv._[0] === 'create') {
             await manager.createMigrationFile(argv.name);
         } else if (argv._[0] === 'apply') {
@@ -130,7 +107,6 @@ async function main() {
         console.error('Error:', error.message);
         process.exit(1);
     } finally {
-        // await manager.close();
         process.exit(0);
     }
 }
