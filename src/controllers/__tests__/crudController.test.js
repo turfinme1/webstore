@@ -120,7 +120,7 @@ describe('CrudController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith(createdProduct);
       expect(req.logger.info).toHaveBeenCalledWith({
-        code: STATUS_CODES.CREATE_SUCCESS,
+        code: STATUS_CODES.CRUD_CREATE_SUCCESS,
         short_description: 'Created testEntity',
         long_description: `Created ${req.params.entity} with id ${createdProduct.id}`
       });
@@ -192,7 +192,7 @@ describe('CrudController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(updatedProduct);
       expect(req.logger.info).toHaveBeenCalledWith({
-        code: STATUS_CODES.UPDATE_SUCCESS,
+        code: STATUS_CODES.CRUD_UPDATE_SUCCESS,
         short_description: 'Updated testEntity',
         long_description: `Updated ${req.params.entity} with id ${updatedProduct.id}`
       });
@@ -213,7 +213,7 @@ describe('CrudController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(deletedProduct);
       expect(req.logger.info).toHaveBeenCalledWith({
-        code: STATUS_CODES.DELETE_SUCCESS,
+        code: STATUS_CODES.CRUD_DELETE_SUCCESS,
         short_description: 'Deleted testEntity',
         long_description: `Deleted ${req.params.entity} with id ${deletedProduct.id}`
       });
