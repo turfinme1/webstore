@@ -1,4 +1,23 @@
 const ProductService = require("../productService");
+const crypto = require("crypto");
+const fetch = require("node-fetch");
+const fs = require("fs");
+const path = require("path");
+const busboy = require("busboy");
+
+jest.mock("crypto");
+jest.mock("node-fetch");
+jest.mock("fs", () => ({
+  promises: {
+    writeFile: jest.fn(),
+    unlink: jest.fn(),
+  },
+  createWriteStream: jest.fn(() => ({
+    on: jest.fn(),
+    end: jest.fn(),
+  })),
+}));
+jest.mock("busboy");
 
 describe("ProductService", () => {
   let productService;
@@ -73,9 +92,11 @@ describe("ProductService", () => {
       },
       dbConnection: mockDbConnection,
       entitySchemaCollection: mockEntitySchemaCollection,
+      headers: {},
+      pipe: jest.fn(),
     };
 
-    jest.spyOn(productService, 'handleFileUploads').mockResolvedValue(['/images/dummy.jpg']);
+    // jest.spyOn(productService, 'handleFileUploads').mockResolvedValue(['/images/dummy.jpg']);
   });
 
   afterEach(() => {
@@ -458,6 +479,7 @@ describe("ProductService", () => {
         short_description: "Short description",
         long_description: "Long description",
       };
+      jest.spyOn(productService, 'handleFileUploads').mockResolvedValue(['/images/dummy.jpg']);
       mockDbConnection.query.mockResolvedValueOnce({ rows: [expectedResponse] });
 
       const result = await productService.create(req);
@@ -604,6 +626,319 @@ describe("ProductService", () => {
 
         await expect(productService.delete(req)).rejects.toThrow("Database error");
       });
+    });
+  });
+
+  describe("uploadProducts", () => {
+    beforeEach(() => {
+      mockDbConnection = {
+        query: jest.fn(),
+      };
+  
+      productService = new ProductService();
+  
+      req = {
+        dbConnection: mockDbConnection,
+      };
+  
+      jest.spyOn(productService, 'streamLines').mockImplementation(async function* (req, invalidLinesLog) {
+        yield ["code1", "name1", "http://example.com/image1.jpg", "desc1", "desc1", "desc1", 100];
+        yield ["code2", "name2", "http://example.com/image2.jpg", "desc2", "desc2", "desc2", 200];
+      });
+  
+      crypto.randomBytes.mockReturnValue(Buffer.from("randombytes"));
+      fetch.mockResolvedValue({
+        ok: true,
+        buffer: jest.fn().mockResolvedValue(Buffer.from("imagebuffer")),
+      });
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should insert products and images, and return success message", async () => {
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // First product insert
+        .mockResolvedValueOnce({ rows: [] }) // First product insert
+        .mockResolvedValueOnce({ rows: [] }) // First product insert
+        .mockResolvedValue({ rows: [] }) // Image insert and commit
+        .mockResolvedValueOnce({ rows: [{ id: 2 }] }) // Second product insert
+
+      const result = await productService.uploadProducts(req);
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO products"),
+        ["code1", "name1", 100, "name1", "name1"]
+      );
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO images"),
+        [1, "/images/72616e646f6d6279746573.jpg"]
+      );
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("COMMIT")
+      );
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO products"),
+        ["code2", "name2", 200, "name2", "name2"]
+      );
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO images"),
+        [2, "/images/72616e646f6d6279746573.jpg"]
+      );
+      expect(fs.promises.writeFile).toHaveBeenCalledWith(
+        path.join(__dirname, "..", "..", "..", "..", "images", "72616e646f6d6279746573.jpg"),
+        Buffer.from("imagebuffer")
+      );
+      expect(result).toEqual({
+        message: "Success. Inserted 2 lines. Rows with no image: 0, Rows with invalid format: 0",
+      });
+    });
+
+    it("should handle image fetch failure and rollback", async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+      });
+
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // First product insert
+        .mockResolvedValue({ rows: [] }); // Image insert and rollback
+
+      const result = await productService.uploadProducts(req);
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO products"),
+        ["code1", "name1", 100, "name1", "name1"]
+      );
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("ROLLBACK")
+      );
+      expect(result).toEqual({
+        message: "Success. Inserted 0 lines. Rows with no image: 1, Rows with invalid format: 0",
+      });
+    });
+
+    it("should handle invalid lines and continue processing", async () => {
+      jest.spyOn(productService, 'streamLines').mockImplementation(async function* (req, invalidLinesLog) {
+        invalidLinesLog.invalidFormat++;
+        yield ["code1", "name1", "http://example.com/image1.jpg", "desc1", "desc1", "desc1", 100];
+      });
+
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // First product insert
+        .mockResolvedValue({ rows: [] }); // Image insert and commit
+
+      const result = await productService.uploadProducts(req);
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO products"),
+        ["code1", "name1", 100, "name1", "name1"]
+      );
+      expect(result).toEqual({
+        message: "Success. Inserted 1 lines. Rows with no image: 0, Rows with invalid format: 1",
+      });
+    });
+  });
+
+  describe("streamLines", () => {
+    let productService;
+    let mockStream;
+    let invalidLinesLog;
+    let mockChunks;
+
+    async function* createMockStream(chunks) {
+      for (const chunk of chunks) {
+        yield chunk;
+      }
+    }
+
+    beforeEach(() => {
+      productService = new ProductService();
+      mockChunks = [
+        "\r\n\r\nheaders,headers,headers\n",
+        "code1,name1,http://example.com/image1.jpg,category1,category2,desc1,desc2,desc3,desc4,100,type\n",
+      ];
+      mockStream = createMockStream(mockChunks);
+      invalidLinesLog = {
+        noImage: 0,
+        invalidFormat: 0,
+      };
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should correctly process lines from the stream", async () => {
+      const lines = [];
+      for await (const line of productService.streamLines(mockStream, invalidLinesLog)) {
+        lines.push(line);
+      }
+
+      expect(lines).toEqual([
+        ["code1", "name1", "http://example.com/image1.jpg", "category1", "category2", "desc1", "desc2", "desc3", "desc4", "100", "type"],
+      ]);
+    });
+
+    it("should handle incomplete lines and continue processing", async () => {
+      const lines = [];
+      mockChunks = [
+        "\r\n\r\nheaders,headers,headers\n",
+        "code1,name1,http://example.com/image1.jpg,category1,category2,desc1,desc2,desc3,desc4,100,type\n",
+        "code1,name1,http://example.com/image1.jpg,desc1,desc1,desc1,100\n",
+        "code2,name2,http://example.com/image2.jpg,desc2,desc2,desc2,200",
+      ];
+      mockStream = createMockStream(mockChunks);
+      for await (const line of productService.streamLines(mockStream, invalidLinesLog)) {
+        lines.push(line);
+      }
+
+      expect(lines).toEqual([
+        ["code1", "name1", "http://example.com/image1.jpg", "category1", "category2", "desc1", "desc2", "desc3", "desc4", "100", "type"],
+      ]);
+    });
+
+    it("should handle lines with no image and continue processing", async () => {
+      const lines = [];
+      mockChunks = [
+        "\r\n\r\nheaders,headers,headers\n",
+        "code1,name1,No Image,category1,category2,desc1,desc2,desc3,desc4,100,type\n",
+        "code1,name1,http://example.com/image1.jpg,category1,category2,desc1,desc2,desc3,desc4,100,type\n",
+      ];
+      mockStream = createMockStream(mockChunks);
+      for await (const line of productService.streamLines(mockStream, invalidLinesLog)) {
+        lines.push(line);
+      }
+
+      expect(lines).toEqual([
+        ["code1", "name1", "http://example.com/image1.jpg", "category1", "category2", "desc1", "desc2", "desc3", "desc4", "100", "type"],
+      ]);
+    });
+    
+  });
+
+  describe("uploadImages", () => {
+    it("should upload images and return file paths", async () => {
+      const filePaths = ["/images/randombytes.jpg"];
+      const imagesToDelete = [];
+      req.body.imagesToDelete = JSON.stringify(imagesToDelete);
+
+      jest.spyOn(productService, "handleFileUploads").mockResolvedValue(filePaths);
+
+      const result = await productService.uploadImages(req);
+
+      expect(result).toEqual(filePaths);
+      expect(mockDbConnection.query).not.toHaveBeenCalledWith(
+        expect.stringContaining("DELETE FROM images"),
+        expect.any(Array)
+      );
+    });
+
+    it("should delete specified images", async () => {
+      const filePaths = ["/images/randombytes.jpg"];
+      const imagesToDelete = ["/images/toDelete.jpg"];
+      req.body.imagesToDelete = JSON.stringify(imagesToDelete);
+
+      jest.spyOn(productService, "handleFileUploads").mockResolvedValue(filePaths);
+
+      const result = await productService.uploadImages(req);
+
+      expect(result).toEqual(filePaths);
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("DELETE FROM images"),
+        ["/images/toDelete.jpg"]
+      );
+      expect(fs.promises.unlink).toHaveBeenCalledWith(
+        path.join(__dirname, "..", "..", "..", "..", "images", "toDelete.jpg")
+      );
+    });
+
+    it("should handle file upload errors", async () => {
+      const filePaths = [];
+      const imagesToDelete = [];
+      req.body.imagesToDelete = JSON.stringify(imagesToDelete);
+
+      jest.spyOn(productService, "handleFileUploads").mockRejectedValue(new Error("Upload error"));
+
+      await expect(productService.uploadImages(req)).rejects.toThrow("Upload error");
+    });
+  });
+
+  describe("handleFileUploads", () => {
+    it("should handle file uploads and return file paths", async () => {
+      const filePaths = ["/images/72616e646f6d6279746573.jpeg"];
+      const fileUploads = [1];
+
+      const mockBusboy = {
+        on: jest.fn((event, callback) => {
+          if (event === "file") {
+            callback("fieldname", {
+              on: jest.fn((event, callback) => {
+                if (event === "data") {
+                  callback(Buffer.alloc(1024)); // Simulate file data
+                }
+              }),
+              pipe: jest.fn(),
+              resume: jest.fn(),
+              unpipe: jest.fn(),
+            }, { filename: "test.jpg", mimeType: "image/jpeg" });
+          } else if (event === "finish") {
+            callback();
+          }
+        }),
+      };
+
+      busboy.mockReturnValue(mockBusboy);
+      crypto.randomBytes.mockReturnValue(Buffer.from("randombytes"));
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // File upload insert
+        .mockResolvedValue({}); // Commit
+
+      const result = await productService.handleFileUploads(req);
+
+      expect(result).toEqual(filePaths);
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO file_uploads"),
+        expect.any(Array)
+      );
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("UPDATE file_uploads"),
+        [fileUploads]
+      );
+    });
+
+    it("should handle file upload errors", async () => {
+      const mockBusboy = {
+        on: jest.fn((event, callback) => {
+          if (event === "file") {
+            callback("fieldname", {
+              on: jest.fn(),
+              pipe: jest.fn(),
+              resume: jest.fn(),
+              unpipe: jest.fn(),
+            }, { filename: "test.jpg", mimeType: "image/jpeg" });
+          } else if (event === "error") {
+            callback(new Error("Upload error"));
+          }
+        }),
+      };
+
+      busboy.mockReturnValue(mockBusboy);
+      crypto.randomBytes.mockReturnValue(Buffer.from("randombytes"));
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // File upload insert
+        .mockResolvedValue({}); // Commit
+
+      await expect(productService.handleFileUploads(req)).rejects.toThrow("Upload error");
+
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO file_uploads"),
+        expect.any(Array)
+      );
+      expect(mockDbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("UPDATE file_uploads"),
+        expect.any(Array)
+      );
     });
   });
 });

@@ -125,7 +125,7 @@ function requestMiddleware(handler) {
       await Promise.race([timeout(), task()]);
       if(req.signal?.aborted) {
         await req.dbConnection.cancel();
-        ASSERT(false, "Request aborted", { code: STATUS_CODES.INTERNAL_SERVER_ERROR, long_description: "Request aborted" });
+        ASSERT(false, "Request aborted", { code: STATUS_CODES.SRV_CNF_REQUEST_TIMEOUT, long_description: "Request aborted" });
       }
 
       await req.dbConnection.query("COMMIT");

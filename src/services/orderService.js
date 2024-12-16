@@ -55,7 +55,7 @@ class OrderService {
       [data.session.user_id]
     );
     const cartItems = cartResult.rows;
-    ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", { code: STATUS_CODES.INVALID_INPUT, long_description: "Cart is empty" });
+    ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", { code: STATUS_CODES.ORDER_INVALID_INPUT_CREATE, long_description: "Cart is empty" });
 
     for (const item of cartItems) {
       const inventoryResult = await data.dbConnection.query(
@@ -65,8 +65,8 @@ class OrderService {
       WHERE product_id = $1`,
         [item.product_id]
       );
-      ASSERT_USER(inventoryResult.rows.length > 0, `Not enough stock for product ${item.name}`, { code: STATUS_CODES.INVALID_INPUT, long_description: `Not enough stock for product ${item.name}` });
-      ASSERT_USER(parseInt(item.quantity) <= parseInt(inventoryResult.rows[0].quantity), `Not enough stock for product ${item.name}`, { code: STATUS_CODES.INVALID_INPUT, long_description: `Not enough stock for product ${item.name}` });
+      ASSERT_USER(inventoryResult.rows.length > 0, `Not enough stock for product ${item.name}`, { code: STATUS_CODES.ORDER_INVALID_INPUT_CREATE_NO_STOCK, long_description: `Not enough stock for product ${item.name}` });
+      ASSERT_USER(parseInt(item.quantity) <= parseInt(inventoryResult.rows[0].quantity), `Not enough stock for product ${item.name}`, { code: STATUS_CODES.ORDER_INVALID_INPUT_CREATE_NO_STOCK, long_description: `Not enough stock for product ${item.name}` });
 
       await data.dbConnection.query(
         `
@@ -223,16 +223,16 @@ class OrderService {
       SELECT * FROM orders_view WHERE id = $1`,
       [data.params.orderId]
     );
-    ASSERT_USER(orderResult.rows.length === 1, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    ASSERT_USER(orderResult.rows.length === 1, "Order not found", { code: STATUS_CODES.ORDER_NOT_FOUND_STAFF_UPDATE, long_description: "Order not found" });
     const order = orderResult.rows[0];
 
 
     if (order.status !== "Pending") {
-      ASSERT_USER(order.order_items.length === data.body.order_items.length, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
+      ASSERT_USER(order.order_items.length === data.body.order_items.length, "Order items cannot be changed", { code: STATUS_CODES.ORDER_INVALID_INPUT_UPDATE_ITEMS, long_description: "Order items cannot be changed" });
 
       for (let i = 0; i < order.order_items.length; i++) {
-        ASSERT_USER(order.order_items[i].product_id === data.body.order_items[i].product_id, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
-        ASSERT_USER(order.order_items[i].quantity === data.body.order_items[i].quantity, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
+        ASSERT_USER(order.order_items[i].product_id === data.body.order_items[i].product_id, "Order items cannot be changed", { code: STATUS_CODES.ORDER_INVALID_INPUT_UPDATE_ITEMS, long_description: "Order items cannot be changed" });
+        ASSERT_USER(order.order_items[i].quantity === data.body.order_items[i].quantity, "Order items cannot be changed", { code: STATUS_CODES.ORDER_INVALID_INPUT_UPDATE_ITEMS, long_description: "Order items cannot be changed" });
       }
     } else {
       const existingItems = order.order_items;
@@ -353,7 +353,7 @@ class OrderService {
       SELECT * FROM orders_detail_view WHERE id = (SELECT order_id FROM payments WHERE provider_payment_id = $1 LIMIT 1)`,
       [data.query.token]
     );
-    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: STATUS_CODES.ORDER_NOT_FOUND_CAPTURE_PAYMENT, long_description: "Order not found" });
     const order = orderViewResult.rows[0];
     
     const paymentResult = await data.dbConnection.query(`
@@ -402,14 +402,14 @@ class OrderService {
       SELECT * FROM payments WHERE provider_payment_id = $1`,
       [data.query.token]
     );
-    ASSERT_USER(paymentResult.rows.length === 1, "Payment not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Payment not found" });
-    ASSERT_USER(paymentResult.rows[0].status === "Pending", "Payment status cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Payment status cannot be changed" });
+    ASSERT_USER(paymentResult.rows.length === 1, "Payment not found", { code: STATUS_CODES.ORDER_NOT_FOUND_CANCEL_PAYMENT, long_description: "Payment not found" });
+    ASSERT_USER(paymentResult.rows[0].status === "Pending", "Payment status cannot be changed", { code: STATUS_CODES.ORDER_INVALID_INPUT_STATUS, long_description: "Payment status cannot be changed" });
 
     const orderViewResult = await data.dbConnection.query(`
       SELECT * FROM orders_view WHERE id = (SELECT order_id FROM payments WHERE provider_payment_id = $1 LIMIT 1)`,
       [data.query.token]
     );
-    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: STATUS_CODES.ORDER_NOT_FOUND_CANCEL_PAYMENT, long_description: "Order not found" });
     const order = orderViewResult.rows[0];
 
     await data.dbConnection.query(`
@@ -466,7 +466,7 @@ class OrderService {
     
     if(! arePricesUpToDate) {
       await data.dbConnection.query("COMMIT");
-      ASSERT_USER(false, "Prices in your cart have changed. Please review your cart.", { code: STATUS_CODES.CART_PRICES_CHANGED, long_description: "Prices in your cart have changed. Please review your cart." });
+      ASSERT_USER(false, "Prices in your cart have changed. Please review your cart.", { code: STATUS_CODES.ORDER_CART_PRICES_CHANGED, long_description: "Prices in your cart have changed. Please review your cart." });
     }
   }
 
@@ -480,7 +480,7 @@ class OrderService {
       [data.params.orderId]
     );
 
-    ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.ORDER_NOT_FOUND_DELETE, long_description: "Order not found" });
 
     return { message: "Order deleted successfully" };
   }

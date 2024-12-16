@@ -15,7 +15,7 @@ class OrderController {
     }
   
     async createOrder(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.ORDER_UNAUTHORIZED_CREATE, long_description: "You must be logged in to perform this action" });
       const data = {
         body: req.body,
         session: req.session,
@@ -27,7 +27,7 @@ class OrderController {
     }
 
     async createOrderByStaff(req, res) {
-      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.ORDER_UNAUTHORIZED_CREATE, long_description: "You must be logged in to perform this action" });
       this.authService.requirePermission(req, "create", 'orders');
       const data = {
         body: req.body,
@@ -40,7 +40,7 @@ class OrderController {
     }
 
     async updateOrderByStaff(req, res) {
-      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.ORDER_UNAUTHORIZED_UPDATE, long_description: "You must be logged in to perform this action" });
       this.authService.requirePermission(req, "update", 'orders');
       const data = {
         body: req.body,
@@ -54,7 +54,7 @@ class OrderController {
     }
   
     async getOrder(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.ORDER_UNAUTHORIZED_READ, long_description: "You must be logged in to perform this action" });
       const data = {
         params: req.params,
         session: req.session,
@@ -65,7 +65,7 @@ class OrderController {
     }
 
     async capturePaypalPayment(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.ORDER_UNAUTHORIZED_CAPTURE_PAYMENT, long_description: "You must be logged in to perform this action" });
       const data = {
         body: req.body,
         query: req.query,
@@ -78,7 +78,7 @@ class OrderController {
     }
 
     async cancelPaypalPayment(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.ORDER_UNAUTHORIZED_CANCEL_PAYMENT, long_description: "You must be logged in to perform this action" });
       const data = {
         body: req.body,
         query: req.query,
@@ -91,7 +91,7 @@ class OrderController {
     }
 
     async deleteOrder(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.ORDER_UNAUTHORIZED_DELETE, long_description: "You must be logged in to perform this action" });
       this.authService.requirePermission(req, "delete", 'orders');
       const data = {
         params: req.params,

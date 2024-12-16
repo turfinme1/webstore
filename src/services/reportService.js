@@ -14,7 +14,7 @@ class ReportService {
 
   async getReport(data) {
     ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
-        code: STATUS_CODES.INVALID_QUERY_PARAMS, 
+        code: STATUS_CODES.REPORT_INVALID_QUERY_PARAMS, 
         long_description: `Report ${data.params.report} not found` 
     });
     
@@ -33,7 +33,7 @@ class ReportService {
 
   async exportReport(data) {
     ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
-        code: STATUS_CODES.INVALID_QUERY_PARAMS, 
+        code: STATUS_CODES.REPORT_INVALID_QUERY_PARAMS, 
         long_description: `Report ${data.params.report} not found` 
     });
 
@@ -531,7 +531,7 @@ class ReportService {
 
       if (groupingValue) {
         if (reportFilter.type === 'timestamp') {
-          ASSERT_USER(groupingValue.match(/minute|hour|day|week|month|year/), `Invalid grouping value ${groupingValue}`, { code: STATUS_CODES.INVALID_BODY, long_description: `Invalid grouping value ${groupingValue}` });
+          ASSERT_USER(groupingValue.match(/minute|hour|day|week|month|year/), `Invalid grouping value ${groupingValue}`, { code: STATUS_CODES.REPORT_INVALID_BODY, long_description: `Invalid grouping value ${groupingValue}` });
           groupingExpr = `DATE_TRUNC('${groupingValue}', ${reportFilter.grouping_expression})`;
         } else {
           groupingExpr = reportFilter.grouping_expression;

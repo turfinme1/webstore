@@ -523,7 +523,7 @@ class CrudService {
       }
           
       await data.logger.info({
-        code: STATUS_CODES.PERMISSION_CHANGE_SUCCESS,
+        code: STATUS_CODES.CRUD_PERMISSION_CHANGE_SUCCESS,
         short_description: `Permissions updated for role with ID: ${data.params.id}`,
         long_description: `Added permissions: ${addedPermissionNames.join(', ')}; Removed permissions: ${removedPermissionNames.join(', ')}`
       });
@@ -574,7 +574,7 @@ class CrudService {
       insertObject.keys = insertObject.keys.filter((key) => key !== "role_id");
       
       await data.logger.info({
-        code: STATUS_CODES.ROLE_CHANGE_SUCCESS,
+        code: STATUS_CODES.CRUD_ROLE_CHANGE_SUCCESS,
         short_description: `User roles updated for user with ID: ${data.params.id}`,
         long_description: `Added roles: ${addedRoleNames.join(', ')}; Removed roles: ${removedRoleNames.join(', ')}`
       });
