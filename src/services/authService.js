@@ -78,12 +78,12 @@ class AuthService {
       SELECT * FROM ${data.entitySchemaCollection.userManagementSchema.user_table} WHERE email = $1`,
       [data.body.email]
     );
-    ASSERT_USER(userResult.rows.length === 1, "Invalid login", { code: STATUS_CODES.INVALID_LOGIN, long_description: `Invalid login with email ${data.body.email}` });
-    ASSERT_USER(userResult.rows[0].is_email_verified, "Email is not verified", { code: STATUS_CODES.INVALID_LOGIN, long_description: `Email ${data.body.email} is not verified` });
+    ASSERT_USER(userResult.rows.length === 1, "Invalid login", { code: STATUS_CODES.AUTH_INVALID_LOGIN, long_description: `Invalid login with email ${data.body.email}` });
+    ASSERT_USER(userResult.rows[0].is_email_verified, "Email is not verified", { code: STATUS_CODES.AUTH_INVALID_LOGIN, long_description: `Email ${data.body.email} is not verified` });
 
     const user = userResult.rows[0];
     const isPasswordCorrect = await bcrypt.compare(data.body.password, user.password_hash);
-    ASSERT_USER(isPasswordCorrect, "Invalid login", { code: STATUS_CODES.INVALID_LOGIN, long_description: `Invalid login with email ${data.body.email}`});
+    ASSERT_USER(isPasswordCorrect, "Invalid login", { code: STATUS_CODES.AUTH_INVALID_LOGIN, long_description: `Invalid login with email ${data.body.email}`});
 
     const requestData = { entitySchemaCollection: data.entitySchemaCollection, dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Authenticated", userId: user.id };
     const session = await this.changeSessionType(requestData);
@@ -104,7 +104,7 @@ class AuthService {
 
   async verifyMail(data) {
     const token = data.query.token;
-    ASSERT_USER(token, "Invalid verification token", { code: STATUS_CODES.INVALID_TOKEN, long_description: `Invalid or expired token ${token}` });
+    ASSERT_USER(token, "Invalid verification token", { code: STATUS_CODES.AUTH_INVALID_TOKEN, long_description: `Invalid or expired token ${token}` });
 
     const userVerificationResult = await data.dbConnection.query(`
       SELECT ev.user_id, ev.expires_at, u.is_email_verified 
@@ -115,9 +115,9 @@ class AuthService {
     );
     const userVerificationInfo = userVerificationResult.rows[0];
 
-    ASSERT_USER(userVerificationResult.rows.length === 1, "Invalid or expired token", { code: STATUS_CODES.INVALID_TOKEN, long_description: `Invalid or expired token ${token}` });
-    ASSERT_USER(new Date() < userVerificationInfo.expires_at, "Verification token has expired", { code: STATUS_CODES.INVALID_TOKEN, long_description: `Invalid or expired token ${token}` });
-    ASSERT_USER(userVerificationInfo.is_email_verified === false, "Email is already verified", { code: STATUS_CODES.INVALID_TOKEN, long_description: `Invalid or expired token ${token}` });
+    ASSERT_USER(userVerificationResult.rows.length === 1, "Invalid or expired token", { code: STATUS_CODES.AUTH_INVALID_TOKEN, long_description: `Invalid or expired token ${token}` });
+    ASSERT_USER(new Date() < userVerificationInfo.expires_at, "Verification token has expired", { code: STATUS_CODES.AUTH_INVALID_TOKEN, long_description: `Invalid or expired token ${token}` });
+    ASSERT_USER(userVerificationInfo.is_email_verified === false, "Email is already verified", { code: STATUS_CODES.AUTH_INVALID_TOKEN, long_description: `Invalid or expired token ${token}` });
 
     await data.dbConnection.query(`
       UPDATE users
@@ -295,7 +295,7 @@ class AuthService {
         [data.session.session_hash]
       );
       data.dbConnection.query(`COMMIT`);
-      ASSERT_USER(false, "Too many failed attempts. Try again later", { code: STATUS_CODES.RATE_LIMITED, long_description: `Too many failed attempts for ${data.session.session_hash}` });
+      ASSERT_USER(false, "Too many failed attempts. Try again later", { code: STATUS_CODES.AUTH_RATE_LIMITED, long_description: `Too many failed attempts for ${data.session.session_hash}` });
     }
 
     const captchaResult = await data.dbConnection.query(`
@@ -321,7 +321,7 @@ class AuthService {
       );
 
       data.dbConnection.query(`COMMIT`);
-      ASSERT_USER(false, "Invalid captcha answer", { code: STATUS_CODES.INVALID_BODY, long_description: `Invalid captcha answer for ${data.session.session_hash}` });
+      ASSERT_USER(false, "Invalid captcha answer", { code: STATUS_CODES.AUTH_INVALID_BODY, long_description: `Invalid captcha answer for ${data.session.session_hash}` });
     }
   }
 
@@ -342,7 +342,7 @@ class AuthService {
     );
 
     const isPasswordValid = await bcrypt.compare(data.body.old_password, userToUpdateResult.rows[0].password_hash);
-    ASSERT_USER(isPasswordValid, "Old password is incorrect", { code: STATUS_CODES.WRONG_PASSWORD, long_description: `Old password is incorrect` });
+    ASSERT_USER(isPasswordValid, "Old password is incorrect", { code: STATUS_CODES.AUTH_WRONG_PASSWORD, long_description: `Old password is incorrect` });
 
     schemaKeys.forEach((key) => {
       if (key === "password" && data.body.password) {
@@ -392,7 +392,7 @@ class AuthService {
         AND is_active = TRUE`,
       [user.id]
     );
-    ASSERT_USER(emailVerificationResult.rows.length === 0, "Please wait a few minutes before requesting another password reset", { code: STATUS_CODES.RATE_LIMITED, long_description: `Please wait a few minutes before requesting another password reset` });
+    ASSERT_USER(emailVerificationResult.rows.length === 0, "Please wait a few minutes before requesting another password reset", { code: STATUS_CODES.AUTH_RATE_LIMITED, long_description: `Please wait a few minutes before requesting another password reset` });
 
     await data.dbConnection.query(`
       UPDATE email_verifications
@@ -421,7 +421,7 @@ class AuthService {
   }
 
   async resetPassword(data) {
-    ASSERT_USER(data.query.token, "Invalid reset token", { code: STATUS_CODES.INVALID_TOKEN, long_description: `Invalid or expired token ${data.query.token}` });
+    ASSERT_USER(data.query.token, "Invalid reset token", { code: STATUS_CODES.AUTH_INVALID_TOKEN, long_description: `Invalid or expired token ${data.query.token}` });
 
     const userVerificationResult = await data.dbConnection.query(`
       SELECT ev.user_id, ev.expires_at
@@ -431,8 +431,8 @@ class AuthService {
     );
     const userVerificationInfo = userVerificationResult.rows[0];
 
-    ASSERT_USER(userVerificationResult.rows.length === 1, "Invalid or expired token", { code: STATUS_CODES.INVALID_TOKEN, long_description: `Invalid or expired token ${data.query.token}` });
-    ASSERT_USER(new Date() < userVerificationInfo.expires_at, "Invalid or expired token", { code: STATUS_CODES.INVALID_TOKEN, long_description: `Invalid or expired token ${data.query.token}` });
+    ASSERT_USER(userVerificationResult.rows.length === 1, "Invalid or expired token", { code: STATUS_CODES.AUTH_INVALID_TOKEN, long_description: `Invalid or expired token ${data.query.token}` });
+    ASSERT_USER(new Date() < userVerificationInfo.expires_at, "Invalid or expired token", { code: STATUS_CODES.AUTH_INVALID_TOKEN, long_description: `Invalid or expired token ${data.query.token}` });
 
     const hashedPassword = await bcrypt.hash(data.body.password, 10);
     await data.dbConnection.query(`
@@ -452,7 +452,7 @@ class AuthService {
   }
   
   requirePermission(req, permission, interfaceName) {
-    ASSERT_USER(req.session.role_permissions.some((rolePermission) => rolePermission.permission === permission && rolePermission.interface === interfaceName), "You do not have permission to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: `You do not have permission to perform this action` });
+    ASSERT_USER(req.session.role_permissions.some((rolePermission) => rolePermission.permission === permission && rolePermission.interface === interfaceName), "You do not have permission to perform this action", { code: STATUS_CODES.AUTH_UNAUTHORIZED, long_description: `You do not have permission to perform this action` });
   }
 }
 

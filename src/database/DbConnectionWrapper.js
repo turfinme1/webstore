@@ -22,12 +22,12 @@ class DbConnectionWrapper {
     } catch (error) {
       console.error("Database query error:", error);
 
-      ASSERT_USER(error.code !== "23505", "Record already exists", { code: STATUS_CODES.INVALID_INPUT, long_description: "Record already exists" });
-      ASSERT_USER(error.code !== "23503", "Invalid foreign key", { code: STATUS_CODES.INVALID_INPUT, long_description: "Invalid foreign key" });
-      ASSERT_USER(error.code !== "23514", "Check constraint failed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Check constraint failed" });
-      ASSERT_USER(error.code !== "22001", "Data too long for column" , { code: STATUS_CODES.INVALID_INPUT, long_description: "Data too long for column" });
-      ASSERT_USER(error.code !== "80000", "Order status cannot be reverted", { code: STATUS_CODES.INVALID_INPUT, long_description: "Cannot change the status of the order" });
-      ASSERT(false, "Internal server error");
+      ASSERT_USER(error.code !== "23505", "Record already exists", { code: STATUS_CODES.DB_WRAPR_INVALID_INPUT_ALREADY_EXISTS, long_description: "Record already exists" });
+      ASSERT_USER(error.code !== "23503", "Invalid foreign key", { code: STATUS_CODES.DB_WRAPR_INVALID_INPUT_FOREIGN_KEY, long_description: "Invalid foreign key" });
+      ASSERT_USER(error.code !== "23514", "Check constraint failed", { code: STATUS_CODES.DB_WRAPR_INVALID_INPUT_CHECK_CONSTRAINT, long_description: "Check constraint failed" });
+      ASSERT_USER(error.code !== "22001", "Data too long for column" , { code: STATUS_CODES.DB_WRAPR_INVALID_INPUT_DATA_TOO_LONG, long_description: "Data too long for column" });
+      ASSERT_USER(error.code !== "80000", "Order status cannot be reverted", { code: STATUS_CODES.DB_WRAPR_INVALID_INPUT_ORDER_STATUS, long_description: "Cannot change the status of the order" });
+      ASSERT(false, "Internal server error", { code: STATUS_CODES.DB_WRAPR_QUERY_ERROR, long_description: "Internal server error" });
     }
   }
 
