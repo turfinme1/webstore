@@ -1,37 +1,70 @@
-DROP VIEW IF EXISTS products_view;
-DROP VIEW IF EXISTS country_codes_view;
-DROP VIEW IF EXISTS categories_view;
-DROP VIEW IF EXISTS comments_view;
-DROP VIEW IF EXISTS product_ratings_view;
-DROP VIEW IF EXISTS orders_view;
-DROP VIEW IF EXISTS orders_export_view;
-DROP VIEW IF EXISTS orders_detail_view;
+-- DROP VIEW IF EXISTS products_view;
+-- DROP VIEW IF EXISTS country_codes_view;
+-- DROP VIEW IF EXISTS categories_view;
+-- DROP VIEW IF EXISTS comments_view;
+-- DROP VIEW IF EXISTS product_ratings_view;
+-- DROP VIEW IF EXISTS orders_view;
+-- DROP VIEW IF EXISTS orders_export_view;
+-- DROP VIEW IF EXISTS orders_detail_view;
+-- DROP VIEW IF EXISTS target_groups_view;
+-- DROP VIEW IF EXISTS target_groups_export_view;
+-- DROP VIEW IF EXISTS users_view;
+-- DROP VIEW IF EXISTS promotions_view;
+-- DROP VIEW IF EXISTS roles_view;
+-- DROP VIEW IF EXISTS permissions_view;
+-- DROP VIEW IF EXISTS logs_view;
+-- DROP VIEW IF EXISTS admin_users_view;
+-- DROP VIEW IF EXISTS email_templates_view;
 
-DROP TABLE IF EXISTS products_categories;
-DROP TABLE IF EXISTS categories;
-DROP TABLE IF EXISTS images;
-DROP TABLE IF EXISTS comments;
-DROP TABLE IF EXISTS ratings;
-DROP TABLE IF EXISTS products;
+-- DROP TABLE IF EXISTS products_categories;
+-- DROP TABLE IF EXISTS categories;
+-- DROP TABLE IF EXISTS images;
+-- DROP TABLE IF EXISTS comments;
+-- DROP TABLE IF EXISTS ratings;
+-- DROP TABLE IF EXISTS email_verifications;
+-- DROP TABLE IF EXISTS file_uploads;
+-- DROP TABLE IF EXISTS app_settings;
+-- DROP TABLE IF EXISTS captchas;
+-- DROP TABLE IF EXISTS admin_captchas;
+-- DROP TABLE IF EXISTS failed_attempts;
+-- DROP TABLE IF EXISTS admin_failed_attempts;
+-- DROP TABLE IF EXISTS attempt_types;
+-- DROP TABLE IF EXISTS cart_items;
+-- DROP TABLE IF EXISTS carts;
+-- DROP TABLE IF EXISTS sessions;
+-- DROP TABLE IF EXISTS admin_sessions;
+-- DROP TABLE IF EXISTS session_types;
+-- DROP TABLE IF EXISTS user_target_groups;
+-- DROP TABLE IF EXISTS target_groups;
+-- DROP table IF EXISTS payments;
+-- DROP TABLE IF EXISTS order_items;
+-- DROP TABLE IF EXISTS orders;
+-- DROP TABLE IF EXISTS addresses;
+-- DROP TABLE IF EXISTS logs;
+-- DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS admin_user_roles;
+-- DROP TABLE IF EXISTS admin_users;
+-- DROP TABLE IF EXISTS genders;
+-- DROP TABLE IF EXISTS currencies;
+-- DROP TABLE IF EXISTS inventories;
+-- DROP TABLE IF EXISTS emails;
+-- DROP TABLE IF EXISTS products;
+-- DROP TABLE IF EXISTS migrations;
+-- DROP TABLE IF EXISTS iso_country_codes;
+-- DROP TABLE IF EXISTS promotions;
+-- DROP TABLE IF EXISTS role_permissions;
+-- DROP TABLE IF EXISTS permissions;
+-- DROP TABLE IF EXISTS roles;
+-- DROP TABLE IF EXISTS email_templates;
+-- DROP TABLE IF EXISTS interfaces;
 
-DROP TABLE IF EXISTS email_verifications;
-DROP TABLE IF EXISTS captchas;
-DROP TABLE IF EXISTS failed_attempts;
-DROP TABLE IF EXISTS attempt_types;
-DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS session_types;
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS genders;
-DROP TABLE IF EXISTS currencies;
-DROP TABLE IF EXISTS iso_country_codes;
-DROP TABLE IF EXISTS app_settings;
-DROP TABLE IF EXISTS user_target_groups;
-DROP TABLE IF EXISTS target_groups;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-DROP TABLE IF EXISTS inventories;
-DROP TABLE IF EXISTS cart_items;
-DROP TABLE IF EXISTS carts;
-DROP TABLE IF EXISTS emails;
+CREATE TABLE IF NOT EXISTS migrations (
+    id SERIAL PRIMARY KEY,
+    file_name TEXT UNIQUE NOT NULL,
+    applied_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 CREATE table emails (
     id BIGSERIAL PRIMARY KEY,
@@ -42,7 +75,7 @@ CREATE table emails (
     sent_at TIMESTAMPTZ NULL,
     status TEXT NOT NULL CHECK (status IN ('queued', 'sent')) DEFAULT 'queued',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
+);
 
 CREATE TABLE file_uploads (
     id BIGSERIAL PRIMARY KEY,
@@ -64,8 +97,6 @@ CREATE TABLE app_settings (
     password_require_special BOOLEAN NOT NULL DEFAULT FALSE,
     report_row_limit_display BIGINT NOT NULL DEFAULT 1000
 );
-ALTER TABLE app_settings ADD COLUMN report_row_limit_display BIGINT NOT NULL DEFAULT 1000;
-
 
 CREATE TABLE iso_country_codes (
     id BIGSERIAL PRIMARY KEY,
@@ -96,8 +127,6 @@ CREATE TABLE users (
 	has_first_login BOOLEAN NOT NULL DEFAULT FALSE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
-ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE users ADD COLUMN birth_date DATE NULL;
 
 CREATE TABLE session_types (
     id BIGSERIAL PRIMARY KEY,
@@ -193,7 +222,7 @@ CREATE TABLE ratings (
     id BIGSERIAL PRIMARY KEY,
     product_id BIGINT NOT NULL REFERENCES products(id),
     user_id BIGINT NOT NULL REFERENCES users(id),
-    rating BIGINT CHECK (rating BETWEEN 1 AND 5), -- Rating between 1 and 5
+    rating BIGINT CHECK (rating BETWEEN 1 AND 5),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(product_id, user_id)
 );
@@ -235,8 +264,6 @@ CREATE TABLE cart_items (
     CONSTRAINT unique_cart_product UNIQUE (cart_id, product_id) 
 );
 
-
--- Addresses Table (Normalized Shipping/Billing Address)
 CREATE TABLE addresses (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES users(id),
@@ -246,7 +273,6 @@ CREATE TABLE addresses (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Orders Table
 CREATE TABLE orders (
     id BIGSERIAL PRIMARY KEY,
     order_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
@@ -257,13 +283,9 @@ CREATE TABLE orders (
     discount_percentage NUMERIC(5, 2) NOT NULL CHECK (discount_percentage >= 0) DEFAULT 0,
     vat_percentage NUMERIC(5, 2) NOT NULL CHECK (vat_percentage >= 0) DEFAULT 0,
     shipping_address_id BIGINT NULL REFERENCES addresses(id),
-    payment_id BIGINT NULL REFERENCES payments(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
-ALTER TABLE orders ADD COLUMN payment_id BIGINT NULL REFERENCES payments(id);
-ALTER TABLE orders ADD COLUMN discount_percentage NUMERIC(5, 2) NOT NULL CHECK (discount_percentage >= 0) DEFAULT 0;
-ALTER TABLE orders ADD COLUMN vat_percentage NUMERIC(5, 2) NOT NULL CHECK (vat_percentage >= 0) DEFAULT 0;
 
 CREATE TABLE payments (
     id BIGSERIAL PRIMARY KEY,
@@ -309,6 +331,7 @@ CREATE TABLE user_target_groups (
     PRIMARY KEY (target_group_id, user_id)
 );
 
+
 CREATE OR REPLACE VIEW target_groups_view AS
 SELECT
     tg.id,
@@ -333,6 +356,7 @@ JOIN genders g ON u.gender_id = g.id
 WHERE tg.is_active = TRUE
 GROUP BY tg.id;
 
+
 CREATE OR REPLACE VIEW target_groups_export_view AS
 SELECT
     tg.id AS id,
@@ -347,7 +371,8 @@ JOIN user_target_groups utg ON tg.id = utg.target_group_id
 JOIN users u ON utg.user_id = u.id
 JOIN genders g ON u.gender_id = g.id
 WHERE tg.is_active = TRUE
-ORDER BY tg.id, u.id
+ORDER BY tg.id, u.id;
+
 
 CREATE OR REPLACE VIEW promotions_view AS
 SELECT
@@ -355,6 +380,7 @@ SELECT
 FROM promotions
 WHERE promotions.is_active = TRUE
 ORDER BY promotions.id DESC;
+
 
 CREATE OR REPLACE VIEW orders_view AS
 SELECT
@@ -386,6 +412,7 @@ LEFT JOIN addresses a ON o.shipping_address_id = a.id
 LEFT JOIN iso_country_codes c ON a.country_id = c.id
 LEFT JOIN users u ON o.user_id = u.id;
 
+
 CREATE OR REPLACE VIEW orders_export_view AS
 SELECT
     o.created_at,
@@ -404,6 +431,7 @@ SELECT
     o.is_active
 FROM orders o
 LEFT JOIN users u ON o.user_id = u.id;
+
 
 CREATE OR REPLACE VIEW orders_detail_view AS
 WITH order_items_agg AS (
@@ -452,6 +480,7 @@ LEFT JOIN addresses a ON o.shipping_address_id = a.id
 LEFT JOIN iso_country_codes c ON a.country_id = c.id
 LEFT JOIN users u ON o.user_id = u.id
 LEFT JOIN order_items_agg oi_agg ON o.id = oi_agg.order_id;
+
 
 CREATE OR REPLACE FUNCTION validate_status_transition()
 RETURNS TRIGGER AS $$
@@ -502,6 +531,7 @@ LEFT JOIN ratings r ON p.id = r.product_id
 CROSS JOIN vat
 GROUP BY p.id, vat.vat_percentage;
 
+
 CREATE OR REPLACE VIEW country_codes_view AS
 SELECT
     icc.id,
@@ -511,12 +541,14 @@ SELECT
 FROM iso_country_codes icc
 ORDER BY icc.country_name;
 
+
 CREATE OR REPLACE VIEW categories_view AS
 SELECT
     id,
     name
 FROM categories
 ORDER BY name;
+
 
 CREATE OR REPLACE VIEW comments_view AS
 SELECT
@@ -525,6 +557,7 @@ SELECT
 FROM comments
 LEFT JOIN users ON comments.user_id = users.id;
 
+
 CREATE OR REPLACE VIEW product_ratings_view AS
 SELECT
     r.product_id,
@@ -532,6 +565,7 @@ SELECT
     COUNT(r.rating) AS rating_count
 FROM ratings r
 GROUP BY r.product_id;
+
 
 CREATE OR REPLACE VIEW users_view AS
 SELECT
@@ -556,13 +590,227 @@ LEFT JOIN iso_country_codes cc ON users.country_id = cc.id
 LEFT JOIN genders ON users.gender_id = genders.id
 WHERE users.is_active = TRUE;
 
-INSERT INTO genders(type) VALUES ('Male'), ('Female');
-INSERT INTO session_types(type) VALUES ('Anonymous'), ('Authenticated'), ('Email Verification');
-INSERT INTO attempt_types(type) VALUES ('Login'), ('Captcha');
-INSERT INTO categories(name) VALUES 
-('T-shirts'), ('Jackets'), ('Pants'), ('Shoes'), ('Hats'), ('Accessories'), ('Dresses'),
-('Sunglasses'), ('Watches'), ('Belts'), ('Socks'), ('Underwear'), ('Scarves'), ('Gloves'),
-('Bags'), ('Wallets'), ('Jewelry'), ('Ties'), ('Boots'), ('Sneakers');
 
-INSERT INTO inventories(product_id, quantity) 
-VALUES (1, 5), (2, 10), (3, 3), (4, 12), (5, 7), (6, 13), (7, 5), (8, 2), (9, 3), (10, 4), (11, 5), (12, 50), (13, 75), (14, 200), (15, 150), (16, 100), (17, 50), (18, 75), (19, 200), (20, 150);
+
+
+
+
+
+CREATE TABLE admin_users (
+    id BIGSERIAL PRIMARY KEY,
+    user_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    password_hash TEXT NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    birth_date DATE NULL,
+    iso_country_code_id BIGINT NOT NULL REFERENCES iso_country_codes(id),
+    country_id BIGINT NULL REFERENCES iso_country_codes(id), 
+    gender_id BIGINT NULL REFERENCES genders(id),
+    address TEXT NULL,
+    is_email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    has_first_login BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE UNIQUE INDEX admin_users_active_email_idx ON admin_users (email) 
+WHERE is_active = TRUE;
+
+CREATE TABLE admin_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    session_hash UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
+    admin_user_id BIGINT NULL REFERENCES admin_users(id),
+    ip_address TEXT NULL,
+    session_type_id BIGINT NOT NULL REFERENCES session_types(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    rate_limited_until TIMESTAMPTZ NULL
+);
+
+CREATE TABLE admin_captchas (
+    id BIGSERIAL PRIMARY KEY,
+    admin_session_id BIGINT NOT NULL REFERENCES admin_sessions(id),
+    equation TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE admin_failed_attempts (
+    id BIGSERIAL PRIMARY KEY,
+    admin_session_id BIGINT NOT NULL REFERENCES admin_sessions(id),
+    attempt_type_id BIGINT NOT NULL REFERENCES attempt_types(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE logs (
+    id BIGSERIAL PRIMARY KEY,
+    admin_user_id BIGINT NULL REFERENCES admin_users(id),
+    user_id BIGINT NULL REFERENCES users(id),
+    status_code TEXT NOT NULL,
+    log_level TEXT NOT NULL,
+    short_description TEXT NOT NULL,
+    long_description TEXT NULL,
+    debug_info TEXT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE email_templates (
+    id BIGSERIAL PRIMARY KEY,
+    type TEXT UNIQUE NOT NULL CHECK (type IN ('Email verification', 'Order created', 'Order paid', 'Forgot password')),
+    subject TEXT NOT NULL,
+	placeholders JSONB NULL,
+    template TEXT NULL,
+    table_border_width BIGINT NULL CHECK (table_border_width IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)),
+    table_border_color TEXT NULL CHECK (table_border_color IN ('black', 'green', 'red', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'indigo', 'maroon', 'navy', 'olive', 'silver', 'aqua', 'fuchsia', 'gray', 'lime', 'teal', 'violet', 'yellow', 'white', 'black', 'red', 'green', 'blue', 'yellow', 'white', 'gray', 'purple', 'orange', 'brown', 'pink', 'cyan')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE roles (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE admin_user_roles (
+    admin_user_id BIGINT NOT NULL REFERENCES admin_users(id),
+    role_id BIGINT NOT NULL REFERENCES roles(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (admin_user_id, role_id)
+);
+
+CREATE TABLE interfaces (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE permissions (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL CHECK (name IN ('view', 'create', 'read', 'update', 'delete')),
+    interface_id BIGINT NOT NULL REFERENCES interfaces(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (name, interface_id)
+);
+
+CREATE TABLE role_permissions (
+    role_id BIGINT NOT NULL REFERENCES roles(id),
+    permission_id BIGINT NOT NULL REFERENCES permissions(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (role_id, permission_id)
+);
+
+CREATE OR REPLACE VIEW permissions_view AS
+SELECT
+    permissions.id,
+    permissions.interface_id,
+    permissions.name,
+    interfaces.name AS interface_name
+FROM permissions
+LEFT JOIN interfaces ON permissions.interface_id = interfaces.id
+ORDER BY permissions.interface_id, permissions.name;
+
+CREATE VIEW roles_view AS
+WITH permissions_per_interface AS (
+    SELECT
+        r.id AS role_id,
+        i.id AS interface_id,
+        i.name AS interface_name,
+        COALESCE(BOOL_OR((p.name = 'view') AND rp.permission_id IS NOT NULL), FALSE) AS "view",
+        COALESCE(BOOL_OR((p.name = 'create') AND rp.permission_id IS NOT NULL), FALSE) AS "create",
+        COALESCE(BOOL_OR((p.name = 'read') AND rp.permission_id IS NOT NULL), FALSE) AS "read",
+        COALESCE(BOOL_OR((p.name = 'update') AND rp.permission_id IS NOT NULL), FALSE) AS "update",
+        COALESCE(BOOL_OR((p.name = 'delete') AND rp.permission_id IS NOT NULL), FALSE) AS "delete"
+    FROM 
+        roles r
+    CROSS JOIN 
+        interfaces i
+    LEFT JOIN 
+        permissions p ON i.id = p.interface_id
+    LEFT JOIN 
+        role_permissions rp ON r.id = rp.role_id AND p.id = rp.permission_id
+    GROUP BY 
+        r.id, i.id, i.name
+)
+SELECT 
+    r.id,
+    r.name,
+    r.created_at,
+    jsonb_agg(
+        jsonb_build_object(
+            'interface_id', pi.interface_id,
+            'interface_name', pi.interface_name,
+            'view', pi."view",
+            'create', pi."create",
+            'read', pi."read",
+            'update', pi."update",
+            'delete', pi."delete"
+        ) ORDER BY pi.interface_id
+    ) AS permissions
+FROM 
+    roles r
+JOIN 
+    permissions_per_interface pi ON r.id = pi.role_id
+WHERE 
+    r.is_active = TRUE
+GROUP BY 
+    r.id, r.name, r.created_at;
+
+
+CREATE OR REPLACE VIEW logs_view AS
+SELECT
+    logs.*
+FROM logs;
+
+CREATE OR REPLACE VIEW admin_users_view AS
+SELECT
+    admin_users.id,
+    admin_users.first_name,
+    admin_users.last_name,
+    admin_users.email,
+    admin_users.phone,
+    icc.phone_code AS phone_code,
+    admin_users.iso_country_code_id,
+    cc.country_name AS country_name,
+    admin_users.country_id,
+    genders.type AS gender,
+    admin_users.gender_id,
+    admin_users.address,
+    admin_users.is_email_verified,
+    admin_users.has_first_login,
+    COALESCE(
+        jsonb_agg(jsonb_build_object('id', roles.id, 'name', roles.name))
+        FILTER (WHERE roles.id IS NOT NULL),
+        '[]'::jsonb
+    ) AS roles
+FROM admin_users
+LEFT JOIN iso_country_codes icc ON admin_users.iso_country_code_id = icc.id
+LEFT JOIN iso_country_codes cc ON admin_users.country_id = cc.id
+LEFT JOIN genders ON admin_users.gender_id = genders.id
+LEFT JOIN admin_user_roles aur ON admin_users.id = aur.admin_user_id
+LEFT JOIN roles ON aur.role_id = roles.id AND roles.is_active = true
+WHERE admin_users.is_active = TRUE 
+GROUP BY
+    admin_users.id,
+    admin_users.first_name,
+    admin_users.last_name,
+    admin_users.email,
+    admin_users.phone,
+    icc.phone_code,
+    admin_users.iso_country_code_id,
+    cc.country_name,
+    admin_users.country_id,
+    genders.type,
+    admin_users.gender_id,
+    admin_users.address,
+    admin_users.is_email_verified,
+    admin_users.has_first_login;
+
+CREATE VIEW email_templates_view AS
+SELECT *
+FROM email_templates;

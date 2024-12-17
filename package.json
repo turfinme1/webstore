@@ -24,7 +24,8 @@
     "express": "^4.19.2",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.15",
-    "pg": "^8.12.0"
+    "pg": "^8.12.0",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.10.0",
@@ -35,6 +36,10 @@
     "nodemon": "^3.1.4"
   },
   "jest": {
-    "coverageReporters": ["json-summary", "text", "lcov"]
+    "coverageReporters": [
+      "json-summary",
+      "text",
+      "lcov"
+    ]
   }
 }
