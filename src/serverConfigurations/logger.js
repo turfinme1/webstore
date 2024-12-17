@@ -1,3 +1,5 @@
+const { STATUS_CODES } = require("./constants");
+
 class Logger {
   constructor(req) {
     this.req = req;
@@ -14,7 +16,7 @@ class Logger {
         [
           this.req?.session?.admin_user_id || null,
           this.req?.session?.user_id || null,
-          logObject?.code || 1,
+          logObject?.code || STATUS_CODES.INTERNAL_SERVER_ERROR,
           logObject?.short_description,
           logObject?.long_description || null,
           logObject?.debug_info || null,

@@ -1,8 +1,9 @@
 const fs = require("fs");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const pool = require("../database/dbConfig");
-const STATUS_CODES = require("../serverConfigurations/constants");
+
 const Logger = require("../serverConfigurations/logger");
+const { STATUS_CODES } = require("../serverConfigurations/constants");
 
 (async () => {
     let client;
@@ -20,7 +21,7 @@ const Logger = require("../serverConfigurations/logger");
         }
         
         await logger.info({ 
-            code: STATUS_CODES.CRON_SUCCESS, 
+            code: STATUS_CODES.CRON_OLD_FILE_DELETE_SUCCESS, 
             short_description: "Cron job for clearing files succeeded", 
             long_description: "Cleared stale file uploads older than 1 day" 
         });
