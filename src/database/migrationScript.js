@@ -24,7 +24,7 @@ class MigrationManager {
             CREATE TABLE IF NOT EXISTS migrations (
                 id SERIAL PRIMARY KEY,
                 file_name TEXT UNIQUE NOT NULL,
-                applied_at TIMESTAMPZ DEFAULT NOW()
+                applied_at TIMESTAMPTZ DEFAULT NOW()
             );
         `);
     }
@@ -54,13 +54,14 @@ class MigrationManager {
                 if (!appliedFiles.has(file)) {
                     const filePath = path.join(this.migrationDir, file);
                     const sql = await fs.promises.readFile(filePath, { encoding: 'utf8' });
-                    await client.query(sql);
+                    await client.query(sql.toString());
                     await client.query('INSERT INTO migrations (file_name) VALUES ($1)', [file]);
                     console.log(`Applied migration: ${file}`);
                 }
             }
 
             await client.query('COMMIT');
+            console.log('All migrations applied successfully');
         } catch (error) {
             await client.query('ROLLBACK');
             console.error('Error running migrations:', error);
@@ -97,7 +98,7 @@ async function main() {
     const manager = new MigrationManager(enviroment, migrationsDir);
 
     try {
-        // await manager.initialize();
+        await manager.initialize();
         if (argv._[0] === 'create') {
             await manager.createMigrationFile(argv.name);
         } else if (argv._[0] === 'apply') {

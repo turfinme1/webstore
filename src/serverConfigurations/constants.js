@@ -97,7 +97,19 @@ const ENV = {
       max: 20,
       idleTimeoutMillis: 6000,
     }
-  }
+  },
+
+  QA:{
+    DB_CONFIG: {
+      user: "postgres",
+      host: "localhost",
+      database: "webstore_qa",
+      password: "postgres",
+      port: "5432",
+      max: 20,
+      idleTimeoutMillis: 6000,
+    }
+  },
 }
 
 module.exports = {STATUS_CODES, ENV};
