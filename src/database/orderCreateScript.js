@@ -83,7 +83,7 @@ async function saveOrders(numOrders, users, batchSize = 1000) {
 
       orders.forEach((order) => {
         orderValues.push(
-          `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`
+          `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`
         );
         orderParams.push(
           order.user_id,
@@ -91,12 +91,13 @@ async function saveOrders(numOrders, users, batchSize = 1000) {
           order.total_price,
           order.created_at,
           order.is_active,
-          order.paid_amount
+          order.paid_amount,
+          150
         );
       });
 
       const ordersInsertQuery = `
-        INSERT INTO orders (user_id, status, total_price, created_at, is_active, paid_amount)
+        INSERT INTO orders (user_id, status, total_price, created_at, is_active, paid_amount, shipping_address_id)
         VALUES ${orderValues.join(", ")}
         RETURNING id;
       `;
@@ -146,5 +147,5 @@ async function saveOrders(numOrders, users, batchSize = 1000) {
   }
 }
 
-const numOrders = 1000000;
+const numOrders = 300000;
 saveOrders(numOrders, users, 2900).catch(console.error);
