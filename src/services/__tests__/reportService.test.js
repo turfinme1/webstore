@@ -203,7 +203,7 @@ describe("ReportService", () => {
         const result = await reportService.logsReportDefinition(data);
 
         expect(result.reportUIConfig.title).toBe("Logs Report");
-        expect(result.reportUIConfig.filters).toHaveLength(3);
+        expect(result.reportUIConfig.filters).toHaveLength(4);
         expect(result.INPUT_DATA).toEqual({
           created_at_minimum_filter_value: "2024-01-01",
           created_at_maximum_filter_value: "2024-12-31",
