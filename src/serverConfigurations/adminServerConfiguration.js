@@ -1,5 +1,4 @@
 const setTimeout = require("timers/promises").setTimeout;
-const cron = require("node-cron");
 const pool = require("../database/dbConfig");
 const { UserError, ASSERT } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
@@ -106,7 +105,7 @@ function requestMiddleware(handler) {
       req.pool = pool;
       req.dbConnection = new DbConnectionWrapper(await req.pool.connect(), req.pool);
       req.entitySchemaCollection = entitySchemaCollection;
-      req.logger = new Logger(req);
+      req.logger = new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
 
       await req.dbConnection.query("BEGIN");
       await sessionMiddleware(req, res);
@@ -125,23 +124,27 @@ function requestMiddleware(handler) {
       await Promise.race([timeout(), task()]);
       if(req.signal?.aborted) {
         await req.dbConnection.cancel();
-        ASSERT(false, "Request aborted", { code: STATUS_CODES.SRV_CNF_REQUEST_TIMEOUT, long_description: "Request aborted" });
+        ASSERT(false, "Request aborted due to timeout", { code: STATUS_CODES.SRV_CNF_REQUEST_TIMEOUT, long_description: "Request aborted due to timeout", temporary: true });
       }
 
       await req.dbConnection.query("COMMIT");
     } catch (error) {
       console.error(error);
+      await req.logger.error(error);
       
       if(req.signal?.aborted) {
-        res.status(500).json({ error: "Request aborted" });
+        if(res.headersSent) {
+          res.end();
+        } else {
+          res.status(500).json({ error: "Request aborted" });
+        }
+
         return;
       }
 
       if (req.dbConnection) {
         await req.dbConnection.query("ROLLBACK");
       }
-
-      await req.logger.error(error);
 
       if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });

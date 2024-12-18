@@ -85,6 +85,7 @@ describe("Logger", () => {
         short_description: infoObject.short_description,
         long_description: infoObject.long_description,
         log_level: "INFO",
+        audit_type: "INFO",
       });
     });
   });
@@ -107,6 +108,7 @@ describe("Logger", () => {
         long_description: errorObject.params.long_description,
         debug_info: errorObject.stack,
         log_level: "ERROR",
+        audit_type: "ASSERT",
       });
     });
   });
