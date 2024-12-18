@@ -1,0 +1,96 @@
+{
+    "type": "object",
+    "name": "voucherQueryParamsSchema",
+    "searchParams": {
+        "type": "object",
+        "properties": {
+            "keyword": {
+                "type": "string"
+            }
+        }
+    },
+    "filterParams": {
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string"
+            },
+            "code": {
+                "type": "string"
+            },
+            "discount_amount": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "number"
+                    },
+                    "max": {
+                        "type": "number"
+                    }
+                }
+            },
+            "start_date": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "max": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                }
+            },
+            "end_date": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "max": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                }
+            }
+        }
+    },
+    "orderParams": {
+        "type": "array",
+        "properties": {
+            "name": {
+                "type": "string",
+                "label": "Name"
+            },
+            "code": {
+                "type": "string",
+                "label": "Code"
+            },
+            "discount_amount": {
+                "type": "string",
+                "label": "Discount Amount"
+            },
+            "start_date": {
+                "type": "string",
+                "label": "Start Date",
+                "format": "date"
+            },
+            "end_date": {
+                "type": "string",
+                "label": "End Date",
+                "format": "date"
+            }
+        }
+    },
+    "pageSize": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 100
+    },
+    "page": {
+        "type": "number",
+        "minimum": 1
+    }
+}
