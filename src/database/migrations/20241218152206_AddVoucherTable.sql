@@ -2,7 +2,7 @@
 -- Created at: 2024-12-18T15:22:06.315Z
 
 CREATE TABLE vouchers (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     discount_amount NUMERIC(12, 2) NOT NULL,
     code TEXT NOT NULL,
@@ -10,6 +10,12 @@ CREATE TABLE vouchers (
     end_date TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE voucher_usages (
+    user_id BIGINT NOT NULL REFERENCES users(id), 
+    voucher_id BIGINT NOT NULL REFERENCES vouchers(id),
+    PRIMARY KEY (user_id, voucher_id)
 );
 
 CREATE OR REPLACE VIEW vouchers_view AS
