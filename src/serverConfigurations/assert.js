@@ -12,7 +12,7 @@ function ASSERT_USER(condition, message, params) {
 
 function ASSERT_PEER(condition, message, params) {
   if (!condition) {
-    throw new ApplicationError(message, params);
+    throw new PeerError(message, params);
   }
 }
 
@@ -30,4 +30,11 @@ class ApplicationError extends Error {
   }
 }
 
-module.exports = { ASSERT, ASSERT_USER, ASSERT_PEER, UserError, ApplicationError };
+class PeerError extends Error {
+  constructor(message, params) {
+    super(message);
+    this.params = params;
+  }
+}
+
+module.exports = { ASSERT, ASSERT_USER, ASSERT_PEER, UserError, ApplicationError, PeerError };
