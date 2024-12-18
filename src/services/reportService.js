@@ -208,6 +208,20 @@ class ReportService {
                 ],
                 groupable: true
             },
+            {
+                key: 'audit_type',
+                label: 'Audit Type',
+                type: 'select',
+                placeholder: 'Enter audit type',
+                options:[
+                    { value: 'ASSERT', label: 'ASSERT' },
+                    { value: 'ASSERT_USER', label: 'ASSERT_USER' },
+                    { value: 'ASSERT_PEER', label: 'ASSERT_PEER' },
+                    { value: 'TEMPORARY', label: 'TEMPORARY' },
+                    { value: 'INFO', label: 'INFO' }
+                ],
+                groupable: true
+            }
         ],
         tableTemplate: 'groupedHeaders',
         headerGroups: [
@@ -216,6 +230,7 @@ class ReportService {
                 { label: 'Created At', rowspan: 2 },
                 { label: 'Status Code', rowspan: 2 },
                 { label: 'Log Level', rowspan: 2 },
+                { label: 'Audit Type', rowspan: 2 },
                 { label: 'Short Description', rowspan: 2 },
                 { label: 'Long Description', rowspan: 2 },
                 { label: 'Debug Info', rowspan: 2 },
@@ -229,6 +244,7 @@ class ReportService {
           { key: 'created_at', label: 'Created At', format: 'date_time' },
           { key: 'status_code', label: 'Status Code', align: 'right', format: 'text' },
           { key: 'log_level', label: 'Log Level', format: 'text' },
+          { key: 'audit_type', label: 'Audit Type', format: 'text' },
           { key: 'short_description', label: 'Short Description', format: 'text' },
           { key: 'long_description', label: 'Long Description', format: 'text' },
           { key: 'debug_info', label: 'Debug Info', format: 'text' },
@@ -243,9 +259,11 @@ class ReportService {
       created_at_maximum_filter_value: data.body.created_at_maximum,
       status_code_filter_value: data.body.status_code,
       log_level_filter_value: data.body.log_level,
+      audit_type_filter_value: data.body.audit_type,
       created_at_grouping_select_value: data.body.created_at_grouping_select_value,
       status_code_grouping_select_value: data.body.status_code_grouping_select_value,
       log_level_grouping_select_value: data.body.log_level_grouping_select_value,
+      audit_type_grouping_select_value: data.body.audit_type_grouping_select_value,
     };
 
     const reportFilters = [
@@ -304,6 +322,11 @@ class ReportService {
             type: "text",
         },
         {
+            key: "audit_type",
+            grouping_expression: "L.audit_type",
+            filter_expression: "L.audit_type = $FILTER_VALUE$",
+        },
+        {
             key: "created_at_minimum",
             grouping_expression: "",
             filter_expression: "L.created_at >= $FILTER_VALUE$",
@@ -325,6 +348,7 @@ class ReportService {
             $user_id_grouping_expression$ AS "user_id",
             $status_code_grouping_expression$ AS "status_code",
             $log_level_grouping_expression$ AS "log_level",
+            $audit_type_grouping_expression$ AS "audit_type",
             $short_description_grouping_expression$ AS "short_description",
             $long_description_grouping_expression$ AS "long_description",
             $debug_info_grouping_expression$ AS "debug_info",
@@ -335,8 +359,9 @@ class ReportService {
             AND $created_at_maximum_filter_expression$
             AND $status_code_filter_expression$
             AND $log_level_filter_expression$
+            AND $audit_type_filter_expression$
         GROUP BY GROUPING SETS (
-            (1, 2, 3, 4, 5, 6, 7, 8, 9),
+            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
             ()
         )
         ORDER BY 1 DESC`;
