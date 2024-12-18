@@ -1,34 +1,118 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams  } from "./page-utility.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
+
+class ProductState {
+  constructor() {
+    this.searchTerm = '';
+    this.selectedCategories = [];
+    this.currentPage = 1;
+    this.pageSize = 6;
+    this.minPrice = null;
+    this.maxPrice = null;
+    this.sortOption = [];
+    this.filterParams = {};
+    this.orderParams = [];
+  }
+
+  initFromUrl(urlParams) {
+    this.currentPage = parseInt(urlParams.page) || 1;
+    this.searchTerm = urlParams.searchParams?.keyword || '';
+    this.selectedCategories = urlParams.filterParams?.categories || [];
+    this.minPrice = urlParams.filterParams?.price?.min || null;
+    this.maxPrice = urlParams.filterParams?.price?.max || null;
+    this.sortOption = urlParams.orderParams?.[0] || [];
+    this.filterParams = urlParams.filterParams || {};
+    this.orderParams = urlParams.orderParams || [];
+  }
+
+  updateUrl() {
+    const urlParamData = {
+      searchParams: this.searchTerm ? { keyword: this.searchTerm } : {},
+      filterParams: this.filterParams,
+      orderParams: this.orderParams,
+      pageSize: this.pageSize,
+      page: this.currentPage,
+      currentPage: this.currentPage
+    };
+    updateUrlParams(urlParamData);
+  }
+
+  setSort(sortOption) {
+    this.sortOption = sortOption;
+    this.orderParams = sortOption.length && sortOption[0] ? [sortOption] : [];
+    this.currentPage = 1;
+  }
+
+  setPrice(min, max) {
+    this.minPrice = min;
+    this.maxPrice = max;
+    this.filterParams.price = {};
+    if (min !== null) this.filterParams.price.min = min;
+    if (max !== null) this.filterParams.price.max = max;
+    this.currentPage = 1;
+  }
+
+  setCategories(categories) {
+    this.selectedCategories = categories;
+    if (categories.length) {
+      this.filterParams.categories = categories;
+    } else {
+      delete this.filterParams.categories;
+    }
+    this.currentPage = 1;
+  }
+
+  getQueryParams() {
+    const queryParams = new URLSearchParams();
+    if (this.searchTerm) {
+      queryParams.append("searchParams", JSON.stringify({ keyword: this.searchTerm }));
+    }
+    if (Object.keys(this.filterParams).length > 0) {
+      queryParams.append("filterParams", JSON.stringify(this.filterParams));
+    }
+    if (this.orderParams.length > 0) {
+      queryParams.append("orderParams", JSON.stringify(this.orderParams));
+    }
+    queryParams.append("pageSize", this.pageSize.toString());
+    queryParams.append("page", this.currentPage.toString());
+    return queryParams;
+  }
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const productList = document.getElementById("product-list");
-  const searchInput = document.getElementById("search-input");
-  const searchBtn = document.getElementById("search-btn");
-  const categoryFilterInput = document.getElementById("category-filter-input");
-  const categoryOptions = document.getElementById("category-options");
-  const selectedCategoriesDiv = document.getElementById("selected-categories");
-  const paginationContainer = document.getElementById("pagination-container");
-  const currentPageDisplay = document.getElementById("current-page-display");
-  const minPriceInput = document.getElementById("min-price-input");
-  const maxPriceInput = document.getElementById("max-price-input");
-  const sortPriceSelect = document.getElementById("sort-price");
-  const applyFiltersBtn = document.getElementById("apply-filters");
-  const resultCountDisplay = document.getElementById("result-count");
+  // Get DOM elements
+  const elements = {
+    productList: document.getElementById("product-list"),
+    searchInput: document.getElementById("search-input"),
+    searchBtn: document.getElementById("search-btn"),
+    categoryFilterInput: document.getElementById("category-filter-input"),
+    categoryOptions: document.getElementById("category-options"),
+    selectedCategoriesDiv: document.getElementById("selected-categories"),
+    paginationContainer: document.getElementById("pagination-container"),
+    currentPageDisplay: document.getElementById("current-page-display"),
+    minPriceInput: document.getElementById("min-price-input"),
+    maxPriceInput: document.getElementById("max-price-input"),
+    sortPriceSelect: document.getElementById("sort-price"),
+    applyFiltersBtn: document.getElementById("apply-filters"),
+    resultCountDisplay: document.getElementById("result-count")
+  };
 
-  let selectedCategories = [];
-  let currentPage = 1;
-  let pageSize = 6;
-  let sortOption = []; // [field, order]
-  let filterParams = {};
-  let orderParams = [];
-  let minPrice = null;
-  let maxPrice = null;
-  let userStatus = await getUserStatus();
-  const urlParams = getUrlParams();
-  currentPage = urlParams.page || 1;
-  pageSize = urlParams.pageSize || 6;
-  filterParams = urlParams.filterParams || {};
-  orderParams = urlParams.orderParams || [];
+  // Initialize state
+  const state = new ProductState();
+  state.initFromUrl(getUrlParams());
+
+  // Sync UI with initial state
+  elements.searchInput.value = state.searchTerm;
+  elements.minPriceInput.value = state.minPrice || '';
+  elements.maxPriceInput.value = state.maxPrice || '';
+  if (state.sortOption.length) {
+    elements.sortPriceSelect.value = state.sortOption.join(' ');
+  }
+
+  const initializeCategories = async () => {
+    elements.categoryFilterInput.value = "";
+    const categories = await fetchCategories();
+    renderCategoryOptions(categories);
+  };
 
   // Function to fetch categories from the server
   const fetchCategories = async () => {
@@ -39,119 +123,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     return await response.data;
   };
 
-  // Function to render category checkboxes
   const renderCategoryOptions = (categories) => {
-    categoryOptions.innerHTML = ""; // Clear existing options
-
+    elements.categoryOptions.innerHTML = "";
     categories.forEach((category) => {
-
       const label = document.createElement("label");
-    
-      // Create input element (checkbox)
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.value = category.name;
-  
-      // Append checkbox and text to label
+      checkbox.checked = state.selectedCategories.includes(category.name);
+      
+      checkbox.addEventListener("change", (e) => {
+        const newCategories = e.target.checked
+          ? [...state.selectedCategories, e.target.value]
+          : state.selectedCategories.filter(cat => cat !== e.target.value);
+        
+        state.setCategories(newCategories);
+        updateSelectedCategories();
+        updateProductList();
+      });
+
       label.appendChild(checkbox);
       label.appendChild(document.createTextNode(` ${category.name}`));
-  
-      // Append label to the category options container
-      categoryOptions.appendChild(label);
-
-      // Add event listener for category checkbox
-      checkbox.addEventListener("change", (e) => {
-        const value = e.target.value;
-
-        if (e.target.checked) {
-          selectedCategories.push(value);
-        } else {
-          selectedCategories = selectedCategories.filter(
-            (cat) => cat !== value
-          );
-        }
-
-        updateSelectedCategories();
-      });
+      elements.categoryOptions.appendChild(label);
     });
   };
 
-  // Fetch and render categories when the page loads
-  const initializeCategories = async () => {
-    categoryFilterInput.value = "";
-    const categories = await fetchCategories();
-    renderCategoryOptions(categories);
+  const updateSelectedCategories = () => {
+    elements.categoryFilterInput.value = state.selectedCategories.join(", ");
   };
 
-  const fetchProducts = async (
-    searchTerm = "",
-    categories = [],
-    page = 1,
-    minPrice = null,
-    maxPrice = null,
-    sortOption = []
-  ) => {
-    // Build searchParams with only the keyword
-    const searchParams = {};
-    if (searchTerm) {
-      searchParams.keyword = searchTerm;
-    }
-
-    // Build filterParams with categories and price
-    filterParams = filterParams || {};
-    if (categories.length > 0) {
-      filterParams.categories = categories;
-    }
-    if (minPrice !== null || maxPrice !== null) {
-      filterParams.price = {};
-      if (minPrice !== null) {
-        filterParams.price.min = minPrice;
-      }
-      if (maxPrice !== null) {
-        filterParams.price.max = maxPrice;
-      }
-    }
-
-    // Build orderParams
-    const orderParams = [];
-    if (sortOption.length === 2) {
-      // orderParams.push(["price", sortOption.toUpperCase()]);
-      orderParams.push(sortOption);
-    }
-
-    // Construct query parameters
-    const queryParams = new URLSearchParams();
-    if (Object.keys(searchParams).length > 0) {
-      queryParams.append("searchParams", JSON.stringify(searchParams));
-    }
-    if (Object.keys(filterParams).length > 0) {
-      queryParams.append("filterParams", JSON.stringify(filterParams));
-    }
-    if (orderParams.length > 0) {
-      queryParams.append("orderParams", JSON.stringify(orderParams));
-    }
-    queryParams.append("pageSize", pageSize.toString());
-    queryParams.append("page", page.toString());
-
-    // Fetch products
-    const urlParamData = {
-      searchParams,
-      filterParams,
-      orderParams,
-      pageSize,
-      currentPage: page
-    }
-    updateUrlParams(urlParamData);
+  const fetchProducts = async () => {
+    const queryParams = state.getQueryParams();
+    state.updateUrl();
     const response = await fetchWithErrorHandling(`/api/products?${queryParams.toString()}`);
-    if(!response.ok){
+    if (!response.ok) {
       showToastMessage(response.error, "error");
     }
     return response.data;
   };
 
   const renderProducts = (products) => {
-    productList.innerHTML = "";
-    products.slice(0, pageSize).forEach((product) => {
+    elements.productList.innerHTML = "";
+    products.slice(0, state.pageSize).forEach((product) => {
       const productCard = document.createElement("div");
       productCard.classList.add("col-md-4", "product-card");
   
@@ -204,42 +217,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         e.stopPropagation(); // Prevent the click event from reaching the card body
       });
   
-      productList.appendChild(productCard);
+      elements.productList.appendChild(productCard);
     });
   };
-  
 
   const updateProductList = async () => {
-    const searchTerm = searchInput.value.trim();
-    const resultObject = await fetchProducts(
-      searchTerm,
-      selectedCategories,
-      currentPage,
-      minPrice,
-      maxPrice,
-      sortOption
-    );
+    const resultObject = await fetchProducts();
     renderProducts(resultObject.result);
-    resultCountDisplay.textContent = `Found ${resultObject.count} results`;
+    elements.resultCountDisplay.textContent = `Found ${resultObject.count} results`;
 
     if (resultObject.result.length > 0) {
-      renderPagination(resultObject.result.length >= pageSize);
+      renderPagination(resultObject.result.length >= state.pageSize);
     } else {
-      currentPageDisplay.textContent = "";
-      paginationContainer.innerHTML = "";
+      elements.currentPageDisplay.textContent = "";
+      elements.paginationContainer.innerHTML = "";
     }
   };
 
   const renderPagination = (hasNextPage) => {
-    paginationContainer.innerHTML = "";
+    elements.paginationContainer.innerHTML = "";
 
     const prevButton = document.createElement("button");
     prevButton.classList.add("btn", "btn-secondary", "me-2");
     prevButton.textContent = "Previous";
-    prevButton.disabled = currentPage === 1;
+    prevButton.disabled = state.currentPage === 1;
     prevButton.addEventListener("click", () => {
-      if (currentPage > 1) {
-        currentPage--;
+      if (state.currentPage > 1) {
+        state.currentPage--;
         updateProductList();
       }
     });
@@ -250,50 +254,45 @@ document.addEventListener("DOMContentLoaded", async () => {
     nextButton.disabled = !hasNextPage;
     nextButton.addEventListener("click", () => {
       if (hasNextPage) {
-        currentPage++;
+        state.currentPage++;
         updateProductList();
       }
     });
 
-    paginationContainer.appendChild(prevButton);
-    paginationContainer.appendChild(nextButton);
+    elements.paginationContainer.appendChild(prevButton);
+    elements.paginationContainer.appendChild(nextButton);
 
-    currentPageDisplay.textContent = `Page ${currentPage}`;
+    elements.currentPageDisplay.textContent = `Page ${state.currentPage}`;
   };
 
-  categoryFilterInput.addEventListener("click", () => {
-    categoryOptions.style.display =
-      categoryOptions.style.display === "block" ? "none" : "block";
+  elements.categoryFilterInput.addEventListener("click", () => {
+    elements.categoryOptions.style.display =
+      elements.categoryOptions.style.display === "block" ? "none" : "block";
   });
 
   document.addEventListener("click", (e) => {
     if (
-      !categoryFilterInput.contains(e.target) &&
-      !categoryOptions.contains(e.target)
+      !elements.categoryFilterInput.contains(e.target) &&
+      !elements.categoryOptions.contains(e.target)
     ) {
-      categoryOptions.style.display = "none";
+      elements.categoryOptions.style.display = "none";
     }
   });
 
-  const updateSelectedCategories = () => {
-    categoryFilterInput.value =
-      selectedCategories.length > 0 ? selectedCategories.join(", ") : "";
-  };
-
-  searchBtn.addEventListener("click", () => {
-    currentPage = 1;
+  elements.searchBtn.addEventListener("click", () => {
+    state.searchTerm = elements.searchInput.value.trim();
+    state.currentPage = 1;
     updateProductList();
   });
 
-  sortPriceSelect.addEventListener("change", (e) => {
-    sortOption = e.target.value.split(" ");
-    currentPage = 1;
+  elements.sortPriceSelect.addEventListener("change", (e) => {
+    state.setSort(e.target.value.split(" "));
     updateProductList();
   });
 
-  applyFiltersBtn.addEventListener("click", () => {
-    const minPriceValue = minPriceInput.value.trim();
-    const maxPriceValue = maxPriceInput.value.trim();
+  elements.applyFiltersBtn.addEventListener("click", () => {
+    const minPriceValue = elements.minPriceInput.value.trim();
+    const maxPriceValue = elements.maxPriceInput.value.trim();
 
     if (minPriceValue && isNaN(minPriceValue)) {
       alert("Minimum price must be a number.");
@@ -304,19 +303,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    minPrice = minPriceValue !== "" ? parseFloat(minPriceValue) : null;
-    maxPrice = maxPriceValue !== "" ? parseFloat(maxPriceValue) : null;
+    const minPrice = minPriceValue !== "" ? parseFloat(minPriceValue) : null;
+    const maxPrice = maxPriceValue !== "" ? parseFloat(maxPriceValue) : null;
 
     if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
       alert("Minimum price cannot be greater than maximum price.");
       return;
     }
 
-    currentPage = 1;
+    state.setPrice(minPrice, maxPrice);
     updateProductList();
   });
 
-  updateProductList();
+  // Initialize
+  const userStatus = await getUserStatus();
   createNavigation(userStatus);
   await initializeCategories();
+  updateSelectedCategories();
+  await updateProductList();
 });
