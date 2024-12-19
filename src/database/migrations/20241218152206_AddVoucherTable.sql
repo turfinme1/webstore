@@ -3,7 +3,7 @@
 
 CREATE TABLE vouchers (
     id BIGSERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
     discount_amount NUMERIC(12, 2) NOT NULL,
     code TEXT NOT NULL,
     start_date TIMESTAMPTZ NOT NULL,
@@ -11,6 +11,7 @@ CREATE TABLE vouchers (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     is_active BOOLEAN DEFAULT TRUE
 );
+CREATE UNIQUE INDEX vouchers_code_is_active_idx ON vouchers (code) WHERE is_active = TRUE;
 
 CREATE TABLE voucher_usages (
     user_id BIGINT NOT NULL REFERENCES users(id), 
@@ -34,3 +35,6 @@ INSERT INTO permissions (name, interface_id) VALUES
 ('read', 12),
 ('update', 12),
 ('delete', 12);
+
+ALTER TABLE carts ADD COLUMN voucher_id BIGINT REFERENCES vouchers(id);
+ALTER table carts ADD COLUMN voucher_discount_amount NUMERIC(12, 2) DEFAULT 0;
