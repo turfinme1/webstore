@@ -175,6 +175,39 @@ function renderCartTotalRow() {
   `;
   fragment.appendChild(priceAfterDiscountRow);
 
+  const voucherRow = document.createElement('tr');
+  voucherRow.classList.add('cart-voucher');
+  voucherRow.innerHTML = `
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">
+      <div class="d-flex align-items-center justify-content-end">
+        <div class="input-group" style="max-width: 350px;">
+          <input type="text" id="voucher-input" class="form-control" placeholder="Enter voucher code">
+          <button class="btn btn-primary" id="apply-voucher-btn">Apply</button>
+          <button class="btn btn-danger remove-voucher id="remove-voucher">Remove</button>
+        </div>
+      </div>
+    </td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$10</td>
+   <td>
+      <button class="btn btn-secondary" id="browse-vouchers-btn">Browse Vouchers</button>
+   </td>
+
+    <div class="modal fade" id="voucher-modal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Available Vouchers</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="voucher-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  fragment.appendChild(voucherRow);
+
   const vatRow = document.createElement('tr');
   vatRow.classList.add('cart-vat');
   vatRow.innerHTML = `
@@ -196,7 +229,6 @@ function renderCartTotalRow() {
   return fragment;
 }
 
-
 function updateCartDisplay(state) {
   const cartContainer = document.getElementById('cart-container');
   cartContainer.innerHTML = '';
@@ -212,6 +244,7 @@ function updateCartDisplay(state) {
   }
   elements.checkoutButton.disabled = false;
   cartContainer.appendChild(renderCartTotalRow());
+  attachVoucherEvents();
 
   for (const item of state.items) {
     if (parseInt(item.quantity) === 1) {
@@ -225,5 +258,108 @@ function updateCartDisplay(state) {
     document.getElementById(`quantity-increase-${item.id}`).addEventListener('click', () => {
       updateCartItemQuantity(item.product_id, parseInt(item.quantity) + 1);
     });
+  }
+}
+
+async function attachVoucherEvents() {
+  const applyVoucherBtn = document.getElementById('apply-voucher-btn');
+  const browseVouchersBtn = document.getElementById('browse-vouchers-btn');
+  const voucherModal = new bootstrap.Modal(document.getElementById('voucher-modal'));
+  const voucherInput = document.getElementById('voucher-input');
+
+  applyVoucherBtn.addEventListener('click', async () => {
+    const code = voucherInput.value.trim();
+    if (code) {
+      await applyVoucher(code);
+    }
+  });
+
+  browseVouchersBtn.addEventListener('click', async () => {
+    await loadAvailableVouchers();
+    voucherModal.show();
+  });
+
+  // Handle remove voucher button if it exists
+  const removeVoucherBtn = document.querySelector('.remove-voucher');
+  if (removeVoucherBtn) {
+    removeVoucherBtn.addEventListener('click', removeVoucher);
+  }
+}
+
+async function loadAvailableVouchers() {
+  try {
+    const response = await fetchWithErrorHandling('/crud/vouchers');
+    if (response.ok) {
+      state.vouchers = await response.data;
+      renderVouchersList();
+    }
+  } catch (error) {
+    console.error('Error loading vouchers:', error);
+    showToastMessage('Failed to load vouchers', 'error');
+  }
+}
+
+function renderVouchersList() {
+  const voucherList = document.querySelector('.voucher-list');
+  voucherList.innerHTML = state.vouchers.map(voucher => `
+    <div class="voucher-item card mb-2">
+      <div class="card-body">
+        <h6 class="card-title">${voucher.name}</h6>
+        <p class="card-text">Discount: $${voucher.discount_amount}</p>
+        <p class="card-text">Code: ${voucher.code}</p>
+        <button class="btn btn-sm btn-primary select-voucher" data-code="${voucher.code}">
+          Use this voucher
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  // Add click handlers for voucher selection
+  voucherList.querySelectorAll('.select-voucher').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const code = e.target.dataset.code;
+      let voucherInput = document.getElementById('voucher-input');
+      voucherInput.value = code;
+      let voucherModal = document.getElementById('voucher-modal');
+      bootstrap.Modal.getInstance(voucherModal).hide();
+    });
+  });
+}
+
+async function applyVoucher(code) {
+  try {
+    const response = await fetchWithErrorHandling('/api/cart/apply-voucher', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+
+    if (response.ok) {
+      const cartData = await getCartItems();
+      state.cart = cartData;
+      updateCartDisplay(state);
+      showToastMessage('Voucher applied successfully', 'success');
+    }
+  } catch (error) {
+    console.error('Error applying voucher:', error);
+    showToastMessage('Failed to apply voucher', 'error');
+  }
+}
+
+async function removeVoucher() {
+  try {
+    const response = await fetchWithErrorHandling('/api/cart/remove-voucher', {
+      method: 'POST'
+    });
+
+    if (response.ok) {
+      const cartData = await getCartItems();
+      state.cart = cartData;
+      updateCartDisplay(state);
+      showToastMessage('Voucher removed successfully', 'success');
+    }
+  } catch (error) {
+    console.error('Error removing voucher:', error);
+    showToastMessage('Failed to remove voucher', 'error');
   }
 }
