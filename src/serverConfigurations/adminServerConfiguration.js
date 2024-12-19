@@ -105,7 +105,7 @@ function requestMiddleware(handler) {
       req.pool = pool;
       req.dbConnection = new DbConnectionWrapper(await req.pool.connect(), req.pool);
       req.entitySchemaCollection = entitySchemaCollection;
-      req.logger = new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
+      req.logger = new Logger(req);
 
       await req.dbConnection.query("BEGIN");
       await sessionMiddleware(req, res);
@@ -130,31 +130,23 @@ function requestMiddleware(handler) {
       await req.dbConnection.query("COMMIT");
     } catch (error) {
       console.error(error);
+  
+      await req.dbConnection?.query("ROLLBACK");
       await req.logger.error(error);
-      
+
       if(req.signal?.aborted) {
         if(res.headersSent) {
-          res.end();
+          return res.end();
         } else {
-          res.status(500).json({ error: "Request aborted" });
+          return res.status(500).json({ error: "Request aborted" });
         }
-
-        return;
-      }
-
-      if (req.dbConnection) {
-        await req.dbConnection.query("ROLLBACK");
-      }
-
-      if (error instanceof UserError) {
+      } else if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });
       } else {
         return res.status(500).json({ error: "Internal server error" });
       }
     } finally {
-      if (req.dbConnection) {
-        req.dbConnection.release();
-      }
+      req.dbConnection?.release();
     }
   };
 }
