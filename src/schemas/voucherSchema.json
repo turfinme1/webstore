@@ -1,0 +1,115 @@
+{
+    "type": "object",
+    "name": "vouchers",
+    "table": "vouchers",
+    "views": "vouchers_view",
+    "queryValidationSchema": "voucherQueryParamsSchema",
+    "properties": {
+        "name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z_-]+$",
+            "label": "Voucher Name",
+            "placeholder": "Enter Voucher Name",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for voucher name."
+            }
+        },
+        "code": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "label": "Voucher Code",
+            "placeholder": "Enter Voucher Code",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for voucher code."
+            }
+        },
+        "discount_amount": {
+            "type": "number",
+            "label": "Discount Amount",
+            "placeholder": "Enter Discount Amount",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "minimum": "0",
+                "step": "0.01"
+            },
+            "errorMessage": {
+                "type": "Invalid value for discount amount."
+            }
+        },
+        "start_date": {
+            "type": "string",
+            "format": "date-range-overlap-start",
+            "label": "Start Date",
+            "placeholder": "Enter Start Date",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "type": "date"
+            },
+            "errorMessage": {
+                "type": "Invalid value for start date."
+            }
+        },
+        "end_date": {
+            "type": "string",
+            "format": "date-range-overlap-end",
+            "label": "End Date",
+            "placeholder": "Enter End Date",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "type": "date"
+            },
+            "errorMessage": {
+                "type": "Invalid value for end date."
+            }
+        }
+    },
+    "table_display_columns": [
+        "name",
+        "code",
+        "discount_amount",
+        "start_date",
+        "end_date"
+    ],
+    "required": [
+        "name",
+        "code",
+        "discount_amount",
+        "start_date",
+        "end_date"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "name": "Voucher name is required.",
+            "code": "Voucher code is required.",
+            "discount_amount": "Discount amount is required.",
+            "start_date": "Start date is required.",
+            "end_date": "End date is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

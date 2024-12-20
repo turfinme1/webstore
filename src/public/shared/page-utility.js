@@ -494,6 +494,13 @@ function createBackofficeNavigation(userStatus) {
       permission: "view",
       interface: "promotions",
     },
+    {
+      id: "crud-voucher-link",
+      text: "CRUD Vouchers",
+      href: "/crud-voucher",
+      permission: "view",
+      interface: "vouchers",
+    },
     // {
     //   id: "logs-link",
     //   text: "Report Logs",

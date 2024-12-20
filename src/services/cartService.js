@@ -1,3 +1,7 @@
+const { da } = require("@faker-js/faker");
+const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
+const { STATUS_CODES } = require("../serverConfigurations/constants");
+
 class CartService {
   constructor() {
     this.getOrCreateCart = this.getOrCreateCart.bind(this);
@@ -6,6 +10,8 @@ class CartService {
     this.updateItem = this.updateItem.bind(this);
     this.deleteItem = this.deleteItem.bind(this);
     this.clearCart = this.clearCart.bind(this);
+    this.applyVoucher = this.applyVoucher.bind(this);
+    this.removeVoucher = this.removeVoucher.bind(this);
   }
 
   async getOrCreateCart(data) {
@@ -91,6 +97,15 @@ class CartService {
         FROM promotions
         WHERE is_active = TRUE
           AND NOW() BETWEEN start_date AND end_date
+      ),
+      cart_details AS (
+        SELECT 
+          c.voucher_id,
+          v.code AS voucher_code,
+          COALESCE(c.voucher_discount_amount, 0) AS voucher_discount_amount
+        FROM carts c
+        LEFT JOIN vouchers v ON c.voucher_id = v.id
+        WHERE c.id = $1
       )
       SELECT
         SUM(ci.total_price) AS total_price,
@@ -99,10 +114,13 @@ class CartService {
         ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100), 2) AS total_price_after_discount,
         vat.vat_percentage,
         ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
-        ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat
-      FROM cart_items ci, vat, largest_discount ld
+        cd.voucher_discount_amount,
+        cd.voucher_code,
+        ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
+        ROUND(GREATEST(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100) - cd.voucher_discount_amount, 0), 2) AS total_price_with_voucher
+      FROM cart_items ci, vat, largest_discount ld, cart_details cd
       WHERE ci.cart_id = $1
-      GROUP BY vat.vat_percentage, ld.discount_percentage`,
+      GROUP BY vat.vat_percentage, ld.discount_percentage, cd.voucher_discount_amount, cd.voucher_code`,
       [cart.id]
     );
 
@@ -113,8 +131,11 @@ class CartService {
     const vatPercentage = cartTotalPriceResult.rows[0]?.vat_percentage || 0;
     const vatAmount = cartTotalPriceResult.rows[0]?.vat_amount || 0;
     const totalPriceWithVat = cartTotalPriceResult.rows[0]?.total_price_with_vat || 0;
+    const voucherAmount = cartTotalPriceResult.rows[0]?.voucher_discount_amount || 0;
+    const totalPriceWithVoucher = cartTotalPriceResult.rows[0]?.total_price_with_voucher || 0;
+    const voucherCode = cartTotalPriceResult.rows[0]?.voucher_code || null; 
 
-    return { cart, items: cartItemsResult.rows, totalPrice, discountPercentage, discountAmount, totalPriceAfterDiscount, vatPercentage, vatAmount, totalPriceWithVat };
+    return { cart, items: cartItemsResult.rows, totalPrice, discountPercentage, discountAmount, totalPriceAfterDiscount, vatPercentage, vatAmount, totalPriceWithVat, voucherAmount, totalPriceWithVoucher, voucherCode };
   }
 
   async updateItem(data) {
@@ -154,6 +175,61 @@ class CartService {
     );
 
     return { message: "Cart cleared successfully." };
+  }
+
+  async applyVoucher(data) {
+    const cart = await this.getOrCreateCart(data);
+
+    const voucherResult = await data.dbConnection.query(`
+      SELECT * FROM vouchers WHERE code = $1 AND is_active = TRUE AND NOW() BETWEEN start_date AND end_date`,
+      [data.body.code]
+    );
+    ASSERT_USER(voucherResult.rows.length > 0, "Invalid voucher code", {
+      code: STATUS_CODES.SRV_CNF_INVALID_VOUCHER_CODE,
+      long_description: `Invalid voucher code ${data.body.code}`,
+    });
+    const voucher = voucherResult.rows[0];
+
+    const voucherUsage = await data.dbConnection.query(`
+      SELECT * FROM voucher_usages WHERE user_id = $1 AND voucher_id = $2`,
+      [data.session.user_id, voucher.id]
+    );
+    ASSERT_USER(voucherUsage.rows.length === 0, "Voucher already used", {
+      code: STATUS_CODES.SRV_CNF_VOUCHER_ALREADY_USED,
+      long_description: `Voucher already used by user ${data.session.user_id}`,
+    });
+
+    // await data.dbConnection.query(`
+    //   INSERT INTO voucher_usages (user_id, voucher_id)
+    //   VALUES ($1, $2)
+    //   RETURNING *`,
+    //   [data.session.user_id, voucher.id]
+    // );
+
+    await data.dbConnection.query(`
+      UPDATE carts SET voucher_id = $1, voucher_discount_amount = $2
+      WHERE id = $3
+      RETURNING *`,
+      [voucher.id, voucher.discount_amount, cart.id]
+    );
+
+    return { message: "Voucher applied successfully." };
+  }
+
+  async removeVoucher(data) {
+    const cart = await this.getOrCreateCart(data);
+    ASSERT_USER(cart.voucher_id, "No voucher applied", {
+      code: STATUS_CODES.SRV_CNF_NO_VOUCHER_APPLIED,
+      long_description: "No voucher applied to the cart",
+    });
+
+    await data.dbConnection.query(`
+      UPDATE carts SET voucher_id = NULL, voucher_discount_amount = 0
+      WHERE id = $1`,
+      [cart.id]
+    );
+
+    return { message: "Voucher removed successfully." };
   }
 }
 

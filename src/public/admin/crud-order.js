@@ -380,6 +380,9 @@ function renderOrders(orders) {
     mainRow.appendChild(createTableCell(`${order.vat_percentage}%`, "right"));
     mainRow.appendChild(createTableCell(formatCurrency(order.vat_amount), "right"));
     mainRow.appendChild(createTableCell(formatCurrency(order.total_price_with_vat), "right"));
+    mainRow.appendChild(createTableCell(order.voucher_code));
+    mainRow.appendChild(createTableCell(formatCurrency(order.voucher_discount_amount), "right"));
+    mainRow.appendChild(createTableCell(formatCurrency(order.total_price_with_voucher), "right"));
     mainRow.appendChild(createTableCell(formatCurrency(order.paid_amount), "right"));
     mainRow.appendChild(createTableCell(order.is_active));
     mainRow.appendChild(
