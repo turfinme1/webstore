@@ -58,6 +58,7 @@ const routeTable = {
     "/api/products/:id/ratings": productController.createRating,
     "/api/cart": cartController.updateItem,
     "/api/cart/apply-voucher": cartController.applyVoucher,
+    "/api/cart/remove-voucher": cartController.removeVoucher,
     "/api/orders": orderController.createOrder,
   },
   put: {
@@ -65,7 +66,6 @@ const routeTable = {
   },
   delete: {
     "/api/cart/:itemId": cartController.deleteItem,
-    "/api/cart/remove-voucher": cartController.removeVoucher,
   },
 };
 

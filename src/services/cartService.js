@@ -101,8 +101,10 @@ class CartService {
       cart_details AS (
         SELECT 
           c.voucher_id,
+          v.code AS voucher_code,
           COALESCE(c.voucher_discount_amount, 0) AS voucher_discount_amount
         FROM carts c
+        LEFT JOIN vouchers v ON c.voucher_id = v.id
         WHERE c.id = $1
       )
       SELECT
@@ -113,11 +115,12 @@ class CartService {
         vat.vat_percentage,
         ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
         cd.voucher_discount_amount,
+        cd.voucher_code,
         ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
-        ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) - cd.voucher_discount_amount, 2) AS total_price_with_voucher
+        ROUND(GREATEST(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100) - cd.voucher_discount_amount, 0), 2) AS total_price_with_voucher
       FROM cart_items ci, vat, largest_discount ld, cart_details cd
       WHERE ci.cart_id = $1
-      GROUP BY vat.vat_percentage, ld.discount_percentage, cd.voucher_discount_amount`,
+      GROUP BY vat.vat_percentage, ld.discount_percentage, cd.voucher_discount_amount, cd.voucher_code`,
       [cart.id]
     );
 
@@ -129,9 +132,10 @@ class CartService {
     const vatAmount = cartTotalPriceResult.rows[0]?.vat_amount || 0;
     const totalPriceWithVat = cartTotalPriceResult.rows[0]?.total_price_with_vat || 0;
     const voucherAmount = cartTotalPriceResult.rows[0]?.voucher_discount_amount || 0;
-    const totalPriceWithVoucher = cartTotalPriceResult.rows[0]?.total_price_with_voucher || 0; 
+    const totalPriceWithVoucher = cartTotalPriceResult.rows[0]?.total_price_with_voucher || 0;
+    const voucherCode = cartTotalPriceResult.rows[0]?.voucher_code || null; 
 
-    return { cart, items: cartItemsResult.rows, totalPrice, discountPercentage, discountAmount, totalPriceAfterDiscount, vatPercentage, vatAmount, totalPriceWithVat, voucherAmount, totalPriceWithVoucher };
+    return { cart, items: cartItemsResult.rows, totalPrice, discountPercentage, discountAmount, totalPriceAfterDiscount, vatPercentage, vatAmount, totalPriceWithVat, voucherAmount, totalPriceWithVoucher, voucherCode };
   }
 
   async updateItem(data) {
@@ -214,6 +218,10 @@ class CartService {
 
   async removeVoucher(data) {
     const cart = await this.getOrCreateCart(data);
+    ASSERT_USER(cart.voucher_id, "No voucher applied", {
+      code: STATUS_CODES.SRV_CNF_NO_VOUCHER_APPLIED,
+      long_description: "No voucher applied to the cart",
+    });
 
     await data.dbConnection.query(`
       UPDATE carts SET voucher_id = NULL, voucher_discount_amount = 0

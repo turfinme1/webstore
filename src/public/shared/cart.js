@@ -175,19 +175,37 @@ function renderCartTotalRow() {
   `;
   fragment.appendChild(priceAfterDiscountRow);
 
+  const vatRow = document.createElement('tr');
+  vatRow.classList.add('cart-vat');
+  vatRow.innerHTML = `
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">VAT (${state.cart.vatPercentage}%):</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.vatAmount}</td>
+    <td></td>
+  `;
+  fragment.appendChild(vatRow);
+
+  const priceWithVatRow = document.createElement('tr');
+  priceWithVatRow.classList.add('cart-price-with-vat');
+  priceWithVatRow.innerHTML = `
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total price with VAT:</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPriceWithVat}</td>
+    <td></td>
+  `;
+  fragment.appendChild(priceWithVatRow);
+
   const voucherRow = document.createElement('tr');
   voucherRow.classList.add('cart-voucher');
   voucherRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">
       <div class="d-flex align-items-center justify-content-end">
         <div class="input-group" style="max-width: 350px;">
-          <input type="text" id="voucher-input" class="form-control" placeholder="Enter voucher code">
+          <input type="text" id="voucher-input" class="form-control" placeholder="Enter voucher code" ${state.cart.voucherCode ? `value= "${state.cart.voucherCode}"`: ""} />
           <button class="btn btn-primary" id="apply-voucher-btn">Apply</button>
-          <button class="btn btn-danger remove-voucher id="remove-voucher">Remove</button>
+          <button class="btn btn-danger remove-voucher" id="remove-voucher">Remove</button>
         </div>
       </div>
     </td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$10</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">-$${state.cart.voucherAmount}</td>
    <td>
       <button class="btn btn-secondary" id="browse-vouchers-btn">Browse Vouchers</button>
    </td>
@@ -208,20 +226,11 @@ function renderCartTotalRow() {
   `;
   fragment.appendChild(voucherRow);
 
-  const vatRow = document.createElement('tr');
-  vatRow.classList.add('cart-vat');
-  vatRow.innerHTML = `
-    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">VAT (${state.cart.vatPercentage}%):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.vatAmount}</td>
-    <td></td>
-  `;
-  fragment.appendChild(vatRow);
-
   const totalRow = document.createElement('tr');
   totalRow.classList.add('cart-total');
   totalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPriceWithVat}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPriceWithVoucher}</td>
     <td></td>
   `;
   fragment.appendChild(totalRow);
@@ -271,6 +280,8 @@ async function attachVoucherEvents() {
     const code = voucherInput.value.trim();
     if (code) {
       await applyVoucher(code);
+    } else {
+      showToastMessage('Please enter a valid voucher code', 'error');
     }
   });
 
@@ -327,39 +338,35 @@ function renderVouchersList() {
 }
 
 async function applyVoucher(code) {
-  try {
-    const response = await fetchWithErrorHandling('/api/cart/apply-voucher', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code })
-    });
+  const response = await fetchWithErrorHandling('/api/cart/apply-voucher', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code })
+  });
 
-    if (response.ok) {
-      const cartData = await getCartItems();
-      state.cart = cartData;
-      updateCartDisplay(state);
-      showToastMessage('Voucher applied successfully', 'success');
-    }
-  } catch (error) {
-    console.error('Error applying voucher:', error);
-    showToastMessage('Failed to apply voucher', 'error');
+  if(!response.ok) {
+    showToastMessage(response.error, "error");
+    return;
   }
+
+  const cartData = await getCartItems();
+  state.cart = cartData;
+  updateCartDisplay(state);
+  showToastMessage('Voucher applied successfully', 'success');
 }
 
 async function removeVoucher() {
-  try {
-    const response = await fetchWithErrorHandling('/api/cart/remove-voucher', {
-      method: 'POST'
-    });
+  const response = await fetchWithErrorHandling('/api/cart/remove-voucher', {
+    method: 'POST'
+  });
 
-    if (response.ok) {
-      const cartData = await getCartItems();
-      state.cart = cartData;
-      updateCartDisplay(state);
-      showToastMessage('Voucher removed successfully', 'success');
-    }
-  } catch (error) {
-    console.error('Error removing voucher:', error);
-    showToastMessage('Failed to remove voucher', 'error');
+  if(!response.ok) {
+    showToastMessage(response.error, "error");
+    return;
   }
+
+  const cartData = await getCartItems();
+  state.cart = cartData;
+  updateCartDisplay(state);
+  showToastMessage('Voucher removed successfully', 'success');
 }

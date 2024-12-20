@@ -35,16 +35,26 @@ class OrderService {
 
     const orderResult = await data.dbConnection.query(
       `
-      INSERT INTO orders (user_id, status, shipping_address_id, vat_percentage, discount_percentage, total_price) 
+      INSERT INTO orders (user_id, status, shipping_address_id, vat_percentage, discount_percentage, total_price, voucher_code, voucher_discount_amount) 
       VALUES ($1, 'Pending', $2, $3, (SELECT COALESCE(SUM(discount_percentage), 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date),
           (SELECT SUM(ci.quantity * p.price) 
               FROM cart_items ci 
               JOIN products p ON ci.product_id = p.id 
-              WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE))) 
+              WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE)),
+              (SELECT v.code FROM carts c LEFT JOIN vouchers v ON c.voucher_id = v.id WHERE c.user_id = $1 AND c.is_active = TRUE),
+              (SELECT COALESCE(voucher_discount_amount, 0) FROM carts WHERE user_id = $1 AND is_active = TRUE)
+              )
       RETURNING *`,
       [data.session.user_id, shippingAddressId, data.context.settings.vat_percentage]
     );
     const order = orderResult.rows[0];
+
+    await data.dbConnection.query(`
+      INSERT INTO voucher_usages (user_id, voucher_id)
+      VALUES ($1, (SELECT voucher_id FROM carts WHERE user_id = $1 AND is_active = TRUE))
+      RETURNING *`,
+      [data.session.user_id]
+    );
 
     const cartResult = await data.dbConnection.query(
       `
@@ -105,7 +115,7 @@ class OrderService {
         {
           amount: {
             currency_code: "USD",
-            value: orderView.total_price_with_vat,
+            value: orderView.total_price_with_voucher,
           },
         },
       ],
@@ -371,7 +381,7 @@ class OrderService {
       UPDATE orders
       SET status = 'Paid', paid_amount = $1
       WHERE id = $2`,
-      [order.total_price_with_vat, order.id]
+      [order.total_price_with_voucher, order.id]
     );
     
     const capture = await this.paypalClient.execute(request);

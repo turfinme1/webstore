@@ -209,8 +209,12 @@ class EmailService {
                 <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.vat_amount)}</td>
             </tr>
             <tr>
+                <td colspan="3" style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">Voucher (${data.order.voucher_code || "Not applied"}):</td>
+                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">-${this.formatCurrency(data.order.voucher_discount_amount)}</td>
+            </tr>
+            <tr>
                 <td colspan="3" style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">Total:</td>
-                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price_with_vat)}</td>
+                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price_with_voucher)}</td>
             </tr>
         `;
 
