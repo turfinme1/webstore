@@ -424,6 +424,9 @@ class ReportService {
                 { label: 'VAT %', rowspan: 2 },
                 { label: 'VAT', rowspan: 2 },
                 { label: 'Total With VAT', rowspan: 2 },
+                { label: 'Voucher Code', rowspan: 2 },
+                { label: 'Voucher Discount', rowspan: 2 },
+                { label: 'Total Price with Voucher', rowspan: 2 },
                 { label: 'Count', rowspan: 2 }
             ]
         ],
@@ -438,6 +441,9 @@ class ReportService {
             { key: 'vat_percentage', label: 'VAT %', align: 'right', format: 'percentage' },
             { key: 'vat_amount', label: 'VAT', align: 'right', format: 'currency' },
             { key: 'total_price_with_vat', label: 'Total With VAT', align: 'right', format: 'currency' },
+            { key: 'voucher_code', label: 'Voucher Code', format: 'text' },
+            { key: 'voucher_discount_amount', label: 'Voucher Discount', align: 'right', format: 'currency' },
+            { key: 'total_price_with_voucher', label: 'Total Price with voucher', align: 'right', format: 'currency' },
             { key: 'count', label: 'Count', align: 'right', format: 'number' }
         ]
     };
@@ -512,7 +518,19 @@ class ReportService {
             grouping_expression: "",
             filter_expression: "O.total_price <= $FILTER_VALUE$",
             type: "number",
-        }
+        },
+        {
+            key: "voucher_code",
+            grouping_expression: "O.voucher_code",
+            filter_expression: "",
+            type: "text",
+        },
+        {
+            key: "voucher_discount_amount",
+            grouping_expression: "O.voucher_discount_amount",
+            filter_expression: "",
+            type: "number",
+        },
     ];
 
     let sql = `
@@ -523,9 +541,12 @@ class ReportService {
             $status_grouping_expression$  AS "status",
             $discount_percentage_grouping_expression$ AS "discount_percentage",
             $vat_percentage_grouping_expression$  AS "vat_percentage",
+            $voucher_code_grouping_expression$ AS "voucher_code",
+            $voucher_discount_amount_grouping_expression$ AS "voucher_discount_amount",
             SUM(ROUND(O.total_price * O.discount_percentage / 100, 2)) AS "discount_amount",
             SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2))  AS "vat_amount",
             SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2))  AS "total_price_with_vat",
+            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0), 2)) AS "total_price_with_voucher",
             SUM(paid_amount) AS "paid_amount",
             SUM(O.total_price) AS "total_price",
             COUNT(*) as count
@@ -538,7 +559,7 @@ class ReportService {
             AND $total_price_minimum_filter_expression$
             AND $total_price_maximum_filter_expression$
         GROUP BY GROUPING SETS (
-            (1, 2, 3, 4, 5, 6),
+            (1, 2, 3, 4, 5, 6, 7, 8),
             ()
         )
         ORDER BY 1 DESC`;
