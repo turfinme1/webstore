@@ -39,10 +39,11 @@ describe('CartService', () => {
     it('should return an existing cart with items', async () => {
       const mockCart = { id: 'cart123', user_id: 'user123' };
       dbConnection.query
-        .mockResolvedValueOnce({ rows: [mockCart] })  // Existing cart
-        .mockResolvedValueOnce({ rows: [{ id: 'item1', product_name: 'Product 1' }] })
-        .mockResolvedValueOnce({ rows: [{ vat_percentage: 20 }] });
-
+        .mockResolvedValueOnce({ rows: [] }) // No user cart merging needed
+        .mockResolvedValueOnce({ rows: [mockCart] })
+        .mockResolvedValueOnce({ rows: [] }) // Voucher check
+        .mockResolvedValueOnce({ rows: [{ price_calculations: { vat_percentage: 20 }, items: [{ id: 'item1', product_name: 'Product 1' }] }] });
+        
       const data = {
         session: { user_id: 'user123', id: 'session123' },
         dbConnection,
@@ -50,10 +51,10 @@ describe('CartService', () => {
 
       const result = await cartService.getCart(data);
 
-      expect(dbConnection.query).toHaveBeenCalledTimes(3);
+      expect(dbConnection.query).toHaveBeenCalledTimes(4);
       expect(result.cart).toEqual(mockCart);
       expect(result.items).toEqual([{ id: 'item1', product_name: 'Product 1' }]);
-      expect(result.vatPercentage).toEqual(20);
+      expect(result.vat_percentage).toEqual(20);
     });
 
     it('should create a new cart if none exists', async () => {
@@ -63,8 +64,8 @@ describe('CartService', () => {
       jest.spyOn(cartService, 'getOrCreateCart').mockResolvedValue(mockNewCart);
     
       dbConnection.query
-        .mockResolvedValueOnce({ rows: [] })  // No user cart merging needed
-        .mockResolvedValueOnce({ rows: [{ vat_percentage: 20 }] });
+        .mockResolvedValueOnce({ rows: [] })  // New cart
+        .mockResolvedValueOnce({ rows: [{ price_calculations: { vat_percentage: 20 }, items: [] }] });
     
       const data = {
         session: { user_id: 'user123', id: 'session123' },
@@ -78,7 +79,7 @@ describe('CartService', () => {
       expect(dbConnection.query).toHaveBeenCalledTimes(2);  // The number of db queries related to the cart items only
       expect(result.cart).toEqual(mockNewCart);
       expect(result.items).toEqual([]);
-      expect(result.vatPercentage).toEqual(20);
+      expect(result.vat_percentage).toEqual(20);
     });
   });
 
@@ -170,9 +171,10 @@ describe('CartService', () => {
         it('should return an existing cart with items', async () => {
           const mockCart = { id: 'cart123', user_id: 'user123' };
           dbConnection.query
+            .mockResolvedValueOnce({ rows: [] }) // No user cart merging needed
             .mockResolvedValueOnce({ rows: [mockCart] })  // Existing cart
-            .mockResolvedValueOnce({ rows: [{ id: 'item1', product_name: 'Product 1' }] })
-            .mockResolvedValueOnce({ rows: [{ vat_percentage: 20 }] });
+            .mockResolvedValueOnce({ rows: [] }) // Voucher check
+            .mockResolvedValueOnce({ rows: [{ price_calculations: { vat_percentage: 20 }, items: [{ id: 'item1', product_name: 'Product 1' }] }] });
 
           const data = {
             session: { user_id: 'user123', id: 'session123' },
@@ -181,10 +183,10 @@ describe('CartService', () => {
 
           const result = await cartService.getCart(data);
 
-          expect(dbConnection.query).toHaveBeenCalledTimes(3);
+          expect(dbConnection.query).toHaveBeenCalledTimes(4);
           expect(result.cart).toEqual(mockCart);
           expect(result.items).toEqual([{ id: 'item1', product_name: 'Product 1' }]);
-          expect(result.vatPercentage).toEqual(20);
+          expect(result.vat_percentage).toEqual(20);
         });
 
         it('should create a new cart if none exists', async () => {
@@ -195,7 +197,7 @@ describe('CartService', () => {
         
           dbConnection.query
             .mockResolvedValueOnce({ rows: [] })  // No user cart merging needed
-            .mockResolvedValueOnce({ rows: [{ vat_percentage: 20 }] });
+            .mockResolvedValueOnce({ rows: [{ price_calculations: { vat_percentage: 20 } }] });
         
           const data = {
             session: { user_id: 'user123', id: 'session123' },
@@ -209,7 +211,7 @@ describe('CartService', () => {
           expect(dbConnection.query).toHaveBeenCalledTimes(2);  // The number of db queries related to the cart items only
           expect(result.cart).toEqual(mockNewCart);
           expect(result.items).toEqual([]);
-          expect(result.vatPercentage).toEqual(20);
+          expect(result.vat_percentage).toEqual(20);
         });
         
       });

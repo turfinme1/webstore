@@ -670,6 +670,11 @@ class CrudPageBuilder {
       this.schema.table_display_columns.forEach((key) => {
         const td = document.createElement("td");
         const property = this.schema.properties[key];
+        if (property?.type === "number") {
+          td.style.textAlign = "right";
+        } else {
+          td.style.textAlign = "left";
+        }
 
         if (property?.renderConfig?.type === "date") {
           td.textContent = new Date(record[key]).toLocaleDateString();
@@ -677,7 +682,13 @@ class CrudPageBuilder {
           // td.textContent = new Date(record[key]).toLocaleString();
         } else if (Array.isArray(record[key])) {
           td.textContent = record[key].map((item) => item.name).join(", ");
-        } else {
+        } else if (property?.renderConfig?.currency) {
+          td.textContent = new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+          }).format(record[key]);
+        }
+        else {
           td.textContent = record[key];
         }
 

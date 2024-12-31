@@ -152,7 +152,7 @@ function renderCartTotalRow() {
   subtotalRow.classList.add('cart-subtotal');
   subtotalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Subtotal:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPrice}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price}</td>
     <td></td>
   `;
   fragment.appendChild(subtotalRow);
@@ -160,8 +160,8 @@ function renderCartTotalRow() {
   const discountRow = document.createElement('tr');
   discountRow.classList.add('cart-discount');
   discountRow.innerHTML = `
-    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Discount (${state.cart.discountPercentage}%):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.discountAmount}</td>
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Discount (${state.cart.discount_percentage}%):</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.discount_amount}</td>
     <td></td>
   `;
   fragment.appendChild(discountRow);
@@ -170,7 +170,7 @@ function renderCartTotalRow() {
   priceAfterDiscountRow.classList.add('cart-price-after-discount');
   priceAfterDiscountRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Price after discount:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPriceAfterDiscount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_after_discount}</td>
     <td></td>
   `;
   fragment.appendChild(priceAfterDiscountRow);
@@ -178,8 +178,8 @@ function renderCartTotalRow() {
   const vatRow = document.createElement('tr');
   vatRow.classList.add('cart-vat');
   vatRow.innerHTML = `
-    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">VAT (${state.cart.vatPercentage}%):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.vatAmount}</td>
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">VAT (${state.cart.vat_percentage}%):</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.vat_amount}</td>
     <td></td>
   `;
   fragment.appendChild(vatRow);
@@ -188,7 +188,7 @@ function renderCartTotalRow() {
   priceWithVatRow.classList.add('cart-price-with-vat');
   priceWithVatRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total price with VAT:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPriceWithVat}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_with_vat}</td>
     <td></td>
   `;
   fragment.appendChild(priceWithVatRow);
@@ -199,13 +199,13 @@ function renderCartTotalRow() {
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">
       <div class="d-flex align-items-center justify-content-end">
         <div class="input-group" style="max-width: 350px;">
-          <input type="text" id="voucher-input" class="form-control" placeholder="Enter voucher code" ${state.cart.voucherCode ? `value= "${state.cart.voucherCode}"`: ""} />
+          <input type="text" id="voucher-input" class="form-control" placeholder="Enter voucher code" ${state.cart.voucher_code ? `value= "${state.cart.voucher_code}"`: ""} />
           <button class="btn btn-primary" id="apply-voucher-btn">Apply</button>
           <button class="btn btn-danger remove-voucher" id="remove-voucher">Remove</button>
         </div>
       </div>
     </td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">-$${state.cart.voucherAmount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">-$${state.cart.voucher_amount}</td>
    <td>
       <button class="btn btn-secondary" id="browse-vouchers-btn">Browse Vouchers</button>
    </td>
@@ -230,7 +230,7 @@ function renderCartTotalRow() {
   totalRow.classList.add('cart-total');
   totalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPriceWithVoucher}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_with_voucher}</td>
     <td></td>
   `;
   fragment.appendChild(totalRow);

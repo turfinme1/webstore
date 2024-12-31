@@ -46,7 +46,8 @@
             },
             "renderConfig": {
                 "minimum": "0",
-                "step": "0.01"
+                "step": "0.01",
+                "currency": true
             },
             "errorMessage": {
                 "type": "Invalid value for discount amount."
