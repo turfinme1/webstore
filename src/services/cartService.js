@@ -9,6 +9,7 @@ class CartService {
     this.updateItem = this.updateItem.bind(this);
     this.deleteItem = this.deleteItem.bind(this);
     this.clearCart = this.clearCart.bind(this);
+    this.getActiveVouchers = this.getActiveVouchers.bind(this);
     this.applyVoucher = this.applyVoucher.bind(this);
     this.removeVoucher = this.removeVoucher.bind(this);
   }
@@ -191,6 +192,24 @@ class CartService {
     );
 
     return { message: "Cart cleared successfully." };
+  }
+
+  async getActiveVouchers(data) {
+    const result = await data.dbConnection.query(`
+      SELECT vouchers.* FROM vouchers 
+      JOIN campaigns ON campaigns.voucher_id = vouchers.id
+      JOIN target_groups ON campaigns.target_group_id = target_groups.id
+      JOIN user_target_groups ON user_target_groups.target_group_id = target_groups.id
+      LEFT JOIN voucher_usages ON voucher_usages.voucher_id = vouchers.id
+      WHERE user_target_groups.user_id = $1
+        AND voucher_usages.user_id IS NULL
+        AND campaigns.is_active = TRUE
+        AND campaigns.status = 'Active'
+        AND vouchers.is_active = TRUE`,
+      [data.session.user_id]
+    );
+
+    return result.rows;
   }
 
   async applyVoucher(data) {

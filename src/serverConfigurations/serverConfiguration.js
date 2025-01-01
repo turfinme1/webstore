@@ -45,6 +45,7 @@ const routeTable = {
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
     "/api/cart": cartController.getCart,
+    "/api/cart/active-vouchers": cartController.getActiveVouchers,
     "/api/orders/:orderId": orderController.getOrder,
     "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
     "/api/paypal/cancel/:orderId": orderController.cancelPaypalPayment,

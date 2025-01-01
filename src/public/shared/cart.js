@@ -299,7 +299,7 @@ async function attachVoucherEvents() {
 
 async function loadAvailableVouchers() {
   try {
-    const response = await fetchWithErrorHandling('/crud/vouchers');
+    const response = await fetchWithErrorHandling("/api/cart/active-vouchers");
     if (response.ok) {
       state.vouchers = await response.data;
       renderVouchersList();
