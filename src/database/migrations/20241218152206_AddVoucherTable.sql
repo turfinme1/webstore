@@ -1,6 +1,10 @@
 -- Migration: AddVoucherTable
 -- Created at: 2024-12-18T15:22:06.315Z
 
+DROP VIEW IF EXISTS vouchers_view;
+DROP TABLE IF EXISTS voucher_usages;
+DROP TABLE IF EXISTS vouchers;
+
 CREATE TABLE vouchers (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,

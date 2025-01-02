@@ -1,6 +1,9 @@
 -- Migration: AddCampaignTable
 -- Created at: 2024-12-31T15:41:46.208Z
 
+DROP VIEW IF EXISTS campaigns_view;
+DROP TABLE IF EXISTS campaigns;
+
 CREATE TABLE campaigns (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -21,7 +24,7 @@ SELECT
 FROM campaigns
 JOIN target_groups ON campaigns.target_group_id = target_groups.id
 JOIN vouchers ON campaigns.voucher_id = vouchers.id
-WHERE campaigns.is_active = TRUE
+WHERE campaigns.is_active = TRUE;
 
 INSERT INTO interfaces (name) VALUES
 ('campaigns');
@@ -32,3 +35,5 @@ INSERT INTO permissions (name, interface_id) VALUES
 ('read', 13),
 ('update', 13),
 ('delete', 13);
+
+ALTER TABLE app_settings ADD COLUMN campaign_status_update_interval INTERVAL NOT NULL DEFAULT '5 minutes';
