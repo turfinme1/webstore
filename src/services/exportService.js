@@ -134,13 +134,18 @@ class ExportService {
 
     async fetchRowsWithCursor(data){
         await data.dbConnection.query(`DECLARE export_cursor CURSOR FOR ${data.query}`, data.values);
-
+        let totalRow = null;
         async function* fetchRows() {
             let result = await data.dbConnection.query("FETCH 10000 FROM export_cursor");
+            if(!totalRow && result.rows.length > 0){
+                totalRow = result.rows.shift();
+            }
             while (result.rows.length > 0) {
                 yield result.rows;
                 result = await data.dbConnection.query("FETCH 10000 FROM export_cursor");
             }
+
+            yield [totalRow];
 
             await data.dbConnection.query("CLOSE export_cursor");
         }
