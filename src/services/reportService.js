@@ -28,6 +28,9 @@ class ReportService {
     let displayRowLimit = parseInt(data.context.settings.report_row_limit_display);
     const result = await data.dbConnection.query(`${replacedQueryData.sql} LIMIT ${displayRowLimit + 1}`, replacedQueryData.insertValues);
     const overRowDisplayLimit = result.rows.length === displayRowLimit + 1;
+    if(result.rows.length > 0){
+        result.rows.push(result.rows.shift());
+    }
     return { rows: result.rows, overRowDisplayLimit  };
   }
 
@@ -173,7 +176,7 @@ class ReportService {
             (1, 2),
             ()
         )
-        ORDER BY 1 ASC`;
+        ORDER BY 1 ASC NULLS FIRST`;
 
     return { reportUIConfig, sql, reportFilters, INPUT_DATA };
   }
@@ -364,7 +367,7 @@ class ReportService {
             (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
             ()
         )
-        ORDER BY 1 DESC`;
+        ORDER BY 1 DESC NULLS FIRST`;
     
     return { reportUIConfig, sql, reportFilters, INPUT_DATA };
   }
@@ -562,7 +565,7 @@ class ReportService {
             (1, 2, 3, 4, 5, 6, 7, 8),
             ()
         )
-        ORDER BY 1 DESC`;
+        ORDER BY 1 DESC NULLS FIRST`;
 
     return { reportUIConfig, sql, reportFilters, INPUT_DATA };
   }
