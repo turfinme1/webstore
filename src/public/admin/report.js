@@ -1,5 +1,4 @@
-import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation, createBackofficeNavigation } from "./navigation.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 import { ReportBuilder } from "./report-builder.js";
 
 const state = {
@@ -13,7 +12,6 @@ const elements = {
 document.addEventListener("DOMContentLoaded", async () => {
     state.userStatus = await getUserStatus();
     createNavigation(state.userStatus);
-    await attachLogoutHandler();
     createBackofficeNavigation(state.userStatus);
 
     const URLParams = new URLSearchParams(window.location.search);
@@ -40,5 +38,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const reportConfig = await reportConfigResponse.json();
     const reportUI = new ReportBuilder(reportConfig.reportUIConfig);
-    reportUI.render('main-container');
+    await reportUI.render('main-container');
 });
