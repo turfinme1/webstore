@@ -216,8 +216,16 @@ class CartService {
     const cart = await this.getOrCreateCart(data);
 
     const voucherResult = await data.dbConnection.query(`
-      SELECT * FROM vouchers WHERE code = $1 AND is_active = TRUE AND NOW() BETWEEN start_date AND end_date`,
-      [data.body.code]
+      SELECT vouchers.* FROM vouchers 
+      JOIN campaigns ON campaigns.voucher_id = vouchers.id
+      JOIN target_groups ON campaigns.target_group_id = target_groups.id
+      JOIN user_target_groups ON user_target_groups.target_group_id = target_groups.id
+      WHERE user_target_groups.user_id = $1
+	  	  AND vouchers.code = $2
+        AND campaigns.is_active = TRUE
+        AND campaigns.status = 'Active'
+        AND vouchers.is_active = TRUE`,
+      [data.session.user_id, data.body.code]
     );
     ASSERT_USER(voucherResult.rows.length > 0, "Invalid voucher code", {
       code: STATUS_CODES.SRV_CNF_INVALID_VOUCHER_CODE,
@@ -233,13 +241,6 @@ class CartService {
       code: STATUS_CODES.SRV_CNF_VOUCHER_ALREADY_USED,
       long_description: `Voucher already used by user ${data.session.user_id}`,
     });
-
-    // await data.dbConnection.query(`
-    //   INSERT INTO voucher_usages (user_id, voucher_id)
-    //   VALUES ($1, $2)
-    //   RETURNING *`,
-    //   [data.session.user_id, voucher.id]
-    // );
 
     await data.dbConnection.query(`
       UPDATE carts SET voucher_id = $1, voucher_discount_amount = $2

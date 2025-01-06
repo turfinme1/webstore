@@ -12,6 +12,7 @@ describe('CartController', () => {
       updateItem: jest.fn(),
       deleteItem: jest.fn(),
       clearCart: jest.fn(),
+      getActiveVouchers: jest.fn(),
       applyVoucher: jest.fn(),
       removeVoucher: jest.fn(),
     };
@@ -94,6 +95,22 @@ describe('CartController', () => {
       });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(mockClearResult);
+    });
+  });
+
+  describe('getActiveVouchers', () => {
+    it('should call cartService.getActiveVouchers and return the result', async () => {
+      const mockActiveVouchersResult = [{ code: 'VOUCHER10', discount: 10 }];
+      cartService.getActiveVouchers.mockResolvedValue(mockActiveVouchersResult);
+
+      await cartController.getActiveVouchers(req, res);
+
+      expect(cartService.getActiveVouchers).toHaveBeenCalledWith({
+        session: req.session,
+        dbConnection: req.dbConnection,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockActiveVouchersResult);
     });
   });
 
