@@ -501,6 +501,13 @@ function createBackofficeNavigation(userStatus) {
       permission: "view",
       interface: "vouchers",
     },
+    {
+      id: "crud-campaign-link",
+      text: "CRUD Campaigns",
+      href: "/crud-campaign",
+      permission: "view",
+      interface: "campaigns",
+    },
     // {
     //   id: "logs-link",
     //   text: "Report Logs",

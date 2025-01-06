@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const { STATUS_CODES }  = require("../serverConfigurations/constants");
+const { ASSERT_USER } = require("../serverConfigurations/assert");
 
 class CrudService {
   constructor() {
@@ -20,6 +21,10 @@ class CrudService {
       data.body.password_hash = await bcrypt.hash(data.body.password_hash, 10);
     }
 
+    if (this.hooks().create[data.params.entity]?.before) {
+      await this.hooks().create[data.params.entity].before(data);
+    }
+    
     // Insert the main entity and return its ID
     const insertedEntity = await this.insertMainEntity(data, schema);
 
@@ -580,7 +585,38 @@ class CrudService {
       });
     }
 
+    async function campainCreateHook(data) {
+      const currentDate = new Date();
+      const start_date = new Date(data.body.start_date);
+      const end_date = new Date(data.body.end_date);
+      ASSERT_USER(start_date < end_date, "Start date must be before end date", { code: STATUS_CODES.CRUD_INVALID_INPUT_CREATE_CAMPAIGN_DATE_RANGE, long_description: "Start date must be before end date" });
+      ASSERT_USER(end_date > currentDate, "End date must be in the future", { code: STATUS_CODES.CRUD_INVALID_INPUT_CREATE_CAMPAIGN_END_DATE, long_description: "End date must be in the future" });
+      /// check if the voucher is active 
+      const voucherResult = await data.dbConnection.query(`
+        SELECT * FROM vouchers
+        WHERE id = $1 AND is_active = TRUE`,
+        [data.body.voucher_id]
+      );
+      const voucher = voucherResult.rows[0];
+      ASSERT_USER(voucher, "Voucher is not active", { code: STATUS_CODES.CRUD_INVALID_INPUT_CREATE_CAMPAIGN_VOUCHER_INVALID, long_description: "Voucher is not active" });
+      let status = "Inactive";
+      if(currentDate > voucher.end_date) {
+        status = "Expired voucher";
+      } else if (currentDate >= start_date && currentDate <= end_date) {
+        status = "Active";
+      } else if (currentDate < start_date) {
+        status = "Pending";
+      } 
+
+      data.body.status = status;
+    }
+
     return {
+      create: {
+        campaigns: {
+          before: campainCreateHook,
+        },
+      },
       update: {
         roles: {
           before: roleUpdateHook,
@@ -589,8 +625,8 @@ class CrudService {
           before: adminUsersUpdateHook,
         },
       },
-    };
-  }
+    }
+  };
 }
 
 module.exports = CrudService;

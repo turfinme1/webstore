@@ -50,7 +50,7 @@ class Logger {
     } else if (errorObject instanceof UserError) {
       audit_type = "ASSERT_USER";
     } else if (errorObject instanceof PeerError) {
-      audit_type = "ASSERT_PEER";
+      audit_type = "TEMPORARY";
     } else {
       audit_type = "ASSERT";
     }

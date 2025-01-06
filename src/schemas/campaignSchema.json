@@ -1,0 +1,132 @@
+{
+    "type": "object",
+    "name": "campaigns",
+    "table": "campaigns",
+    "views": "campaigns_view",
+    "queryValidationSchema": "campaignQueryParamsSchema",
+    "properties": {
+        "name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z_-]+$",
+            "label": "Campaign Name",
+            "placeholder": "Enter Campaign Name",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for campaign name."
+            }
+        },
+        "start_date": {
+            "type": "string",
+            "format": "date-range-overlap-start",
+            "label": "Start Date",
+            "placeholder": "Enter Start Date",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "type": "date"
+            },
+            "errorMessage": {
+                "type": "Invalid value for start date."
+            }
+        },
+        "end_date": {
+            "type": "string",
+            "format": "date-range-overlap-end",
+            "label": "End Date",
+            "placeholder": "Enter End Date",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "type": "date"
+            },
+            "errorMessage": {
+                "type": "Invalid value for end date."
+            }
+        },
+        "status": {
+            "type": "string",
+            "label": "Status",
+            "placeholder": "Enter Status",
+            "filterable": true,
+            "hideInCreate": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for status."
+            }
+        },
+        "target_group_id": {
+            "type": "integer",
+            "label": "Target Group",
+            "placeholder": "Enter Target Group",
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "type": "select",
+                "fetchFrom": "/crud/target-groups",
+                "displayKey": "name"
+            },
+            "errorMessage": {
+                "type": "Invalid value for target group."
+            }
+        },
+        "voucher_id": {
+            "type": "integer",
+            "label": "Voucher",
+            "placeholder": "Enter Voucher",
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "type": "select",
+                "fetchFrom": "/crud/vouchers",
+                "displayKey": "name"
+            },
+            "errorMessage": {
+                "type": "Invalid value for voucher."
+            }
+        } 
+    },
+    "table_display_columns": [
+        "name",
+        "start_date",
+        "end_date",
+        "status",
+        "target_group_name",
+        "voucher_name"
+    ],
+    "required": [
+        "name",
+        "start_date",
+        "end_date",
+        "target_group_id",
+        "voucher_id"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "name": "Campaign name is required.",
+            "start_date": "Start date is required.",
+            "end_date": "End date is required.",
+            "target_group_id": "Target group ID is required.",
+            "voucher_id": "Voucher ID is required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

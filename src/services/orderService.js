@@ -19,8 +19,7 @@ class OrderService {
   async createOrder(data) {
     await this.verifyCartPricesAreUpToDate(data);
 
-    const addressResult = await data.dbConnection.query(
-      `
+    const addressResult = await data.dbConnection.query(`
       INSERT INTO addresses (user_id, street, city, country_id) 
       VALUES ($1, $2, $3, $4) 
       RETURNING id`,
@@ -33,8 +32,7 @@ class OrderService {
     );
     const shippingAddressId = addressResult.rows[0].id;
 
-    const orderResult = await data.dbConnection.query(
-      `
+    const orderResult = await data.dbConnection.query(`
       INSERT INTO orders (user_id, status, shipping_address_id, vat_percentage, discount_percentage, total_price, voucher_code, voucher_discount_amount) 
       VALUES ($1, 'Pending', $2, $3, (SELECT COALESCE(SUM(discount_percentage), 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date),
           (SELECT SUM(ci.quantity * p.price) 
@@ -56,8 +54,7 @@ class OrderService {
       [data.session.user_id]
     );
 
-    const cartResult = await data.dbConnection.query(
-      `
+    const cartResult = await data.dbConnection.query(`
       SELECT ci.*, p.name
       FROM cart_items ci
       JOIN products p ON ci.product_id = p.id 
@@ -68,34 +65,30 @@ class OrderService {
     ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", { code: STATUS_CODES.ORDER_INVALID_INPUT_CREATE, long_description: "Cart is empty" });
 
     for (const item of cartItems) {
-      const inventoryResult = await data.dbConnection.query(
-        `
-      SELECT quantity 
-      FROM inventories 
-      WHERE product_id = $1`,
+      const inventoryResult = await data.dbConnection.query(`
+        SELECT quantity 
+        FROM inventories 
+        WHERE product_id = $1`,
         [item.product_id]
       );
       ASSERT_USER(inventoryResult.rows.length > 0, `Not enough stock for product ${item.name}`, { code: STATUS_CODES.ORDER_INVALID_INPUT_CREATE_NO_STOCK, long_description: `Not enough stock for product ${item.name}` });
       ASSERT_USER(parseInt(item.quantity) <= parseInt(inventoryResult.rows[0].quantity), `Not enough stock for product ${item.name}`, { code: STATUS_CODES.ORDER_INVALID_INPUT_CREATE_NO_STOCK, long_description: `Not enough stock for product ${item.name}` });
 
-      await data.dbConnection.query(
-        `
-          INSERT INTO order_items (order_id, product_id, quantity, unit_price) 
-          VALUES ($1, $2, $3, $4)`,
+      await data.dbConnection.query(`
+        INSERT INTO order_items (order_id, product_id, quantity, unit_price) 
+        VALUES ($1, $2, $3, $4)`,
         [order.id, item.product_id, item.quantity, item.unit_price]
       );
 
-      await data.dbConnection.query(
-        `
-          UPDATE inventories
-          SET quantity = quantity - $1
-          WHERE product_id = $2`,
+      await data.dbConnection.query(`
+        UPDATE inventories
+        SET quantity = quantity - $1
+        WHERE product_id = $2`,
         [item.quantity, item.product_id]
       );
     }
 
-    await data.dbConnection.query(
-      `
+    await data.dbConnection.query(`
       UPDATE carts SET is_active = FALSE
       WHERE user_id = $1`,
       [data.session.user_id]
@@ -107,36 +100,46 @@ class OrderService {
     );
     const orderView = orderViewResult.rows[0];
 
-    const request = new paypal.orders.OrdersCreateRequest();
-    request.prefer("return=representation");
-    request.requestBody({
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          amount: {
-            currency_code: "USD",
-            value: orderView.total_price_with_voucher,
+    let approvalUrl = null;
+    if(orderView.total_price_with_voucher == 0) {
+      await data.dbConnection.query(`
+        UPDATE orders
+        SET status = 'Paid', paid_amount = 0
+        WHERE id = $1`,
+        [order.id]
+      );
+    } else {
+      const request = new paypal.orders.OrdersCreateRequest();
+      request.prefer("return=representation");
+      request.requestBody({
+        intent: "CAPTURE",
+        purchase_units: [
+          {
+            amount: {
+              currency_code: "USD",
+              value: orderView.total_price_with_voucher,
+            },
           },
-        },
-      ],
-      application_context: {
-        return_url: `${ENV.DEVELOPMENT_URL}/api/paypal/capture/${order.id}`,
-        cancel_url: `${ENV.DEVELOPMENT_URL}/api/paypal/cancel/${order.id}`,
-        shipping_preference: 'NO_SHIPPING',
-        user_action: 'PAY_NOW'
-      }
-    });
+        ],
+        application_context: {
+          return_url: `${ENV.DEVELOPMENT_URL}/api/paypal/capture/${order.id}`,
+          cancel_url: `${ENV.DEVELOPMENT_URL}/api/paypal/cancel/${order.id}`,
+          shipping_preference: 'NO_SHIPPING',
+          user_action: 'PAY_NOW'
+        }
+      });
+      
+      const paypalOrder = await this.paypalClient.execute(request);
+      approvalUrl = paypalOrder.result.links.find(link => link.rel === "approve").href;
+
+      const paymentResult = await data.dbConnection.query(`
+        INSERT INTO payments (order_id, payment_provider, provider_payment_id, status)
+        VALUES ($1, 'PayPal', $2, 'Pending')
+        RETURNING *`,
+        [order.id, paypalOrder.result.id]
+      );
+    }
     
-    const paypalOrder = await this.paypalClient.execute(request);
-    const approvalUrl = paypalOrder.result.links.find(link => link.rel === "approve").href;
-
-    const paymentResult = await data.dbConnection.query(
-      `INSERT INTO payments (order_id, payment_provider, provider_payment_id, status)
-      VALUES ($1, 'PayPal', $2, 'Pending')
-      RETURNING *`,
-      [order.id, paypalOrder.result.id]
-    );
-
     const userResult = await data.dbConnection.query(`SELECT * FROM users WHERE id = $1`, [data.session.user_id]);
     const user = userResult.rows[0];
     const emailObject = { 
@@ -152,7 +155,7 @@ class OrderService {
     };
     await this.emailService.queueEmail(emailObject);
 
-    return { approvalUrl, paypalOrder, message: "Order placed successfully" };
+    return { approvalUrl, message: "Order placed successfully", orderId: order.id };
   }
   
   async createOrderByStaff(data){

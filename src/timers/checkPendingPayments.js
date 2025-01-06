@@ -52,8 +52,9 @@ const { ENV } = require("../serverConfigurations/constants");
     } catch (error) {
         console.error(error);
         if(logger){
-            await logger.error(error);
+          await logger.error(error);
         }
+    } finally {
         if(client){
             client.release();
         }

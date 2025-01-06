@@ -1,4 +1,3 @@
-const { da } = require("@faker-js/faker");
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
 const { STATUS_CODES } = require("../serverConfigurations/constants");
 
@@ -10,6 +9,7 @@ class CartService {
     this.updateItem = this.updateItem.bind(this);
     this.deleteItem = this.deleteItem.bind(this);
     this.clearCart = this.clearCart.bind(this);
+    this.getActiveVouchers = this.getActiveVouchers.bind(this);
     this.applyVoucher = this.applyVoucher.bind(this);
     this.removeVoucher = this.removeVoucher.bind(this);
   }
@@ -77,19 +77,35 @@ class CartService {
       }
     }
 
-    // Fetch cart items
-    const cartItemsResult = await data.dbConnection.query(`
-      SELECT ci.*, p.name AS product_name, p.code AS product_code, 
-        (SELECT url FROM images i WHERE i.product_id = p.id LIMIT 1) AS product_image
-      FROM cart_items ci
-      LEFT JOIN products p ON ci.product_id = p.id
-      WHERE ci.cart_id = $1
-      ORDER BY ci.created_at`,
-      [cart.id]
+    /// check if voucher from cart has changed and update the cart
+    const voucherResult = await data.dbConnection.query(`
+      SELECT * FROM vouchers WHERE id = $1`, [cart.voucher_id]
     );
+    if (voucherResult.rows.length === 1) {
+      const voucher = voucherResult.rows[0];
+      if (voucher.is_active === false || new Date() < voucher.start_date || new Date() > voucher.end_date) {
+        await data.dbConnection.query(`
+          UPDATE carts SET voucher_id = NULL, voucher_discount_amount = 0 WHERE id = $1`, [cart.id]
+        );
+      } else {
+        await data.dbConnection.query(`
+          UPDATE carts SET voucher_discount_amount = $1 WHERE id = $2`, [voucher.discount_amount, cart.id]
+        );
+      }
+    }
     
-    const cartTotalPriceResult = await data.dbConnection.query(`
-      WITH vat AS (
+    const cartItemsAndCalculationsResult = await data.dbConnection.query(`
+      WITH cart_items_cte AS (
+        SELECT 
+          cart_items.*,
+          products.name AS product_name,
+          products.code AS product_code,
+          (SELECT url FROM images WHERE images.product_id = products.id LIMIT 1) AS product_image
+        FROM cart_items
+        LEFT JOIN products ON cart_items.product_id = products.id
+        WHERE cart_items.cart_id = $1
+      ),
+      vat AS (
         SELECT vat_percentage FROM app_settings LIMIT 1
       ),
       largest_discount AS (
@@ -100,42 +116,43 @@ class CartService {
       ),
       cart_details AS (
         SELECT 
-          c.voucher_id,
-          v.code AS voucher_code,
-          COALESCE(c.voucher_discount_amount, 0) AS voucher_discount_amount
-        FROM carts c
-        LEFT JOIN vouchers v ON c.voucher_id = v.id
-        WHERE c.id = $1
+          carts.voucher_id,
+          vouchers.code AS voucher_code,
+          COALESCE(carts.voucher_discount_amount, 0) AS voucher_amount
+        FROM carts
+        LEFT JOIN vouchers ON carts.voucher_id = vouchers.id
+        WHERE carts.id = $1
+      ),
+      price_calcs AS (
+        SELECT
+          SUM(cart_items_cte.total_price) AS total_price,
+          largest_discount.discount_percentage,
+          ROUND(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2) AS discount_amount,
+          ROUND(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100), 2) AS total_price_after_discount,
+          vat.vat_percentage,
+          ROUND(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
+          cart_details.voucher_amount,
+          cart_details.voucher_code,
+          ROUND(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
+          ROUND(GREATEST(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100) * (1 + vat.vat_percentage / 100) - cart_details.voucher_amount, 0), 2) AS total_price_with_voucher
+        FROM cart_items_cte, vat, largest_discount, cart_details
+        GROUP BY vat.vat_percentage, largest_discount.discount_percentage, cart_details.voucher_amount, cart_details.voucher_code
       )
-      SELECT
-        SUM(ci.total_price) AS total_price,
-        ld.discount_percentage,
-        ROUND(SUM(ci.total_price) * ld.discount_percentage / 100, 2) AS discount_amount,
-        ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100), 2) AS total_price_after_discount,
-        vat.vat_percentage,
-        ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
-        cd.voucher_discount_amount,
-        cd.voucher_code,
-        ROUND(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
-        ROUND(GREATEST(SUM(ci.total_price) * (1 - ld.discount_percentage / 100) * (1 + vat.vat_percentage / 100) - cd.voucher_discount_amount, 0), 2) AS total_price_with_voucher
-      FROM cart_items ci, vat, largest_discount ld, cart_details cd
-      WHERE ci.cart_id = $1
-      GROUP BY vat.vat_percentage, ld.discount_percentage, cd.voucher_discount_amount, cd.voucher_code`,
+      SELECT 
+        jsonb_agg(to_jsonb(cart_items_cte.*)) AS items,
+        to_jsonb(price_calcs.*) AS price_calculations
+      FROM cart_items_cte
+      CROSS JOIN price_calcs
+      GROUP BY price_calcs.*`,
       [cart.id]
     );
+    const cartItemsAndCalculations = cartItemsAndCalculationsResult.rows[0];
 
-    const totalPrice = cartTotalPriceResult.rows[0]?.total_price || 0;
-    const discountPercentage = cartTotalPriceResult.rows[0]?.discount_percentage || 0;
-    const discountAmount = cartTotalPriceResult.rows[0]?.discount_amount || 0;
-    const totalPriceAfterDiscount = cartTotalPriceResult.rows[0]?.total_price_after_discount || 0;
-    const vatPercentage = cartTotalPriceResult.rows[0]?.vat_percentage || 0;
-    const vatAmount = cartTotalPriceResult.rows[0]?.vat_amount || 0;
-    const totalPriceWithVat = cartTotalPriceResult.rows[0]?.total_price_with_vat || 0;
-    const voucherAmount = cartTotalPriceResult.rows[0]?.voucher_discount_amount || 0;
-    const totalPriceWithVoucher = cartTotalPriceResult.rows[0]?.total_price_with_voucher || 0;
-    const voucherCode = cartTotalPriceResult.rows[0]?.voucher_code || null; 
-
-    return { cart, items: cartItemsResult.rows, totalPrice, discountPercentage, discountAmount, totalPriceAfterDiscount, vatPercentage, vatAmount, totalPriceWithVat, voucherAmount, totalPriceWithVoucher, voucherCode };
+    return { 
+      cart,
+      items: cartItemsAndCalculations?.items || [],
+      ...cartItemsAndCalculations?.price_calculations,
+    }
   }
 
   async updateItem(data) {
@@ -177,12 +194,38 @@ class CartService {
     return { message: "Cart cleared successfully." };
   }
 
+  async getActiveVouchers(data) {
+    const result = await data.dbConnection.query(`
+      SELECT vouchers.* FROM vouchers 
+      JOIN campaigns ON campaigns.voucher_id = vouchers.id
+      JOIN target_groups ON campaigns.target_group_id = target_groups.id
+      JOIN user_target_groups ON user_target_groups.target_group_id = target_groups.id
+      LEFT JOIN voucher_usages ON voucher_usages.voucher_id = vouchers.id
+      WHERE user_target_groups.user_id = $1
+        AND voucher_usages.user_id IS NULL
+        AND campaigns.is_active = TRUE
+        AND campaigns.status = 'Active'
+        AND vouchers.is_active = TRUE`,
+      [data.session.user_id]
+    );
+
+    return result.rows;
+  }
+
   async applyVoucher(data) {
     const cart = await this.getOrCreateCart(data);
 
     const voucherResult = await data.dbConnection.query(`
-      SELECT * FROM vouchers WHERE code = $1 AND is_active = TRUE AND NOW() BETWEEN start_date AND end_date`,
-      [data.body.code]
+      SELECT vouchers.* FROM vouchers 
+      JOIN campaigns ON campaigns.voucher_id = vouchers.id
+      JOIN target_groups ON campaigns.target_group_id = target_groups.id
+      JOIN user_target_groups ON user_target_groups.target_group_id = target_groups.id
+      WHERE user_target_groups.user_id = $1
+	  	  AND vouchers.code = $2
+        AND campaigns.is_active = TRUE
+        AND campaigns.status = 'Active'
+        AND vouchers.is_active = TRUE`,
+      [data.session.user_id, data.body.code]
     );
     ASSERT_USER(voucherResult.rows.length > 0, "Invalid voucher code", {
       code: STATUS_CODES.SRV_CNF_INVALID_VOUCHER_CODE,
@@ -198,13 +241,6 @@ class CartService {
       code: STATUS_CODES.SRV_CNF_VOUCHER_ALREADY_USED,
       long_description: `Voucher already used by user ${data.session.user_id}`,
     });
-
-    // await data.dbConnection.query(`
-    //   INSERT INTO voucher_usages (user_id, voucher_id)
-    //   VALUES ($1, $2)
-    //   RETURNING *`,
-    //   [data.session.user_id, voucher.id]
-    // );
 
     await data.dbConnection.query(`
       UPDATE carts SET voucher_id = $1, voucher_discount_amount = $2

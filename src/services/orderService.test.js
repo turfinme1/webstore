@@ -71,14 +71,8 @@ describe('OrderService', () => {
 
             expect(result).toEqual({
                 approvalUrl: 'http://approval.url',
-                paypalOrder: {
-                    result: {
-
-                        id: 'PAYPAL_ORDER_ID',
-                        links: [{ rel: 'approve', href: 'http://approval.url' }],
-                    },
-                },
                 message: 'Order placed successfully',
+                orderId: 1,
             });
 
             expect(mockDbConnection.query).toHaveBeenCalledTimes(11);
