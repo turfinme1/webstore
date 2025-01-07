@@ -9,6 +9,7 @@ class ReportService {
         "report-orders-by-user": this.ordersByUserReportDefinition.bind(this),
         "report-logs": this.logsReportDefinition.bind(this),
         "report-orders": this.ordersReportDefinition.bind(this),
+        "report-users": this.usersReportDefinition.bind(this),
     }
   }
 
@@ -567,6 +568,239 @@ class ReportService {
         )
         ORDER BY 1 DESC NULLS FIRST`;
 
+    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
+  }
+
+  async usersReportDefinition(data) {
+    const reportUIConfig = {
+        title: 'Users Report',
+        dataEndpoint: '/api/reports/report-users',
+        filters: [
+            {
+                key: 'created_at',
+                label: 'Period',
+                type: 'timestamp',
+                groupable: true
+            },
+            {
+                key: 'country_name',
+                label: 'Country',
+                type: 'select',
+                placeholder: 'Enter country',
+                groupable: true,
+                fetchFrom: "/crud/iso-country-codes",
+                displayKey: 'country_name',
+                valueKey: 'id'
+            },
+            {
+                key: 'phone_code',
+                label: 'Phone Code',
+                type: 'select',
+                placeholder: 'Enter phone code',
+                groupable: true,
+                fetchFrom: "/crud/iso-country-codes",
+                displayKey: 'phone_code',
+                valueKey: 'id'
+            },
+            {
+                key: 'days_since_creation',
+                label: 'Days since creation',
+                type: 'number',
+                step: '1',
+                min: 0,
+                max: 100000000
+            },
+            {
+                key: 'first_name',
+                label: 'First Name',
+                type: 'text',
+            },
+            {
+                key: 'last_name',
+                label: 'Last Name',
+                type: 'text',
+            },
+            {
+                key: 'email',
+                label: 'Email',
+                type: 'text',
+            },
+        ],
+        tableTemplate: 'groupedHeaders',
+        headerGroups: [
+            [
+                { label: 'First Name', rowspan: 2 },
+                { label: 'Last Name', rowspan: 2 },
+                { label: 'Email', rowspan: 2 },
+                { label: 'Phone Code', rowspan: 2 },
+                { label: 'Phone', rowspan: 2 },
+                { label: 'Country', rowspan: 2 },
+                { label: 'Gender', rowspan: 2 },
+                { label: 'Birth Date', rowspan: 2 },
+                { label: 'Is Email Verified', rowspan: 2 },
+                { label: 'Created At', rowspan: 2 },
+                { label: 'Days Since Creation', rowspan: 2 },
+                { label: 'Count', rowspan: 2 }
+            ]
+        ],
+        columns: [
+            { key: 'first_name', label: 'First Name', format: 'text' },
+            { key: 'last_name', label: 'Last Name', format: 'text' },
+            { key: 'email', label: 'Email', format: 'text' },
+            { key: 'phone_code', label: 'Phone Code', format: 'text' },
+            { key: 'phone', label: 'Phone', format: 'text' },
+            { key: 'country_name', label: 'Country', format: 'text' },
+            { key: 'gender', label: 'Gender', format: 'text' },
+            { key: 'birth_date', label: 'Birth Date', format: 'date' },
+            { key: 'is_email_verified', label: 'Is Email Verified', format: 'text' },
+            { key: 'created_at', label: 'Created At', format: 'date_time' },
+            { key: 'days_since_creation', label: 'Days Since Creation', align: 'right', format: 'number' },
+            { key: 'count', label: 'Count', align: 'right', format: 'number' }
+        ]
+    };
+
+    const INPUT_DATA = {
+        first_name_filter_value: data.body.first_name,
+        last_name_filter_value: data.body.last_name,
+        email_filter_value: data.body.email,
+        country_name_filter_value: data.body.country_name,
+        phone_code_filter_value: data.body.phone_code,
+        created_at_minimum_filter_value: data.body.created_at_minimum,
+        created_at_maximum_filter_value: data.body.created_at_maximum,
+        days_since_creation_minimum_filter_value: data.body.days_since_creation_minimum,
+        days_since_creation_maximum_filter_value: data.body.days_since_creation_maximum,
+        created_at_grouping_select_value: data.body.created_at_grouping_select_value,
+        country_name_grouping_select_value: data.body.country_name_grouping_select_value,
+        phone_code_grouping_select_value: data.body.phone_code_grouping_select_value,
+    };
+
+    const reportFilters = [
+        {
+            key: "first_name",
+            grouping_expression: "U.first_name",
+            filter_expression: "STRPOS(LOWER(CAST( U.first_name AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+        },
+        {
+            key: "last_name",
+            grouping_expression: "U.last_name",
+            filter_expression: "STRPOS(LOWER(CAST( U.last_name AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+        },
+        {
+            key: "email",
+            grouping_expression: "U.email",
+            filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+        },
+        {
+            key: "phone",
+            grouping_expression: "U.phone",
+            filter_expression: "",
+            type: "text",
+        },
+        {
+            key: "phone_code",
+            grouping_expression: "icc.phone_code",
+            filter_expression: "icc.id = $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "country_name",
+            grouping_expression: "cc.country_name",
+            filter_expression: "cc.id = $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "gender",
+            grouping_expression: "genders.type",
+            filter_expression: "",
+            type: "text",
+        },
+        {
+            key: "birth_date",
+            grouping_expression: "U.birth_date",
+            filter_expression: "",
+            type: "timestamp",
+        },
+        {
+            key: "is_email_verified",
+            grouping_expression: "U.is_email_verified",
+            filter_expression: "",
+            type: "text",
+        },
+        {
+            key: "created_at",
+            grouping_expression: "U.created_at",
+            filter_expression: "U.created_at = $FILTER_VALUE$",
+            type: "timestamp",
+        },
+        {
+            key: "created_at_minimum",
+            grouping_expression: "",
+            filter_expression: "U.created_at >= $FILTER_VALUE$",
+            type: "timestamp",
+        },
+        {
+            key: "created_at_maximum",
+            grouping_expression: "",
+            filter_expression: "U.created_at <= $FILTER_VALUE$",
+            type: "timestamp",
+        },
+        {
+            key: "days_since_creation",
+            grouping_expression: "DATE_PART('day', CURRENT_DATE - U.created_at)", 
+            filter_expression: "",
+            type: "number",
+        },
+        {
+            key: "days_since_creation_minimum",
+            grouping_expression: "",
+            filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "days_since_creation_maximum",
+            grouping_expression: "",
+            filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) <= $FILTER_VALUE$",
+            type: "number",
+        },
+    ];
+
+    let sql = `
+        SELECT
+            $first_name_grouping_expression$ AS "first_name",
+            $last_name_grouping_expression$  AS "last_name",
+            $email_grouping_expression$  AS "email",
+            $phone_grouping_expression$  AS "phone",
+            $phone_code_grouping_expression$ AS "phone_code",
+            $country_name_grouping_expression$ AS "country_name",
+            $gender_grouping_expression$ AS "gender",
+            $birth_date_grouping_expression$ AS "birth_date",
+            $is_email_verified_grouping_expression$ AS "is_email_verified",
+            $created_at_grouping_expression$ AS "created_at",
+            $days_since_creation_grouping_expression$ AS "days_since_creation",
+            COUNT(*) AS "count"
+        FROM users U
+        LEFT JOIN iso_country_codes icc ON U.iso_country_code_id = icc.id
+        LEFT JOIN iso_country_codes cc ON U.country_id = cc.id
+        LEFT JOIN genders ON U.gender_id = genders.id
+        WHERE U.is_active = TRUE
+            AND $first_name_filter_expression$
+            AND $last_name_filter_expression$
+            AND $email_filter_expression$
+            AND $country_name_filter_expression$
+            AND $phone_code_filter_expression$
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
+            AND $days_since_creation_minimum_filter_expression$
+            AND $days_since_creation_maximum_filter_expression$
+        GROUP BY GROUPING SETS (
+            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+            ()
+        )
+        ORDER BY 1 NULLS FIRST`;
+    
     return { reportUIConfig, sql, reportFilters, INPUT_DATA };
   }
   

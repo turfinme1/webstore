@@ -241,6 +241,9 @@ class ReportBuilder {
             })
         },
         number: (value) => {
+            if(value == 0) {
+                return '0';
+            }
             if(!value || value ==="All") {
                 return '---';
             }
@@ -254,13 +257,19 @@ class ReportBuilder {
         }
     };
 
-    buildFilterForm() {
+    async buildFilterForm() {
         const formContainer = document.createElement('div');
         formContainer.className = 'bg-white p-4 rounded shadow-sm mb-5';
         
         const form = document.createElement('form');
         form.id = 'report-form';
         form.className = 'mb-3';
+
+        for (const filter of this.config.filters) {
+            if (filter.type === 'select' && !filter.options) {
+                filter.options = await this.fetchOptions(filter);
+            }
+        }
 
         const filterHTML = this.config.filters.map(filter => {
             const filterType = ReportBuilder.filterTypes[filter.type];
@@ -315,7 +324,7 @@ class ReportBuilder {
         return tableContainer;
     }
 
-    render(containerId) {
+    async render(containerId) {
         const container = document.getElementById(containerId);
         container.innerHTML = '';
 
@@ -329,7 +338,7 @@ class ReportBuilder {
         container.appendChild(this.buildExportSection(this.config.exportConfig));
 
         // Add filter form
-        container.appendChild(this.buildFilterForm());
+        container.appendChild(await this.buildFilterForm());
 
         // Add table
         container.appendChild(this.buildTable());
@@ -377,6 +386,13 @@ class ReportBuilder {
             spinner.style.display = 'none';
         }
     }
+
+    async fetchOptions(filter) {
+        const response = await fetch(filter.fetchFrom);
+        let options = await response.json();
+        options = options.map(option => ({ value: option[filter.valueKey], label: option[filter.displayKey] }));
+        return options;
+    };
 
     renderTableData(data) {
         const tbody = document.getElementById('report-table-body');
