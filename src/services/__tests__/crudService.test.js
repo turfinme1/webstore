@@ -1,3 +1,4 @@
+const { STATUS_CODES } = require("../../serverConfigurations/constants");
 const CrudService = require("../crudService");
 const bcrypt = require("bcrypt");
 
@@ -372,6 +373,227 @@ describe("CrudService", () => {
     });
   });
 
+  describe('buildFilteredPaginatedQuery', () => {
+    let mockRequest;
+    
+    beforeEach(() => {
+      mockRequest = {
+        params: { entity: 'testEntity' },
+        query: {
+          filterParams: {},
+          orderParams: [],
+          groupParams: [],
+          page: 1,
+          pageSize: 10
+        },
+        entitySchemaCollection: {
+          testEntity: {
+            views: 'test_view',
+            export_view: 'test_export_view',
+            properties: {
+              id: { type: 'number' },
+              name: { type: 'string' },
+              created_at: { 
+                type: 'string',
+                format: 'date-time',
+                groupable: true,
+                aggregation: 'DATE_TRUNC'
+              },
+              price: { 
+                type: 'number',
+                group_behavior: 'SUM'
+              },
+              status: { type: 'string' },
+              birthday: {
+                type: 'string',
+                format: 'date-time-no-year'
+              },
+              start_date: {
+                type: 'string',
+                format: 'date-range-overlap-start'
+              },
+              end_date: {
+                type: 'string',
+                format: 'date-range-overlap-end'
+              }
+            }
+          }
+        }
+      };
+    });
+  
+    it('should build basic query without filters or grouping', () => {
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.query).toContain('SELECT *');
+      expect(result.query).toContain('FROM test_view');
+      expect(result.query).toContain('ORDER BY id ASC');
+      expect(result.searchValues).toHaveLength(0);
+    });
+  
+    it('should build query with string filter', () => {
+      mockRequest.query.filterParams = { name: 'test' };
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.query).toContain('WHERE STRPOS(LOWER(CAST(name AS text)), LOWER($1)) > 0');
+      expect(result.searchValues).toEqual(['test']);
+    });
+  
+    it('should build query with array filter', () => {
+      mockRequest.query.filterParams = { status: ['active', 'pending'] };
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.query).toContain('WHERE (LOWER(CAST(status AS text)) = LOWER($1) OR LOWER(CAST(status AS text)) = LOWER($2))');
+      expect(result.searchValues).toEqual(['active', 'pending']);
+    });
+  
+    it('should build query with date-time filter range', () => {
+      mockRequest.query.filterParams = {
+        created_at: {
+          min: '2024-01-01',
+          max: '2024-12-31'
+        }
+      };
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.query).toContain('WHERE created_at >= $1');
+      expect(result.query).toContain('created_at <= $2'); 
+      expect(result.searchValues).toEqual(['2024-01-01', '2024-12-31']);
+    });
+
+    it('should build query with date-time filter range with only min', () => {
+      mockRequest.query.filterParams = {
+        created_at: {
+          min: '2024-01-01'
+        }
+      };
+
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+
+      expect(result.query).toContain('WHERE created_at >= $1');
+      expect(result.searchValues).toEqual(['2024-01-01']);
+    });
+
+    it('should build query with date-time filter range with only max', () => {
+      mockRequest.query.filterParams = {
+        created_at: {
+          max: '2024-12-31'
+        }
+      };
+
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+
+      expect(result.query).toContain('WHERE created_at <= $1');
+      expect(result.searchValues).toEqual(['2024-12-31']);
+    });
+
+    it('should build query with date-time filter with exact match', () => {
+      mockRequest.query.filterParams = { created_at: '2024-12-25' };
+
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+
+      expect(result.query).toContain('WHERE created_at = $1');
+      expect(result.searchValues).toEqual(['2024-12-25']);
+    });
+  
+    it('should build query with date-time-no-year filter', () => {
+      mockRequest.query.filterParams = { birthday: '2024-12-25' };
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.query).toContain('(EXTRACT(MONTH FROM birthday), EXTRACT(DAY FROM birthday))');
+      expect(result.searchValues).toEqual(['2024-12-25']);
+    });
+  
+    it('should build query with date range overlap', () => {
+      mockRequest.query.filterParams = {
+        start_date: '2024-01-01',
+        end_date: '2024-12-31'
+      };
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.query).toContain('$1 <= end_date');
+      expect(result.query).toContain('start_date <= $2');
+      expect(result.searchValues).toEqual(['2024-01-01', '2024-12-31']);
+    });
+  
+    it('should build query with numeric range filter', () => {
+      mockRequest.query.filterParams = {
+        price: { min: 10, max: 100 }
+      };
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.query).toContain('WHERE price >= $1 AND price <= $2');
+      expect(result.searchValues).toEqual([10, 100]);
+    });
+  
+    it('should build query with grouping', () => {
+      mockRequest.query.groupParams = [
+        { column: 'created_at', granularity: 'month' }
+      ];
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.query).toContain("DATE_TRUNC('month', created_at)");
+      expect(result.query).toContain('GROUP BY GROUPING SETS');
+      expect(result.query).toContain('COUNT(*) AS count');
+    });
+  
+    it('should build query with ordering', () => {
+      mockRequest.query.orderParams = [['name', 'desc']];
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.query).toContain('ORDER BY name DESC');
+    });
+  
+    it('should build query with multiple filters', () => {
+      mockRequest.query.filterParams = {
+        name: 'test',
+        status: 'active',
+        price: { min: 10 }
+      };
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.query).toContain('WHERE');
+      expect(result.query).toContain('AND');
+      expect(result.searchValues).toHaveLength(3);
+    });
+  
+    it('should build export query when isExport is true', () => {
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest, true);
+  
+      expect(result.query).toContain('FROM test_export_view');
+    });
+  
+    it('should build aggregated total query with group behavior', () => {
+      mockRequest.query.groupParams = [
+        { column: 'created_at', granularity: 'month' }
+      ];
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.aggregatedTotalQuery).toContain('SUM(price) AS total_price');
+      expect(result.aggregatedTotalQuery).toContain('COUNT(*) AS total_rows');
+    });
+  
+    it('should handle empty filter values', () => {
+      mockRequest.query.filterParams = {
+        name: '',
+      };
+  
+      const result = crudService.buildFilteredPaginatedQuery(mockRequest);
+  
+      expect(result.searchValues).toHaveLength(1);
+    });
+  });
+
   describe("update", () => {
     beforeEach(() => {
       mockEntitySchemaCollection = {
@@ -690,6 +912,433 @@ describe("CrudService", () => {
       expect(mockDbConnection.query).toHaveBeenCalledWith(
         `DELETE FROM relationship_two_table WHERE user_id = $1`,
         [1]
+      );
+    });
+  });
+
+  describe('campaignCreateHook', () => {
+    let mockData;
+    let currentDate;
+  
+    beforeEach(() => {
+      currentDate = new Date('2024-01-01T00:00:00Z');
+      jest.useFakeTimers().setSystemTime(currentDate);
+  
+      mockData = {
+        body: {
+          start_date: '2024-01-01T00:00:00Z',
+          end_date: '2024-01-31T00:00:00Z',
+          voucher_id: 1
+        },
+        dbConnection: {
+          query: jest.fn()
+        }
+      };
+    });
+  
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+  
+    it('should set status to Active for current campaign', async () => {
+      const mockVoucher = {
+        id: 1,
+        is_active: true,
+        end_date: new Date('2024-02-01T00:00:00Z')
+      };
+      
+      mockData.dbConnection.query.mockResolvedValueOnce({
+        rows: [mockVoucher]
+      });
+  
+      await crudService.campainCreateHook(mockData);
+  
+      expect(mockData.body.status).toBe('Active');
+      expect(mockData.dbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT * FROM vouchers'),
+        [1]
+      );
+    });
+  
+    it('should set status to Pending for future campaign', async () => {
+      mockData.body.start_date = '2024-01-15T00:00:00Z';
+      mockData.body.end_date = '2024-01-31T00:00:00Z';
+  
+      const mockVoucher = {
+        id: 1,
+        is_active: true,
+        end_date: new Date('2024-02-01T00:00:00Z')
+      };
+      
+      mockData.dbConnection.query.mockResolvedValueOnce({
+        rows: [mockVoucher]
+      });
+  
+      await crudService.campainCreateHook(mockData);
+  
+      expect(mockData.body.status).toBe('Pending');
+    });
+  
+    it('should set status to Expired voucher when voucher end date is passed', async () => {
+      const mockVoucher = {
+        id: 1,
+        is_active: true,
+        end_date: new Date('2023-12-31T23:59:59Z')
+      };
+      
+      mockData.dbConnection.query.mockResolvedValueOnce({
+        rows: [mockVoucher]
+      });
+  
+      await crudService.campainCreateHook(mockData);
+  
+      expect(mockData.body.status).toBe('Expired voucher');
+    });
+  
+    it('should throw error when start date is after end date', async () => {
+      mockData.body.start_date = '2024-01-31T00:00:00Z';
+      mockData.body.end_date = '2024-01-01T00:00:00Z';
+  
+      await expect(crudService.campainCreateHook(mockData))
+        .rejects
+        .toThrow('Start date must be before end date');
+    });
+  
+    it('should throw error when end date is in the past', async () => {
+      mockData.body.start_date = '2023-12-01T00:00:00Z';
+      mockData.body.end_date = '2023-12-31T00:00:00Z';
+  
+      await expect(crudService.campainCreateHook(mockData))
+        .rejects
+        .toThrow('End date must be in the future');
+    });
+  
+    it('should throw error when there is no active voucher', async () => {
+      mockData.dbConnection.query.mockResolvedValueOnce({
+        rows: []
+      });
+  
+      await expect(crudService.campainCreateHook(mockData))
+        .rejects
+        .toThrow('Voucher is not active');
+    });
+  
+    it('should throw error when voucher does not exist', async () => {
+      mockData.dbConnection.query.mockResolvedValueOnce({
+        rows: []
+      });
+  
+      await expect(crudService.campainCreateHook(mockData))
+        .rejects
+        .toThrow('Voucher is not active');
+    });
+  
+    it('should set status to Pending if date is before campaign start date', async () => {
+      mockData.body.start_date = '2024-02-01T00:00:00Z';
+      mockData.body.end_date = '2024-02-28T00:00:00Z';
+  
+      const mockVoucher = {
+        id: 1,
+        is_active: true,
+        end_date: new Date('2024-03-01T00:00:00Z')
+      };
+      
+      mockData.dbConnection.query.mockResolvedValueOnce({
+        rows: [mockVoucher]
+      });
+  
+      await crudService.campainCreateHook(mockData);
+  
+      expect(mockData.body.status).toBe('Pending');
+    });
+  });
+
+  describe('adminUsersUpdateHook', () => {
+    let mockData;
+    let mockInsertObject;
+    
+    beforeEach(() => {
+      mockData = {
+        params: { id: 1 },
+        body: {
+          role_id: [2, 3] // New roles to be assigned
+        },
+        dbConnection: {
+          query: jest.fn()
+        },
+        logger: {
+          info: jest.fn()
+        }
+      };
+  
+      mockInsertObject = {
+        keys: ['username', 'role_id', 'email']
+      };
+    });
+  
+    it('should handle role updates correctly', async () => {
+      // Mock current roles (to be deleted)
+      mockData.dbConnection.query
+        .mockResolvedValueOnce({
+          rows: [
+            { role_id: 1, role_name: 'Admin' },
+            { role_id: 2, role_name: 'Editor' }
+          ]
+        })
+        // Mock new role insertions
+        .mockResolvedValueOnce({ rows: [{ id: 2 }] })
+        .mockResolvedValueOnce({ rows: [{ id: 3 }] })
+        // Mock added roles lookup
+        .mockResolvedValueOnce({
+          rows: [
+            { role_id: 3, role_name: 'Viewer' }
+          ]
+        });
+  
+      await crudService.adminUsersUpdateHook(mockData, mockInsertObject);
+  
+      // Verify DELETE query
+      expect(mockData.dbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM admin_user_roles'),
+        [1]
+      );
+  
+      // Verify INSERT queries
+      expect(mockData.dbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO admin_user_roles'),
+        [1, 2]
+      );
+      expect(mockData.dbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO admin_user_roles'),
+        [1, 3]
+      );
+  
+      // Verify role_id was removed from insertObject
+      expect(mockInsertObject.keys).not.toContain('role_id');
+  
+      // Verify logging
+      expect(mockData.logger.info).toHaveBeenCalledWith({
+        code: STATUS_CODES.CRUD_ROLE_CHANGE_SUCCESS,
+        short_description: expect.stringContaining('User roles updated for user with ID: 1'),
+        long_description: expect.stringContaining('Added roles: Viewer; Removed roles: Admin')
+      });
+    });
+  
+    it('should handle empty new roles list', async () => {
+      mockData.body.role_id = [];
+  
+      mockData.dbConnection.query
+        .mockResolvedValueOnce({
+          rows: [
+            { role_id: 1, role_name: 'Admin' },
+            { role_id: 2, role_name: 'Editor' }
+          ]
+        })
+        .mockResolvedValueOnce({ rows: [] });
+  
+      await crudService.adminUsersUpdateHook(mockData, mockInsertObject);
+  
+      // Verify only DELETE was called
+      expect(mockData.dbConnection.query).toHaveBeenCalledTimes(2);
+      expect(mockData.logger.info).toHaveBeenCalledWith({
+        code: STATUS_CODES.CRUD_ROLE_CHANGE_SUCCESS,
+        short_description: expect.stringContaining('User roles updated for user with ID: 1'),
+        long_description: expect.stringContaining('Added roles: ; Removed roles: Admin, Editor')
+      });
+    });
+  
+    it('should handle no existing roles', async () => {
+      mockData.dbConnection.query
+        .mockResolvedValueOnce({ rows: [] }) // No current roles
+        .mockResolvedValueOnce({ rows: [{ id: 2 }] })
+        .mockResolvedValueOnce({ rows: [{ id: 3 }] })
+        .mockResolvedValueOnce({
+          rows: [
+            { role_id: 2, role_name: 'Editor' },
+            { role_id: 3, role_name: 'Viewer' }
+          ]
+        });
+  
+      await crudService.adminUsersUpdateHook(mockData, mockInsertObject);
+  
+      // Verify INSERT queries were called
+      expect(mockData.dbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO admin_user_roles'),
+        expect.any(Array)
+      );
+  
+      expect(mockData.logger.info).toHaveBeenCalledWith({
+        code: STATUS_CODES.CRUD_ROLE_CHANGE_SUCCESS,
+        short_description: expect.stringContaining('User roles updated for user with ID: 1'),
+        long_description: expect.stringContaining('Added roles: Editor, Viewer; Removed roles: ')
+      });
+    });
+  
+    it('should handle no changes in roles', async () => {
+      mockData.body.role_id = [1, 2];
+      
+      mockData.dbConnection.query
+        .mockResolvedValueOnce({
+          rows: [
+            { role_id: 1, role_name: 'Admin' },
+            { role_id: 2, role_name: 'Editor' }
+          ]
+        })
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] })
+        .mockResolvedValueOnce({ rows: [{ id: 2 }] })
+        .mockResolvedValueOnce({ rows: [] }); // No new roles added
+  
+      await crudService.adminUsersUpdateHook(mockData, mockInsertObject);
+  
+      expect(mockData.logger.info).toHaveBeenCalledWith({
+        code: STATUS_CODES.CRUD_ROLE_CHANGE_SUCCESS,
+        short_description: expect.stringContaining('User roles updated for user with ID: 1'),
+        long_description: expect.stringContaining('Added roles: ; Removed roles: ')
+      });
+    });
+  
+    it('should handle database errors gracefully', async () => {
+      mockData.dbConnection.query.mockRejectedValueOnce(new Error('Database error'));
+  
+      await expect(crudService.adminUsersUpdateHook(mockData, mockInsertObject))
+        .rejects
+        .toThrow('Database error');
+    });
+  });
+
+  describe('roleUpdateHook', () => {
+    let mockData;
+    let mockInsertObject;
+  
+    beforeEach(() => {
+      mockData = {
+        params: { id: 1 },
+        body: {
+          permissions: [
+            { interface_id: 1, action: 'create', allowed: true },
+            { interface_id: 2, action: 'read', allowed: true },
+            { interface_id: 1, action: 'delete', allowed: false }
+          ]
+        },
+        dbConnection: {
+          query: jest.fn()
+        },
+        logger: {
+          info: jest.fn()
+        }
+      };
+  
+      mockInsertObject = {
+        keys: ['name', 'role_permissions', 'description']
+      };
+    });
+  
+    it('should handle permission updates correctly', async () => {
+      // Mock current permissions query
+      mockData.dbConnection.query
+        .mockResolvedValueOnce({
+          rows: [
+            { permission_id: 1, interface_id: 2, action: 'read', interface: 'users' },
+            { permission_id: 2, interface_id: 1, action: 'delete', interface: 'users' }
+          ]
+        })
+        // Mock permission insertions
+        .mockResolvedValueOnce({
+          rows: [{ permission_id: 3, action: 'create', interface: 'users' }]
+        })
+        // Mock permission deletions
+        .mockResolvedValueOnce({
+          rows: [{ permission_id: 2, action: 'delete', interface: 'users' }]
+        });
+  
+      await crudService.roleUpdateHook(mockData, mockInsertObject);
+  
+      // Verify queries were called
+      expect(mockData.dbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT role_permissions.permission_id'),
+        [1]
+      );
+  
+      expect(mockInsertObject.keys).not.toContain('role_permissions');
+  
+      expect(mockData.logger.info).toHaveBeenCalledWith({
+        code: STATUS_CODES.CRUD_PERMISSION_CHANGE_SUCCESS,
+        short_description: expect.stringContaining('Permissions updated for role with ID: 1'),
+        long_description: expect.stringContaining('Added permissions: create - users; Removed permissions: delete - users')
+      });
+    });
+  
+    it('should handle adding new permissions to role without existing permissions', async () => {
+      // Mock empty current permissions
+      mockData.dbConnection.query
+        .mockResolvedValueOnce({ rows: [] })
+        // Mock permission insertions
+        .mockResolvedValueOnce({
+          rows: [{ permission_id: 1, action: 'create', interface: 'users' }]
+        })
+        .mockResolvedValueOnce({
+          rows: [{ permission_id: 2, action: 'read', interface: 'users' }]
+        });
+  
+      await crudService.roleUpdateHook(mockData, mockInsertObject);
+  
+      expect(mockData.logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          long_description: expect.stringContaining('Added permissions: create - users, read - users; Removed permissions: ')
+        })
+      );
+    });
+  
+    it('should handle no permission changes', async () => {
+      mockData.body.permissions = [
+        { interface_id: 1, action: 'read', allowed: true }
+      ];
+  
+      mockData.dbConnection.query
+        .mockResolvedValueOnce({
+          rows: [
+            { permission_id: 1, interface_id: 1, action: 'read', interface: 'users' }
+          ]
+        })
+        .mockResolvedValueOnce({ rows: [] }) // No permissions added
+        .mockResolvedValueOnce({ rows: [] }); // No permissions removed
+  
+      await crudService.roleUpdateHook(mockData, mockInsertObject);
+  
+      expect(mockData.logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          long_description: expect.stringContaining('Added permissions: ; Removed permissions: ')
+        })
+      );
+    });
+  
+    it('should handle database errors gracefully', async () => {
+      mockData.dbConnection.query.mockRejectedValueOnce(new Error('Database error'));
+  
+      await expect(crudService.roleUpdateHook(mockData, mockInsertObject))
+        .rejects
+        .toThrow('Database error');
+    });
+  
+    it('should filter out non-allowed permissions', async () => {
+      mockData.body.permissions = [
+        { interface_id: 1, action: 'create', allowed: false },
+        { interface_id: 2, action: 'read', allowed: true }
+      ];
+  
+      mockData.dbConnection.query
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({
+          rows: [{ permission_id: 2, action: 'read', interface: 'products' }]
+        });
+  
+      await crudService.roleUpdateHook(mockData, mockInsertObject);
+  
+      // Verify only allowed permissions were processed
+      expect(mockData.logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          long_description: expect.stringContaining('Added permissions: read - products; Removed permissions: ')
+        })
       );
     });
   });
