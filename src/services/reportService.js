@@ -603,6 +603,14 @@ class ReportService {
                 valueKey: 'id'
             },
             {
+                key: 'days_since_creation',
+                label: 'Days since creation',
+                type: 'number',
+                step: '1',
+                min: 0,
+                max: 100000000
+            },
+            {
                 key: 'first_name',
                 label: 'First Name',
                 type: 'text',
@@ -659,6 +667,8 @@ class ReportService {
         phone_code_filter_value: data.body.phone_code,
         created_at_minimum_filter_value: data.body.created_at_minimum,
         created_at_maximum_filter_value: data.body.created_at_maximum,
+        days_since_creation_minimum_filter_value: data.body.days_since_creation_minimum,
+        days_since_creation_maximum_filter_value: data.body.days_since_creation_maximum,
         created_at_grouping_select_value: data.body.created_at_grouping_select_value,
         country_name_grouping_select_value: data.body.country_name_grouping_select_value,
         phone_code_grouping_select_value: data.body.phone_code_grouping_select_value,
@@ -739,10 +749,22 @@ class ReportService {
         },
         {
             key: "days_since_creation",
-            grouping_expression: "DATE_PART('day', CURRENT_DATE - U.created_at)",
+            grouping_expression: "DATE_PART('day', CURRENT_DATE - U.created_at)", 
             filter_expression: "",
             type: "number",
-        }
+        },
+        {
+            key: "days_since_creation_minimum",
+            grouping_expression: "",
+            filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "days_since_creation_maximum",
+            grouping_expression: "",
+            filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) <= $FILTER_VALUE$",
+            type: "number",
+        },
     ];
 
     let sql = `
@@ -757,7 +779,7 @@ class ReportService {
             $birth_date_grouping_expression$ AS "birth_date",
             $is_email_verified_grouping_expression$ AS "is_email_verified",
             $created_at_grouping_expression$ AS "created_at",
-            $days_since_creation_grouping_expression$ AS days_since_creation,
+            $days_since_creation_grouping_expression$ AS "days_since_creation",
             COUNT(*) AS "count"
         FROM users U
         LEFT JOIN iso_country_codes icc ON U.iso_country_code_id = icc.id
@@ -771,6 +793,8 @@ class ReportService {
             AND $phone_code_filter_expression$
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$
+            AND $days_since_creation_minimum_filter_expression$
+            AND $days_since_creation_maximum_filter_expression$
         GROUP BY GROUPING SETS (
             (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
             ()
