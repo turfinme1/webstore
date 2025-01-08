@@ -320,6 +320,25 @@ function handleFilterOrders(event) {
     delete filterParams["total_price_max"];
   }
 
+  const daysSinceOrderMin = parseInt(formData.get("days_since_order_min"));
+  const daysSinceOrderMax = parseInt(formData.get("days_since_order_max"));
+  if((daysSinceOrderMin && daysSinceOrderMax) && (daysSinceOrderMin > daysSinceOrderMax)) {
+    alert("Days Since Order Min should be less than Days Since Order Max");
+    return;
+  }
+
+  if (daysSinceOrderMin || daysSinceOrderMax) {
+    filterParams["days_since_order"] = {};
+    if(daysSinceOrderMin) {
+      filterParams["days_since_order"].min = daysSinceOrderMin;
+    }
+    if(daysSinceOrderMax) {
+      filterParams["days_since_order"].max = daysSinceOrderMax;
+    }
+    delete filterParams["days_since_order_min"];
+    delete filterParams["days_since_order_max"];
+  }
+
   if(elements.orderBySelect.value) {
     state.orderParams = [ elements.orderBySelect.value.split(" ") ];
   } else {
@@ -327,6 +346,7 @@ function handleFilterOrders(event) {
   }
 
   state.filterParams = filterParams;
+  state.currentPage = 1;
   loadOrders(state.currentPage);
 }
 
@@ -369,6 +389,7 @@ function renderOrders(orders) {
     mainRow.appendChild(
       createTableCell(new Date(order.created_at).toLocaleString())
     );
+    mainRow.appendChild(createTableCell(order.days_since_order, "right"));
     mainRow.appendChild(createTableCell(order.id, "right"));
     // row.appendChild(createTableCell(order.order_hash));
     mainRow.appendChild(createTableCell(order.email));
