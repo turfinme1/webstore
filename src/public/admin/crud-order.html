@@ -69,6 +69,17 @@
                                     <input type="number" step=".01" min="0" id="total_price_max" name="total_price_max" class="form-control">
                                 </div>
                             </div>
+                            <div class="row g-3">
+                                <div class="mb-3 col-auto">
+                                    <label for="days_since_order_min" class="form-label">Days Since Order (Min)</label>
+                                    <input type="number" step="1" min="0" id="days_since_order_min" name="days_since_order_min" class="form-control">
+                                </div>
+
+                                <div class="mb-3 col-auto">
+                                    <label for="days_since_order_max" class="form-label">Days Since Order (Max)</label>
+                                    <input type="number" step="1" min="0" id="days_since_order_max" name="days_since_order_max" class="form-control">
+                                </div>
+                            </div>
                             <div class="mb-3">
                                 <label for="user_email_filter" class="form-label">User Email</label>
                                 <input type="text" class="form-control" id="user_email_filter" name="email">
@@ -218,6 +229,7 @@
                         <thead>
                             <tr>
                                 <th>Created At</th>
+                                <th>Days Since Order</th>
                                 <th>Order ID</th>
                                 <!-- <th>Order Hash</th> -->
                                 <th>User Email</th>

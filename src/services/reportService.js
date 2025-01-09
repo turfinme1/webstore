@@ -413,12 +413,21 @@ class ReportService {
                 step: '0.01',
                 min: 0,
                 max: 100000000
-            }
+            },
+            {
+                key: 'days_since_order',
+                label: 'Days Since Order',
+                type: 'number',
+                step: '1',
+                min: 0,
+                max: 100000000
+            },
         ],
         tableTemplate: 'groupedHeaders',
         headerGroups: [
             [
                 { label: 'Created At', rowspan: 2 },
+                { label: 'Days Since Order', rowspan: 2 },
                 { label: 'Order Hash', rowspan: 2 },
                 { label: 'User Email', rowspan: 2 },
                 { label: 'Status', rowspan: 2 },
@@ -436,6 +445,7 @@ class ReportService {
         ],
         columns: [
             { key: 'created_at', label: 'Created At', format: 'date_time' },
+            { key: 'days_since_order', label: 'Days Since Order', align: 'right', format: 'number' },
             { key: 'order_hash', label: 'Order Hash', format: 'text' },
             { key: 'user_email', label: 'User Email', format: 'text' },
             { key: 'status', label: 'Status', format: 'text' },
@@ -458,6 +468,8 @@ class ReportService {
         status_filter_value: data.body.status,
         total_price_minimum_filter_value: data.body.total_price_minimum,
         total_price_maximum_filter_value: data.body.total_price_maximum,
+        days_since_order_minimum_filter_value: data.body.days_since_order_minimum,
+        days_since_order_maximum_filter_value: data.body.days_since_order_maximum,
         created_at_grouping_select_value: data.body.created_at_grouping_select_value,
         status_grouping_select_value: data.body.status_grouping_select_value,
     };
@@ -468,6 +480,12 @@ class ReportService {
             grouping_expression: "O.created_at",
             filter_expression: "O.created_at = $FILTER_VALUE$",
             type: "timestamp",
+        },
+        {
+            key: "days_since_order",
+            grouping_expression: "DATE_PART('day', CURRENT_DATE - O.created_at)",
+            filter_expression: "",
+            type: "number",
         },
         {
             key: "order_hash",
@@ -524,6 +542,18 @@ class ReportService {
             type: "number",
         },
         {
+            key: "days_since_order_minimum",
+            grouping_expression: "",
+            filter_expression: "DATE_PART('day', CURRENT_DATE - O.created_at) >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "days_since_order_maximum",
+            grouping_expression: "",
+            filter_expression: "DATE_PART('day', CURRENT_DATE - O.created_at) <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
             key: "voucher_code",
             grouping_expression: "O.voucher_code",
             filter_expression: "",
@@ -540,6 +570,7 @@ class ReportService {
     let sql = `
         SELECT
             $created_at_grouping_expression$  AS "created_at",
+            $days_since_order_grouping_expression$  AS "days_since_order",
             $order_hash_grouping_expression$  AS "order_hash",
             $user_email_grouping_expression$  AS "user_email",
             $status_grouping_expression$  AS "status",
@@ -562,8 +593,10 @@ class ReportService {
             AND $status_filter_expression$
             AND $total_price_minimum_filter_expression$
             AND $total_price_maximum_filter_expression$
+            AND $days_since_order_minimum_filter_expression$
+            AND $days_since_order_maximum_filter_expression$
         GROUP BY GROUPING SETS (
-            (1, 2, 3, 4, 5, 6, 7, 8),
+            (1, 2, 3, 4, 5, 6, 7, 8, 9),
             ()
         )
         ORDER BY 1 DESC NULLS FIRST`;
