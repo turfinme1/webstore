@@ -35,7 +35,7 @@ LEFT JOIN iso_country_codes cc ON users.country_id = cc.id
 LEFT JOIN genders ON users.gender_id = genders.id
 LEFT JOIN last_orders lo ON users.id = lo.user_id
 WHERE users.is_active = TRUE
-ORDER BY users.id
+ORDER BY users.id;
 
 
 DROP VIEW IF EXISTS target_groups_view;
