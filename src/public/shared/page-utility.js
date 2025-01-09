@@ -117,6 +117,16 @@ async function createForm(schema, formId, formType) {
       wrapper.appendChild(label);
       wrapper.appendChild(input);
 
+    } else if (schema.properties[key]?.format === "time") {
+      const input = document.createElement("input");
+      input.type = "time";
+      input.id = key;
+      input.name = key;
+      input.className = "form-control";
+
+      wrapper.appendChild(label);
+      wrapper.appendChild(input);
+
     } else {
       const input = document.createElement("input");
       input.type = key === "password" ? "password" : "text";
@@ -185,6 +195,11 @@ async function populateFormFields(formId, url) {
             `option[value="${userData[key]}"]`
           );
           if (option) input.value = userData[key];
+          break;
+        case "time":
+          const localTime = userData[key].split(':').slice(0, 2).join(':');
+          
+          input.value = localTime;
           break;
         default:
           input.value = userData[key] ?? "";
