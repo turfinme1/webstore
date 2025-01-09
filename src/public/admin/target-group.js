@@ -167,6 +167,9 @@ function renderUserList(users) {
     userRow.appendChild(createTableCell(user.email));
     userRow.appendChild(createTableCell(user.birth_date ? new Date(user.birth_date).toLocaleDateString() : ""));
     userRow.appendChild(createTableCell(user.gender));
+    userRow.appendChild(createTableCell(new Date(user.created_at).toLocaleString()));
+    userRow.appendChild(createTableCell(user.days_since_registration, "right"));
+    userRow.appendChild(createTableCell(user.days_since_order, "right"));
 
     // Actions (Update/Delete)
     // const actionCell = createTableCell("");
@@ -192,8 +195,9 @@ function renderUserList(users) {
 }
 
 // Create table cell
-function createTableCell(text) {
+function createTableCell(text, align = "left") {
   const cell = document.createElement("td");
+  cell.style.textAlign = align;
   cell.textContent = text;
   return cell;
 }
@@ -242,7 +246,11 @@ async function handleCreateTargetGroup(event) {
   event.preventDefault();
   const formData = new FormData(elements.targetGroupCreateForm);
   const data = Object.fromEntries(formData);
-  data.filters = getFilters();
+  data.filters = {
+    query: {
+      filterParams: state.filterParams,
+    }
+  }
 
   const queryParams = new URLSearchParams({
     filterParams: JSON.stringify(state.filterParams),
@@ -251,17 +259,22 @@ async function handleCreateTargetGroup(event) {
     page: "1",
   });
 
-  const response = await fetchWithErrorHandling(
-    `/crud/users/filtered?${queryParams.toString()}`
-  );
-  if(!response.ok){
-    showToastMessage(response.error, 'error');
-    return;
-  }
-  const { result, count } = await response.data;
-  state.userIds = result.map(user => user.id);
+  // const response = await fetchWithErrorHandling(
+  //   `/crud/users/filtered?${queryParams.toString()}`
+  // );
+  // if(!response.ok){
+  //   showToastMessage(response.error, 'error');
+  //   return;
+  // }
+  // const { result, count } = await response.data;
+  // state.userIds = result.map(user => user.id);
 
-  data.users = state.userIds;
+  // data.users = state.userIds;
+  data.users = {
+    query: {
+      filterParams: state.filterParams,
+    }
+  }
   console.log(JSON.stringify(data));
   try {
     const response = await fetchWithErrorHandling("/crud/target-groups", {
@@ -357,13 +370,12 @@ async function handleDeleteUser(userId) {
 
 function getFilters() {
   const formData = new FormData(elements.filterForm);
-  const filterParams = Object.fromEntries(formData);
-
+  const filterParams = Object.fromEntries(
+    Object.entries(Object.fromEntries(formData)).filter(([_, value]) => value.trim() !== "")
+  );
 
   if(filterParams.birth_date){
     filterParams.birth_date = dayjs(filterParams.birth_date).format("YYYY-MM-DD");
-  } else {
-    filterParams.birth_date = "All";
   }
 
   if(filterParams.birth_day){
@@ -373,27 +385,47 @@ function getFilters() {
       alert("Please select a month.");
       return;
     }
-  } else {
-    delete filterParams.birth_day;
     delete filterParams.birth_month;
-    filterParams.birth_date = "All";
   }
 
-  let firstNameFilter = filterParams.first_name.replace(/\s/g, "").split(",");
-  if(firstNameFilter.length > 1 && firstNameFilter[0]){
-    filterParams.first_name = firstNameFilter;
-  } else {
-    filterParams.first_name = "All";
+  if(filterParams.first_name) {
+    let firstNameFilter = filterParams.first_name.replace(/\s/g, "").split(",");
+    if(firstNameFilter.length > 1 && firstNameFilter[0]){
+      filterParams.first_name = firstNameFilter;
+    }
   }
 
   if(filterParams.gender_id){
     const genderSelect = document.getElementById('gender_id'); // Replace with your select element's ID
     const selectedOption = genderSelect.options[genderSelect.selectedIndex];
     filterParams.gender = selectedOption.text;
-  } else {
-    filterParams.gender = "All";
+  } 
+
+  if(filterParams.days_since_order_min || filterParams.days_since_order_max) {
+    filterParams["days_since_order"] = {};
+    if(filterParams.days_since_order_min) {
+      filterParams["days_since_order"].min = filterParams.days_since_order_min;
+    }
+    if(filterParams.days_since_order_max) {
+      filterParams["days_since_order"].max = filterParams.days_since_order_max;
+    }
+
+    delete filterParams.days_since_order_min;
+    delete filterParams.days_since_order_max;
   }
-  delete filterParams.gender_id;
+
+  if(filterParams.days_since_registration_min || filterParams.days_since_registration_max) {
+    filterParams["days_since_registration"] = {};
+    if(filterParams.days_since_registration_min) {
+      filterParams["days_since_registration"].min = filterParams.days_since_registration_min;
+    }
+    if(filterParams.days_since_registration_max) {
+      filterParams["days_since_registration"].max = filterParams.days_since_registration_max;
+    }
+
+    delete filterParams.days_since_registration_min;
+    delete filterParams.days_since_registration_max;
+  }
 
   return filterParams;
 }
@@ -434,6 +466,44 @@ async function handleFilterUsers(event) {
   } else {
     delete filterParams.first_name;
   }
+
+  const daysSinceOrderMin = parseInt(formData.get("days_since_order_min"));
+  const daysSinceOrderMax = parseInt(formData.get("days_since_order_max"));
+  if((daysSinceOrderMin && daysSinceOrderMax) && (daysSinceOrderMin > daysSinceOrderMax)) {
+    alert("Days Since Order Min should be less than Days Since Order Max");
+    return;
+  }
+
+  if (daysSinceOrderMin || daysSinceOrderMax) {
+    filterParams["days_since_order"] = {};
+    if(daysSinceOrderMin) {
+      filterParams["days_since_order"].min = daysSinceOrderMin;
+    }
+    if(daysSinceOrderMax) {
+      filterParams["days_since_order"].max = daysSinceOrderMax;
+    }
+  }
+  delete filterParams["days_since_order_min"];
+  delete filterParams["days_since_order_max"];
+  
+  const daysSinceRegistrationMin = parseInt(formData.get("days_since_registration_min"));
+  const daysSinceRegistrationMax = parseInt(formData.get("days_since_registration_max"));
+  if((daysSinceRegistrationMin && daysSinceRegistrationMax) && (daysSinceRegistrationMin > daysSinceRegistrationMax)) {
+    alert("Days Since Registration Min should be less than Days Since Registration Max");
+    return;
+  }
+
+  if (daysSinceRegistrationMin || daysSinceRegistrationMax) {
+    filterParams["days_since_registration"] = {};
+    if(daysSinceRegistrationMin) {
+      filterParams["days_since_registration"].min = daysSinceRegistrationMin;
+    }
+    if(daysSinceRegistrationMax) {
+      filterParams["days_since_registration"].max = daysSinceRegistrationMax;
+    }
+  }
+  delete filterParams["days_since_registration_min"];
+  delete filterParams["days_since_registration_max"];
 
   if(filterParams.gender_id){
     filterParams.gender_id = parseInt(filterParams.gender_id);
@@ -494,8 +564,15 @@ function renderTargetGroupList(targetGroups) {
     // Actions (Update/Delete)
     const actionCell = createTableCell("");
     actionCell.appendChild(
-      createActionButton("View Users", "btn-warning", () => {
-        renderUserList(targetGroup.users);
+      createActionButton("View Users", "btn-warning",async () => {
+
+        const targetGroupDetailResponse = await fetchWithErrorHandling(`/crud/target-groups/${targetGroup.id}`);
+        if(!targetGroupDetailResponse.ok){
+          showToastMessage(response.error, 'error');
+          return;
+        }
+
+        renderUserList(targetGroupDetailResponse.data.users);
         const userTableSection = document.getElementById("user-table-section");
         userTableSection.scrollIntoView({ behavior: "smooth" });
       })

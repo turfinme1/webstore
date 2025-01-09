@@ -32,6 +32,36 @@
             },
             "is_email_verified": {
                 "type": "boolean"
+            },
+            "days_since_order": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Filter by minimum days since order was created"
+                    },
+                    "max": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Filter by maximum days since order was created"
+                    }
+                }
+            },
+            "days_since_registration": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Filter by minimum days since user was registered"
+                    },
+                    "max": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Filter by maximum days since user was registered"
+                    }
+                }
             }
         }
     },

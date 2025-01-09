@@ -483,7 +483,7 @@ class ReportService {
         },
         {
             key: "days_since_order",
-            grouping_expression: "DATE_PART('day', CURRENT_DATE - O.created_at)",
+            grouping_expression: "EXTRACT(DAY FROM (NOW() - O.created_at))",
             filter_expression: "",
             type: "number",
         },
@@ -544,13 +544,13 @@ class ReportService {
         {
             key: "days_since_order_minimum",
             grouping_expression: "",
-            filter_expression: "DATE_PART('day', CURRENT_DATE - O.created_at) >= $FILTER_VALUE$",
+            filter_expression: "EXTRACT(DAY FROM (NOW() - O.created_at)) >= $FILTER_VALUE$",
             type: "number",
         },
         {
             key: "days_since_order_maximum",
             grouping_expression: "",
-            filter_expression: "DATE_PART('day', CURRENT_DATE - O.created_at) <= $FILTER_VALUE$",
+            filter_expression: "EXTRACT(DAY FROM (NOW() - O.created_at)) <= $FILTER_VALUE$",
             type: "number",
         },
         {
