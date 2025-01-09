@@ -31,6 +31,10 @@ class CrudService {
     // Handle insertions into mapping tables
     await this.handleMappingInsertions(data, schema, insertedEntity.id);
 
+    if (this.hooks().create[data.params.entity]?.after) {
+      await this.hooks().create[data.params.entity].after(data, insertedEntity.id);
+    }
+
     return insertedEntity; // Return the created main entity
   }
 
@@ -241,7 +245,7 @@ class CrudService {
     } else {
       selectFields = ["*"];
       orderByClause =
-        data.query.orderParams.length > 0
+        data.query?.orderParams?.length > 0
           ? data.query.orderParams
               .map(
                 ([column, direction]) => `${column} ${direction.toUpperCase()}`
@@ -418,6 +422,9 @@ class CrudService {
       create: {
         campaigns: {
           before: this.campainCreateHook,
+        },
+        "target-groups": {
+          after: this.targetGroupCreateHook.bind(this),
         },
       },
       update: {
@@ -599,6 +606,24 @@ class CrudService {
     insertObject.keys = insertObject.keys.filter(
       (key) => key !== "role_permissions"
     );
+  }
+
+  async targetGroupCreateHook(data, mainEntityId) {
+    data.params.entity = "users";
+    data.query = data.body.users.query;
+
+    const innerInsertQuery = this.buildFilteredPaginatedQuery(data);
+
+    const insertQuery = `
+      INSERT INTO user_target_groups (user_id, target_group_id)
+      SELECT users_view.id, $${innerInsertQuery.searchValues.length + 1}
+      FROM (${innerInsertQuery.query}) AS users_view
+      RETURNING *
+    `;
+  
+    const queryValues = [...innerInsertQuery.searchValues, mainEntityId];
+  
+    const result = await data.dbConnection.query(insertQuery, queryValues);
   }
 }
 

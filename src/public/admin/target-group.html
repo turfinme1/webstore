@@ -70,6 +70,28 @@
                             </div>
                             <div class="row g-3">
                                 <div class="mb-3 col-auto">
+                                    <label for="days_since_order_min" class="form-label">Days Since Order (Min)</label>
+                                    <input type="number" step="1" min="0" id="days_since_order_min" name="days_since_order_min" class="form-control">
+                                </div>
+
+                                <div class="mb-3 col-auto">
+                                    <label for="days_since_order_max" class="form-label">Days Since Order (Max)</label>
+                                    <input type="number" step="1" min="0" id="days_since_order_max" name="days_since_order_max" class="form-control">
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="mb-3 col-auto">
+                                    <label for="days_since_registration_min" class="form-label">Days Since Registration (Min)</label>
+                                    <input type="number" step="1" min="0" id="days_since_registration_min" name="days_since_registration_min" class="form-control">
+                                </div>
+
+                                <div class="mb-3 col-auto">
+                                    <label for="days_since_registration_max" class="form-label">Days Since Registration (Max)</label>
+                                    <input type="number" step="1" min="0" id="days_since_registration_max" name="days_since_registration_max" class="form-control">
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="mb-3 col-auto">
                                     <label for="birth_day_filter" class="form-label">Birth Day</label>
                                     <input type="number" step="1" min="1" max="31" id="birth_day_filter" name="birth_day" class="form-control">
                                 </div>
@@ -221,6 +243,9 @@
                                 <th>Email</th>
                                 <th>Birth Date</th>
                                 <th>Gender</th>
+                                <th>Created At</th>
+                                <th>Days Since Registration</th>
+                                <th>Days Since Order</th>
                                 <!-- <th>Actions</th> -->
                             </tr>
                         </thead>
