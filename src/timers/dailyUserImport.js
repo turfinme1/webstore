@@ -4,8 +4,8 @@ const pool = require("../database/dbConfig");
 const Logger = require("../serverConfigurations/logger");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 
-const TOTAL_USERS_PER_DAY = 1000;
-const BATCH_SIZE = 1;
+const TOTAL_USERS_PER_DAY = 10000;
+const BATCH_SIZE = 300;
 const BATCHES_PER_DAY = Math.ceil(TOTAL_USERS_PER_DAY / BATCH_SIZE);
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MS_PER_BATCH = Math.floor(MS_PER_DAY / BATCHES_PER_DAY);
