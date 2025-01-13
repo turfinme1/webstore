@@ -143,13 +143,13 @@ class ReportService {
         {
             key: "order_total_minimum",
             grouping_expression: "",
-            filter_expression: "O.total_price >= $FILTER_VALUE$",
+            filter_expression: "O.paid_amount >= $FILTER_VALUE$",
             type: "number",
         },
         {
             key: "order_total_maximum",
             grouping_expression: "",
-            filter_expression: "O.total_price <= $FILTER_VALUE$",
+            filter_expression: "O.paid_amount <= $FILTER_VALUE$",
             type: "number",
         },
     ];
@@ -159,13 +159,13 @@ class ReportService {
             $user_email_grouping_expression$ AS "user_email",
             $user_id_grouping_expression$ AS "user_id",
             COUNT(CASE WHEN O.created_at >= NOW() - INTERVAL '1 day' THEN 1 END) AS "orders_last_day",
-            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 day' THEN O.total_price END), 0) AS "total_last_day",
+            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 day' THEN O.paid_amount END), 0) AS "total_last_day",
             COUNT(CASE WHEN O.created_at >= NOW() - INTERVAL '1 week' THEN 1 END) AS "orders_last_week",
-            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 week' THEN O.total_price END), 0) AS "total_last_week",
+            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 week' THEN O.paid_amount END), 0) AS "total_last_week",
             COUNT(CASE WHEN O.created_at >= NOW() - INTERVAL '1 month' THEN 1 END) AS "orders_last_month",
-            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 month' THEN O.total_price END), 0) AS "total_last_month",
+            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 month' THEN O.paid_amount END), 0) AS "total_last_month",
             COUNT(CASE WHEN O.created_at >= NOW() - INTERVAL '1 year' THEN 1 END) AS "orders_last_year",
-            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 year' THEN O.total_price END), 0) AS "total_last_year"
+            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 year' THEN O.paid_amount END), 0) AS "total_last_year"
         FROM orders O
         JOIN users U ON U.id = O.user_id
         WHERE TRUE
