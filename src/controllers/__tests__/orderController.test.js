@@ -1,5 +1,4 @@
 const { ASSERT_USER } = require("../../serverConfigurations/assert");
-const { STATUS_CODES } = require("../../serverConfigurations/constants");
 const OrderController = require("../orderController");
 
 jest.mock("../../serverConfigurations/assert");
@@ -54,7 +53,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.user_id,
         "You must be logged in to perform this action",
-        { code: STATUS_CODES.ORDER_UNAUTHORIZED_CREATE, long_description: "You must be logged in to perform this action" }
+        { code: "ORDER_UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" }
       );
       expect(orderService.createOrder).toHaveBeenCalledWith({
         body: req.body,
@@ -82,7 +81,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action",
-        { code: STATUS_CODES.ORDER_UNAUTHORIZED_CREATE, long_description: "You must be logged in to perform this action" }
+        { code: "ORDER_UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" }
       );
       expect(authService.requirePermission).toHaveBeenCalledWith(req, "create", "orders");
       expect(orderService.createOrderByStaff).toHaveBeenCalledWith({
@@ -112,7 +111,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action",
-        { code: STATUS_CODES.ORDER_UNAUTHORIZED_UPDATE, long_description: "You must be logged in to perform this action" }
+        { code: "ORDER_UNAUTHORIZED_UPDATE", long_description: "You must be logged in to perform this action" }
       );
       expect(authService.requirePermission).toHaveBeenCalledWith(req, "update", "orders");
       expect(orderService.updateOrderByStaff).toHaveBeenCalledWith({
@@ -142,7 +141,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.user_id,
         "You must be logged in to perform this action",
-        { code: STATUS_CODES.ORDER_UNAUTHORIZED_READ, long_description: "You must be logged in to perform this action" }
+        { code: "ORDER_UNAUTHORIZED_READ", long_description: "You must be logged in to perform this action" }
       );
       expect(orderService.getOrder).toHaveBeenCalledWith({
         params: req.params,
@@ -173,7 +172,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.user_id,
         "You must be logged in to perform this action",
-        { code: STATUS_CODES.ORDER_UNAUTHORIZED_CAPTURE_PAYMENT, long_description: "You must be logged in to perform this action" }
+        { code: "ORDER_UNAUTHORIZED_CAPTURE_PAYMENT", long_description: "You must be logged in to perform this action" }
       );
       expect(orderService.capturePaypalPayment).toHaveBeenCalledWith({
         body: req.body,
@@ -205,7 +204,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.user_id,
         "You must be logged in to perform this action",
-        { code: STATUS_CODES.ORDER_UNAUTHORIZED_CANCEL_PAYMENT, long_description: "You must be logged in to perform this action" }
+        { code: "ORDER_UNAUTHORIZED_CANCEL_PAYMENT", long_description: "You must be logged in to perform this action" }
       );
       expect(orderService.cancelPaypalPayment).toHaveBeenCalledWith({
         body: req.body,
@@ -235,7 +234,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.user_id,
         "You must be logged in to perform this action",
-        { code: STATUS_CODES.ORDER_UNAUTHORIZED_DELETE, long_description: "You must be logged in to perform this action" }
+        { code: "ORDER_UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" }
       );
       expect(authService.requirePermission).toHaveBeenCalledWith(req, "delete", "orders");
       expect(orderService.deleteOrder).toHaveBeenCalledWith({
@@ -246,7 +245,7 @@ describe("OrderController", () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(deleteResult);
       expect(req.logger.info).toHaveBeenCalledWith({
-        code: STATUS_CODES.DELETE_SUCCESS,
+        code: "DELETE_SUCCESS",
         short_description: "Order deleted successfully",
         long_description: `Order for user ${req.session.user_id} deleted successfully`,
       });

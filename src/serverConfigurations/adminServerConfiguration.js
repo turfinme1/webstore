@@ -2,7 +2,6 @@ const setTimeout = require("timers/promises").setTimeout;
 const pool = require("../database/dbConfig");
 const { UserError, ASSERT } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
-const { STATUS_CODES } = require("./constants");
 
 const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
@@ -124,7 +123,7 @@ function requestMiddleware(handler) {
       await Promise.race([timeout(), task()]);
       if(req.signal?.aborted) {
         await req.dbConnection.cancel();
-        ASSERT(false, "Request aborted due to timeout", { code: STATUS_CODES.SRV_CNF_REQUEST_TIMEOUT, long_description: "Request aborted due to timeout", temporary: true });
+        ASSERT(false, "Request aborted due to timeout", { code: "SRV_CNF_REQUEST_TIMEOUT", long_description: "Request aborted due to timeout", temporary: true });
       }
 
       await req.dbConnection.query("COMMIT");

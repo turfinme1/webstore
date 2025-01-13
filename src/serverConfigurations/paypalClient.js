@@ -1,6 +1,5 @@
 // const paypal = require("@paypal/checkout-server-sdk");
 const { ASSERT, ASSERT_PEER } = require("./assert");
-const { STATUS_CODES } = require("./constants");
 
 // const paypalClient = new paypal.core.PayPalHttpClient(
 //     new paypal.core.SandboxEnvironment(
@@ -35,7 +34,7 @@ class PayPalHttpClient {
         });
         ASSERT_PEER(response.ok, "There was an error processing the request.",
             { 
-                code: STATUS_CODES.PPAL_PEER_ERROR_RESPONSE_FAILURE, long_description: "There was an error when fetching the access token for PayPal API",
+                code: "PPAL_PEER_ERROR_RESPONSE_FAILURE", long_description: "There was an error when fetching the access token for PayPal API",
             }
         );
 
@@ -58,7 +57,7 @@ class PayPalHttpClient {
             });
             ASSERT_PEER(response.ok, "There was an error processing the request.",
                 {
-                    code: STATUS_CODES.PPAL_PEER_ERROR_RESPONSE_FAILURE, long_description: "There was an error when creating PayPal order",
+                    code: "PPAL_PEER_ERROR_RESPONSE_FAILURE", long_description: "There was an error when creating PayPal order",
                 }
             );
 
@@ -73,7 +72,7 @@ class PayPalHttpClient {
             });
             ASSERT_PEER(response.ok, "There was an error processing the request.",
                 {
-                    code: STATUS_CODES.PPAL_PEER_ERROR_RESPONSE_FAILURE, long_description: "There was an error when capturing PayPal payment",
+                    code: "PPAL_PEER_ERROR_RESPONSE_FAILURE", long_description: "There was an error when capturing PayPal payment",
                 }
             );
 
@@ -88,7 +87,7 @@ class PayPalHttpClient {
             });
             ASSERT_PEER(response.ok, "There was an error processing the request.",
                 {
-                    code: STATUS_CODES.PPAL_PEER_ERROR_RESPONSE_FAILURE, long_description: "There was an error when fetching the order details",
+                    code: "PPAL_PEER_ERROR_RESPONSE_FAILURE", long_description: "There was an error when fetching the order details",
                 }
             );
 
@@ -96,7 +95,7 @@ class PayPalHttpClient {
         } else {
             ASSERT( false, "Invalid type of request", 
                 { 
-                    code: STATUS_CODES.PPAL_INVALID_INPUT, long_description: "Invalid type of request", 
+                    code: "PPAL_INVALID_INPUT", long_description: "Invalid type of request", 
                 }
             );
         }

@@ -1,6 +1,5 @@
 const ProductController = require("../productController");
 const { ASSERT_USER } = require("../../serverConfigurations/assert");
-const { STATUS_CODES } = require("../../serverConfigurations/constants");
 
 jest.mock("../../serverConfigurations/assert");
 
@@ -150,7 +149,7 @@ describe("ProductController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         mockReq.session.user_id, 
         "You must be logged in to perform this action", 
-        { code: STATUS_CODES.PRODUCT_UNAUTHORIZED, long_description: "You must be logged in to perform this action" }
+        { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
       expect(productService.createComment).toHaveBeenCalledWith({
         body: mockReq.body,
@@ -174,7 +173,7 @@ describe("ProductController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         mockReq.session.user_id, 
         "You must be logged in to perform this action", 
-        { code: STATUS_CODES.PRODUCT_UNAUTHORIZED, long_description: "You must be logged in to perform this action" }
+        { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
       expect(productService.createRating).toHaveBeenCalledWith({
         body: mockReq.body,

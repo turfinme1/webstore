@@ -1,5 +1,4 @@
 const { UserError, PeerError } = require("./assert");
-const { STATUS_CODES } = require("./constants");
 
 class Logger {
   constructor(req) {
@@ -17,7 +16,7 @@ class Logger {
         [
           this.req?.session?.admin_user_id || null,
           this.req?.session?.user_id || null,
-          logObject?.code || STATUS_CODES.INTERNAL_SERVER_ERROR,
+          logObject?.code || "INTERNAL_SERVER_ERROR",
           logObject?.short_description,
           logObject?.long_description || null,
           logObject?.debug_info || null,

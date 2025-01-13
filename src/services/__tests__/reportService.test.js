@@ -1,4 +1,3 @@
-const { STATUS_CODES } = require("../../serverConfigurations/constants");
 const ReportService = require("../reportService");
 
 describe("ReportService", () => {

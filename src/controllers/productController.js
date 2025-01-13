@@ -1,4 +1,3 @@
-const { STATUS_CODES }  = require("../serverConfigurations/constants");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateQueryParams } = require("../serverConfigurations/validation");
 
@@ -30,7 +29,7 @@ class ProductController {
   }
 
   async createComment(req, res) {
-    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.PRODUCT_UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       params: req.params,
@@ -43,7 +42,7 @@ class ProductController {
   }
 
   async createRating(req, res) {
-    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: STATUS_CODES.PRODUCT_UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       params: req.params,
@@ -74,7 +73,7 @@ class ProductController {
   }
 
   async create(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.PRODUCT_UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "update", 'products');
     const data = {
       body: req.body,
@@ -88,7 +87,7 @@ class ProductController {
   } 
 
   async update(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.PRODUCT_UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "update", 'products');
     const data = {
       body: req.body,
@@ -102,7 +101,7 @@ class ProductController {
   }
 
   async uploadImages(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.PRODUCT_UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "update", 'products');
     const data = {
       body: req.body,
@@ -116,7 +115,7 @@ class ProductController {
   }
 
   async uploadProducts(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.PRODUCT_UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       req: req,
@@ -129,7 +128,7 @@ class ProductController {
   }
 
   async delete(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.PRODUCT_UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "delete", 'products');
     const data = {
       body: req.body,

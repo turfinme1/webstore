@@ -1,5 +1,4 @@
 // paypalClient.test.js
-const { STATUS_CODES } = require('../constants');
 // const { PayPalHttpClient, OrdersCreateRequest, OrdersCaptureRequest, OrdersGetRequest } = require('../serverConfigurations/paypalClient');
 const paypal = require("../paypalClient");
 

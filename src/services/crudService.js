@@ -1,5 +1,4 @@
 const bcrypt = require("bcrypt");
-const { STATUS_CODES }  = require("../serverConfigurations/constants");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 
 class CrudService {
@@ -442,8 +441,8 @@ class CrudService {
     const currentDate = new Date();
     const start_date = new Date(data.body.start_date);
     const end_date = new Date(data.body.end_date);
-    ASSERT_USER(start_date < end_date, "Start date must be before end date", { code: STATUS_CODES.CRUD_INVALID_INPUT_CREATE_CAMPAIGN_DATE_RANGE, long_description: "Start date must be before end date" });
-    ASSERT_USER(end_date > currentDate, "End date must be in the future", { code: STATUS_CODES.CRUD_INVALID_INPUT_CREATE_CAMPAIGN_END_DATE, long_description: "End date must be in the future" });
+    ASSERT_USER(start_date < end_date, "Start date must be before end date", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_DATE_RANGE", long_description: "Start date must be before end date" });
+    ASSERT_USER(end_date > currentDate, "End date must be in the future", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_END_DATE", long_description: "End date must be in the future" });
     /// check if the voucher is active 
     const voucherResult = await data.dbConnection.query(`
       SELECT * FROM vouchers
@@ -451,7 +450,7 @@ class CrudService {
       [data.body.voucher_id]
     );
     const voucher = voucherResult.rows[0];
-    ASSERT_USER(voucher, "Voucher is not active", { code: STATUS_CODES.CRUD_INVALID_INPUT_CREATE_CAMPAIGN_VOUCHER_INVALID, long_description: "Voucher is not active" });
+    ASSERT_USER(voucher, "Voucher is not active", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_VOUCHER_INVALID", long_description: "Voucher is not active" });
     let status = "Inactive";
     if(currentDate > voucher.end_date) {
       status = "Expired voucher";
@@ -505,7 +504,7 @@ class CrudService {
     insertObject.keys = insertObject.keys.filter((key) => key !== "role_id");
     
     await data.logger.info({
-      code: STATUS_CODES.CRUD_ROLE_CHANGE_SUCCESS,
+      code: "CRUD_ROLE_CHANGE_SUCCESS",
       short_description: `User roles updated for user with ID: ${data.params.id}`,
       long_description: `Added roles: ${addedRoleNames.join(', ')}; Removed roles: ${removedRoleNames.join(', ')}`
     });
@@ -598,7 +597,7 @@ class CrudService {
     }
         
     await data.logger.info({
-      code: STATUS_CODES.CRUD_PERMISSION_CHANGE_SUCCESS,
+      code: "CRUD_PERMISSION_CHANGE_SUCCESS",
       short_description: `Permissions updated for role with ID: ${data.params.id}`,
       long_description: `Added permissions: ${addedPermissionNames.join(', ')}; Removed permissions: ${removedPermissionNames.join(', ')}`
     });
