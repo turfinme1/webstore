@@ -35,12 +35,14 @@ async function getRandomUsers(client, count) {
 
 async function generateOrders(client, count) {
   const users = await getRandomUsers(client, count);
+  const products = await getRandomProducts(client, 500);
   const orders = [];
 
   for (const user of users) {
     const productCount = faker.number.int({ min: 1, max: 5 });
-    const products = await getRandomProducts(client, productCount);
-    const orderItems = products.map(product => ({
+    const orderProducts = faker.helpers.shuffle(products).slice(0, productCount);
+    
+    const orderItems = orderProducts.map(product => ({
       product_id: product.id,
       quantity: faker.number.int({ min: 1, max: 10 }),
       unit_price: product.price
@@ -52,14 +54,12 @@ async function generateOrders(client, count) {
         "Cancelled",
     ]);
     const totalPrice = orderItems.reduce((sum, item) => sum + item.quantity * parseFloat(item.unit_price), 0);
-    const paidAmount = status === "Paid" ? totalPrice : 0;
 
     orders.push({
       user_id: user.id,
       items: orderItems,
       status,
       total_price: totalPrice,
-      paid_amount: paidAmount
     });
   }
 
@@ -69,13 +69,41 @@ async function generateOrders(client, count) {
 async function insertOrderBatch(orders, client, logger) {
   for (const order of orders) {
     const orderResult = await client.query(`
+      WITH settings AS (
+        SELECT vat_percentage FROM app_settings LIMIT 1
+      ),
+      total_calc AS (
+        SELECT 
+          $1::decimal as base_total,
+          settings.vat_percentage,
+          $2 as status,
+          ROUND(
+            $1::decimal * (1 + settings.vat_percentage / 100),
+            2
+          ) as total_with_vat
+        FROM settings
+      )
       INSERT INTO orders (
-        user_id, status, total_price, paid_amount, 
-        discount_percentage, vat_percentage
-      ) VALUES ($1, $2, $3, $4, 0, 
-        (SELECT vat_percentage FROM app_settings LIMIT 1)
-      ) RETURNING id`,
-      [order.user_id, order.status, order.total_price, order.paid_amount ]
+        user_id, 
+        status, 
+        total_price,
+        vat_percentage,
+        discount_percentage,
+        paid_amount
+      ) 
+      SELECT 
+        $3,
+        status,
+        base_total,
+        vat_percentage,
+        0,
+        CASE 
+          WHEN status = 'Paid' THEN total_with_vat
+          ELSE 0
+        END
+      FROM total_calc
+      RETURNING *`,
+      [order.total_price, order.status, order.user_id]
     );
 
     const orderId = orderResult.rows[0].id;
