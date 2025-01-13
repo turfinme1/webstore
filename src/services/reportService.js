@@ -439,7 +439,10 @@ class ReportService {
                 { label: 'Total With VAT', rowspan: 2 },
                 { label: 'Voucher Code', rowspan: 2 },
                 { label: 'Voucher Discount', rowspan: 2 },
-                { label: 'Total Price with Voucher', rowspan: 2 },
+                { label: 'Final Price', rowspan: 2 },
+                { label: 'Final Price without VAT', rowspan: 2 },
+                { label: 'Final Price VAT amount', rowspan: 2 },
+                { label: 'Paid Amount', rowspan: 2 },
                 { label: 'Count', rowspan: 2 }
             ]
         ],
@@ -458,6 +461,9 @@ class ReportService {
             { key: 'voucher_code', label: 'Voucher Code', format: 'text' },
             { key: 'voucher_discount_amount', label: 'Voucher Discount', align: 'right', format: 'currency' },
             { key: 'total_price_with_voucher', label: 'Total Price with voucher', align: 'right', format: 'currency' },
+            { key: 'total_price_with_voucher_without_vat', label: 'Final Price without VAT', align: 'right', format: 'currency' },
+            { key: 'total_price_with_voucher_vat_amount', label: 'Final Price VAT amount', align: 'right', format: 'currency' },
+            { key: 'paid_amount', label: 'Paid Amount', align: 'right', format: 'currency' },
             { key: 'count', label: 'Count', align: 'right', format: 'number' }
         ]
     };
@@ -582,6 +588,9 @@ class ReportService {
             SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2))  AS "vat_amount",
             SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2))  AS "total_price_with_vat",
             SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0), 2)) AS "total_price_with_voucher",
+            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100), 2)) AS total_price_with_voucher_without_vat,
+            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) - 
+                (GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100)), 2)) AS total_price_with_voucher_vat_amount,
             SUM(paid_amount) AS "paid_amount",
             SUM(O.total_price) AS "total_price",
             COUNT(*) as count
