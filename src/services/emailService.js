@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
-const { STATUS_CODES, ENV }  = require("../serverConfigurations/constants");
+const { ENV }  = require("../serverConfigurations/constants");
 
 const transporter = nodemailer.createTransport({
   host: "localhost",
@@ -16,10 +16,10 @@ class EmailService {
     }
 
     async sendEmail(data) {
-        ASSERT(data.from, "Missing email sender", { code: STATUS_CODES.EMAIL_INVALID_INPUT_SENDER, long_description: "Missing email sender" });
-        ASSERT(data.to, "Missing email recipient", { code: STATUS_CODES.EMAIL_INVALID_INPUT_RECIPIENT, long_description: "Missing email recipient" });
-        ASSERT(data.subject, "Missing email subject", { code: STATUS_CODES.EMAIL_INVALID_INPUT_SUBJECT, long_description: "Missing email subject" });
-        ASSERT(data.html, "Missing email body", { code: STATUS_CODES.EMAIL_INVALID_INPUT_BODY, long_description: "Missing email body" });
+        ASSERT(data.from, "Missing email sender", { code: "EMAIL_INVALID_INPUT_SENDER", long_description: "Missing email sender" });
+        ASSERT(data.to, "Missing email recipient", { code: "EMAIL_INVALID_INPUT_RECIPIENT", long_description: "Missing email recipient" });
+        ASSERT(data.subject, "Missing email subject", { code: "EMAIL_INVALID_INPUT_SUBJECT", long_description: "Missing email subject" });
+        ASSERT(data.html, "Missing email body", { code: "EMAIL_INVALID_INPUT_BODY", long_description: "Missing email body" });
           
         return await this.transporter.sendMail(data);
     }
@@ -76,7 +76,7 @@ class EmailService {
             emailData.templateType = "Forgot password";
             emailData.address = `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=RANDOMLY_GENERATED_TOKEN">Reset Password</a>`;
         } else {
-            ASSERT_USER(false, "Invalid email type", { code: STATUS_CODES.EMAIL_INVALID_QUERY_PARAMS, long_description: `Invalid email type: ${data.params.type}` });
+            ASSERT_USER(false, "Invalid email type", { code: "EMAIL_INVALID_QUERY_PARAMS", long_description: `Invalid email type: ${data.params.type}` });
         }
 
         const emailOptions = await this.processTemplate({ emailData, dbConnection: data.dbConnection });
@@ -84,10 +84,10 @@ class EmailService {
     }
 
     async queueEmail(data) {
-        ASSERT(data.dbConnection, "Missing database connection", { code: STATUS_CODES.EMAIL_INVALID_INPUT_CONNECTION, long_description: "Missing database connection" });
-        ASSERT(data.emailData, "Missing email data", { code: STATUS_CODES.EMAIL_INVALID_INPUT_BODY, long_description: "Missing email data" });
-        ASSERT(data.emailData.templateType, "Missing email template type", { code: STATUS_CODES.EMAIL_INVALID_INPUT_TEMPLATE, long_description: "Missing email template type" });
-        ASSERT(data.emailData.recipient, "Missing email recipient", { code: STATUS_CODES.EMAIL_INVALID_INPUT_RECIPIENT, long_description: "Missing email recipient" });
+        ASSERT(data.dbConnection, "Missing database connection", { code: "EMAIL_INVALID_INPUT_CONNECTION", long_description: "Missing database connection" });
+        ASSERT(data.emailData, "Missing email data", { code: "EMAIL_INVALID_INPUT_BODY", long_description: "Missing email data" });
+        ASSERT(data.emailData.templateType, "Missing email template type", { code: "EMAIL_INVALID_INPUT_TEMPLATE", long_description: "Missing email template type" });
+        ASSERT(data.emailData.recipient, "Missing email recipient", { code: "EMAIL_INVALID_INPUT_RECIPIENT", long_description: "Missing email recipient" });
 
         const emailRecord = await data.dbConnection.query(
             `INSERT INTO emails (template_type, data_object) 
@@ -104,13 +104,13 @@ class EmailService {
             `SELECT * FROM email_templates WHERE type = $1`,
             [data.emailData.templateType]
         );
-        ASSERT(emailTemplateResult.rows.length === 1, "Template not found", { code: STATUS_CODES.EMAIL_NOT_FOUND, long_description: "Template not found" });
+        ASSERT(emailTemplateResult.rows.length === 1, "Template not found", { code: "EMAIL_NOT_FOUND", long_description: "Template not found" });
         const emailTemplate = emailTemplateResult.rows[0];
         
         let emailBody = emailTemplate.template;
         for (const placeholder of emailTemplate.placeholders) {
             let placeholderKey = placeholder.replace(/[{}]/g, "");
-            ASSERT(data.emailData.hasOwnProperty(placeholderKey), "Missing email template placeholder", { code: STATUS_CODES.EMAIL_INVALID_INPUT_TEMPLATE, long_description: `"Missing email template placeholder: ${placeholderKey}` });
+            ASSERT(data.emailData.hasOwnProperty(placeholderKey), "Missing email template placeholder", { code: "EMAIL_INVALID_INPUT_TEMPLATE", long_description: `"Missing email template placeholder: ${placeholderKey}` });
             
             if(placeholderKey === "order_table") {
                 const htmlTable = this.buildOrderTable({ order: data.emailData[placeholderKey], emailTemplate});

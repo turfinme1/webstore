@@ -1,5 +1,4 @@
 const OrderService = require('./orderService');
-const { STATUS_CODES } = require('../serverConfigurations/constants');
 const paypal = require('@paypal/checkout-server-sdk');
 
 jest.mock('@paypal/checkout-server-sdk');

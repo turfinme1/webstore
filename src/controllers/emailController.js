@@ -1,4 +1,3 @@
-const { STATUS_CODES }  = require("../serverConfigurations/constants");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 
 class EmailController {
@@ -9,7 +8,7 @@ class EmailController {
   }
 
   async sendTestEmail(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action",{ code: STATUS_CODES.EMAIL_UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action",{ code: "EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       params: req.params,
@@ -22,7 +21,7 @@ class EmailController {
   }
 
   async previewEmail(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action",{ code: STATUS_CODES.EMAIL_UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action",{ code: "EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       params: req.params,

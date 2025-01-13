@@ -1,5 +1,4 @@
 const { ASSERT_USER } = require("../serverConfigurations/assert");
-const { STATUS_CODES } = require("../serverConfigurations/constants");
 const { validateObject } = require("../serverConfigurations/validation");
 
 class ReportService {
@@ -15,7 +14,7 @@ class ReportService {
 
   async getReport(data) {
     ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
-        code: STATUS_CODES.REPORT_INVALID_QUERY_PARAMS, 
+        code: "REPORT_INVALID_QUERY_PARAMS", 
         long_description: `Report ${data.params.report} not found` 
     });
     
@@ -37,7 +36,7 @@ class ReportService {
 
   async exportReport(data) {
     ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
-        code: STATUS_CODES.REPORT_INVALID_QUERY_PARAMS, 
+        code: "REPORT_INVALID_QUERY_PARAMS", 
         long_description: `Report ${data.params.report} not found` 
     });
 
@@ -196,9 +195,8 @@ class ReportService {
             {
                 key: 'status_code',
                 label: 'Status Code',
-                type: 'select',
+                type: 'text',
                 placeholder: 'Enter status code',
-                options: Object.keys(STATUS_CODES).map(key => ({ value: STATUS_CODES[key], label: `${key} (${STATUS_CODES[key]})` })),
                 groupable: true
             },
             {
@@ -316,7 +314,7 @@ class ReportService {
         {
             key: "status_code",
             grouping_expression: "L.status_code",
-            filter_expression: "L.status_code = $FILTER_VALUE$",
+            filter_expression: "STRPOS(LOWER(CAST( L.status_code AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
         },
         {
@@ -856,7 +854,7 @@ class ReportService {
 
       if (groupingValue) {
         if (reportFilter.type === 'timestamp') {
-          ASSERT_USER(groupingValue.match(/minute|hour|day|week|month|year/), `Invalid grouping value ${groupingValue}`, { code: STATUS_CODES.REPORT_INVALID_BODY, long_description: `Invalid grouping value ${groupingValue}` });
+          ASSERT_USER(groupingValue.match(/minute|hour|day|week|month|year/), `Invalid grouping value ${groupingValue}`, { code: "REPORT_INVALID_BODY", long_description: `Invalid grouping value ${groupingValue}` });
           groupingExpr = `DATE_TRUNC('${groupingValue}', ${reportFilter.grouping_expression})`;
         } else {
           groupingExpr = reportFilter.grouping_expression;

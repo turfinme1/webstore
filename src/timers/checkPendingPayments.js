@@ -2,7 +2,6 @@ const fs = require("fs");
 const paypal = require("../serverConfigurations/paypalClient");
 const Logger = require("../serverConfigurations/logger");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
-const STATUS_CODES = require("../serverConfigurations/constants");
 const pool = require("../database/dbConfig");
 const { ENV } = require("../serverConfigurations/constants");
 
@@ -42,7 +41,7 @@ const { ENV } = require("../serverConfigurations/constants");
               );
       
               await logger.info({
-                code: STATUS_CODES.CRON_SUCCESS,
+                code: "CRON_SUCCESS",
                 short_description: `Payment captured for Order ID: ${pendingPayment.id}`,
                 long_description: `Updated payment status to COMPLETED for Order ID: ${pendingPayment.id}`,
               });

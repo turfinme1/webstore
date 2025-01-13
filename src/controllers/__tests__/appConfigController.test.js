@@ -1,5 +1,4 @@
 const { ASSERT_USER } = require("../../serverConfigurations/assert");
-const { STATUS_CODES } = require("../../serverConfigurations/constants");
 const { validateBody } = require("../../serverConfigurations/validation");
 const AppConfigController = require("../appConfigController");
 
@@ -58,7 +57,7 @@ describe("AppConfigController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action", 
-        { code: STATUS_CODES.APP_CNF_UNAUTHORIZED, long_description: "You must be logged in to perform this action" }
+        { code: "APP_CNF_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
       expect(validateBody).toHaveBeenCalledWith(
         req,
@@ -91,7 +90,7 @@ describe("AppConfigController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action" , 
-        { code: STATUS_CODES.APP_CNF_UNAUTHORIZED, long_description: "You must be logged in to perform this action" }
+        { code: "APP_CNF_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
       expect(appConfigService.getRateLimitSettings).toHaveBeenCalledWith({
         dbConnection: req.dbConnection,

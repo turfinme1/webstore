@@ -1,4 +1,3 @@
-const { STATUS_CODES } = require("../../serverConfigurations/constants");
 const CrudService = require("../crudService");
 const bcrypt = require("bcrypt");
 
@@ -1118,7 +1117,8 @@ describe("CrudService", () => {
   
       // Verify logging
       expect(mockData.logger.info).toHaveBeenCalledWith({
-        code: STATUS_CODES.CRUD_ROLE_CHANGE_SUCCESS,
+        code: "CRUD_ROLE_CHANGE_SUCCESS"
+,
         short_description: expect.stringContaining('User roles updated for user with ID: 1'),
         long_description: expect.stringContaining('Added roles: Viewer; Removed roles: Admin')
       });
@@ -1141,7 +1141,8 @@ describe("CrudService", () => {
       // Verify only DELETE was called
       expect(mockData.dbConnection.query).toHaveBeenCalledTimes(2);
       expect(mockData.logger.info).toHaveBeenCalledWith({
-        code: STATUS_CODES.CRUD_ROLE_CHANGE_SUCCESS,
+        code: "CRUD_ROLE_CHANGE_SUCCESS"
+,
         short_description: expect.stringContaining('User roles updated for user with ID: 1'),
         long_description: expect.stringContaining('Added roles: ; Removed roles: Admin, Editor')
       });
@@ -1168,7 +1169,8 @@ describe("CrudService", () => {
       );
   
       expect(mockData.logger.info).toHaveBeenCalledWith({
-        code: STATUS_CODES.CRUD_ROLE_CHANGE_SUCCESS,
+        code: "CRUD_ROLE_CHANGE_SUCCESS"
+,
         short_description: expect.stringContaining('User roles updated for user with ID: 1'),
         long_description: expect.stringContaining('Added roles: Editor, Viewer; Removed roles: ')
       });
@@ -1191,7 +1193,8 @@ describe("CrudService", () => {
       await crudService.adminUsersUpdateHook(mockData, mockInsertObject);
   
       expect(mockData.logger.info).toHaveBeenCalledWith({
-        code: STATUS_CODES.CRUD_ROLE_CHANGE_SUCCESS,
+        code: "CRUD_ROLE_CHANGE_SUCCESS"
+,
         short_description: expect.stringContaining('User roles updated for user with ID: 1'),
         long_description: expect.stringContaining('Added roles: ; Removed roles: ')
       });
@@ -1262,7 +1265,8 @@ describe("CrudService", () => {
       expect(mockInsertObject.keys).not.toContain('role_permissions');
   
       expect(mockData.logger.info).toHaveBeenCalledWith({
-        code: STATUS_CODES.CRUD_PERMISSION_CHANGE_SUCCESS,
+        code: "CRUD_PERMISSION_CHANGE_SUCCESS"
+,
         short_description: expect.stringContaining('Permissions updated for role with ID: 1'),
         long_description: expect.stringContaining('Added permissions: create - users; Removed permissions: delete - users')
       });

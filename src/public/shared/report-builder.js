@@ -142,7 +142,23 @@ class ReportBuilder {
                     </select>
                 </div>
             `
-        }
+        },
+        text: {
+            template: (filter) => `
+                <div class="mb-3">
+                    <label for="${filter.key}_grouping_select_value" class="form-label">${filter.label}</label>
+                    <select 
+                            id="${filter.key}_grouping_select_value"
+                            name="${filter.key}_grouping_select_value"
+                            class="form-select"
+                            ${filter.required ? 'required' : ''}
+                    >
+                        <option value="">No grouping</option>
+                        <option value="group">Group by ${filter.label}</option>
+                    </select>
+                </div>
+            `
+        },
     }
 
     static tableTemplates = {
