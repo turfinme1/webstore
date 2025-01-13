@@ -1,8 +1,6 @@
-const cron = require("node-cron");
 const pool = require("../database/dbConfig");
 const { UserError } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
-const { checkPendingPayments } = require("./cronJobs");
 
 // const paypalClient = require("./paypalClient");
 const { ENV } = require("./constants");
@@ -47,6 +45,7 @@ const routeTable = {
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
     "/api/cart": cartController.getCart,
+    "/api/cart/active-vouchers": cartController.getActiveVouchers,
     "/api/orders/:orderId": orderController.getOrder,
     "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
     "/api/paypal/cancel/:orderId": orderController.cancelPaypalPayment,
@@ -59,6 +58,8 @@ const routeTable = {
     "/api/products/:id/comments": productController.createComment,
     "/api/products/:id/ratings": productController.createRating,
     "/api/cart": cartController.updateItem,
+    "/api/cart/apply-voucher": cartController.applyVoucher,
+    "/api/cart/remove-voucher": cartController.removeVoucher,
     "/api/orders": orderController.createOrder,
   },
   put: {
@@ -114,9 +115,13 @@ function requestMiddleware(handler) {
 
 async function sessionMiddleware(req, res) {
   const cookieName = req.entitySchemaCollection.userManagementSchema.cookie_name;
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let sessionId = req.cookies[cookieName];
 
-  if (sessionId) {
+  const settings = await req.dbConnection.query("SELECT * FROM app_settings WHERE id = 1 LIMIT 1");
+  req.context = { settings: settings.rows[0] };
+  
+  if (sessionId && UUID_REGEX.test(sessionId)) {
     const data = { entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, sessionHash : sessionId };
     const session = await authService.getSession(data);
 
@@ -141,14 +146,6 @@ async function sessionMiddleware(req, res) {
 
   req.session = anonymousSession;
 }
-
-cron.schedule("*/10 * * * *", async () => {
-  await checkPendingPayments(pool, paypalClient, orderService);
-});
-
-cron.schedule("* * * * *", async () => {
-  await emailService.processEmailQueue(pool);
-});
 
 process.on('uncaughtException', async (error) => {
   try {

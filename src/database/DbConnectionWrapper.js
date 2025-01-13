@@ -1,11 +1,13 @@
-const { STATUS_CODES }  = require("../serverConfigurations/constants");
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
 
 class DbConnectionWrapper {
-  constructor(dbConnection) {
+  constructor(dbConnection, pool) {
     this.dbConnection = dbConnection;
+    this.pool = pool;
+    this.backendPid = dbConnection.processID;
     this.query = this.query.bind(this);
     this.release = this.release.bind(this);
+    this.cancel = this.cancel.bind(this);
   }
 
   async query(queryCommand, values) {
@@ -19,13 +21,18 @@ class DbConnectionWrapper {
     } catch (error) {
       console.error("Database query error:", error);
 
-      ASSERT_USER(error.code !== "23505", "Record already exists", { code: STATUS_CODES.INVALID_INPUT, long_description: "Record already exists" });
-      ASSERT_USER(error.code !== "23503", "Invalid foreign key", { code: STATUS_CODES.INVALID_INPUT, long_description: "Invalid foreign key" });
-      ASSERT_USER(error.code !== "23514", "Check constraint failed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Check constraint failed" });
-      ASSERT_USER(error.code !== "22001", "Data too long for column" , { code: STATUS_CODES.INVALID_INPUT, long_description: "Data too long for column" });
-      ASSERT_USER(error.code !== "80000", "Order status cannot be reverted", { code: STATUS_CODES.INVALID_INPUT, long_description: "Cannot change the status of the order" });
-      ASSERT(false, "Internal server error");
+      ASSERT_USER(error.code !== "23505", "Record already exists", { code: "DB_WRAPR_INVALID_INPUT_ALREADY_EXISTS", long_description: "Record already exists" });
+      ASSERT_USER(error.code !== "23503", "Invalid foreign key", { code: "DB_WRAPR_INVALID_INPUT_FOREIGN_KEY", long_description: "Invalid foreign key" });
+      ASSERT_USER(error.code !== "23514", "Check constraint failed", { code: "DB_WRAPR_INVALID_INPUT_CHECK_CONSTRAINT", long_description: "Check constraint failed" });
+      ASSERT_USER(error.code !== "22001", "Data too long for column" , { code: "DB_WRAPR_INVALID_INPUT_DATA_TOO_LONG", long_description: "Data too long for column" });
+      ASSERT_USER(error.code !== "80000", "Order status cannot be reverted", { code: "DB_WRAPR_INVALID_INPUT_ORDER_STATUS", long_description: "Cannot change the status of the order" });
+      ASSERT(false, "Internal server error", { code: "DB_WRAPR_QUERY_ERROR", long_description: "Internal server error" });
     }
+  }
+
+  async cancel() {
+    const result = await this.pool.query("SELECT pg_cancel_backend($1)", [this.backendPid]);
+    return result;
   }
 
   release() {

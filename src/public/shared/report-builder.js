@@ -1,3 +1,5 @@
+import { showToastMessage } from "./page-utility.js";
+
 class ReportBuilder {
     constructor(config) {
         this.config = config;
@@ -140,7 +142,23 @@ class ReportBuilder {
                     </select>
                 </div>
             `
-        }
+        },
+        text: {
+            template: (filter) => `
+                <div class="mb-3">
+                    <label for="${filter.key}_grouping_select_value" class="form-label">${filter.label}</label>
+                    <select 
+                            id="${filter.key}_grouping_select_value"
+                            name="${filter.key}_grouping_select_value"
+                            class="form-select"
+                            ${filter.required ? 'required' : ''}
+                    >
+                        <option value="">No grouping</option>
+                        <option value="group">Group by ${filter.label}</option>
+                    </select>
+                </div>
+            `
+        },
     }
 
     static tableTemplates = {
@@ -239,6 +257,9 @@ class ReportBuilder {
             })
         },
         number: (value) => {
+            if(value == 0) {
+                return '0';
+            }
             if(!value || value ==="All") {
                 return '---';
             }
@@ -252,13 +273,19 @@ class ReportBuilder {
         }
     };
 
-    buildFilterForm() {
+    async buildFilterForm() {
         const formContainer = document.createElement('div');
         formContainer.className = 'bg-white p-4 rounded shadow-sm mb-5';
         
         const form = document.createElement('form');
         form.id = 'report-form';
         form.className = 'mb-3';
+
+        for (const filter of this.config.filters) {
+            if (filter.type === 'select' && !filter.options) {
+                filter.options = await this.fetchOptions(filter);
+            }
+        }
 
         const filterHTML = this.config.filters.map(filter => {
             const filterType = ReportBuilder.filterTypes[filter.type];
@@ -313,7 +340,7 @@ class ReportBuilder {
         return tableContainer;
     }
 
-    render(containerId) {
+    async render(containerId) {
         const container = document.getElementById(containerId);
         container.innerHTML = '';
 
@@ -327,7 +354,7 @@ class ReportBuilder {
         container.appendChild(this.buildExportSection(this.config.exportConfig));
 
         // Add filter form
-        container.appendChild(this.buildFilterForm());
+        container.appendChild(await this.buildFilterForm());
 
         // Add table
         container.appendChild(this.buildTable());
@@ -360,16 +387,28 @@ class ReportBuilder {
             
             const data = await response.json();
             if(data.overRowDisplayLimit){
-                alert("The row limit has been reached. Please refine your search criteria.");
+                showToastMessage("The row limit has been reached. Please refine your search criteria.", "error");
             }
             this.renderTableData(data);
         } catch (error) {
-            console.error('Error fetching report data:', error);
+            console.error('Error fetching data:', error);
+            if (!navigator.onLine) {
+                showToastMessage('No internet connection', 'error');
+            } else {
+                showToastMessage('Error fetching data', 'error');
+            }
         } finally {
             button.disabled = false;
             spinner.style.display = 'none';
         }
     }
+
+    async fetchOptions(filter) {
+        const response = await fetch(filter.fetchFrom);
+        let options = await response.json();
+        options = options.map(option => ({ value: option[filter.valueKey], label: option[filter.displayKey] }));
+        return options;
+    };
 
     renderTableData(data) {
         const tbody = document.getElementById('report-table-body');
@@ -443,8 +482,11 @@ class ReportBuilder {
             a.click();
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Error exporting data:', error);
-            alert('Export failed');
+            if (!navigator.onLine) {
+                showToastMessage('No internet connection', 'error');
+            } else {
+                showToastMessage('Export failed.', 'error');
+            }
         } finally {
             button.disabled = false;
             exportButtons.forEach(button => button.disabled = false);

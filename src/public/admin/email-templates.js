@@ -1,5 +1,4 @@
-import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation, createBackofficeNavigation } from "./navigation.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 
 let state = {
   userStatus: null,
@@ -25,7 +24,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   state.userStatus = await getUserStatus();
   createNavigation(state.userStatus);
   createBackofficeNavigation(state.userStatus);
-  await attachLogoutHandler();
   // if (!hasPermission(state.userStatus, 'read', "site-settings")) {
   // 	window.location = '/login.html';
   // }
@@ -50,15 +48,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function getTemplates() {
   try {
-    const response = await fetch("/crud/email-templates");
+    const response = await fetchWithErrorHandling("/crud/email-templates");
     if (response.ok) {
-      const templates = await response.json();
+      const templates = await response.data;
       state.templates = templates;
     } else {
-      alert("Error fetching templates");
+      showToastMessage(response.error, "error");
     }
   } catch (error) {
-    alert("Error fetching templates");
+    showToastMessage("Error while fetching templates", "error");
   }
 }
 
@@ -93,7 +91,7 @@ async function handleTemplateFormSubmit(event) {
     data.table_border_color = null;
     data.table_border_width = null;
   }
-  const response = await fetch(
+  const response = await fetchWithErrorHandling(
     `/crud/email-templates/${state.emailTemplateId}`,
     {
       method: "PUT",
@@ -105,12 +103,10 @@ async function handleTemplateFormSubmit(event) {
   );
 
   if (response.ok) {
-    alert("Template saved!");
+    showToastMessage("Template saved", "success");
     await getTemplates();
   } else {
-    const apiError = await response.json();
-    const errorMessage = apiError.error || "Error saving template";
-    alert(errorMessage);
+    showToastMessage(response.error, "error");
   }
 }
 
@@ -124,14 +120,14 @@ async function loadCurrentTemplate() {
   console.log(currentTemplate);
 
   try {
-    const response = await fetch(
+    const response = await fetchWithErrorHandling(
       `/crud/email-templates/${state.emailTemplateId}`
     );
     if (response.ok) {
-      const emailTemplate = await response.json();
+      const emailTemplate = await response.data;
       populateTemplateForm(emailTemplate);
     } else {
-      alert("error!");
+      showToastMessage(response.error, "error");
     }
   } catch (error) {
     console.error("fetch error", error);
@@ -157,22 +153,22 @@ function populateTemplateForm(template) {
 
 async function handleSendTestEmail() {
   const emailType = elements.templateTypeSelect.value.replace(/\s/g, "-").toLowerCase();
-  const response = await fetch(`/api/test-email/${emailType}`);
+  const response = await fetchWithErrorHandling(`/api/test-email/${emailType}`);
 
   if (response.ok) {
-    alert("Test email sent!");
+    showToastMessage("Test email sent", "success");
   } else {
-    alert("Error sending test email");
+    showToastMessage(response.error, "error");
   }
 }
 
 async function handlePreviewEmail() {
   const emailType = elements.templateTypeSelect.value.replace(/\s/g, "-").toLowerCase();
-  const response = await fetch(`/api/preview-email/${emailType}`);
+  const response = await fetchWithErrorHandling(`/api/preview-email/${emailType}`);
 
   try {
     if (response.ok) {
-      const email = await response.json();
+      const email = await response.data;
       const modal = document.createElement("div");
       modal.style.position = "fixed";
       modal.style.top = "0";
@@ -197,7 +193,7 @@ async function handlePreviewEmail() {
       modal.appendChild(iframe);
       document.body.appendChild(modal);
     } else {
-      alert("Error previewing email");
+      showToastMessage(response.error, "error");
     }
   }
   catch (error) {

@@ -49,6 +49,21 @@
               "description": "Filter by maximum order total amount"
             }
           }
+        },
+        "days_since_order": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Filter by minimum days since order was created"
+            },
+            "max": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Filter by maximum days since order was created"
+            }
+          }
         }
       }
     },

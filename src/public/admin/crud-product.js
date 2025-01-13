@@ -1,6 +1,4 @@
-import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation, createBackofficeNavigation } from "./navigation.js";
-
+import { createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage, hasPermission, getUrlParams, updateUrlParams } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const mainContainer = document.getElementById("main-container");
@@ -36,16 +34,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   let categoryChoices;
   let categoryUpdateChoices;
   let currentPage = 1;
-  const pageSize = 10;
+  let pageSize = 10;
   let searchParams = {};
+  let orderParams = [];
+  let filterParams = {};
   let selectedCategories = [];
   let minPrice = null;
   let maxPrice = null;
 
+  const urlParams = getUrlParams();
+  currentPage = urlParams.page || 1;
+  pageSize = urlParams.pageSize || 10;
+  filterParams = urlParams.filterParams || {};
+  orderParams = urlParams.orderParams || [];
+  searchParams = urlParams.searchParams || {};
+
   productForm.reset();
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
-  await attachLogoutHandler();
   createBackofficeNavigation(userStatus);
 
   if (!hasPermission(userStatus, "read", "products")) {
@@ -194,7 +200,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function loadProducts(currentPage) {
     try {
-      const filterParams = {};
+      filterParams = filterParams || {};
       if (selectedCategories.length > 0) {
         filterParams.categories = selectedCategories;
       }
@@ -222,8 +228,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       queryParams.append("pageSize", pageSize.toString());
       queryParams.append("page", currentPage.toString());
 
-      const response = await fetch(`/api/products?${queryParams.toString()}`);
-      const data = await response.json();
+      updateUrlParams({ currentPage, pageSize, searchParams, filterParams, orderParams });
+      const response = await fetchWithErrorHandling(`/api/products?${queryParams.toString()}`);
+
+      if(!response.ok) {
+        showToastMessage(response.error, "error");
+        return;
+      }
+      const data = await response.data;
       const products = data.result;
       const totalProducts = parseInt(data.count);
 
@@ -353,14 +365,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function handleUpdateProduct(productId) {
     try {
       // Fetch product details by ID from the backend
-      const productResponse = await fetch(`/crud/products/${productId}`);
-      const product = await productResponse.json();
-
-      if (!product) {
+      const productResponse = await fetchWithErrorHandling(`/crud/products/${productId}`);
+      
+      if (!productResponse.ok) {
         console.error("Product not found");
+        showToastMessage(productResponse.error, "error");
         return;
       }
-
+      const product = await productResponse.data;
+      
       // Show the form container
       formUpdateContainer.style.display = "block";
       formContainer.style.display = "none";
@@ -372,8 +385,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       productUpdateForm["long_description"].value = product.long_description;
 
       // Fetch categories and populate them, marking selected ones
-      const categoriesResponse = await fetch("/crud/categories");
-      const categories = await categoriesResponse.json();
+      const categoriesResponse = await fetchWithErrorHandling("/crud/categories");
+      const categories = await categoriesResponse.data;
 
       // Populate categories and mark selected categories
       categories.forEach((category) => {
@@ -439,14 +452,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         formData.set("categories", JSON.stringify(categories)); // Add selected categories to the form data
 
         try {
-          const response = await fetch(`/api/products/${productId}`, {
+          const response = await fetchWithErrorHandling(`/api/products/${productId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(jsonData),
           });
 
           if (response.ok) {
-            const imageUploadResponse = await fetch(
+            const imageUploadResponse = await fetchWithErrorHandling(
               `/api/products/${productId}/images`,
               {
                 method: "POST",
@@ -455,7 +468,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             );
 
             if (imageUploadResponse.ok) {
-              alert("Product updated successfully!");
+              showToastMessage("Product updated successfully!", "success");
+              await new Promise((resolve) => setTimeout(resolve, 1000));
               productUpdateForm.reset();
               window.location.reload();
               // loadProducts(currentPage);
@@ -466,13 +480,12 @@ document.addEventListener("DOMContentLoaded", async () => {
               alert(`Failed to update product: ${error.error}`);
             }
           } else {
-            const error = await response.json();
             console.error("Error:", error);
-            alert(`Failed to update product: ${error.error}`);
+            showToastMessage(`Failed to update product: ${response.error}`, "error");
           }
         } catch (error) {
           console.error("Error submitting the form:", error);
-          alert("Failed to update product.");
+          showToastMessage("Failed to update product.", "error");
         }
       });
     } catch (error) {
@@ -484,16 +497,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function handleDeleteProduct(productId) {
     if (confirm("Are you sure you want to delete this product?")) {
       try {
-        const response = await fetch(`/api/products/${productId}`, {
+        const response = await fetchWithErrorHandling(`/api/products/${productId}`, {
           method: "DELETE",
         });
         if (response.ok) {
           alert("Product deleted successfully!");
+          showToastMessage("Product deleted successfully!", "success");
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           window.location.reload();
           loadProducts(currentPage); // Reload the product list after deletion
         } else {
-          const error = await response.json();
-          alert(`Failed to delete product: ${error.error}`);
+          showToastMessage(`Failed to delete product: ${response.error}`, "error");
         }
       } catch (error) {
         console.error("Error deleting product:", error);
@@ -557,6 +571,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (maxPriceValue && isNaN(maxPriceValue)) {
       alert("Maximum price must be a number.");
+      return;
+    }
+    
+    if(minPriceValue < 0 || maxPriceValue < 0) {
+      alert("Price cannot be negative.");
       return;
     }
 

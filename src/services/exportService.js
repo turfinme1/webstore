@@ -2,7 +2,6 @@ const { Readable } = require("stream");
 const { pipeline } = require("stream/promises");
 const ExcelJS = require("exceljs");
 const { ASSERT } = require("../serverConfigurations/assert");
-const { STATUS_CODES } = require("../serverConfigurations/constants");
 
 class ExportService {
     constructor(crudService) {
@@ -134,13 +133,18 @@ class ExportService {
 
     async fetchRowsWithCursor(data){
         await data.dbConnection.query(`DECLARE export_cursor CURSOR FOR ${data.query}`, data.values);
-
+        let totalRow = null;
         async function* fetchRows() {
             let result = await data.dbConnection.query("FETCH 10000 FROM export_cursor");
+            if(!totalRow && result.rows.length > 0){
+                totalRow = result.rows.shift();
+            }
             while (result.rows.length > 0) {
                 yield result.rows;
                 result = await data.dbConnection.query("FETCH 10000 FROM export_cursor");
             }
+
+            yield [totalRow];
 
             await data.dbConnection.query("CLOSE export_cursor");
         }
@@ -272,17 +276,17 @@ class ExportService {
     }
 
     async exportReport(data){
-        ASSERT(data.format, "Missing export format", { code: STATUS_CODES.INVALID_INPUT, long_description: "Missing export format" });
-        ASSERT(data.query, "Missing query", { code: STATUS_CODES.INVALID_INPUT, long_description: "Missing query" });
-        ASSERT(data.values, "Missing query values", { code: STATUS_CODES.INVALID_INPUT, long_description: "Missing query values" });
-        ASSERT(data.filename, "Missing filename", { code: STATUS_CODES.INVALID_INPUT, long_description: "Missing filename" });
+        ASSERT(data.format, "Missing export format", { code: "EXPORT_INVALID_INPUT_FORMAT", long_description: "Missing export format" });
+        ASSERT(data.query, "Missing query", { code: "EXPORT_INVALID_INPUT_QUERY", long_description: "Missing query" });
+        ASSERT(data.values, "Missing query values", { code: "EXPORT_INVALID_INPUT_VALUES", long_description: "Missing query values" });
+        ASSERT(data.filename, "Missing filename", { code: "EXPORT_INVALID_INPUT_FILENAME", long_description: "Missing filename" });
 
         if (data.format === 'csv') {
             await this. exportReportToCsv(data);
         } else if (data.format === 'excel') {
             await this.exportReportToExcel(data);
         } else {
-            ASSERT(false, "Invalid export format", { code: STATUS_CODES.INVALID_INPUT, long_description: "Invalid export format" });
+            ASSERT(false, "Invalid export format", { code: "EXPORT_INVALID_INPUT", long_description: "Invalid export format" });
         }
     }
 
@@ -293,59 +297,59 @@ class ExportService {
         });
 
         const dbRowGenerator = this.fetchRowsWithCursor;
-        async function* csvRowGenerator() {
-            yield "\uFEFF"; 
+        const csvStream = Readable.from(this.csvRowGenerator(data, dbRowGenerator));
+        await pipeline(csvStream, data.res);
+    }
 
-            if (data.filters || data.groupings) {
-                
-                if (data.filters) {
-                    yield '\n# Applied Filters:\n';
-                    for (const [key, value] of Object.entries(data.filters)) {
-                    if (value) {
-                        yield `${key},${value}\n`;
-                    }
-                    }
-                }
+    async* csvRowGenerator(data, dbRowGenerator) {
+        yield "\uFEFF"; 
+
+        if (data.filters || data.groupings) {
             
-                if (data.groupings) {
-                    yield '\n# Applied Grouping:\n';
-                    for (const [key, value] of Object.entries(data.groupings)) {
-                    if (value) {
-                        yield `${key},${value}\n`;
-                    }
-                    }
+            if (data.filters) {
+                yield '\n# Applied Filters:\n';
+                for (const [key, value] of Object.entries(data.filters)) {
+                if (value) {
+                    yield `${key},${value}\n`;
                 }
-                yield "\n";
-            }
-
-            let headers = null;
-            for await (const rows of await dbRowGenerator(data)) {
-                for (const row of rows) {
-                    if (!headers) {
-                        headers = Object.keys(row)
-                        yield `${headers.join(",")}\n`;
-                    }
-
-                    const rowValues = Object.values(row)
-                        .map(value => {
-                            if (Array.isArray(value)) {
-                                return value.join(':');
-                            }
-                            if (typeof value === 'object' && value !== null) {
-                                return JSON.stringify(value);
-                            }
-
-                            return value;
-                        })
-                        .join(",") + "\n";
-
-                    yield rowValues;
                 }
             }
+        
+            if (data.groupings) {
+                yield '\n# Applied Grouping:\n';
+                for (const [key, value] of Object.entries(data.groupings)) {
+                if (value) {
+                    yield `${key},${value}\n`;
+                }
+                }
+            }
+            yield "\n";
         }
 
-        const csvStream = Readable.from(csvRowGenerator());
-        await pipeline(csvStream, data.res);
+        let headers = null;
+        for await (const rows of await dbRowGenerator(data)) {
+            for (const row of rows) {
+                if (!headers) {
+                    headers = Object.keys(row)
+                    yield `${headers.join(",")}\n`;
+                }
+
+                const rowValues = Object.values(row)
+                    .map(value => {
+                        if (Array.isArray(value)) {
+                            return value.join(':');
+                        }
+                        if (typeof value === 'object' && value !== null) {
+                            return JSON.stringify(value);
+                        }
+
+                        return value;
+                    })
+                    .join(",") + "\n";
+
+                yield rowValues;
+            }
+        }
     }
 
     async exportReportToExcel(data) {

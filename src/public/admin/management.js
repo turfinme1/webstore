@@ -1,10 +1,8 @@
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
-import { createNavigation, createBackofficeNavigation } from "./navigation.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
-  await attachLogoutHandler();
   createBackofficeNavigation(userStatus);
 
   renderOrderChartLastSixMonths();

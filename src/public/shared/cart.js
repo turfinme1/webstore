@@ -1,5 +1,4 @@
-import { getUserStatus, attachLogoutHandler } from "./auth.js";
-import { createNavigation } from "./navigation.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 
 // Centralized state for the cart
 const state = {
@@ -19,7 +18,6 @@ const elements = {
 document.addEventListener('DOMContentLoaded', async () => {
   state.userStatus = await getUserStatus();
   createNavigation(state.userStatus);
-  await attachLogoutHandler();
   const cartData = await getCartItems();
   state.items = cartData.items;
   state.cart = cartData;
@@ -50,13 +48,22 @@ function handleCartItemActions(event) {
 // Update cart item quantity
 async function updateCartItemQuantity(productId, newQuantity) {
   try {
-    await updateCartItem(productId, newQuantity);
-    
-    const cartData = await getCartItems();
-    state.items = cartData.items;
-    state.cart = cartData;
-
-    updateCartDisplay(state);
+    const response = await fetchWithErrorHandling(`/api/cart`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ product_id: productId, quantity: newQuantity }),
+    });
+    if (!response.ok) {
+      showToastMessage(response.error, "error");
+    } else {
+      const cartData = await getCartItems();
+      state.items = cartData.items;
+      state.cart = cartData;
+      
+      updateCartDisplay(state);
+    }
   } catch (error) {
     console.error('Error updating cart item:', error);
   }
@@ -65,13 +72,19 @@ async function updateCartItemQuantity(productId, newQuantity) {
 // Remove item from cart
 async function removeItemFromCart(itemId) {
   try {
-    await removeCartItem(itemId);
+    const response = await fetchWithErrorHandling(`/api/cart/${itemId}`, {
+      method: 'DELETE',
+    });
 
-    const cartData = await getCartItems();
-    state.items = cartData.items;
-    state.cart = cartData;
-
-    updateCartDisplay(state);
+    if (!response.ok) {
+      showToastMessage(response.error, "error");
+    } else {
+      const cartData = await getCartItems();
+      state.items = cartData.items;
+      state.cart = cartData;
+      
+      updateCartDisplay(state);
+    }
   } catch (error) {
     console.error('Error removing cart item:', error);
   }
@@ -98,27 +111,12 @@ async function handleCheckout() {
 // cartService.js
 
 async function getCartItems() {
-  const response = await fetch('/api/cart');
-  if (!response.ok) throw new Error('Failed to fetch cart items');
-  return await response.json();
-}
-
-async function updateCartItem(productId, quantity) {
-  const response = await fetch(`/api/cart`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ product_id: productId, quantity }),
-    });
-  if (!response.ok) throw new Error('Failed to update cart item');
-}
-
-async function removeCartItem(itemId) {
-  const response = await fetch(`/api/cart/${itemId}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) throw new Error('Failed to remove cart item');
+  const response = await fetchWithErrorHandling('/api/cart');
+  if (!response.ok) {
+    showToastMessage(response.error, "error");
+  } else {
+    return await response.data;
+  }
 }
 
 // cartUI.js
@@ -154,7 +152,7 @@ function renderCartTotalRow() {
   subtotalRow.classList.add('cart-subtotal');
   subtotalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Subtotal:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPrice}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price}</td>
     <td></td>
   `;
   fragment.appendChild(subtotalRow);
@@ -162,8 +160,8 @@ function renderCartTotalRow() {
   const discountRow = document.createElement('tr');
   discountRow.classList.add('cart-discount');
   discountRow.innerHTML = `
-    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Discount (${state.cart.discountPercentage}%):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.discountAmount}</td>
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Discount (${state.cart.discount_percentage}%):</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.discount_amount}</td>
     <td></td>
   `;
   fragment.appendChild(discountRow);
@@ -172,7 +170,7 @@ function renderCartTotalRow() {
   priceAfterDiscountRow.classList.add('cart-price-after-discount');
   priceAfterDiscountRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Price after discount:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPriceAfterDiscount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_after_discount}</td>
     <td></td>
   `;
   fragment.appendChild(priceAfterDiscountRow);
@@ -180,24 +178,65 @@ function renderCartTotalRow() {
   const vatRow = document.createElement('tr');
   vatRow.classList.add('cart-vat');
   vatRow.innerHTML = `
-    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">VAT (${state.cart.vatPercentage}%):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.vatAmount}</td>
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">VAT (${state.cart.vat_percentage}%):</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.vat_amount}</td>
     <td></td>
   `;
   fragment.appendChild(vatRow);
+
+  const priceWithVatRow = document.createElement('tr');
+  priceWithVatRow.classList.add('cart-price-with-vat');
+  priceWithVatRow.innerHTML = `
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total price with VAT:</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_with_vat}</td>
+    <td></td>
+  `;
+  fragment.appendChild(priceWithVatRow);
+
+  const voucherRow = document.createElement('tr');
+  voucherRow.classList.add('cart-voucher');
+  voucherRow.innerHTML = `
+    <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">
+      <div class="d-flex align-items-center justify-content-end">
+        <div class="input-group" style="max-width: 350px;">
+          <input type="text" id="voucher-input" class="form-control" placeholder="Enter voucher code" ${state.cart.voucher_code ? `value= "${state.cart.voucher_code}"`: ""} />
+          <button class="btn btn-primary" id="apply-voucher-btn">Apply</button>
+          <button class="btn btn-danger remove-voucher" id="remove-voucher">Remove</button>
+        </div>
+      </div>
+    </td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">-$${state.cart.voucher_amount}</td>
+   <td>
+      <button class="btn btn-secondary" id="browse-vouchers-btn">Browse Vouchers</button>
+   </td>
+
+    <div class="modal fade" id="voucher-modal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Available Vouchers</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="voucher-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  fragment.appendChild(voucherRow);
 
   const totalRow = document.createElement('tr');
   totalRow.classList.add('cart-total');
   totalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.totalPriceWithVat}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_with_voucher}</td>
     <td></td>
   `;
   fragment.appendChild(totalRow);
 
   return fragment;
 }
-
 
 function updateCartDisplay(state) {
   const cartContainer = document.getElementById('cart-container');
@@ -214,6 +253,7 @@ function updateCartDisplay(state) {
   }
   elements.checkoutButton.disabled = false;
   cartContainer.appendChild(renderCartTotalRow());
+  attachVoucherEvents();
 
   for (const item of state.items) {
     if (parseInt(item.quantity) === 1) {
@@ -228,4 +268,105 @@ function updateCartDisplay(state) {
       updateCartItemQuantity(item.product_id, parseInt(item.quantity) + 1);
     });
   }
+}
+
+async function attachVoucherEvents() {
+  const applyVoucherBtn = document.getElementById('apply-voucher-btn');
+  const browseVouchersBtn = document.getElementById('browse-vouchers-btn');
+  const voucherModal = new bootstrap.Modal(document.getElementById('voucher-modal'));
+  const voucherInput = document.getElementById('voucher-input');
+
+  applyVoucherBtn.addEventListener('click', async () => {
+    const code = voucherInput.value.trim();
+    if (code) {
+      await applyVoucher(code);
+    } else {
+      showToastMessage('Please enter a valid voucher code', 'error');
+    }
+  });
+
+  browseVouchersBtn.addEventListener('click', async () => {
+    await loadAvailableVouchers();
+    voucherModal.show();
+  });
+
+  // Handle remove voucher button if it exists
+  const removeVoucherBtn = document.querySelector('.remove-voucher');
+  if (removeVoucherBtn) {
+    removeVoucherBtn.addEventListener('click', removeVoucher);
+  }
+}
+
+async function loadAvailableVouchers() {
+  try {
+    const response = await fetchWithErrorHandling("/api/cart/active-vouchers");
+    if (response.ok) {
+      state.vouchers = await response.data;
+      renderVouchersList();
+    }
+  } catch (error) {
+    console.error('Error loading vouchers:', error);
+    showToastMessage('Failed to load vouchers', 'error');
+  }
+}
+
+function renderVouchersList() {
+  const voucherList = document.querySelector('.voucher-list');
+  voucherList.innerHTML = state.vouchers.map(voucher => `
+    <div class="voucher-item card mb-2">
+      <div class="card-body">
+        <h6 class="card-title">${voucher.name}</h6>
+        <p class="card-text">Discount: $${voucher.discount_amount}</p>
+        <p class="card-text">Code: ${voucher.code}</p>
+        <button class="btn btn-sm btn-primary select-voucher" data-code="${voucher.code}">
+          Use this voucher
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  // Add click handlers for voucher selection
+  voucherList.querySelectorAll('.select-voucher').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const code = e.target.dataset.code;
+      let voucherInput = document.getElementById('voucher-input');
+      voucherInput.value = code;
+      let voucherModal = document.getElementById('voucher-modal');
+      bootstrap.Modal.getInstance(voucherModal).hide();
+    });
+  });
+}
+
+async function applyVoucher(code) {
+  const response = await fetchWithErrorHandling('/api/cart/apply-voucher', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code })
+  });
+
+  if(!response.ok) {
+    showToastMessage(response.error, "error");
+    return;
+  }
+
+  const cartData = await getCartItems();
+  state.cart = cartData;
+  updateCartDisplay(state);
+  showToastMessage('Voucher applied successfully', 'success');
+}
+
+async function removeVoucher() {
+  const response = await fetchWithErrorHandling('/api/cart/remove-voucher', {
+    method: 'POST'
+  });
+
+  if(!response.ok) {
+    showToastMessage(response.error, "error");
+    return;
+  }
+
+  const cartData = await getCartItems();
+  state.cart = cartData;
+  updateCartDisplay(state);
+  showToastMessage('Voucher removed successfully', 'success');
 }

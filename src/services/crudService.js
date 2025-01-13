@@ -1,5 +1,5 @@
 const bcrypt = require("bcrypt");
-const { STATUS_CODES }  = require("../serverConfigurations/constants");
+const { ASSERT_USER } = require("../serverConfigurations/assert");
 
 class CrudService {
   constructor() {
@@ -20,11 +20,19 @@ class CrudService {
       data.body.password_hash = await bcrypt.hash(data.body.password_hash, 10);
     }
 
+    if (this.hooks().create[data.params.entity]?.before) {
+      await this.hooks().create[data.params.entity].before(data);
+    }
+    
     // Insert the main entity and return its ID
     const insertedEntity = await this.insertMainEntity(data, schema);
 
     // Handle insertions into mapping tables
     await this.handleMappingInsertions(data, schema, insertedEntity.id);
+
+    if (this.hooks().create[data.params.entity]?.after) {
+      await this.hooks().create[data.params.entity].after(data, insertedEntity.id);
+    }
 
     return insertedEntity; // Return the created main entity
   }
@@ -165,33 +173,6 @@ class CrudService {
               `${filterField} = $${searchValues.length}`
             );
           }
-        } else if (schema.properties[filterField]?.format === "date-time") {
-          if (filterValue.min && filterValue.max) {
-            searchValues.push(filterValue.min);
-            searchValues.push(filterValue.max);
-            conditions.push(
-              `DATE_TRUNC('day', ${filterField}) >= $${
-                searchValues.length - 1
-              } AND DATE_TRUNC('day', ${filterField}) <= $${
-                searchValues.length
-              }`
-            );
-          } else if (filterValue.min) {
-            searchValues.push(filterValue.min);
-            conditions.push(
-              `DATE_TRUNC('day', ${filterField}) >= $${searchValues.length}`
-            );
-          } else if (filterValue.max) {
-            searchValues.push(filterValue.max);
-            conditions.push(
-              `DATE_TRUNC('day', ${filterField}) <= $${searchValues.length}`
-            );
-          } else {
-            searchValues.push(filterValue);
-            conditions.push(
-              `DATE_TRUNC('day', ${filterField}) = $${searchValues.length}`
-            );
-          }
         } else if (schema.properties[filterField]?.format === "date-time-no-year") {
           searchValues.push(filterValue);
           conditions.push(
@@ -263,7 +244,7 @@ class CrudService {
     } else {
       selectFields = ["*"];
       orderByClause =
-        data.query.orderParams.length > 0
+        data.query?.orderParams?.length > 0
           ? data.query.orderParams
               .map(
                 ([column, direction]) => `${column} ${direction.toUpperCase()}`
@@ -436,160 +417,212 @@ class CrudService {
   }
 
   hooks() {
-    async function roleUpdateHook(data, insertObject) {
-      const currentPermissionsResult = await data.dbConnection.query(`
-        SELECT role_permissions.permission_id, permissions.interface_id, permissions.name AS action, interfaces.name AS interface
-        FROM role_permissions
-        JOIN permissions ON role_permissions.permission_id = permissions.id
-        JOIN interfaces ON permissions.interface_id = interfaces.id
-        WHERE role_permissions.role_id = $1`,
-        [data.params.id]
-      );
-      
-      const currentPermissions = currentPermissionsResult.rows.map(row => ({
-        permission_id: row.permission_id,
-        interface_id: parseInt(row.interface_id, 10),
-        action: row.action,
-        interface: row.interface
-      }));
-    
-      const newPermissions = data.body.permissions.filter(permission => permission.allowed);
-      
-      const addedPermissions = newPermissions.filter(
-        (newPerm) =>
-          !currentPermissions.some(
-            (currPerm) =>
-              currPerm.interface_id === newPerm.interface_id &&
-              currPerm.action === newPerm.action
-          )
-      );
-
-      const removedPermissions = currentPermissions.filter(
-        (currPerm) =>
-          !newPermissions.some(
-            (newPerm) =>
-              newPerm.interface_id === currPerm.interface_id &&
-              newPerm.action === currPerm.action
-          )
-      );
-      
-      const addedPermissionNames = [];
-      const removedPermissionNames = [];
-    
-      // Insert added permissions and retrieve interface and action names for logging
-      for (const permission of addedPermissions) {
-        const insertResult = await data.dbConnection.query(
-          `WITH inserted_permission AS (
-            INSERT INTO role_permissions (role_id, permission_id, created_at)
-            SELECT $1, p.id, NOW()
-            FROM permissions p
-            WHERE p.interface_id = $2 AND p.name = $3
-            RETURNING permission_id
-          )
-          SELECT inserted_permission.permission_id, permissions.name AS action, interfaces.name AS interface
-          FROM inserted_permission
-          JOIN permissions ON inserted_permission.permission_id = permissions.id
-          JOIN interfaces ON permissions.interface_id = interfaces.id`,
-          [data.params.id, permission.interface_id, permission.action]
-        );
-
-        // Add to log list with interface name and action
-        insertResult.rows.forEach(row => {
-          addedPermissionNames.push(`${row.action} - ${row.interface}`);
-        });
-      }
-
-      // Delete removed permissions and retrieve interface and action names for logging
-      for (const permission of removedPermissions) {
-        const deleteResult = await data.dbConnection.query(
-          `WITH deleted_permission AS (
-            DELETE FROM role_permissions
-            WHERE role_id = $1 AND permission_id = (
-              SELECT id FROM permissions
-              WHERE interface_id = $2 AND name = $3
-            )
-            RETURNING permission_id
-          )
-          SELECT deleted_permission.permission_id, permissions.name AS action, interfaces.name AS interface
-          FROM deleted_permission
-          JOIN permissions ON deleted_permission.permission_id = permissions.id
-          JOIN interfaces ON permissions.interface_id = interfaces.id`,
-          [data.params.id, permission.interface_id, permission.action]
-        );
-           
-        deleteResult.rows.forEach(row => {
-          removedPermissionNames.push(`${row.action} - ${row.interface}`);
-        });
-      }
-          
-      await data.logger.info({
-        code: STATUS_CODES.PERMISSION_CHANGE_SUCCESS,
-        short_description: `Permissions updated for role with ID: ${data.params.id}`,
-        long_description: `Added permissions: ${addedPermissionNames.join(', ')}; Removed permissions: ${removedPermissionNames.join(', ')}`
-      });
-
-      insertObject.keys = insertObject.keys.filter(
-        (key) => key !== "role_permissions"
-      );
-    }
-
-    async function adminUsersUpdateHook(data, insertObject) {
-      const currentRolesResult = await data.dbConnection.query(`
-        DELETE FROM admin_user_roles
-        USING roles
-        WHERE admin_user_roles.role_id = roles.id
-          AND admin_user_roles.admin_user_id = $1
-        RETURNING admin_user_roles.role_id, roles.name AS role_name`,
-        [data.params.id]
-      );
-      const currentRoles = currentRolesResult.rows.map(row => ({
-        role_id: row.role_id,
-        role_name: row.role_name
-      }));
-
-      const newRoles = data.body.role_id;
-      const addedRoles = newRoles.filter(roleId => !currentRoles.some(role => role.role_id === roleId));
-      const removedRoles = currentRoles.filter(role => !newRoles.includes(role.role_id));
-
-      for (const roleId of newRoles) {
-        const result = await data.dbConnection.query(`
-          INSERT INTO admin_user_roles (admin_user_id, role_id)
-          VALUES ($1, $2)
-          ON CONFLICT DO NOTHING
-          RETURNING *`,
-          [data.params.id, roleId]
-        );
-        console.log(result.rows);
-      }
-
-      const addedRolesResult = await data.dbConnection.query(`
-        SELECT id AS role_id, name AS role_name
-        FROM roles
-        WHERE id = ANY($1)`,
-        [addedRoles]
-      );
-      const addedRoleNames = addedRolesResult.rows.map(row => row.role_name);
-      const removedRoleNames = removedRoles.map(role => role.role_name);
-
-      insertObject.keys = insertObject.keys.filter((key) => key !== "role_id");
-      
-      await data.logger.info({
-        code: STATUS_CODES.ROLE_CHANGE_SUCCESS,
-        short_description: `User roles updated for user with ID: ${data.params.id}`,
-        long_description: `Added roles: ${addedRoleNames.join(', ')}; Removed roles: ${removedRoleNames.join(', ')}`
-      });
-    }
-
     return {
-      update: {
-        roles: {
-          before: roleUpdateHook,
+      create: {
+        campaigns: {
+          before: this.campainCreateHook,
         },
-        "admin-users": {
-          before: adminUsersUpdateHook,
+        "target-groups": {
+          after: this.targetGroupCreateHook.bind(this),
         },
       },
-    };
+      update: {
+        roles: {
+          before: this.roleUpdateHook,
+        },
+        "admin-users": {
+          before: this.adminUsersUpdateHook,
+        },
+      },
+    }
+  };
+
+  async campainCreateHook(data) {
+    const currentDate = new Date();
+    const start_date = new Date(data.body.start_date);
+    const end_date = new Date(data.body.end_date);
+    ASSERT_USER(start_date < end_date, "Start date must be before end date", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_DATE_RANGE", long_description: "Start date must be before end date" });
+    ASSERT_USER(end_date > currentDate, "End date must be in the future", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_END_DATE", long_description: "End date must be in the future" });
+    /// check if the voucher is active 
+    const voucherResult = await data.dbConnection.query(`
+      SELECT * FROM vouchers
+      WHERE id = $1 AND is_active = TRUE`,
+      [data.body.voucher_id]
+    );
+    const voucher = voucherResult.rows[0];
+    ASSERT_USER(voucher, "Voucher is not active", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_VOUCHER_INVALID", long_description: "Voucher is not active" });
+    let status = "Inactive";
+    if(currentDate > voucher.end_date) {
+      status = "Expired voucher";
+    } else if (currentDate >= start_date && currentDate <= end_date) {
+      status = "Active";
+    } else if (currentDate < start_date) {
+      status = "Pending";
+    } 
+
+    data.body.status = status;
+  }
+
+  async adminUsersUpdateHook(data, insertObject) {
+    const currentRolesResult = await data.dbConnection.query(`
+      DELETE FROM admin_user_roles
+      USING roles
+      WHERE admin_user_roles.role_id = roles.id
+        AND admin_user_roles.admin_user_id = $1
+      RETURNING admin_user_roles.role_id, roles.name AS role_name`,
+      [data.params.id]
+    );
+    const currentRoles = currentRolesResult.rows.map(row => ({
+      role_id: row.role_id,
+      role_name: row.role_name
+    }));
+
+    const newRoles = data.body.role_id;
+    const addedRoles = newRoles.filter(roleId => !currentRoles.some(role => role.role_id === roleId));
+    const removedRoles = currentRoles.filter(role => !newRoles.includes(role.role_id));
+
+    for (const roleId of newRoles) {
+      const result = await data.dbConnection.query(`
+        INSERT INTO admin_user_roles (admin_user_id, role_id)
+        VALUES ($1, $2)
+        ON CONFLICT DO NOTHING
+        RETURNING *`,
+        [data.params.id, roleId]
+      );
+      console.log(result.rows);
+    }
+
+    const addedRolesResult = await data.dbConnection.query(`
+      SELECT id AS role_id, name AS role_name
+      FROM roles
+      WHERE id = ANY($1)`,
+      [addedRoles]
+    );
+    const addedRoleNames = addedRolesResult.rows.map(row => row.role_name);
+    const removedRoleNames = removedRoles.map(role => role.role_name);
+
+    insertObject.keys = insertObject.keys.filter((key) => key !== "role_id");
+    
+    await data.logger.info({
+      code: "CRUD_ROLE_CHANGE_SUCCESS",
+      short_description: `User roles updated for user with ID: ${data.params.id}`,
+      long_description: `Added roles: ${addedRoleNames.join(', ')}; Removed roles: ${removedRoleNames.join(', ')}`
+    });
+  }
+
+  async roleUpdateHook(data, insertObject) {
+    const currentPermissionsResult = await data.dbConnection.query(`
+      SELECT role_permissions.permission_id, permissions.interface_id, permissions.name AS action, interfaces.name AS interface
+      FROM role_permissions
+      JOIN permissions ON role_permissions.permission_id = permissions.id
+      JOIN interfaces ON permissions.interface_id = interfaces.id
+      WHERE role_permissions.role_id = $1`,
+      [data.params.id]
+    );
+    
+    const currentPermissions = currentPermissionsResult.rows.map(row => ({
+      permission_id: row.permission_id,
+      interface_id: parseInt(row.interface_id, 10),
+      action: row.action,
+      interface: row.interface
+    }));
+  
+    const newPermissions = data.body.permissions.filter(permission => permission.allowed);
+    
+    const addedPermissions = newPermissions.filter(
+      (newPerm) =>
+        !currentPermissions.some(
+          (currPerm) =>
+            currPerm.interface_id === newPerm.interface_id &&
+            currPerm.action === newPerm.action
+        )
+    );
+
+    const removedPermissions = currentPermissions.filter(
+      (currPerm) =>
+        !newPermissions.some(
+          (newPerm) =>
+            newPerm.interface_id === currPerm.interface_id &&
+            newPerm.action === currPerm.action
+        )
+    );
+    
+    const addedPermissionNames = [];
+    const removedPermissionNames = [];
+  
+    // Insert added permissions and retrieve interface and action names for logging
+    for (const permission of addedPermissions) {
+      const insertResult = await data.dbConnection.query(
+        `WITH inserted_permission AS (
+          INSERT INTO role_permissions (role_id, permission_id, created_at)
+          SELECT $1, p.id, NOW()
+          FROM permissions p
+          WHERE p.interface_id = $2 AND p.name = $3
+          RETURNING permission_id
+        )
+        SELECT inserted_permission.permission_id, permissions.name AS action, interfaces.name AS interface
+        FROM inserted_permission
+        JOIN permissions ON inserted_permission.permission_id = permissions.id
+        JOIN interfaces ON permissions.interface_id = interfaces.id`,
+        [data.params.id, permission.interface_id, permission.action]
+      );
+
+      // Add to log list with interface name and action
+      insertResult.rows.forEach(row => {
+        addedPermissionNames.push(`${row.action} - ${row.interface}`);
+      });
+    }
+
+    // Delete removed permissions and retrieve interface and action names for logging
+    for (const permission of removedPermissions) {
+      const deleteResult = await data.dbConnection.query(
+        `WITH deleted_permission AS (
+          DELETE FROM role_permissions
+          WHERE role_id = $1 AND permission_id = (
+            SELECT id FROM permissions
+            WHERE interface_id = $2 AND name = $3
+          )
+          RETURNING permission_id
+        )
+        SELECT deleted_permission.permission_id, permissions.name AS action, interfaces.name AS interface
+        FROM deleted_permission
+        JOIN permissions ON deleted_permission.permission_id = permissions.id
+        JOIN interfaces ON permissions.interface_id = interfaces.id`,
+        [data.params.id, permission.interface_id, permission.action]
+      );
+         
+      deleteResult.rows.forEach(row => {
+        removedPermissionNames.push(`${row.action} - ${row.interface}`);
+      });
+    }
+        
+    await data.logger.info({
+      code: "CRUD_PERMISSION_CHANGE_SUCCESS",
+      short_description: `Permissions updated for role with ID: ${data.params.id}`,
+      long_description: `Added permissions: ${addedPermissionNames.join(', ')}; Removed permissions: ${removedPermissionNames.join(', ')}`
+    });
+
+    insertObject.keys = insertObject.keys.filter(
+      (key) => key !== "role_permissions"
+    );
+  }
+
+  async targetGroupCreateHook(data, mainEntityId) {
+    data.params.entity = "users";
+    data.query = data.body.users.query;
+
+    const innerInsertQuery = this.buildFilteredPaginatedQuery(data);
+
+    const insertQuery = `
+      INSERT INTO user_target_groups (user_id, target_group_id)
+      SELECT users_view.id, $${innerInsertQuery.searchValues.length + 1}
+      FROM (${innerInsertQuery.query}) AS users_view
+      RETURNING *
+    `;
+  
+    const queryValues = [...innerInsertQuery.searchValues, mainEntityId];
+  
+    const result = await data.dbConnection.query(insertQuery, queryValues);
   }
 }
 

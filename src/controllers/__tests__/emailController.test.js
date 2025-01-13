@@ -1,5 +1,4 @@
 const { ASSERT_USER } = require("../../serverConfigurations/assert");
-const { STATUS_CODES } = require("../../serverConfigurations/constants");
 const EmailController = require("../emailController");
 
 jest.mock("../../serverConfigurations/assert");
@@ -45,7 +44,7 @@ describe("EmailController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action",
-        { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" }
+        { code: "EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
       expect(emailService.sendTestEmail).toHaveBeenCalledWith({
         body: req.body,
@@ -77,7 +76,7 @@ describe("EmailController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action",
-        { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" }
+        { code: "EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
       expect(emailService.previewEmail).toHaveBeenCalledWith({
         body: req.body,

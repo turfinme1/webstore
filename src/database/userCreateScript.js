@@ -8,8 +8,8 @@ function generateUsers(count) {
 
   for (let i = 0; i < count; i++) {
     users.push({
-      first_name: faker.name.firstName(),
-      last_name: faker.name.lastName(),
+      first_name: faker.person.firstName(),
+      last_name: faker.person.lastName(),
       email: `${randomCounter++}${faker.internet.email()}`,
       phone: faker.phone.number({ style: 'national' }),
       birth_date: faker.date.past({ years: 80 }),
@@ -78,5 +78,5 @@ async function saveUsers(recordCount, batchSize = 3000) {
   }
 }
 
-const numUsers = 1;
+const numUsers = 100000;
 saveUsers(numUsers).catch(console.error);

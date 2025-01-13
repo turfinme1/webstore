@@ -11,7 +11,6 @@ describe("ProductController", () => {
   let mockReq;
   let mockNext;
   let mockDbConnection;
-  let STATUS_CODES = 2;
 
   beforeEach(() => {
     productService = {
@@ -150,7 +149,7 @@ describe("ProductController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         mockReq.session.user_id, 
         "You must be logged in to perform this action", 
-        { code: STATUS_CODES, long_description: "You must be logged in to perform this action" }
+        { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
       expect(productService.createComment).toHaveBeenCalledWith({
         body: mockReq.body,
@@ -174,7 +173,7 @@ describe("ProductController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         mockReq.session.user_id, 
         "You must be logged in to perform this action", 
-        { code: STATUS_CODES, long_description: "You must be logged in to perform this action" }
+        { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
       expect(productService.createRating).toHaveBeenCalledWith({
         body: mockReq.body,

@@ -12,6 +12,9 @@ describe('CartController', () => {
       updateItem: jest.fn(),
       deleteItem: jest.fn(),
       clearCart: jest.fn(),
+      getActiveVouchers: jest.fn(),
+      applyVoucher: jest.fn(),
+      removeVoucher: jest.fn(),
     };
 
     cartController = new CartController(cartService);
@@ -92,6 +95,55 @@ describe('CartController', () => {
       });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(mockClearResult);
+    });
+  });
+
+  describe('getActiveVouchers', () => {
+    it('should call cartService.getActiveVouchers and return the result', async () => {
+      const mockActiveVouchersResult = [{ code: 'VOUCHER10', discount: 10 }];
+      cartService.getActiveVouchers.mockResolvedValue(mockActiveVouchersResult);
+
+      await cartController.getActiveVouchers(req, res);
+
+      expect(cartService.getActiveVouchers).toHaveBeenCalledWith({
+        session: req.session,
+        dbConnection: req.dbConnection,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockActiveVouchersResult);
+    });
+  });
+
+  describe('applyVoucher', () => {
+    it('should call cartService.applyVoucher and return the result', async () => {
+      const mockApplyVoucherResult = { discount: 10 };
+      cartService.applyVoucher.mockResolvedValue(mockApplyVoucherResult);
+
+      await cartController.applyVoucher(req, res);
+
+      expect(cartService.applyVoucher).toHaveBeenCalledWith({
+        body: req.body,
+        session: req.session,
+        dbConnection: req.dbConnection,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockApplyVoucherResult);
+    });
+  });
+
+  describe('removeVoucher', () => {
+    it('should call cartService.removeVoucher and return the result', async () => {
+      const mockRemoveVoucherResult = { success: true };
+      cartService.removeVoucher.mockResolvedValue(mockRemoveVoucherResult);
+
+      await cartController.removeVoucher(req, res);
+
+      expect(cartService.removeVoucher).toHaveBeenCalledWith({
+        session: req.session,
+        dbConnection: req.dbConnection,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockRemoveVoucherResult);
     });
   });
 });

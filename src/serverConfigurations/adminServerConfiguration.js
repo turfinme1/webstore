@@ -1,8 +1,7 @@
-const cron = require("node-cron");
+const setTimeout = require("timers/promises").setTimeout;
 const pool = require("../database/dbConfig");
-const { UserError } = require("../serverConfigurations/assert");
+const { UserError, ASSERT } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
-const { clearOldFileUploads } = require("./cronJobs");
 
 const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
@@ -99,46 +98,67 @@ function registerRoutes(routing, app) {
 function requestMiddleware(handler) {
   return async (req, res, next) => {
     try {
+      const cancelTimeout = new AbortController();
+      const cancelTask = new AbortController();
+      req.signal = cancelTask.signal;
       req.pool = pool;
-      req.dbConnection = new DbConnectionWrapper(await req.pool.connect());
+      req.dbConnection = new DbConnectionWrapper(await req.pool.connect(), req.pool);
       req.entitySchemaCollection = entitySchemaCollection;
       req.logger = new Logger(req);
-      
-      req.dbConnection.query("BEGIN");
-      await sessionMiddleware(req, res);
-      await handler(req, res, next);
-      req.dbConnection.query("COMMIT");
 
-    } catch (error) {
-      console.error(error);
-      
-      if (req.dbConnection) {
-        req.dbConnection.query("ROLLBACK");
+      await req.dbConnection.query("BEGIN");
+      await sessionMiddleware(req, res);
+
+      const timeout = async () => {
+        await setTimeout(60000, { signal: cancelTimeout.signal });
+        cancelTask.abort();
+      }
+      const task = async () => {
+        try {
+          await handler(req, res, next);
+        } finally {
+          cancelTimeout.abort();
+        } 
+      }
+      await Promise.race([timeout(), task()]);
+      if(req.signal?.aborted) {
+        await req.dbConnection.cancel();
+        ASSERT(false, "Request aborted due to timeout", { code: "SRV_CNF_REQUEST_TIMEOUT", long_description: "Request aborted due to timeout", temporary: true });
       }
 
+      await req.dbConnection.query("COMMIT");
+    } catch (error) {
+      console.error(error);
+  
+      await req.dbConnection?.query("ROLLBACK");
       await req.logger.error(error);
-      
-      if (error instanceof UserError) {
+
+      if(req.signal?.aborted) {
+        if(res.headersSent) {
+          return res.end();
+        } else {
+          return res.status(500).json({ error: "Request aborted" });
+        }
+      } else if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });
       } else {
         return res.status(500).json({ error: "Internal server error" });
       }
     } finally {
-      if (req.dbConnection) {
-        req.dbConnection.release();
-      }
+      req.dbConnection?.release();
     }
   };
 }
 
 async function sessionMiddleware(req, res) {
   const cookieName = req.entitySchemaCollection.userManagementSchema.cookie_name;
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let sessionId = req.cookies[cookieName];
 
   const settings = await req.dbConnection.query("SELECT * FROM app_settings WHERE id = 1 LIMIT 1");
   req.context = { settings: settings.rows[0] };
 
-  if (sessionId) {
+  if (sessionId && UUID_REGEX.test(sessionId)) {
     const data = { entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, sessionHash : sessionId };
     const session = await authService.getSession(data);
 
@@ -174,10 +194,6 @@ async function sessionMiddleware(req, res) {
   req.session = anonymousSession;
 }
 
-cron.schedule('0 0 * * *', async () => {
-  await clearOldFileUploads(pool);
-});
-
 process.on('uncaughtException', async (error) => {
   try {
     const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
@@ -190,7 +206,7 @@ process.on('uncaughtException', async (error) => {
 process.on('unhandledRejection', async (error) => {
   try {
     const logger =  new Logger({ dbConnection: new DbConnectionWrapper(await pool.connect()) });
-  await logger.error(error);
+    await logger.error(error);
   } catch (error) {
     console.error(error);
   }

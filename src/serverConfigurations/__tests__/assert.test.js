@@ -1,4 +1,4 @@
-const { ASSERT, ASSERT_USER, UserError } = require("../assert");
+const { ASSERT, ASSERT_USER, UserError, ASSERT_PEER } = require("../assert");
 
 describe('ASSERT function', () => {
   it('should not throw an error if the condition is true', () => {
@@ -31,6 +31,17 @@ describe('ASSERT_USER function', () => {
     }
   });
 });
+
+describe('ASSERT_PERR function', () => {
+  it('should not throw an error if the condition is true', () => {
+    expect(() => ASSERT_PEER(true, 'Error message')).not.toThrow();
+  });
+
+  it('should throw an error with the provided message if the condition is false', () => {
+    expect(() => ASSERT_PEER(false, 'Error message')).toThrow(new Error('Error message'));
+  });
+});
+
 
 describe('UserError class', () => {
   it('should create an instance of UserError with the provided message and params', () => {

@@ -1,4 +1,3 @@
-const { STATUS_CODES }  = require("../serverConfigurations/constants");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateQueryParams } = require("../serverConfigurations/validation");
 
@@ -15,7 +14,7 @@ class CrudController {
   }
 
   async create(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CRUD_UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "create", req.params.entity);
     const data = {
       body: req.body,
@@ -27,7 +26,7 @@ class CrudController {
     const result = await this.crudService.create(data);
     res.status(201).json(result);
 
-    await req.logger.info({ code: STATUS_CODES.CREATE_SUCCESS, short_description: `Created ${data.params.entity}`, long_description: `Created ${data.params.entity} with id ${result.id}` });
+    await req.logger.info({ code: "CRUD_CREATE_SUCCESS", short_description: `Created ${data.params.entity}`, long_description: `Created ${data.params.entity} with id ${result.id}` });
   } 
 
   async getById(req, res, next) {
@@ -65,7 +64,7 @@ class CrudController {
   }
 
   async update(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CRUD_UNAUTHORIZED_UPDATE", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "update", req.params.entity);
     const data = {
       body: req.body,
@@ -78,11 +77,11 @@ class CrudController {
     const result = await this.crudService.update(data);
     res.status(200).json(result);
 
-    await req.logger.info({ code: STATUS_CODES.UPDATE_SUCCESS, short_description: `Updated ${data.params.entity}`, long_description: `Updated ${data.params.entity} with id ${data.params.id}` });
+    await req.logger.info({ code: "CRUD_UPDATE_SUCCESS", short_description: `Updated ${data.params.entity}`, long_description: `Updated ${data.params.entity} with id ${data.params.id}` });
   }
 
   async delete(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: STATUS_CODES.UNAUTHORIZED, long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CRUD_UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "delete", req.params.entity);
     const data = {
       body: req.body,
@@ -93,7 +92,7 @@ class CrudController {
     const result = await this.crudService.delete(data);
     res.status(200).json(result);
 
-    await req.logger.info({ code: STATUS_CODES.DELETE_SUCCESS, short_description: `Deleted ${data.params.entity}`, long_description: `Deleted ${data.params.entity} with id ${data.params.id}` });
+    await req.logger.info({ code: "CRUD_DELETE_SUCCESS", short_description: `Deleted ${data.params.entity}`, long_description: `Deleted ${data.params.entity} with id ${data.params.id}` });
   }  
 }
 

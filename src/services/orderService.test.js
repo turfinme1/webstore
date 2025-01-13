@@ -1,5 +1,4 @@
 const OrderService = require('./orderService');
-const { STATUS_CODES } = require('../serverConfigurations/constants');
 const paypal = require('@paypal/checkout-server-sdk');
 
 jest.mock('@paypal/checkout-server-sdk');
@@ -38,11 +37,17 @@ describe('OrderService', () => {
                     },
                 },
                 dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
 
             mockDbConnection.query
                 .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // addressResult
                 .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // orderResult
+                .mockResolvedValueOnce({ rows: [] }) // voucherResult
                 .mockResolvedValueOnce({ rows: [{ product_id: 1, quantity: 2, unit_price: 10, name: 'Product 1' }] }) // cartResult
                 .mockResolvedValueOnce({ rows: [{ quantity: 10, name: 'Product 1', id: 1, product_name: 'Product 1' }] }) // inventoryResult
                 .mockResolvedValueOnce({ rows: []}) // Update
@@ -65,17 +70,11 @@ describe('OrderService', () => {
 
             expect(result).toEqual({
                 approvalUrl: 'http://approval.url',
-                paypalOrder: {
-                    result: {
-
-                        id: 'PAYPAL_ORDER_ID',
-                        links: [{ rel: 'approve', href: 'http://approval.url' }],
-                    },
-                },
                 message: 'Order placed successfully',
+                orderId: 1,
             });
 
-            expect(mockDbConnection.query).toHaveBeenCalledTimes(10);
+            expect(mockDbConnection.query).toHaveBeenCalledTimes(11);
             expect(mockEmailService.queueEmail).toHaveBeenCalledTimes(1);
         });
 
@@ -90,6 +89,11 @@ describe('OrderService', () => {
                     },
                 },
                 dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
 
             jest.spyOn(orderService, "verifyCartPricesAreUpToDate").mockResolvedValue(true);
@@ -97,11 +101,12 @@ describe('OrderService', () => {
             mockDbConnection.query
                 .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // addressResult
                 .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // orderResult
+                .mockResolvedValueOnce({ rows: [] }) // voucherResult
                 .mockResolvedValueOnce({ rows: [] }); // cartResult
 
             await expect(orderService.createOrder(data)).rejects.toThrow('Cart is empty');
 
-            expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
+            expect(mockDbConnection.query).toHaveBeenCalledTimes(4);
             expect(mockEmailService.sendOrderCreatedConfirmationEmail).not.toHaveBeenCalled();
         });
 
@@ -116,6 +121,11 @@ describe('OrderService', () => {
                     },
                 },
                 dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
 
             jest.spyOn(orderService, "verifyCartPricesAreUpToDate").mockResolvedValue(true);
@@ -123,12 +133,13 @@ describe('OrderService', () => {
             mockDbConnection.query
                 .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // addressResult
                 .mockResolvedValueOnce({ rows: [{ id: 1 }] }) // orderResult
+                .mockResolvedValueOnce({ rows: [] }) // voucherResult
                 .mockResolvedValueOnce({ rows: [{ product_id: 1, quantity: 2, unit_price: 10, name: 'Product 1' }] }) // cartResult
                 .mockResolvedValueOnce({ rows: [{ quantity: 1, name: 'Product 1', id: 1 }] }); // inventoryResult
 
             await expect(orderService.createOrder(data)).rejects.toThrow('Not enough stock for product Product 1');
 
-            expect(mockDbConnection.query).toHaveBeenCalledTimes(4);
+            expect(mockDbConnection.query).toHaveBeenCalledTimes(5);
             expect(mockEmailService.sendOrderCreatedConfirmationEmail).not.toHaveBeenCalled();
         });
     });
@@ -146,7 +157,12 @@ describe('OrderService', () => {
                     city: 'Anytown',
                     country_id: 1
                 },
-                dbConnection: mockDbConnection
+                dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
     
             mockDbConnection.query
@@ -178,7 +194,12 @@ describe('OrderService', () => {
                     city: 'Anytown',
                     country_id: 1
                 },
-                dbConnection: mockDbConnection
+                dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
     
             mockDbConnection.query
@@ -203,7 +224,12 @@ describe('OrderService', () => {
                     city: 'Anytown',
                     country_id: 1
                 },
-                dbConnection: mockDbConnection
+                dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
     
             mockDbConnection.query
@@ -230,7 +256,12 @@ describe('OrderService', () => {
                     city: 'Anytown',
                     country_id: 1
                 },
-                dbConnection: mockDbConnection
+                dbConnection: mockDbConnection,
+                context:{
+                    settings: {
+                        vat_percentage: 10
+                    }
+                }
             };
     
             mockDbConnection.query

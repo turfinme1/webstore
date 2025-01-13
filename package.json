@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "start": "nodemon server.js",
     "admin": "nodemon adminServer.js",
     "payment": "nodemon paymentServer.js"
@@ -12,6 +13,7 @@
   "author": "Borislav Angelov",
   "license": "ISC",
   "dependencies": {
+    "@jridgewell/gen-mapping": "^0.3.6",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "ajv": "^8.17.1",
     "bcrypt": "^5.1.1",
@@ -22,7 +24,8 @@
     "express": "^4.19.2",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.15",
-    "pg": "^8.12.0"
+    "pg": "^8.12.0",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.10.0",
@@ -31,5 +34,12 @@
     "globals": "^15.9.0",
     "jest": "^29.7.0",
     "nodemon": "^3.1.4"
+  },
+  "jest": {
+    "coverageReporters": [
+      "json-summary",
+      "text",
+      "lcov"
+    ]
   }
 }

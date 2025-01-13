@@ -1,5 +1,4 @@
-import { getUserStatus, attachLogoutHandler, hasPermission } from "./auth.js";
-import { createNavigation, createBackofficeNavigation } from "./navigation.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
 
 // Centralized state object
 const state = {
@@ -47,8 +46,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   state.userStatus = userStatus;
   createNavigation(userStatus);
-  await attachLogoutHandler();
   createBackofficeNavigation(userStatus);
+  const urlParams = getUrlParams();
+  state.currentPage = urlParams.page || 1;
+  state.pageSize = urlParams.pageSize || 10;
+  state.filterParams = urlParams.filterParams || {};
+  state.orderParams = urlParams.orderParams || [];
+
   if (!hasPermission(userStatus, "read", "users")) {
     elements.mainContainer.innerHTML = "<h1>User Management</h1>";
     return;
@@ -146,11 +150,15 @@ async function loadUsers(page) {
       orderParams: JSON.stringify(state.orderParams),
       page: page.toString(),
     });
-
-    const response = await fetch(
+    updateUrlParams(state);
+    const response = await fetchWithErrorHandling(
       `/crud/users/filtered?${queryParams.toString()}`
     );
-    const { result, count } = await response.json();
+    if(!response.ok) {
+      showToastMessage(response.error, "error");
+      return;
+    }
+    const { result, count } = await response.data;
     renderUserList(result);
     updatePagination(count, page);
   } catch (error) {
@@ -231,10 +239,16 @@ function updatePagination(totalUsers, page) {
   }
 
   elements.paginationContainer.appendChild(
-    createPaginationButton("Previous", page > 1, () => loadUsers(page - 1))
+    createPaginationButton("Previous", page > 1, () => {
+      state.currentPage = page - 1;
+      loadUsers(state.currentPage);
+    })
   );
   elements.paginationContainer.appendChild(
-    createPaginationButton("Next", page < totalPages, () => loadUsers(page + 1))
+    createPaginationButton("Next", page < totalPages, () => {
+      state.currentPage = page + 1;
+      loadUsers(state.currentPage);
+    })
   );
 }
 
@@ -252,21 +266,24 @@ function createPaginationButton(text, enabled, onClick) {
 async function handleCreateUser(event) {
   event.preventDefault();
   const formData = new FormData(elements.userForm);
-  console.log(JSON.stringify(formData));
+  const data = Object.fromEntries(formData);
+  if(data.birth_date === ""){
+    data.birth_date = null;
+  }
   try {
-    const response = await fetch("/crud/users", {
+    const response = await fetchWithErrorHandling("/crud/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(formData)),
+      body: JSON.stringify(data),
     });
     if (response.ok) {
-      alert("User created successfully!");
+      showToastMessage("User created successfully!", "success");
       elements.userForm.reset();
       hideForm();
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       loadUsers(state.currentPage);
     } else {
-      const error = await response.json();
-      alert(`Failed to create user: ${error.error}`);
+      showToastMessage(`Failed to create user: ${response.error}`, "error");
     }
   } catch (error) {
     console.error("Error creating user:", error);
@@ -276,23 +293,27 @@ async function handleCreateUser(event) {
 async function handleUpdateUser(event) {
   event.preventDefault();
   const formData = new FormData(elements.userUpdateForm);
+  const data = Object.fromEntries(formData);
+  if(data.birth_date === ""){
+    data.birth_date = null;
+  }
   console.log(JSON.stringify(formData));
   try {
-    const response = await fetch(`/crud/users/${state.userToUpdateId}`, {
+    const response = await fetchWithErrorHandling(`/crud/users/${state.userToUpdateId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(formData)),
+      body: JSON.stringify(data),
     });
     if (response.ok) {
-      alert("User updated successfully!");
+      showToastMessage("User updated successfully!", "success");
       elements.userUpdateForm.reset();
       state.filterParams = {};
       state.currentPage = 1;
       hideUpdateForm();
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       loadUsers(state.currentPage);
     } else {
-      const error = await response.json();
-      alert(`Failed to update user: ${error.error}`);
+      showToastMessage(`Failed to update user: ${response.error}`, "error");
     }
   } catch (error) {
     console.error("Error updating user:", error);
@@ -301,8 +322,12 @@ async function handleUpdateUser(event) {
 
 async function displayUpdateForm(userId) {
   try {
-    const userResponse = await fetch(`/crud/users/${userId}`);
-    const user = await userResponse.json();
+    const userResponse = await fetchWithErrorHandling(`/crud/users/${userId}`);
+    if (!userResponse.ok) {
+      showToastMessage(userResponse.error, "error");
+      return;
+    }
+    const user = await userResponse.data;
     showUpdateForm();
     populateUpdateForm(user);
     state.userToUpdateId = userId;
@@ -332,15 +357,15 @@ function populateUpdateForm(user) {
 async function handleDeleteUser(userId) {
   if (!confirm("Are you sure you want to delete this user?")) return;
   try {
-    const response = await fetch(`/crud/users/${userId}`, {
+    const response = await fetchWithErrorHandling(`/crud/users/${userId}`, {
       method: "DELETE",
     });
     if (response.ok) {
-      alert("User deleted successfully!");
+      showToastMessage("User deleted successfully!", "success");
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       loadUsers(state.currentPage);
     } else {
-      const error = await response.json();
-      alert(`Failed to delete user: ${error.error}`);
+      showToastMessage(`Failed to delete user: ${response.error}`, "error");
     }
   } catch (error) {
     console.error("Error deleting user:", error);

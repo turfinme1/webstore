@@ -1,6 +1,5 @@
 const { ASSERT_USER, ASSERT } = require("../serverConfigurations/assert");
-const { STATUS_CODES, ENV} = require("../serverConfigurations/constants");
-// const paypal = require("@paypal/checkout-server-sdk");
+const { ENV } = require("../serverConfigurations/constants");
 const paypal = require("../serverConfigurations/paypalClient");
 
 class OrderService {
@@ -20,8 +19,7 @@ class OrderService {
   async createOrder(data) {
     await this.verifyCartPricesAreUpToDate(data);
 
-    const addressResult = await data.dbConnection.query(
-      `
+    const addressResult = await data.dbConnection.query(`
       INSERT INTO addresses (user_id, street, city, country_id) 
       VALUES ($1, $2, $3, $4) 
       RETURNING id`,
@@ -34,21 +32,29 @@ class OrderService {
     );
     const shippingAddressId = addressResult.rows[0].id;
 
-    const orderResult = await data.dbConnection.query(
-      `
-      INSERT INTO orders (user_id, status, shipping_address_id, total_price) 
-      VALUES ($1, 'Pending', $2,
+    const orderResult = await data.dbConnection.query(`
+      INSERT INTO orders (user_id, status, shipping_address_id, vat_percentage, discount_percentage, total_price, voucher_code, voucher_discount_amount) 
+      VALUES ($1, 'Pending', $2, $3, (SELECT COALESCE(SUM(discount_percentage), 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date),
           (SELECT SUM(ci.quantity * p.price) 
               FROM cart_items ci 
               JOIN products p ON ci.product_id = p.id 
-              WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE))) 
+              WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE)),
+              (SELECT v.code FROM carts c LEFT JOIN vouchers v ON c.voucher_id = v.id WHERE c.user_id = $1 AND c.is_active = TRUE),
+              (SELECT COALESCE(voucher_discount_amount, 0) FROM carts WHERE user_id = $1 AND is_active = TRUE)
+              )
       RETURNING *`,
-      [data.session.user_id, shippingAddressId]
+      [data.session.user_id, shippingAddressId, data.context.settings.vat_percentage]
     );
     const order = orderResult.rows[0];
 
-    const cartResult = await data.dbConnection.query(
-      `
+    await data.dbConnection.query(`
+      INSERT INTO voucher_usages (user_id, voucher_id)
+      VALUES ($1, (SELECT voucher_id FROM carts WHERE user_id = $1 AND is_active = TRUE))
+      RETURNING *`,
+      [data.session.user_id]
+    );
+
+    const cartResult = await data.dbConnection.query(`
       SELECT ci.*, p.name
       FROM cart_items ci
       JOIN products p ON ci.product_id = p.id 
@@ -56,37 +62,33 @@ class OrderService {
       [data.session.user_id]
     );
     const cartItems = cartResult.rows;
-    ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", { code: STATUS_CODES.INVALID_INPUT, long_description: "Cart is empty" });
+    ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", { code: "ORDER_INVALID_INPUT_CREATE", long_description: "Cart is empty" });
 
     for (const item of cartItems) {
-      const inventoryResult = await data.dbConnection.query(
-        `
-      SELECT quantity 
-      FROM inventories 
-      WHERE product_id = $1`,
+      const inventoryResult = await data.dbConnection.query(`
+        SELECT quantity 
+        FROM inventories 
+        WHERE product_id = $1`,
         [item.product_id]
       );
-      ASSERT_USER(inventoryResult.rows.length > 0, `Not enough stock for product ${item.name}`, { code: STATUS_CODES.INVALID_INPUT, long_description: `Not enough stock for product ${item.name}` });
-      ASSERT_USER(parseInt(item.quantity) <= parseInt(inventoryResult.rows[0].quantity), `Not enough stock for product ${item.name}`, { code: STATUS_CODES.INVALID_INPUT, long_description: `Not enough stock for product ${item.name}` });
+      ASSERT_USER(inventoryResult.rows.length > 0, `Not enough stock for product ${item.name}`, { code: "ORDER_INVALID_INPUT_CREATE_NO_STOCK", long_description: `Not enough stock for product ${item.name}` });
+      ASSERT_USER(parseInt(item.quantity) <= parseInt(inventoryResult.rows[0].quantity), `Not enough stock for product ${item.name}`, { code: "ORDER_INVALID_INPUT_CREATE_NO_STOCK", long_description: `Not enough stock for product ${item.name}` });
 
-      await data.dbConnection.query(
-        `
-          INSERT INTO order_items (order_id, product_id, quantity, unit_price) 
-          VALUES ($1, $2, $3, $4)`,
+      await data.dbConnection.query(`
+        INSERT INTO order_items (order_id, product_id, quantity, unit_price) 
+        VALUES ($1, $2, $3, $4)`,
         [order.id, item.product_id, item.quantity, item.unit_price]
       );
 
-      await data.dbConnection.query(
-        `
-          UPDATE inventories
-          SET quantity = quantity - $1
-          WHERE product_id = $2`,
+      await data.dbConnection.query(`
+        UPDATE inventories
+        SET quantity = quantity - $1
+        WHERE product_id = $2`,
         [item.quantity, item.product_id]
       );
     }
 
-    await data.dbConnection.query(
-      `
+    await data.dbConnection.query(`
       UPDATE carts SET is_active = FALSE
       WHERE user_id = $1`,
       [data.session.user_id]
@@ -98,36 +100,46 @@ class OrderService {
     );
     const orderView = orderViewResult.rows[0];
 
-    const request = new paypal.orders.OrdersCreateRequest();
-    request.prefer("return=representation");
-    request.requestBody({
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          amount: {
-            currency_code: "USD",
-            value: orderView.total_price_with_vat,
+    let approvalUrl = null;
+    if(orderView.total_price_with_voucher == 0) {
+      await data.dbConnection.query(`
+        UPDATE orders
+        SET status = 'Paid', paid_amount = 0
+        WHERE id = $1`,
+        [order.id]
+      );
+    } else {
+      const request = new paypal.orders.OrdersCreateRequest();
+      request.prefer("return=representation");
+      request.requestBody({
+        intent: "CAPTURE",
+        purchase_units: [
+          {
+            amount: {
+              currency_code: "USD",
+              value: orderView.total_price_with_voucher,
+            },
           },
-        },
-      ],
-      application_context: {
-        return_url: `${ENV.DEVELOPMENT_URL}/api/paypal/capture/${order.id}`,
-        cancel_url: `${ENV.DEVELOPMENT_URL}/api/paypal/cancel/${order.id}`,
-        shipping_preference: 'NO_SHIPPING',
-        user_action: 'PAY_NOW'
-      }
-    });
+        ],
+        application_context: {
+          return_url: `${ENV.DEVELOPMENT_URL}/api/paypal/capture/${order.id}`,
+          cancel_url: `${ENV.DEVELOPMENT_URL}/api/paypal/cancel/${order.id}`,
+          shipping_preference: 'NO_SHIPPING',
+          user_action: 'PAY_NOW'
+        }
+      });
+      
+      const paypalOrder = await this.paypalClient.execute(request);
+      approvalUrl = paypalOrder.result.links.find(link => link.rel === "approve").href;
+
+      const paymentResult = await data.dbConnection.query(`
+        INSERT INTO payments (order_id, payment_provider, provider_payment_id, status)
+        VALUES ($1, 'PayPal', $2, 'Pending')
+        RETURNING *`,
+        [order.id, paypalOrder.result.id]
+      );
+    }
     
-    const paypalOrder = await this.paypalClient.execute(request);
-    const approvalUrl = paypalOrder.result.links.find(link => link.rel === "approve").href;
-
-    const paymentResult = await data.dbConnection.query(
-      `INSERT INTO payments (order_id, payment_provider, provider_payment_id, status)
-      VALUES ($1, 'PayPal', $2, 'Pending')
-      RETURNING *`,
-      [order.id, paypalOrder.result.id]
-    );
-
     const userResult = await data.dbConnection.query(`SELECT * FROM users WHERE id = $1`, [data.session.user_id]);
     const user = userResult.rows[0];
     const emailObject = { 
@@ -143,22 +155,23 @@ class OrderService {
     };
     await this.emailService.queueEmail(emailObject);
 
-    return { approvalUrl, paypalOrder, message: "Order placed successfully" };
+    return { approvalUrl, message: "Order placed successfully", orderId: order.id };
   }
   
   async createOrderByStaff(data){
       // Step 1: Insert the order into the orders table
     const orderResult = await data.dbConnection.query(
       `
-      INSERT INTO orders (user_id, status, total_price) 
-      VALUES ($1, $2, (
+      INSERT INTO orders (user_id, status, vat_percentage, discount_percentage, total_price) 
+      VALUES ($1, $2, $3, (SELECT COALESCE(SUM(discount_percentage), 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date),
+      (
         SELECT SUM(p.price * (oi->>'quantity')::BIGINT)
         FROM products p
-        JOIN jsonb_array_elements($3::jsonb) AS oi ON p.id = (oi->>'id')::BIGINT
+        JOIN jsonb_array_elements($4::jsonb) AS oi ON p.id = (oi->>'id')::BIGINT
       ))
       RETURNING *;
       `,
-      [data.body.user_id, data.body.order_status, JSON.stringify(data.body.order_items)]
+      [data.body.user_id, data.body.order_status, data.context.settings.vat_percentage, JSON.stringify(data.body.order_items)]
     );
     const order = orderResult.rows[0];
 
@@ -223,16 +236,16 @@ class OrderService {
       SELECT * FROM orders_view WHERE id = $1`,
       [data.params.orderId]
     );
-    ASSERT_USER(orderResult.rows.length === 1, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    ASSERT_USER(orderResult.rows.length === 1, "Order not found", { code: "ORDER_NOT_FOUND_STAFF_UPDATE", long_description: "Order not found" });
     const order = orderResult.rows[0];
 
 
     if (order.status !== "Pending") {
-      ASSERT_USER(order.order_items.length === data.body.order_items.length, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
+      ASSERT_USER(order.order_items.length === data.body.order_items.length, "Order items cannot be changed", { code: "ORDER_INVALID_INPUT_UPDATE_ITEMS", long_description: "Order items cannot be changed" });
 
       for (let i = 0; i < order.order_items.length; i++) {
-        ASSERT_USER(order.order_items[i].product_id === data.body.order_items[i].product_id, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
-        ASSERT_USER(order.order_items[i].quantity === data.body.order_items[i].quantity, "Order items cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Order items cannot be changed" });
+        ASSERT_USER(order.order_items[i].product_id === data.body.order_items[i].product_id, "Order items cannot be changed", { code: "ORDER_INVALID_INPUT_UPDATE_ITEMS", long_description: "Order items cannot be changed" });
+        ASSERT_USER(order.order_items[i].quantity === data.body.order_items[i].quantity, "Order items cannot be changed", { code: "ORDER_INVALID_INPUT_UPDATE_ITEMS", long_description: "Order items cannot be changed" });
       }
     } else {
       const existingItems = order.order_items;
@@ -353,7 +366,7 @@ class OrderService {
       SELECT * FROM orders_detail_view WHERE id = (SELECT order_id FROM payments WHERE provider_payment_id = $1 LIMIT 1)`,
       [data.query.token]
     );
-    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: "ORDER_NOT_FOUND_CAPTURE_PAYMENT", long_description: "Order not found" });
     const order = orderViewResult.rows[0];
     
     const paymentResult = await data.dbConnection.query(`
@@ -363,7 +376,7 @@ class OrderService {
       RETURNING *`,
       [order.total_price_with_vat, data.query.token]
     );
-    ASSERT_USER(paymentResult.rows.length > 0, "Payment not found", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment not found" });
+    ASSERT_USER(paymentResult.rows.length > 0, "Payment not found", { code: "ORDER_COMPLETE_FAILURE", long_description: "Payment not found" });
 
     const payment = paymentResult.rows[0];
     
@@ -371,11 +384,11 @@ class OrderService {
       UPDATE orders
       SET status = 'Paid', paid_amount = $1
       WHERE id = $2`,
-      [order.total_price_with_vat, order.id]
+      [order.total_price_with_voucher, order.id]
     );
     
     const capture = await this.paypalClient.execute(request);
-    ASSERT(capture.result.status === "COMPLETED", "Payment failed", { code: STATUS_CODES.ORDER_COMPLETE_FAILURE, long_description: "Payment failed" });
+    ASSERT(capture.result.status === "COMPLETED", "Payment failed", { code: "ORDER_COMPLETE_FAILURE", long_description: "Payment failed" });
     await data.dbConnection.query("COMMIT");
     
     const userResult = await data.dbConnection.query(`SELECT * FROM users WHERE id = $1`, [data.session.user_id]);
@@ -402,14 +415,14 @@ class OrderService {
       SELECT * FROM payments WHERE provider_payment_id = $1`,
       [data.query.token]
     );
-    ASSERT_USER(paymentResult.rows.length === 1, "Payment not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Payment not found" });
-    ASSERT_USER(paymentResult.rows[0].status === "Pending", "Payment status cannot be changed", { code: STATUS_CODES.INVALID_INPUT, long_description: "Payment status cannot be changed" });
+    ASSERT_USER(paymentResult.rows.length === 1, "Payment not found", { code: "ORDER_NOT_FOUND_CANCEL_PAYMENT", long_description: "Payment not found" });
+    ASSERT_USER(paymentResult.rows[0].status === "Pending", "Payment status cannot be changed", { code: "ORDER_INVALID_INPUT_STATUS", long_description: "Payment status cannot be changed" });
 
     const orderViewResult = await data.dbConnection.query(`
       SELECT * FROM orders_view WHERE id = (SELECT order_id FROM payments WHERE provider_payment_id = $1 LIMIT 1)`,
       [data.query.token]
     );
-    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: "ORDER_NOT_FOUND_CANCEL_PAYMENT", long_description: "Order not found" });
     const order = orderViewResult.rows[0];
 
     await data.dbConnection.query(`
@@ -466,7 +479,7 @@ class OrderService {
     
     if(! arePricesUpToDate) {
       await data.dbConnection.query("COMMIT");
-      ASSERT_USER(false, "Prices in your cart have changed. Please review your cart.", { code: STATUS_CODES.CART_PRICES_CHANGED, long_description: "Prices in your cart have changed. Please review your cart." });
+      ASSERT_USER(false, "Prices in your cart have changed. Please review your cart.", { code: "ORDER_CART_PRICES_CHANGED", long_description: "Prices in your cart have changed. Please review your cart." });
     }
   }
 
@@ -480,7 +493,7 @@ class OrderService {
       [data.params.orderId]
     );
 
-    ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: STATUS_CODES.NOT_FOUND, long_description: "Order not found" });
+    ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: "ORDER_NOT_FOUND_DELETE", long_description: "Order not found" });
 
     return { message: "Order deleted successfully" };
   }

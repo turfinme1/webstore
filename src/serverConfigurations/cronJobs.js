@@ -4,7 +4,6 @@ const paypal = require("../serverConfigurations/paypalClient");
 
 const Logger = require("./logger");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
-const STATUS_CODES = require("./constants");
 
 async function clearOldFileUploads(pool) {
   let logger;
@@ -20,7 +19,7 @@ async function clearOldFileUploads(pool) {
     }
     
     await logger.info({ 
-      code: STATUS_CODES.CRON_SUCCESS, 
+      code: "CRON_SUCCESS", 
       short_description: "Cron job for clearing files succeeded", 
       long_description: "Cleared stale file uploads older than 1 day" 
     });
@@ -65,7 +64,7 @@ async function checkPendingPayments(pool, paypalClient, orderService) {
         );
 
         await logger.info({
-          code: STATUS_CODES.CRON_SUCCESS,
+          code: "CRON_SUCCESS",
           short_description: `Payment captured for Order ID: ${pendingPayment.id}`,
           long_description: `Updated payment status to COMPLETED for Order ID: ${pendingPayment.id}`,
         });
