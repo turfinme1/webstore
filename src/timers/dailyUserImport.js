@@ -104,7 +104,7 @@ async function insertUserBatch(users, client, logger) {
         }
        
         await logger.info({
-            code: 'CRON_USER_IMPORT_SUCCESS',
+            code: 'TIMERS.DAILY_USER_IMPORT.00107.USER_IMPORT_SUCCESS',
             short_description: `Generated ${TOTAL_USERS_PER_DAY} users`,
             long_description: `Successfully inserted ${TOTAL_USERS_PER_DAY} users`
         });

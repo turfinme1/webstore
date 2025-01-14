@@ -29,7 +29,7 @@ class ProductController {
   }
 
   async createComment(req, res) {
-    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "CONTROLLER.PRODUCT.00032.UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       params: req.params,
@@ -42,7 +42,7 @@ class ProductController {
   }
 
   async createRating(req, res) {
-    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "CONTROLLER.PRODUCT.00045.UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       params: req.params,
@@ -73,7 +73,7 @@ class ProductController {
   }
 
   async create(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.PRODUCT.00076.UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "update", 'products');
     const data = {
       body: req.body,
@@ -87,7 +87,7 @@ class ProductController {
   } 
 
   async update(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.PRODUCT.00090.UNAUTHORIZED_UPDATE", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "update", 'products');
     const data = {
       body: req.body,
@@ -101,7 +101,7 @@ class ProductController {
   }
 
   async uploadImages(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.PRODUCT.00104.UNAUTHORIZED_UPLAOD", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "update", 'products');
     const data = {
       body: req.body,
@@ -115,7 +115,7 @@ class ProductController {
   }
 
   async uploadProducts(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.PRODUCT.00118.UNAUTHORIZED_UPLOAD", long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
       req: req,
@@ -128,7 +128,7 @@ class ProductController {
   }
 
   async delete(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.PRODUCT.00131.UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "delete", 'products');
     const data = {
       body: req.body,

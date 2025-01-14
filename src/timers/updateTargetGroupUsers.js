@@ -88,7 +88,7 @@ const CrudService = require("../services/crudService");
 
             console.log("Target groups update completed");
             await logger.info({ 
-                code: `CRON_TARGET_GROUPS_UPDATE_SUCCESS`,
+                code: `TIMERS.UPD_TARGET_GROUP.00091.CRON_UPDATE_SUCCESS`,
                 short_description: "Target groups update completed by cron",
                 long_description: "Target groups update completed by cron"
             });

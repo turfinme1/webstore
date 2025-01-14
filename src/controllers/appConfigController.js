@@ -10,7 +10,7 @@ class AppConfigController {
   }
 
   async updateRateLimitSettings(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "APP_CNF_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.APP_CONF.00013.UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     validateBody(req, req.entitySchemaCollection.appSettingsSchema);
     this.authService.requirePermission(req, "update", 'site-settings');
     const data = {
@@ -24,7 +24,7 @@ class AppConfigController {
   }
 
   async getRateLimitSettings(req, res, next) {
-    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "APP_CNF_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
+    ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.APP_CONF.00027.UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     const data = {
       dbConnection: req.dbConnection,
     };

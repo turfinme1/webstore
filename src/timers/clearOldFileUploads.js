@@ -20,7 +20,7 @@ const Logger = require("../serverConfigurations/logger");
         }
         
         await logger.info({ 
-            code: "CRON_OLD_FILE_DELETE_SUCCESS", 
+            code: 'TIMERS.CLEAR_OLD_FILE_UPLOADS.00023.DELETE_SUCCESS',
             short_description: "Cron job for clearing files succeeded", 
             long_description: "Cleared stale file uploads older than 1 day" 
         });

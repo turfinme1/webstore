@@ -123,7 +123,7 @@ function requestMiddleware(handler) {
       await Promise.race([timeout(), task()]);
       if(req.signal?.aborted) {
         await req.dbConnection.cancel();
-        ASSERT(false, "Request aborted due to timeout", { code: "SRV_CNF_REQUEST_TIMEOUT", long_description: "Request aborted due to timeout", temporary: true });
+        ASSERT(false, "Request aborted due to timeout", { code: "SERVER_CONFIG.ADM_SRV_CONF.00126.REQUEST_TIMEOUT", long_description: "Request aborted due to timeout", temporary: true });
       }
 
       await req.dbConnection.query("COMMIT");

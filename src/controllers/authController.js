@@ -16,7 +16,7 @@ class AuthController {
   }
 
   async register(req, res, next) {
-    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", { code: "AUTH_CTR_RATE_LIMITED", long_description: "Too many failed attempts. Try again later" });
+    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", { code: "CONTROLLER.AUTH.00019.RATE_LIMITED", long_description: "Too many failed attempts. Try again later" });
     validateBody(req, req.entitySchemaCollection.userRegisterSchema);
     const data = {
       body: req.body,
@@ -34,7 +34,7 @@ class AuthController {
   }
 
   async login(req, res, next) {
-    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", { code: "AUTH_CTR_RATE_LIMITED", long_description: "Too many failed attempts. Try again later" });
+    ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", { code: "CONTROLLER.AUTH.00037.RATE_LIMITED", long_description: "Too many failed attempts. Try again later" });
     validateBody(req, req.entitySchemaCollection.userLoginSchema);
     const data = {
       body: req.body,
@@ -48,7 +48,7 @@ class AuthController {
       .cookie("session_id", result.session_hash, { expires: result.expires_at, secure: false, httpOnly: false})
       .json({message: "Login successful"});
     
-    await req.logger.info({ code: "AUTH_LOGIN_SUCCESS", short_description: "Login successful", long_description: `User ${req.body.email} logged in successfully` });
+    await req.logger.info({ code: "CONTROLLER.AUTH.00051.LOGIN_SUCCESS", short_description: "Login successful", long_description: `User ${req.body.email} logged in successfully` });
   }
 
   async logout(req, res, next) {
@@ -110,7 +110,7 @@ class AuthController {
     const result = await this.authService.updateProfile(data);
     res.status(200).json(result);
 
-    await req.logger.info({ code: "AUTH_PROFILE_UPDATE_SUCCESS", short_description: "User profile update successful", long_description: `User ${req.session.session_hash} updated their profile successfully` });
+    await req.logger.info({ code: "CONTROLLER.AUTH.00113.UPDATE_SUCCESS", short_description: "User profile update successful", long_description: `User ${req.session.session_hash} updated their profile successfully` });
   }
 
   async forgotPassword(req, res, next) {
@@ -139,7 +139,7 @@ class AuthController {
     const result = await this.authService.resetPassword(data);
     res.status(200).json(result);
 
-    await req.logger.info({ code: "AUTH_PASSWORD_RESET_SUCCESS", short_description: "User password reset successful", long_description: `User ${req.session.session_hash} reset their password successfully` });
+    await req.logger.info({ code: "CONTROLLER.AUTH.00142.PASSWORD_RESET_SUCCESS", short_description: "User password reset successful", long_description: `User ${req.session.session_hash} reset their password successfully` });
   }
 }
 

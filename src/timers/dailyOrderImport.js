@@ -178,7 +178,7 @@ async function insertOrderBatch(orders, client, logger) {
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
       await logger.info({
-        code: 'CRON_ORDER_IMPORT_SUCCESS',
+        code: 'TIMERS.DAILY_ORDER_IMPORT.00181.ORDER_IMPORT_SUCCESS',
         short_description: `Generated ${TOTAL_ORDERS_PER_DAY} orders`,
         long_description: `Successfully inserted ${TOTAL_ORDERS_PER_DAY} orders`
     });

@@ -34,7 +34,7 @@ class CrudService {
       await this.hooks().create[data.params.entity].after(data, insertedEntity.id);
     }
 
-    return insertedEntity; // Return the created main entity
+    return insertedEntity;
   }
 
   async insertMainEntity(data, schema) {
@@ -54,7 +54,7 @@ class CrudService {
       .join(",")}) RETURNING *`;
 
     const result = await data.dbConnection.query(insertQuery, mainEntityValues);
-    return result.rows[0]; // The newly created main entity
+    return result.rows[0];
   }
 
   async handleMappingInsertions(data, schema, mainEntityId) {
@@ -68,22 +68,6 @@ class CrudService {
         const mappingTable = insertConfig.table;
         const foreignKey = insertConfig.foreignKey;
         const mappingKey = insertConfig.mappingKey;
-
-        // // Prepare the data to insert into the mapping table
-        // const mappingValues = data.body[key].map((value) => ({
-        //   [foreignKey]: mainEntityId,
-        //   [mappingKey]: value,
-        // }));
-
-        // // Insert each entry into the mapping table
-        // for (const mapping of mappingValues) {
-        //   const columns = Object.keys(mapping).join(", ");
-        //   const values = Object.values(mapping);
-        //   const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
-
-        //   const mappingQuery = `INSERT INTO ${mappingTable} (${columns}) VALUES (${placeholders})`;
-        //   await data.dbConnection.query(mappingQuery, values);
-        // }
 
         // Create arrays for each column
         const foreignKeys = Array(data.body[key].length).fill(mainEntityId);
@@ -441,8 +425,8 @@ class CrudService {
     const currentDate = new Date();
     const start_date = new Date(data.body.start_date);
     const end_date = new Date(data.body.end_date);
-    ASSERT_USER(start_date < end_date, "Start date must be before end date", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_DATE_RANGE", long_description: "Start date must be before end date" });
-    ASSERT_USER(end_date > currentDate, "End date must be in the future", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_END_DATE", long_description: "End date must be in the future" });
+    ASSERT_USER(start_date < end_date, "Start date must be before end date", { code: "SERVICE.CRUD.00444.INVALID_INPUT_CREATE_CAMPAIGN_DATE_RANGE", long_description: "Start date must be before end date" });
+    ASSERT_USER(end_date > currentDate, "End date must be in the future", { code: "SERVICE.CRUD.00445.INVALID_INPUT_CREATE_CAMPAIGN_END_DATE", long_description: "End date must be in the future" });
     /// check if the voucher is active 
     const voucherResult = await data.dbConnection.query(`
       SELECT * FROM vouchers
@@ -450,7 +434,7 @@ class CrudService {
       [data.body.voucher_id]
     );
     const voucher = voucherResult.rows[0];
-    ASSERT_USER(voucher, "Voucher is not active", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_VOUCHER_INVALID", long_description: "Voucher is not active" });
+    ASSERT_USER(voucher, "Voucher is not active", { code: "SERVICE.CRUD.00453.INVALID_INPUT_CREATE_CAMPAIGN_VOUCHER_INVALID", long_description: "Voucher is not active" });
     let status = "Inactive";
     if(currentDate > voucher.end_date) {
       status = "Expired voucher";
@@ -489,7 +473,6 @@ class CrudService {
         RETURNING *`,
         [data.params.id, roleId]
       );
-      console.log(result.rows);
     }
 
     const addedRolesResult = await data.dbConnection.query(`
@@ -504,7 +487,7 @@ class CrudService {
     insertObject.keys = insertObject.keys.filter((key) => key !== "role_id");
     
     await data.logger.info({
-      code: "CRUD_ROLE_CHANGE_SUCCESS",
+      code: "SERVICE.CRUD.00507.ROLE_CHANGE_SUCCESS",
       short_description: `User roles updated for user with ID: ${data.params.id}`,
       long_description: `Added roles: ${addedRoleNames.join(', ')}; Removed roles: ${removedRoleNames.join(', ')}`
     });

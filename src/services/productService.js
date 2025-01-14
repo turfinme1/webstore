@@ -235,7 +235,6 @@ class ProductService {
         const response = await fetch(line[2]);
         if (!response.ok) {
           invalidLinesLog.noImage++;
-          console.log(`Failed to fetch image: ${line[2]}`);
           await req.dbConnection.query(`ROLLBACK`);
           continue;
         }
@@ -286,7 +285,6 @@ class ProductService {
 
           if(preparedLine[2].includes('No Image')){
             invalidLinesLog.noImage++;
-            console.log(`No image for product: ${preparedLine[1]}`);
             continue;
           }
 
@@ -298,7 +296,6 @@ class ProductService {
 
   async uploadImages(req) {
     const filePaths = await this.handleFileUploads(req);
-    console.log(filePaths);
     const imagesToDelete = JSON.parse(req.body.imagesToDelete);
 
     if (filePaths.length > 0) {
@@ -338,7 +335,6 @@ class ProductService {
 
       bb.on('file', async (fieldname, file, filename, encoding, mimetype) => {
         try {
-          console.log(filename);
           if(! filename.filename) {
             file.resume();
             return;

@@ -1,7 +1,7 @@
 const { Readable } = require("stream");
 const { pipeline } = require("stream/promises");
 const ExcelJS = require("exceljs");
-const ExportService = require("./exportService");
+const ExportService = require("../exportService");
 const { executionAsyncId } = require("async_hooks");
 
 jest.mock("stream/promises");
