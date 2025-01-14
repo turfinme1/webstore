@@ -33,8 +33,8 @@ class PayPalHttpClient {
             body: "grant_type=client_credentials"
         });
         ASSERT_PEER(response.ok, "There was an error processing the request.",
-            { 
-                code: "PPAL_PEER_ERROR_RESPONSE_FAILURE", long_description: "There was an error when fetching the access token for PayPal API",
+            {
+                code: "SERVER_CONFIG.PAYPAL_CLIENT.00037.PEER_RESPONSE_FAILURE", long_description: "There was an error when fetching the access token for PayPal API",
             }
         );
 
@@ -57,7 +57,7 @@ class PayPalHttpClient {
             });
             ASSERT_PEER(response.ok, "There was an error processing the request.",
                 {
-                    code: "PPAL_PEER_ERROR_RESPONSE_FAILURE", long_description: "There was an error when creating PayPal order",
+                    code: "SERVER_CONFIG.PAYPAL_CLIENT.00060.PEER_RESPONSE_FAILURE", long_description: "There was an error when creating PayPal order",
                 }
             );
 
@@ -72,7 +72,7 @@ class PayPalHttpClient {
             });
             ASSERT_PEER(response.ok, "There was an error processing the request.",
                 {
-                    code: "PPAL_PEER_ERROR_RESPONSE_FAILURE", long_description: "There was an error when capturing PayPal payment",
+                    code: "SERVER_CONFIG.PAYPAL_CLIENT.00075.PEER_RESPONSE_FAILURE", long_description: "There was an error when capturing PayPal payment",
                 }
             );
 
@@ -87,7 +87,7 @@ class PayPalHttpClient {
             });
             ASSERT_PEER(response.ok, "There was an error processing the request.",
                 {
-                    code: "PPAL_PEER_ERROR_RESPONSE_FAILURE", long_description: "There was an error when fetching the order details",
+                    code: "SERVER_CONFIG.PAYPAL_CLIENT.00090.PEER_RESPONSE_FAILURE", long_description: "There was an error when fetching the order details",
                 }
             );
 

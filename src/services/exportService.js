@@ -276,17 +276,17 @@ class ExportService {
     }
 
     async exportReport(data){
-        ASSERT(data.format, "Missing export format", { code: "EXPORT_INVALID_INPUT_FORMAT", long_description: "Missing export format" });
-        ASSERT(data.query, "Missing query", { code: "EXPORT_INVALID_INPUT_QUERY", long_description: "Missing query" });
-        ASSERT(data.values, "Missing query values", { code: "EXPORT_INVALID_INPUT_VALUES", long_description: "Missing query values" });
-        ASSERT(data.filename, "Missing filename", { code: "EXPORT_INVALID_INPUT_FILENAME", long_description: "Missing filename" });
+        ASSERT(data.format, "Missing export format", { code: "SERVICE.EXPORT.00279.INVALID_INPUT_FORMAT", long_description: "Missing export format" });
+        ASSERT(data.query, "Missing query", { code: "SERVICE.EXPORT.00280.INVALID_INPUT_QUERY", long_description: "Missing query" });
+        ASSERT(data.values, "Missing query values", { code: "SERVICE.EXPORT.00281.INVALID_INPUT_VALUES", long_description: "Missing query values" });
+        ASSERT(data.filename, "Missing filename", { code: "SERVICE.EXPORT.00282.INVALID_INPUT_FILENAME", long_description: "Missing filename" });
 
         if (data.format === 'csv') {
             await this. exportReportToCsv(data);
         } else if (data.format === 'excel') {
             await this.exportReportToExcel(data);
         } else {
-            ASSERT(false, "Invalid export format", { code: "EXPORT_INVALID_INPUT", long_description: "Invalid export format" });
+            ASSERT(false, "Invalid export format", { code: "SERVICE.EXPORT.00289.INVALID_INPUT", long_description: "Invalid export format" });
         }
     }
 

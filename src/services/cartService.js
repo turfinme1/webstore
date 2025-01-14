@@ -1,4 +1,4 @@
-const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
+const { ASSERT_USER } = require("../serverConfigurations/assert");
 
 class CartService {
   constructor() {
@@ -227,7 +227,7 @@ class CartService {
       [data.session.user_id, data.body.code]
     );
     ASSERT_USER(voucherResult.rows.length > 0, "Invalid voucher code", {
-      code: "SRV_CNF_INVALID_VOUCHER_CODE",
+      code: "SERVICE.CART.00230.INVALID_VOUCHER_CODE",
       long_description: `Invalid voucher code ${data.body.code}`,
     });
     const voucher = voucherResult.rows[0];
@@ -237,7 +237,7 @@ class CartService {
       [data.session.user_id, voucher.id]
     );
     ASSERT_USER(voucherUsage.rows.length === 0, "Voucher already used", {
-      code: "SRV_CNF_VOUCHER_ALREADY_USED",
+      code: "SERVICE.CART.00240.VOUCHER_ALREADY_USED",
       long_description: `Voucher already used by user ${data.session.user_id}`,
     });
 
@@ -254,7 +254,7 @@ class CartService {
   async removeVoucher(data) {
     const cart = await this.getOrCreateCart(data);
     ASSERT_USER(cart.voucher_id, "No voucher applied", {
-      code: "SRV_CNF_NO_VOUCHER_APPLIED",
+      code: "SERVICE.CART.00257.NO_VOUCHER_APPLIED",
       long_description: "No voucher applied to the cart",
     });
 

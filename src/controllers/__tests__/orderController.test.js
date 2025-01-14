@@ -53,7 +53,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.user_id,
         "You must be logged in to perform this action",
-        { code: "ORDER_UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.ORDER.00017.UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" }
       );
       expect(orderService.createOrder).toHaveBeenCalledWith({
         body: req.body,
@@ -81,7 +81,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action",
-        { code: "ORDER_UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.ORDER.00029.UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" }
       );
       expect(authService.requirePermission).toHaveBeenCalledWith(req, "create", "orders");
       expect(orderService.createOrderByStaff).toHaveBeenCalledWith({
@@ -111,7 +111,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action",
-        { code: "ORDER_UNAUTHORIZED_UPDATE", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.ORDER.00042.UNAUTHORIZED_UPDATE", long_description: "You must be logged in to perform this action" }
       );
       expect(authService.requirePermission).toHaveBeenCalledWith(req, "update", "orders");
       expect(orderService.updateOrderByStaff).toHaveBeenCalledWith({
@@ -141,7 +141,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.user_id,
         "You must be logged in to perform this action",
-        { code: "ORDER_UNAUTHORIZED_READ", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.ORDER.00056.UNAUTHORIZED_READ", long_description: "You must be logged in to perform this action" }
       );
       expect(orderService.getOrder).toHaveBeenCalledWith({
         params: req.params,
@@ -172,7 +172,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.user_id,
         "You must be logged in to perform this action",
-        { code: "ORDER_UNAUTHORIZED_CAPTURE_PAYMENT", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.ORDER.00067.UNAUTHORIZED_CAPTURE_PAYMENT", long_description: "You must be logged in to perform this action" }
       );
       expect(orderService.capturePaypalPayment).toHaveBeenCalledWith({
         body: req.body,
@@ -204,7 +204,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.user_id,
         "You must be logged in to perform this action",
-        { code: "ORDER_UNAUTHORIZED_CANCEL_PAYMENT", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.ORDER.00080.UNAUTHORIZED_CANCEL_PAYMENT",  long_description: "You must be logged in to perform this action" }
       );
       expect(orderService.cancelPaypalPayment).toHaveBeenCalledWith({
         body: req.body,
@@ -234,7 +234,7 @@ describe("OrderController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.user_id,
         "You must be logged in to perform this action",
-        { code: "ORDER_UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.ORDER.00093.UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" }
       );
       expect(authService.requirePermission).toHaveBeenCalledWith(req, "delete", "orders");
       expect(orderService.deleteOrder).toHaveBeenCalledWith({

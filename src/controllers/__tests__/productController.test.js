@@ -149,7 +149,7 @@ describe("ProductController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         mockReq.session.user_id, 
         "You must be logged in to perform this action", 
-        { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.PRODUCT.00032.UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" }
       );
       expect(productService.createComment).toHaveBeenCalledWith({
         body: mockReq.body,
@@ -173,7 +173,7 @@ describe("ProductController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         mockReq.session.user_id, 
         "You must be logged in to perform this action", 
-        { code: "PRODUCT_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.PRODUCT.00045.UNAUTHORIZED_CREATE",  long_description: "You must be logged in to perform this action" }
       );
       expect(productService.createRating).toHaveBeenCalledWith({
         body: mockReq.body,

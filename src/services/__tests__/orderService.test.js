@@ -1,4 +1,4 @@
-const OrderService = require('./orderService');
+const OrderService = require('../orderService');
 const paypal = require('@paypal/checkout-server-sdk');
 
 jest.mock('@paypal/checkout-server-sdk');

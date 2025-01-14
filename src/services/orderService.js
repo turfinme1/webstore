@@ -366,7 +366,7 @@ class OrderService {
       SELECT * FROM orders_detail_view WHERE id = (SELECT order_id FROM payments WHERE provider_payment_id = $1 LIMIT 1)`,
       [data.query.token]
     );
-    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: "ORDER_NOT_FOUND_CAPTURE_PAYMENT", long_description: "Order not found" });
+    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: "SERVICE.ORDER.00369.NOT_FOUND_CAPTURE_PAYMENT", long_description: "Order not found" });
     const order = orderViewResult.rows[0];
     
     const paymentResult = await data.dbConnection.query(`
@@ -376,7 +376,7 @@ class OrderService {
       RETURNING *`,
       [order.total_price_with_vat, data.query.token]
     );
-    ASSERT_USER(paymentResult.rows.length > 0, "Payment not found", { code: "ORDER_COMPLETE_FAILURE", long_description: "Payment not found" });
+    ASSERT_USER(paymentResult.rows.length > 0, "Payment not found", { code: "SERVICE.ORDER.00379.COMPLETE_FAILURE", long_description: "Payment not found" });
 
     const payment = paymentResult.rows[0];
     
@@ -388,7 +388,7 @@ class OrderService {
     );
     
     const capture = await this.paypalClient.execute(request);
-    ASSERT(capture.result.status === "COMPLETED", "Payment failed", { code: "ORDER_COMPLETE_FAILURE", long_description: "Payment failed" });
+    ASSERT(capture.result.status === "COMPLETED", "Payment failed", { code: "SERVICE.ORDER.00391.COMPLETE_FAILURE", long_description: "Payment failed" });
     await data.dbConnection.query("COMMIT");
     
     const userResult = await data.dbConnection.query(`SELECT * FROM users WHERE id = $1`, [data.session.user_id]);
@@ -415,14 +415,14 @@ class OrderService {
       SELECT * FROM payments WHERE provider_payment_id = $1`,
       [data.query.token]
     );
-    ASSERT_USER(paymentResult.rows.length === 1, "Payment not found", { code: "ORDER_NOT_FOUND_CANCEL_PAYMENT", long_description: "Payment not found" });
-    ASSERT_USER(paymentResult.rows[0].status === "Pending", "Payment status cannot be changed", { code: "ORDER_INVALID_INPUT_STATUS", long_description: "Payment status cannot be changed" });
+    ASSERT_USER(paymentResult.rows.length === 1, "Payment not found", { code: "SERVICE.ORDER.00418.ORDER_NOT_FOUND", long_description: "Payment not found" });
+    ASSERT_USER(paymentResult.rows[0].status === "Pending", "Payment status cannot be changed", { code: "SERVICE.ORDER.00419.INVALID_STATUS", long_description: "Payment status cannot be changed" });
 
     const orderViewResult = await data.dbConnection.query(`
       SELECT * FROM orders_view WHERE id = (SELECT order_id FROM payments WHERE provider_payment_id = $1 LIMIT 1)`,
       [data.query.token]
     );
-    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: "ORDER_NOT_FOUND_CANCEL_PAYMENT", long_description: "Order not found" });
+    ASSERT_USER(orderViewResult.rows.length > 0, "Order not found", { code: "SERVICE.ORDER.00425.ORDER_NOT_FOUND", long_description: "Order not found" });
     const order = orderViewResult.rows[0];
 
     await data.dbConnection.query(`
@@ -479,7 +479,7 @@ class OrderService {
     
     if(! arePricesUpToDate) {
       await data.dbConnection.query("COMMIT");
-      ASSERT_USER(false, "Prices in your cart have changed. Please review your cart.", { code: "ORDER_CART_PRICES_CHANGED", long_description: "Prices in your cart have changed. Please review your cart." });
+      ASSERT_USER(false, "Prices in your cart have changed. Please review your cart.", { code: "SERVICE.ORDER.00482.CART_PRICES_CHANGED", long_description: "Prices in your cart have changed. Please review your cart." });
     }
   }
 
@@ -493,7 +493,7 @@ class OrderService {
       [data.params.orderId]
     );
 
-    ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: "ORDER_NOT_FOUND_DELETE", long_description: "Order not found" });
+    ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: "SERVICE.ORDER.00496.ORDER_NOT_FOUND", long_description: "Order not found" });
 
     return { message: "Order deleted successfully" };
   }

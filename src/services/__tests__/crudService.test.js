@@ -1117,8 +1117,7 @@ describe("CrudService", () => {
   
       // Verify logging
       expect(mockData.logger.info).toHaveBeenCalledWith({
-        code: "CRUD_ROLE_CHANGE_SUCCESS"
-,
+        code: "SERVICE.CRUD.00507.ROLE_CHANGE_SUCCESS",
         short_description: expect.stringContaining('User roles updated for user with ID: 1'),
         long_description: expect.stringContaining('Added roles: Viewer; Removed roles: Admin')
       });
@@ -1141,8 +1140,7 @@ describe("CrudService", () => {
       // Verify only DELETE was called
       expect(mockData.dbConnection.query).toHaveBeenCalledTimes(2);
       expect(mockData.logger.info).toHaveBeenCalledWith({
-        code: "CRUD_ROLE_CHANGE_SUCCESS"
-,
+        code: "SERVICE.CRUD.00507.ROLE_CHANGE_SUCCESS",
         short_description: expect.stringContaining('User roles updated for user with ID: 1'),
         long_description: expect.stringContaining('Added roles: ; Removed roles: Admin, Editor')
       });
@@ -1169,7 +1167,7 @@ describe("CrudService", () => {
       );
   
       expect(mockData.logger.info).toHaveBeenCalledWith({
-        code: "CRUD_ROLE_CHANGE_SUCCESS"
+        code: "SERVICE.CRUD.00507.ROLE_CHANGE_SUCCESS"
 ,
         short_description: expect.stringContaining('User roles updated for user with ID: 1'),
         long_description: expect.stringContaining('Added roles: Editor, Viewer; Removed roles: ')
@@ -1193,7 +1191,7 @@ describe("CrudService", () => {
       await crudService.adminUsersUpdateHook(mockData, mockInsertObject);
   
       expect(mockData.logger.info).toHaveBeenCalledWith({
-        code: "CRUD_ROLE_CHANGE_SUCCESS"
+        code: "SERVICE.CRUD.00507.ROLE_CHANGE_SUCCESS"
 ,
         short_description: expect.stringContaining('User roles updated for user with ID: 1'),
         long_description: expect.stringContaining('Added roles: ; Removed roles: ')

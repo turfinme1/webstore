@@ -14,7 +14,7 @@ class ReportService {
 
   async getReport(data) {
     ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
-        code: "REPORT_INVALID_QUERY_PARAMS", 
+        code: "SERVICE.REPORT.00017.INVALID_QUERY_PARAMS", 
         long_description: `Report ${data.params.report} not found` 
     });
     
@@ -36,7 +36,7 @@ class ReportService {
 
   async exportReport(data) {
     ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
-        code: "REPORT_INVALID_QUERY_PARAMS", 
+        code: "SERVICE.REPORT.00039.INVALID_QUERY_PARAMS", 
         long_description: `Report ${data.params.report} not found` 
     });
 
@@ -56,6 +56,42 @@ class ReportService {
     };
 
     await this.exportService.exportReport(exportData);
+  }
+
+  replaceFilterExpressions(sql, reportFilters, INPUT_DATA) {
+    let insertValues = [];
+    const hasAnyGrouping = reportFilters.some(filter =>INPUT_DATA[`${filter.key}_grouping_select_value`]);
+
+    for (let reportFilter of reportFilters) {
+      const groupingValue = INPUT_DATA[`${reportFilter.key}_grouping_select_value`];
+      let groupingExpr = "'All'"; // default
+
+      if (groupingValue) {
+        if (reportFilter.type === 'timestamp') {
+          ASSERT_USER(groupingValue.match(/minute|hour|day|week|month|year/), `Invalid grouping value ${groupingValue}`, { code: "SERVICE.REPORT.00071.INVALID_BODY", long_description: `Invalid grouping value ${groupingValue}` });
+          groupingExpr = `DATE_TRUNC('${groupingValue}', ${reportFilter.grouping_expression})`;
+        } else {
+          groupingExpr = reportFilter.grouping_expression;
+        }
+      } else if ( ! hasAnyGrouping) {
+        groupingExpr = reportFilter.grouping_expression;
+      }
+      sql = sql.replace(`$${reportFilter.key}_grouping_expression$`, groupingExpr);
+
+      if (INPUT_DATA[`${reportFilter.key}_filter_value`]) {
+        let filterExpr = reportFilter.filter_expression;
+        let filterValue = INPUT_DATA[`${reportFilter.key}_filter_value`];
+        let filterExprReplaced;
+
+        insertValues.push(filterValue);
+        filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
+        sql = sql.replace(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
+      } else {
+        sql = sql.replace(`$${reportFilter.key}_filter_expression$`, 'TRUE');
+      }
+    }
+
+    return {sql, insertValues};
   }
 
   async ordersByUserReportDefinition(data) {
@@ -842,42 +878,6 @@ class ReportService {
         ORDER BY 1 NULLS FIRST`;
     
     return { reportUIConfig, sql, reportFilters, INPUT_DATA };
-  }
-  
-  replaceFilterExpressions(sql, reportFilters, INPUT_DATA) {
-    let insertValues = [];
-    const hasAnyGrouping = reportFilters.some(filter =>INPUT_DATA[`${filter.key}_grouping_select_value`]);
-
-    for (let reportFilter of reportFilters) {
-      const groupingValue = INPUT_DATA[`${reportFilter.key}_grouping_select_value`];
-      let groupingExpr = "'All'"; // default
-
-      if (groupingValue) {
-        if (reportFilter.type === 'timestamp') {
-          ASSERT_USER(groupingValue.match(/minute|hour|day|week|month|year/), `Invalid grouping value ${groupingValue}`, { code: "REPORT_INVALID_BODY", long_description: `Invalid grouping value ${groupingValue}` });
-          groupingExpr = `DATE_TRUNC('${groupingValue}', ${reportFilter.grouping_expression})`;
-        } else {
-          groupingExpr = reportFilter.grouping_expression;
-        }
-      } else if ( ! hasAnyGrouping) {
-        groupingExpr = reportFilter.grouping_expression;
-      }
-      sql = sql.replace(`$${reportFilter.key}_grouping_expression$`, groupingExpr);
-
-      if (INPUT_DATA[`${reportFilter.key}_filter_value`]) {
-        let filterExpr = reportFilter.filter_expression;
-        let filterValue = INPUT_DATA[`${reportFilter.key}_filter_value`];
-        let filterExprReplaced;
-
-        insertValues.push(filterValue);
-        filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
-        sql = sql.replace(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
-      } else {
-        sql = sql.replace(`$${reportFilter.key}_filter_expression$`, 'TRUE');
-      }
-    }
-
-    return {sql, insertValues};
   }
 
   formatReportMetadata(reportFilters, INPUT_DATA) {

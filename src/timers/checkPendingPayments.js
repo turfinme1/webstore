@@ -41,7 +41,7 @@ const { ENV } = require("../serverConfigurations/constants");
               );
       
               await logger.info({
-                code: "CRON_SUCCESS",
+                code: 'TIMERS.CHECK_PENDING_PAYMENTS.00044.CAPTURE_SUCCESS',
                 short_description: `Payment captured for Order ID: ${pendingPayment.id}`,
                 long_description: `Updated payment status to COMPLETED for Order ID: ${pendingPayment.id}`,
               });
