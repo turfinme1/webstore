@@ -61,7 +61,7 @@ describe("AuthController", () => {
       expect(mockRes.cookie).toHaveBeenCalledWith("session_id", registrationResult.session_hash, expect.any(Object));
       expect(mockRes.json).toHaveBeenCalledWith({ message: "Registration successful" });
       expect(req.logger.info).toHaveBeenCalledWith({
-        code: "AUTH_REGISTRATION_SUCCESS",
+        code: "CONTROLLER.AUTH.00033.REGISTRATION_SUCCESS", 
         short_description: "Registration successful",
         long_description: `User ${req.body.email} registered successfully`,
       });

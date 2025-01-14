@@ -30,7 +30,7 @@ class AuthController {
       .cookie("session_id", result.session_hash, { expires: result.expires_at, secure: false, httpOnly: false})
       .json({message: "Registration successful"});
 
-    await req.logger.info({ code: "AUTH_REGISTRATION_SUCCESS", short_description: "Registration successful", long_description: `User ${req.body.email} registered successfully` });
+    await req.logger.info({ code: "CONTROLLER.AUTH.00033.REGISTRATION_SUCCESS", short_description: "Registration successful", long_description: `User ${req.body.email} registered successfully` });
   }
 
   async login(req, res, next) {

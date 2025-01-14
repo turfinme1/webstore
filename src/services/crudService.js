@@ -580,7 +580,7 @@ class CrudService {
     }
         
     await data.logger.info({
-      code: "CRUD_PERMISSION_CHANGE_SUCCESS",
+      code: "SERVICE.CRUD.00583.PERMISSION_CHANGE_SUCCESS",
       short_description: `Permissions updated for role with ID: ${data.params.id}`,
       long_description: `Added permissions: ${addedPermissionNames.join(', ')}; Removed permissions: ${removedPermissionNames.join(', ')}`
     });

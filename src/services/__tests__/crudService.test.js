@@ -1263,8 +1263,7 @@ describe("CrudService", () => {
       expect(mockInsertObject.keys).not.toContain('role_permissions');
   
       expect(mockData.logger.info).toHaveBeenCalledWith({
-        code: "CRUD_PERMISSION_CHANGE_SUCCESS"
-,
+        code: "SERVICE.CRUD.00583.PERMISSION_CHANGE_SUCCESS",
         short_description: expect.stringContaining('Permissions updated for role with ID: 1'),
         long_description: expect.stringContaining('Added permissions: create - users; Removed permissions: delete - users')
       });

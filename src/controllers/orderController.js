@@ -100,7 +100,7 @@ class OrderController {
       const result = await this.orderService.deleteOrder(data);
       res.status(200).json(result);
 
-      await req.logger.info({ code: "DELETE_SUCCESS", short_description: `Order deleted successfully`, long_description: `Order for user ${req.session.user_id} deleted successfully` });
+      await req.logger.info({ code: "CONTROLLER.ORDER.00103.DELETE_SUCCESS", short_description: `Order deleted successfully`, long_description: `Order for user ${req.session.user_id} deleted successfully` });
     }
   }
   
