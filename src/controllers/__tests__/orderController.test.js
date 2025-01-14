@@ -245,7 +245,7 @@ describe("OrderController", () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(deleteResult);
       expect(req.logger.info).toHaveBeenCalledWith({
-        code: "DELETE_SUCCESS",
+        code: "CONTROLLER.ORDER.00103.DELETE_SUCCESS",
         short_description: "Order deleted successfully",
         long_description: `Order for user ${req.session.user_id} deleted successfully`,
       });
