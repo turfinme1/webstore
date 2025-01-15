@@ -280,7 +280,7 @@ class ReportService {
         columns: [
           { key: 'id', label: 'ID', align: 'right', format: 'text' },
           { key: 'created_at', label: 'Created At', format: 'date_time' },
-          { key: 'status_code', label: 'Status Code', align: 'right', format: 'text' },
+          { key: 'status_code', label: 'Status Code', format: 'text' },
           { key: 'log_level', label: 'Log Level', format: 'text' },
           { key: 'audit_type', label: 'Audit Type', format: 'text' },
           { key: 'short_description', label: 'Short Description', format: 'text' },

@@ -26,7 +26,7 @@ class DbConnectionWrapper {
       ASSERT_USER(error.code !== "23514", "Check constraint failed", { code: "DATABASE.DB_CON_WRAPPER.00026.INVALID_INPUT_CHECK_CONSTRAINT", long_description: "Check constraint failed" });
       ASSERT_USER(error.code !== "22001", "Data too long for column" , { code: "DATABASE.DB_CON_WRAPPER.00027.INVALID_INPUT_DATA_TOO_LONG", long_description: "Data too long for column" });
       ASSERT_USER(error.code !== "80000", "Order status cannot be reverted", { code: "DATABASE.DB_CON_WRAPPER.00028.INVALID_INPUT_ORDER_STATUS", long_description: "Cannot change the status of the order" });
-      ASSERT(false, "Internal server error", { code: "DATABASE.DB_CON_WRAPPER.00029.QUERY_ERROR", long_description: "Internal server error" });
+      ASSERT(false, "Internal server error", { code: "DATABASE.DB_CON_WRAPPER.00029.QUERY_ERROR", long_description: `MESSAGE: ${error.message}\nQUERY: ${queryCommand}\nDETAIL: ${error.detail}\nSTACK: ${error.stack}` });
     }
   }
 
