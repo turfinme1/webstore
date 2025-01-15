@@ -47,22 +47,25 @@ class OrderService {
     );
     const order = orderResult.rows[0];
 
-    await data.dbConnection.query(`
-      INSERT INTO voucher_usages (user_id, voucher_id)
-      VALUES ($1, (SELECT voucher_id FROM carts WHERE user_id = $1 AND is_active = TRUE))
-      RETURNING *`,
-      [data.session.user_id]
-    );
-
     const cartResult = await data.dbConnection.query(`
-      SELECT ci.*, p.name
-      FROM cart_items ci
-      JOIN products p ON ci.product_id = p.id 
-      WHERE ci.cart_id = (SELECT id FROM carts WHERE user_id = $1 AND is_active = TRUE)`,
+      SELECT ci.*, p.name, c.voucher_id
+      FROM carts c
+      LEFT JOIN cart_items ci ON c.id = ci.cart_id
+      LEFT JOIN products p ON ci.product_id = p.id
+      WHERE c.user_id = $1 AND c.is_active = TRUE`,
       [data.session.user_id]
     );
     const cartItems = cartResult.rows;
     ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", { code: "ORDER_INVALID_INPUT_CREATE", long_description: "Cart is empty" });
+
+    if(cartItems[0].voucher_id) {
+      await data.dbConnection.query(`
+        INSERT INTO voucher_usages (user_id, voucher_id)
+        VALUES ($1, (SELECT voucher_id FROM carts WHERE user_id = $1 AND is_active = TRUE))
+        RETURNING *`,
+        [data.session.user_id]
+      );
+    }
 
     for (const item of cartItems) {
       const inventoryResult = await data.dbConnection.query(`
