@@ -9,30 +9,40 @@ class ReportService {
         "report-logs": this.logsReportDefinition.bind(this),
         "report-orders": this.ordersReportDefinition.bind(this),
         "report-users": this.usersReportDefinition.bind(this),
-        "store-trends": this.storeTrendsReportDefinition.bind(this),
+    }
+    this.dashboardReports = {
+        "store-trends": this.storeTrendsReportDefinition.bind(this)
     }
   }
 
   async getReport(data) {
-    ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
-        code: "SERVICE.REPORT.00017.INVALID_QUERY_PARAMS", 
-        long_description: `Report ${data.params.report} not found` 
-    });
-    
-    const reportDefinition = await this.reports[data.params.report](data);
-    validateObject(reportDefinition.reportUIConfig, data.entitySchemaCollection["reportUI"]);
-    if(data.body.metadataRequest === true) {
-        return reportDefinition;
-    }
+    if(this.reports[data.params.report]) {
+        const reportDefinition = await this.reports[data.params.report](data);
+        validateObject(reportDefinition.reportUIConfig, data.entitySchemaCollection["reportUI"]);
+        if(data.body.metadataRequest === true) {
+            return reportDefinition;
+        }
 
-    const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
-    let displayRowLimit = parseInt(data.context.settings.report_row_limit_display);
-    const result = await data.dbConnection.query(`${replacedQueryData.sql} LIMIT ${displayRowLimit + 1}`, replacedQueryData.insertValues);
-    const overRowDisplayLimit = result.rows.length === displayRowLimit + 1;
-    if(result.rows.length > 0){
-        result.rows.push(result.rows.shift());
+        const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
+        let displayRowLimit = parseInt(data.context.settings.report_row_limit_display);
+        const result = await data.dbConnection.query(`${replacedQueryData.sql} LIMIT ${displayRowLimit + 1}`, replacedQueryData.insertValues);
+        const overRowDisplayLimit = result.rows.length === displayRowLimit + 1;
+        if(result.rows.length > 0){
+            result.rows.push(result.rows.shift());
+        }
+        return { rows: result.rows, overRowDisplayLimit };
+    } else if (this.dashboardReports[data.params.report]) {
+        const reportDefinition = await this.dashboardReports[data.params.report](data);
+        const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
+    
+        const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
+        return { rows: result.rows };
+    } else {
+        ASSERT_USER(false, `Report ${data.params.report} not found`, {
+            code: "SERVICE.REPORT.00045.INVALID_QUERY_PARAMS",
+            long_description: `Report ${data.params.report} not found`
+        });
     }
-    return { rows: result.rows, overRowDisplayLimit  };
   }
 
   async exportReport(data) {
@@ -885,15 +895,15 @@ class ReportService {
     const reportUIConfig = {};
 
     const INPUT_DATA = {
-        start_date_filter_value: data.body.start_date,
-        end_date__filter_value: data.body.end_date || new Date().toISOString(),
+        start_date_filter_value: data.body.start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        end_date_filter_value: data.body.end_date || new Date().toISOString(),
     };
 
     const reportFilters = [
         {
             key: "start_date",
             grouping_expression: "",
-            filter_expression: "O.created_at >= $FILTER_VALUE$",
+            filter_expression: "$FILTER_VALUE$",
             type: "timestamp",
         },
         {
@@ -907,10 +917,8 @@ class ReportService {
     let sql = `
         WITH date_filter AS (
         SELECT
-            $end_date_filter_expression$::date AS end_date,
-            ($end_date_filter_expression$ - INTERVAL '7 days')::date AS start_date,
-            ($end_date_filter_expression$ - INTERVAL '7 days')::date AS prev_week_end_date,
-            ($end_date_filter_expression$ - INTERVAL '14 days')::date AS prev_week_start_date
+            $start_date_filter_expression$::date AS start_date,
+            $end_date_filter_expression$::date AS end_date
         ),
         registered_users AS (
             SELECT
@@ -922,104 +930,112 @@ class ReportService {
             SELECT
                 COUNT(*) AS registered_users
             FROM users u 
-            WHERE u.created_at <= (SELECT prev_week_end_date FROM date_filter) AND u.created_at >= (SELECT prev_week_start_date FROM date_filter)
+            WHERE u.created_at <= (SELECT (end_date - INTERVAL '7 days')::date FROM date_filter) AND u.created_at >= (SELECT (end_date - INTERVAL '7 days')::date FROM date_filter)
         ),
         order_metrics AS (
             SELECT 
                 COUNT(DISTINCT user_id) AS active_users,
-                AVG(paid_amount) AS avg_order_price,
-                SUM(paid_amount) / COUNT(DISTINCT(user_id)) AS avg_amount_spent_by_user,
-                SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount) AS net_revenue,
-                SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount) / COUNT(DISTINCT user_id) as avg_net_revenue_by_user
+                COALESCE(AVG(paid_amount), 0) AS avg_order_price,
+                COALESCE(SUM(paid_amount) / COUNT(DISTINCT(user_id)), 0) AS avg_amount_spent_by_user,
+                COALESCE(SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount), 0) AS net_revenue,
+                COALESCE(SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount) / COUNT(DISTINCT user_id), 0) as avg_net_revenue_by_user
             FROM orders
             WHERE created_at BETWEEN (SELECT start_date FROM date_filter) AND (SELECT end_date FROM date_filter)
         ),
         prev_week_order_metrics AS (
             SELECT 
                 COUNT(DISTINCT user_id) AS active_users,
-                AVG(paid_amount) AS avg_order_price,
-                SUM(paid_amount) / COUNT(DISTINCT(user_id)) AS avg_amount_spent_by_user,
-                SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount) AS net_revenue,
-                SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount) / COUNT(DISTINCT user_id) as avg_net_revenue_by_user
+                COALESCE(AVG(paid_amount), 0) AS avg_order_price,
+                COALESCE(SUM(paid_amount) / COUNT(DISTINCT(user_id)), 0) AS avg_amount_spent_by_user,
+                COALESCE(SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount), 0) AS net_revenue,
+                COALESCE(SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount) / COUNT(DISTINCT user_id), 0) as avg_net_revenue_by_user
             FROM orders
-            WHERE created_at BETWEEN (SELECT prev_week_start_date FROM date_filter) AND (SELECT prev_week_end_date FROM date_filter)
+            WHERE created_at BETWEEN (SELECT (start_date - INTERVAL '7 days')::date FROM date_filter) AND (SELECT (end_date - INTERVAL '7 days')::date FROM date_filter)
         ),
-        yearly_user_trends AS (
-            SELECT
-                start_of_month,
-                COUNT(*) AS registered_users
-            FROM generate_series(
-                date_trunc('month', NOW() - INTERVAL '1 year'),
-                date_trunc('month', NOW()),
-                '1 month'
-            ) AS start_of_month
-            LEFT JOIN users u ON u.created_at BETWEEN start_of_month AND start_of_month + INTERVAL '1 month' - INTERVAL '1 day'
-            GROUP BY start_of_month
-            ORDER BY start_of_month
-        ),
-        yearly_order_trends AS (
-            SELECT
-                start_of_month,
+        --
+        order_data AS (
+            SELECT 
+                date_trunc('month', created_at) AS month_start,
                 COUNT(DISTINCT user_id) AS active_users,
                 AVG(paid_amount) AS avg_order_price,
-                SUM(paid_amount) / COUNT(DISTINCT(user_id)) AS avg_amount_spent_by_user,
-                SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount) AS net_revenue,
-                SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount) / COUNT(DISTINCT user_id) as avg_net_revenue_by_user
-            FROM generate_series(
-                date_trunc('month', NOW() - INTERVAL '1 year'),
-                date_trunc('month', NOW()),
-                '1 month'
-            ) AS start_of_month
-            LEFT JOIN orders ON created_at BETWEEN start_of_month AND start_of_month + INTERVAL '1 month' - INTERVAL '1 day'
-            GROUP BY start_of_month
-            ORDER BY start_of_month
+                SUM(paid_amount) AS total_revenue,
+                SUM(paid_amount - total_price * discount_percentage / 100 - voucher_discount_amount) AS net_revenue,
+                COUNT(DISTINCT user_id) AS distinct_users
+            FROM orders
+            GROUP BY date_trunc('month', created_at)
+        ),
+        user_data AS (
+            SELECT 
+                date_trunc('month', created_at) AS month_start,
+                COUNT(id) AS registered_users
+            FROM users
+            GROUP BY date_trunc('month', created_at)
+        ),
+        yearly_trends AS (
+            SELECT
+                ms.month_start,
+                COALESCE(o.active_users, 0) AS active_users,
+                ROUND(COALESCE(o.avg_order_price, 0), 2) AS avg_order_price,
+                ROUND(COALESCE(o.total_revenue / NULLIF(o.distinct_users, 0), 0), 2) AS avg_amount_spent_by_user,
+                ROUND(COALESCE(o.net_revenue, 0), 2) AS net_revenue,
+                ROUND(COALESCE(o.net_revenue / NULLIF(o.distinct_users, 0), 0), 2) AS avg_net_revenue_by_user,
+                COALESCE(u.registered_users, 0) AS registered_users
+            FROM (
+                SELECT generate_series(
+                    date_trunc('month', (SELECT end_date FROM date_filter) - INTERVAL '1 year'),
+                    date_trunc('month', (SELECT end_date FROM date_filter)),
+                    '1 month'
+                ) AS month_start
+            ) ms
+            LEFT JOIN order_data o ON o.month_start = ms.month_start
+            LEFT JOIN user_data u ON u.month_start = ms.month_start
         )
-        SELECT jsonb_build_object(
-            'metrics', jsonb_build_array(
+        --
+        SELECT 
+            jsonb_build_array(
                 jsonb_build_object(
                     'name', 'Registered Users',
                     'current', registered_users.registered_users,
                     'previous', prev_week_registered_users.registered_users,
                     'change', ROUND(((registered_users.registered_users - prev_week_registered_users.registered_users)::float / NULLIF(prev_week_registered_users.registered_users, 0) * 100)::numeric, 2),
-                    'trend', (SELECT jsonb_agg(registered_users) FROM yearly_user_trends)
+                    'trend', (SELECT jsonb_agg(registered_users) FROM yearly_trends)
                 ),
                 jsonb_build_object(
                     'name', 'Active Users',
                     'current', order_metrics.active_users,
                     'previous',  prev_week_order_metrics.active_users,
                     'change', ROUND(((order_metrics.active_users - prev_week_order_metrics.active_users)::float / NULLIF(prev_week_order_metrics.active_users, 0) * 100)::numeric, 2),
-                    'trend', (SELECT jsonb_agg(active_users) FROM yearly_order_trends)
+                    'trend', (SELECT jsonb_agg(active_users) FROM yearly_trends)
                 ),
                 jsonb_build_object(
                     'name', 'Average Order Price',
                     'current', ROUND(order_metrics.avg_order_price::numeric, 2),
                     'previous', ROUND(prev_week_order_metrics.avg_order_price::numeric, 2),
                     'change', ROUND(((order_metrics.avg_order_price - prev_week_order_metrics.avg_order_price)::float / NULLIF(prev_week_order_metrics.avg_order_price, 0) * 100)::numeric, 2),
-                    'trend', (SELECT jsonb_agg(avg_order_price) FROM yearly_order_trends)
+                    'trend', (SELECT jsonb_agg(avg_order_price) FROM yearly_trends)
                 ),
                 jsonb_build_object(
                     'name', 'Average Amount Spent by User',
                     'current', ROUND(order_metrics.avg_amount_spent_by_user::numeric, 2),
                     'previous', ROUND(prev_week_order_metrics.avg_amount_spent_by_user::numeric, 2),
                     'change', ROUND(((order_metrics.avg_amount_spent_by_user - prev_week_order_metrics.avg_amount_spent_by_user)::float / NULLIF(prev_week_order_metrics.avg_amount_spent_by_user, 0) * 100)::numeric, 2),
-                    'trend', (SELECT jsonb_agg(avg_amount_spent_by_user) FROM yearly_order_trends)
+                    'trend', (SELECT jsonb_agg(avg_amount_spent_by_user) FROM yearly_trends)
                 ),
                 jsonb_build_object(
                     'name', 'Net Revenue',
                     'current', ROUND(order_metrics.net_revenue::numeric, 2),
                     'previous', ROUND(prev_week_order_metrics.net_revenue::numeric, 2),
                     'change', ROUND(((order_metrics.net_revenue - prev_week_order_metrics.net_revenue)::float / NULLIF(prev_week_order_metrics.net_revenue, 0) * 100)::numeric, 2),
-                    'trend', (SELECT jsonb_agg(net_revenue) FROM yearly_order_trends)
+                    'trend', (SELECT jsonb_agg(net_revenue) FROM yearly_trends)
                 ),
                 jsonb_build_object(
                     'name', 'Net Revenue by User',
                     'current', ROUND(order_metrics.avg_net_revenue_by_user::numeric, 2),
                     'previous', ROUND(prev_week_order_metrics.avg_net_revenue_by_user::numeric, 2),
                     'change', ROUND(((order_metrics.avg_net_revenue_by_user - prev_week_order_metrics.avg_net_revenue_by_user)::float / NULLIF(prev_week_order_metrics.avg_net_revenue_by_user, 0) * 100)::numeric, 2),
-                    'trend', (SELECT jsonb_agg(avg_net_revenue_by_user) FROM yearly_order_trends)
+                    'trend', (SELECT jsonb_agg(avg_net_revenue_by_user) FROM yearly_trends)
                 )
-            )
-        ) AS dashboard_data
+            ) AS dashboard_data
         FROM registered_users
         CROSS JOIN prev_week_registered_users
         CROSS JOIN order_metrics

@@ -7,33 +7,100 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const contentArea = document.getElementById("content-area");
   contentArea.innerHTML = `
-    <div id="dashboard-container"></div>
-    <div class="charts-container mb-5">
-      <h1 class='mb-4'>Order Charts</h1>
-      <div class="chart-section">
-        <h2>Orders Last 6 Months
-          <div id="spinner-6-months" class="spinner-border text-primary ms-3" role="status" style="display: none;">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-        </h2>
-        <canvas id='orderChart' width='400' height='200'></canvas>
+    <div class="container-fluid">
+      <div class="row mb-4">
+        <div class="col-12">
+          <h1>Management Dashboard</h1>
+        </div>
       </div>
-      
-      <div class="chart-section mt-5">
-        <h2>Orders Last 2 Days
-          <div id="spinner-2-days" class="spinner-border text-primary ms-3" role="status" style="display: none;">
-            <span class="visually-hidden">Loading...</span>
+
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Orders Last 6 Months
+                <div id="spinner-6-months" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </h5>
+              <canvas id="orderChart"></canvas>
+            </div>
           </div>
-        </h2>
-        <canvas id='orderChartLastTwoDays' width='400' height='200'></canvas>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Orders Last 2 Days
+                <div id="spinner-2-days" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </h5>
+              <canvas id="orderChartLastTwoDays"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <h2 class="mb-4">Overview</h2>
+
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-body">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <label class="form-label">Date Range (max 1 week):</label>
+                </div>
+                <div class="col-auto">
+                  <input type="date" id="start-date" class="form-control">
+                </div>
+                <div class="col-auto">
+                  <span>to</span>
+                </div>
+                <div class="col-auto">
+                  <input type="date" id="end-date" class="form-control">
+                </div>
+                <div class="col-auto">
+                  <button id="filter-dashboard" class="btn btn-primary">Apply Filter</button>
+                </div>
+                <div id="spinner-dashboard" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="dashboard-container" class="row mb-4"></div>
+
     </div>
   `;
+
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 7);
+  
+  document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+  document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+
+  document.getElementById('filter-dashboard').addEventListener('click', async () => {
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+
+    // validate date range
+    if (new Date(endDate) - new Date(startDate) > 7 * 24 * 60 * 60 * 1000) {
+      showToastMessage('Date range cannot exceed 7 days', 'error');
+      return;
+    }
+    
+    await renderDashboard(startDate, endDate);
+  });
 
   await Promise.any([
     renderOrderChartLastSixMonths(),
     renderOrderChartLastTwoDays(),
-    renderDashboard()
   ]);
 });
 
@@ -219,91 +286,110 @@ async function renderOrderChartLastTwoDays() {
   }
 }
 
-async function renderDashboard() {
+async function renderDashboard(startDate, endDate) {
+  const spinner = document.getElementById("spinner-dashboard");
+  const filterButton = document.getElementById("filter-dashboard");
   const dashboardContainer = document.getElementById("dashboard-container");
-  const response = await fetch('/api/reports/store-trends', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  
-  const metrics = await response.json();
-  
-  dashboardContainer.innerHTML += `
-    <div class="container mt-4">
-      <h2 class="mb-4">Dashboard Overview</h2>
-      <div class="row g-4">
-        ${metrics.map(metric => `
-          <div class="col-md-6">
-            <div class="card h-100 shadow-sm">
-              <div class="card-body">
-                <h5 class="card-title text-muted mb-3">${metric.name}</h5>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                  <div>
-                    <h3 class="mb-0">${formatNumber(metric.current)}</h3>
-                    <span class="change-indicator ${metric.change >= 0 ? 'text-success' : 'text-danger'}">
-                      <i class="bi ${metric.change >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'}"></i>
-                      ${Math.abs(metric.change).toFixed(1)}%
-                    </span>
-                    <small class="text-muted ms-2">vs last week</small>
-                  </div>
-                  <div style="width: 150px; height: 50px;">
-                    <canvas id="chart-${metric.name.toLowerCase().replace(/\s+/g, '-')}"></canvas>
+  try {
+      spinner.style.display = "inline-block";
+      filterButton.disabled = true;
+    
+    const response = await fetchWithErrorHandling('/api/reports/store-trends', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start_date: startDate, end_date: endDate })
+    });
+
+    if(!response.ok) {
+      showToastMessage(response.error, "error");
+      return;
+    }
+    const data = await response.data;
+    const metrics = data.rows[0].dashboard_data;
+    const yearBefore = new Date(endDate);
+    yearBefore.setFullYear(yearBefore.getFullYear() - 1);
+    dashboardContainer.innerHTML = `
+      <div class="container mt-4">
+        <div class="row g-4">
+          ${metrics.map((metric, index) => `
+            <div class="col-md-4">
+              <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                  <h5 class="card-title text-muted mb-3">${metric.name}</h5>
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                      <h6 class="mb-1 text-muted">${formatHumanReadableDate(startDate)} - ${formatHumanReadableDate(endDate)}</h6>
+                      <h3 class="mb-0">${metric.name === 'Active Users' || metric.name === 'Registered Users' ? formatNumber(metric.current) : formatCurrency(metric.current)}</h3>
+                      <span class="change-indicator ${metric.change >= 0 ? 'text-success' : 'text-danger'}">
+                        <i class="bi ${metric.change >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'}"></i>
+                        ${Math.abs(metric.change).toFixed(1)}%
+                      </span>
+                      <small class="text-muted ms-2">vs last week</small>
+                    </div>
+                    <div>
+                      <h6 class="mb-1 text-muted">${formatHumanReadableDate(yearBefore)} - ${formatHumanReadableDate(endDate)}</h6>
+                      <div style="width: 150px; height: 60px;">
+                        <canvas id="chart-${metric.name.toLowerCase().replace(/\s+/g, '-')}"></canvas>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        `).join('')}
+          `).join('')}
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
-  // Render sparkline charts
-  metrics.forEach(metric => {
-    const ctx = document.getElementById(`chart-${metric.name.toLowerCase().replace(/\s+/g, '-')}`).getContext('2d');
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: Array(metric.trend.length).fill(''),
-        datasets: [{
-          data: metric.trend,
-          borderColor: getMetricColor(metric.name),
-          borderWidth: 2,
-          fill: {
-            target: 'origin',
-            above: `${getMetricColor(metric.name)}15`
+    metrics.forEach(metric => {
+      const ctx = document.getElementById(`chart-${metric.name.toLowerCase().replace(/\s+/g, '-')}`).getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: Array(metric.trend.length).fill(''),
+          datasets: [{
+            data: metric.trend,
+            borderColor: getMetricColor(metric.name),
+            borderWidth: 2,
+            fill: {
+              target: 'origin',
+              above: `${getMetricColor(metric.name)}15`
+            },
+            tension: 0.4,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: (context) => formatCurrency(context.parsed.y)
+              }
+            }
           },
-          tension: 0.4,
-          pointRadius: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            mode: 'index',
-            intersect: false,
-            callbacks: {
-              label: (context) => formatNumber(context.parsed.y)
+          scales: {
+            x: { display: false },
+            y: { 
+              display: false,
+              min: Math.min(...metric.trend) * 0.95,
+              max: Math.max(...metric.trend) * 1.05
             }
           }
-        },
-        scales: {
-          x: { display: false },
-          y: { 
-            display: false,
-            min: Math.min(...metric.trend) * 0.95,
-            max: Math.max(...metric.trend) * 1.05
-          }
         }
-      }
+      });
     });
-  });
+  } finally {
+    spinner.style.display = "none";
+    filterButton.disabled = false;
+  }
 }
 
-function formatNumber(value) {
+function formatCurrency(value) {
   if (typeof value !== 'number') return '0';
   
   if (value >= 1000000) {
@@ -313,6 +399,18 @@ function formatNumber(value) {
     return `$${(value / 1000).toFixed(1)}K`;
   }
   return `$${value.toFixed(2)}`;
+}
+
+function formatNumber(value) {
+  if (typeof value !== 'number') return '0';
+  
+  if (value >= 1000000) {
+    return `${(value / 1000000).toFixed(1)}M`;
+  }
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}K`;
+  }
+  return `${value.toFixed(2)}`;
 }
 
 function getMetricColor(metricName) {
@@ -325,4 +423,9 @@ function getMetricColor(metricName) {
     'User Net Revenue': '#795548'
   };
   return colors[metricName] || '#666666';
+}
+
+function formatHumanReadableDate(inputDate) {
+  const date = new Date(inputDate);
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
 }
