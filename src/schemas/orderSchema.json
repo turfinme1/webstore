@@ -40,7 +40,10 @@
         "paid_amount": {
             "type": "number",
             "label": "Paid Amount",
-            "placeholder": "Paid Amount"
+            "placeholder": "Paid Amount",
+            "group_behavior": "SUM",
+            "groupable": true
+            
         },
         "shipping_address_id": {
             "type": "integer",

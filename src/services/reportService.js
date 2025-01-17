@@ -11,7 +11,8 @@ class ReportService {
         "report-users": this.usersReportDefinition.bind(this),
     }
     this.dashboardReports = {
-        "store-trends": this.storeTrendsReportDefinition.bind(this)
+        "store-trends": this.storeTrendsReportDefinition.bind(this),
+        "campaign-trends": this.campaignTrendsReportDefinition.bind(this),
     }
   }
 
@@ -39,7 +40,7 @@ class ReportService {
         return { rows: result.rows };
     } else {
         ASSERT_USER(false, `Report ${data.params.report} not found`, {
-            code: "SERVICE.REPORT.00045.INVALID_QUERY_PARAMS",
+            code: "SERVICE.REPORT.00042.INVALID_QUERY_PARAMS",
             long_description: `Report ${data.params.report} not found`
         });
     }
@@ -47,7 +48,7 @@ class ReportService {
 
   async exportReport(data) {
     ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
-        code: "SERVICE.REPORT.00039.INVALID_QUERY_PARAMS", 
+        code: "SERVICE.REPORT.00051.INVALID_QUERY_PARAMS", 
         long_description: `Report ${data.params.report} not found` 
     });
 
@@ -79,7 +80,7 @@ class ReportService {
 
       if (groupingValue) {
         if (reportFilter.type === 'timestamp') {
-          ASSERT_USER(groupingValue.match(/minute|hour|day|week|month|year/), `Invalid grouping value ${groupingValue}`, { code: "SERVICE.REPORT.00071.INVALID_BODY", long_description: `Invalid grouping value ${groupingValue}` });
+          ASSERT_USER(groupingValue.match(/minute|hour|day|week|month|year/), `Invalid grouping value ${groupingValue}`, { code: "SERVICE.REPORT.00083.INVALID_BODY", long_description: `Invalid grouping value ${groupingValue}` });
           groupingExpr = `DATE_TRUNC('${groupingValue}', ${reportFilter.grouping_expression})`;
         } else {
           groupingExpr = reportFilter.grouping_expression;
@@ -903,22 +904,22 @@ class ReportService {
         {
             key: "start_date",
             grouping_expression: "",
-            filter_expression: "$FILTER_VALUE$",
+            filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date)",
             type: "timestamp",
-        },
-        {
-            key: "end_date",
+          },
+          {
+            key: "end_date", 
             grouping_expression: "",
-            filter_expression: "$FILTER_VALUE$",
-            type: "timestamp",
+            filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date + INTERVAL '1 day')",
+            type: "timestamp", 
         },
     ];
 
     let sql = `
         WITH date_filter AS (
         SELECT
-            $start_date_filter_expression$::date AS start_date,
-            $end_date_filter_expression$::date AS end_date
+            $start_date_filter_expression$ AS start_date,
+            $end_date_filter_expression$ AS end_date
         ),
         registered_users AS (
             SELECT
@@ -1041,6 +1042,103 @@ class ReportService {
         CROSS JOIN order_metrics
         CROSS JOIN prev_week_order_metrics;
     `;
+  
+    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
+  }
+
+  async campaignTrendsReportDefinition(data) {
+    const reportUIConfig = {};
+  
+    const INPUT_DATA = {
+      start_date_filter_value: data.body.start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      end_date_filter_value: data.body.end_date || new Date().toISOString(),
+    };
+  
+    const reportFilters = [
+      {
+        key: "start_date",
+        grouping_expression: "",
+        filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date)",
+        type: "timestamp",
+      },
+      {
+        key: "end_date", 
+        grouping_expression: "",
+        filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date + INTERVAL '1 day')",
+        type: "timestamp", 
+      },
+    ];
+  
+    let sql = `
+        WITH date_filter AS (
+        SELECT
+            $start_date_filter_expression$ AS start_date,
+            $end_date_filter_expression$ AS end_date
+        ),
+        campaign_metrics AS (
+        SELECT 
+            COUNT(DISTINCT CASE WHEN o.discount_percentage > 0 OR o.voucher_code IS NOT NULL THEN o.user_id END) AS users_with_campaign_activity,
+            COUNT(DISTINCT CASE WHEN o.discount_percentage > 0 THEN o.id END) AS orders_with_promotion,
+            COUNT(DISTINCT CASE WHEN o.voucher_code IS NOT NULL THEN o.id END) AS orders_with_voucher,
+            SUM(o.paid_amount) AS total_paid_amount,
+            SUM(o.paid_amount - COALESCE(o.voucher_discount_amount, 0) - 
+                COALESCE(o.total_price * o.discount_percentage / 100, 0)) AS net_amount
+        FROM orders o
+        WHERE o.created_at BETWEEN (SELECT start_date FROM date_filter) AND (SELECT end_date FROM date_filter)
+        ),
+        prev_week_campaign_metrics AS (
+        SELECT 
+            COUNT(DISTINCT CASE WHEN o.discount_percentage > 0 OR o.voucher_code IS NOT NULL THEN o.user_id END) AS users_with_campaign_activity,
+            COUNT(DISTINCT CASE WHEN o.discount_percentage > 0 THEN o.id END) AS orders_with_promotion,
+            COUNT(DISTINCT CASE WHEN o.voucher_code IS NOT NULL THEN o.id END) AS orders_with_voucher,
+            SUM(o.paid_amount) AS total_paid_amount,
+            SUM(o.paid_amount - COALESCE(o.voucher_discount_amount, 0) - 
+                COALESCE(o.total_price * o.discount_percentage / 100, 0)) AS net_amount
+        FROM orders o
+        WHERE o.created_at BETWEEN 
+            (SELECT (start_date - INTERVAL '7 days')::date FROM date_filter) 
+            AND (SELECT (end_date - INTERVAL '7 days')::date FROM date_filter)
+        )
+        SELECT jsonb_build_array(
+            jsonb_build_object(
+                'name', 'Users with Campaign Activity',
+                'current', cm.users_with_campaign_activity,
+                'previous', pw.users_with_campaign_activity,
+                'change', ROUND(((cm.users_with_campaign_activity - pw.users_with_campaign_activity)::float 
+                        / NULLIF(pw.users_with_campaign_activity, 0) * 100)::numeric, 2)
+            ),
+            jsonb_build_object(
+                'name', 'Promotions Used',
+                'current', cm.orders_with_promotion,
+                'previous', pw.orders_with_promotion,
+                'change', ROUND(((cm.orders_with_promotion - pw.orders_with_promotion)::float 
+                        / NULLIF(pw.orders_with_promotion, 0) * 100)::numeric, 2)
+            ),
+            jsonb_build_object(
+                'name', 'Vouchers Used',
+                'current', cm.orders_with_voucher,
+                'previous', pw.orders_with_voucher, 
+                'change', ROUND(((cm.orders_with_voucher - pw.orders_with_voucher)::float
+                        / NULLIF(pw.orders_with_voucher, 0) * 100)::numeric, 2)
+            ),
+            jsonb_build_object(
+                'name', 'Gross Revenue',
+                'current', ROUND(cm.total_paid_amount::numeric, 2),
+                'previous', ROUND(pw.total_paid_amount::numeric, 2),
+                'change', ROUND(((cm.total_paid_amount - pw.total_paid_amount)::float
+                        / NULLIF(pw.total_paid_amount, 0) * 100)::numeric, 2)
+            ),
+            jsonb_build_object(
+                'name', 'Net Revenue',
+                'current', ROUND(cm.net_amount::numeric, 2),
+                'previous', ROUND(pw.net_amount::numeric, 2),
+                'change', ROUND(((cm.net_amount - pw.net_amount)::float
+                        / NULLIF(pw.net_amount, 0) * 100)::numeric, 2)
+            )
+        ) AS campaign_data
+        FROM campaign_metrics cm
+        CROSS JOIN prev_week_campaign_metrics pw;
+    `;  
   
     return { reportUIConfig, sql, reportFilters, INPUT_DATA };
   }
