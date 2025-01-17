@@ -73,6 +73,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
       </div>
 
+      <div id="campaign-dashboard-container" class="row mb-4"></div>
+      
       <div id="dashboard-container" class="row mb-4"></div>
 
     </div>
@@ -81,21 +83,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 7);
-  
-  document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
-  document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+  const startDateElement = document.getElementById('start-date');
+  const endDateElement = document.getElementById('end-date');
+  startDateElement.value = startDate.toISOString().split('T')[0];
+  endDateElement.value = endDate.toISOString().split('T')[0];
 
   document.getElementById('filter-dashboard').addEventListener('click', async () => {
-    const startDate = document.getElementById('start-date').value;
-    const endDate = document.getElementById('end-date').value;
+    const start_date = startDateElement.value;
+    const end_date = endDateElement.value;
 
-    // validate date range
-    if (new Date(endDate) - new Date(startDate) > 7 * 24 * 60 * 60 * 1000) {
+    if (new Date(end_date) - new Date(start_date) > 7 * 24 * 60 * 60 * 1000) {
       showToastMessage('Date range cannot exceed 7 days', 'error');
       return;
     }
     
-    await renderDashboard(startDate, endDate);
+    await Promise.all([
+      renderDashboard(start_date, end_date),
+      renderCampaignDashboard(start_date, end_date),
+    ])
   });
 
   await Promise.any([
@@ -137,7 +142,7 @@ async function renderOrderChartLastSixMonths() {
       .reverse();
     const orderCounts = data.result.map((item) => Number(item.count)).reverse();
     const orderPrices = data.result
-      .map((item) => parseFloat(item.total_price))
+      .map((item) => parseFloat(item.paid_amount))
       .reverse();
 
     // Render chart using Chart.js
@@ -156,7 +161,7 @@ async function renderOrderChartLastSixMonths() {
             yAxisID: "y1",
           },
           {
-            label: "Total Price without VAT ($)",
+            label: "Total Price with VAT ($)",
             data: orderPrices,
             backgroundColor: "rgba(255, 159, 64, 0.6)",
             borderColor: "rgba(255, 159, 64, 1)",
@@ -178,7 +183,7 @@ async function renderOrderChartLastSixMonths() {
             type: "linear",
             position: "right",
             beginAtZero: true,
-            title: { display: true, text: "Total Price without VAT ($)" },
+            title: { display: true, text: "Total Price with VAT ($)" },
             grid: { drawOnChartArea: false },
           },
         },
@@ -249,7 +254,7 @@ async function renderOrderChartLastTwoDays() {
             yAxisID: "y1",
           },
           {
-            label: "Total Price without VAT ($)",
+            label: "Total Price with VAT ($)",
             data: orderPrices,
             backgroundColor: "rgba(255, 99, 132, 0.6)",
             borderColor: "rgba(255, 99, 132, 1)",
@@ -271,7 +276,7 @@ async function renderOrderChartLastTwoDays() {
             type: "linear",
             position: "right",
             beginAtZero: true,
-            title: { display: true, text: "Total Price without VAT ($)" },
+            title: { display: true, text: "Total Price with VAT ($)" },
             grid: { drawOnChartArea: false },
           },
         },
@@ -319,7 +324,7 @@ async function renderDashboard(startDate, endDate) {
                   <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                       <h6 class="mb-1 text-muted">${formatHumanReadableDate(startDate)} - ${formatHumanReadableDate(endDate)}</h6>
-                      <h3 class="mb-0">${metric.name === 'Active Users' || metric.name === 'Registered Users' ? formatNumber(metric.current) : formatCurrency(metric.current)}</h3>
+                      <h3 class="mb-0">${metric.name === 'Active Users' || metric.name === 'Registered Users' ? metric.current : formatCurrency(metric.current)}</h3>
                       <span class="change-indicator ${metric.change >= 0 ? 'text-success' : 'text-danger'}">
                         <i class="bi ${metric.change >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'}"></i>
                         ${Math.abs(metric.change).toFixed(1)}%
@@ -389,14 +394,107 @@ async function renderDashboard(startDate, endDate) {
   }
 }
 
+async function renderCampaignDashboard(startDate, endDate) {
+  const spinner = document.getElementById("spinner-dashboard");
+  const filterButton = document.getElementById("filter-dashboard");
+  const dashboardContainer = document.getElementById("campaign-dashboard-container");
+  
+  try {
+    spinner.style.display = "inline-block";
+    filterButton.disabled = true;
+    
+    const response = await fetchWithErrorHandling('/api/reports/campaign-trends', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start_date: startDate, end_date: endDate })
+    });
+
+    if(!response.ok) {
+      showToastMessage(response.error, "error");
+      return;
+    }
+
+    const data = await response.data;
+    const metrics = data.rows[0].campaign_data;
+
+    dashboardContainer.innerHTML = `
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-borderless mb-0">
+                <thead>
+                  <tr>
+                    ${metrics.map(metric => `
+                      <th class="text-center py-3" style="min-width: 200px;">
+                        ${metric.name}
+                      </th>
+                    `).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    ${metrics.map(metric => `
+                      <td class="p-3">
+                        <div class="card h-100 border-0 shadow-sm">
+                          <div class="card-body">
+                            <div class="d-flex flex-column align-items-center">
+                              <h3 class="mb-2">
+                                ${formatMetricValue(metric.name, metric.current)}
+                              </h3>
+                              <div class="text-muted mb-2">
+                                Previous: ${formatMetricValue(metric.name, metric.previous)}
+                              </div>
+                              <span class="badge ${getChangeClass(metric.change)} px-2 py-1">
+                                <i class="bi ${metric.change >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'}"></i>
+                                ${Math.abs(metric.change).toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    `).join('')}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    dashboardContainer.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'start'
+    });
+
+  } finally {
+    spinner.style.display = "none"; 
+    filterButton.disabled = false;
+  }
+}
+
+function formatMetricValue(metricName, value) {
+  if (metricName.includes('Revenue')) {
+    return formatCurrency(value);
+  }
+  return value;
+}
+
+function getChangeClass(change) {
+  if (change > 0) return 'bg-success';
+  if (change < 0) return 'bg-danger';
+  return 'bg-secondary';
+}
+
 function formatCurrency(value) {
-  if (typeof value !== 'number') return '0';
+  if (typeof value !== 'number') return '$0.00';
   
   if (value >= 1000000) {
-    return `$${(value / 1000000).toFixed(1)}M`;
+    return `$${(value / 1000000).toFixed(2)}M`;
   }
   if (value >= 1000) {
-    return `$${(value / 1000).toFixed(1)}K`;
+    return `$${(value / 1000).toFixed(2)}K`;
   }
   return `$${value.toFixed(2)}`;
 }
@@ -416,11 +514,11 @@ function formatNumber(value) {
 function getMetricColor(metricName) {
   const colors = {
     'Registered Users': '#4CAF50',
-    'Users with Orders': '#2196F3',
+    'Active Users': '#2196F3',
     'Average Order Price': '#FF9800',
-    'Average User Spend': '#9C27B0',
+    'Average Amount Spent by User': '#9C27B0',
     'Net Revenue': '#F44336',
-    'User Net Revenue': '#795548'
+    'Net Revenue by User': '#795548'
   };
   return colors[metricName] || '#666666';
 }
