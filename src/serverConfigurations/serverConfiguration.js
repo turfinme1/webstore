@@ -15,13 +15,15 @@ const CartService = require("../services/cartService");
 const OrderService = require("../services/orderService");
 const OrderController = require("../controllers/orderController");
 const { EmailService, transporter } = require("../services/emailService");
+const { TemplateLoader } = require("./templateLoader");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const Logger = require("./logger");
 const paypalClientWrapper = require("./paypalClient");
 
 const paypalClient = new paypalClientWrapper.core.PayPalHttpClient(ENV.PAYPAL_CLIENT_ID, ENV.PAYPAL_CLIENT_SECRET);
 const entitySchemaCollection = loadEntitySchemas("user");
-const emailService = new EmailService(transporter);
+const templateLoader = new TemplateLoader();
+const emailService = new EmailService(transporter, templateLoader);
 const authService = new AuthService(emailService);
 const authController = new AuthController(authService);
 const service = new CrudService();
