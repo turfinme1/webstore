@@ -1,6 +1,7 @@
 const nodemailer = require("nodemailer");
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
 const { ENV }  = require("../serverConfigurations/constants");
+const { TEMPLATES } = require("../serverConfigurations/templateLoader");
 
 const transporter = nodemailer.createTransport({
   host: "localhost",
@@ -9,17 +10,18 @@ const transporter = nodemailer.createTransport({
 });
 
 class EmailService {
-    constructor(transporter) {
+    constructor(transporter, templateLoader) {
         this.transporter = transporter;
+        this.templateLoader = templateLoader;
         this.sendTestEmail = this.sendTestEmail.bind(this);
         this.previewEmail = this.previewEmail.bind(this);
     }
 
     async sendEmail(data) {
-        ASSERT(data.from, "Missing email sender", { code: "SERVICE.EMAIL.00019.INVALID_INPUT_SENDER", long_description: "Missing email sender" });
-        ASSERT(data.to, "Missing email recipient", { code: "SERVICE.EMAIL.00020.INVALID_INPUT_RECIPIENT", long_description: "Missing email recipient" });
-        ASSERT(data.subject, "Missing email subject", { code: "SERVICE.EMAIL.00021.INVALID_INPUT_SUBJECT", long_description: "Missing email subject" });
-        ASSERT(data.html, "Missing email body", { code: "SERVICE.EMAIL.00022.INVALID_INPUT_BODY", long_description: "Missing email body" });
+        ASSERT(data.from, "Missing email sender", { code: "SERVICE.EMAIL.00021.INVALID_INPUT_SENDER", long_description: "Missing email sender" });
+        ASSERT(data.to, "Missing email recipient", { code: "SERVICE.EMAIL.00022.INVALID_INPUT_RECIPIENT", long_description: "Missing email recipient" });
+        ASSERT(data.subject, "Missing email subject", { code: "SERVICE.EMAIL.00023.INVALID_INPUT_SUBJECT", long_description: "Missing email subject" });
+        ASSERT(data.html, "Missing email body", { code: "SERVICE.EMAIL.00024.INVALID_INPUT_BODY", long_description: "Missing email body" });
           
         return await this.transporter.sendMail(data);
     }
@@ -76,7 +78,7 @@ class EmailService {
             emailData.templateType = "Forgot password";
             emailData.address = `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=RANDOMLY_GENERATED_TOKEN">Reset Password</a>`;
         } else {
-            ASSERT_USER(false, "Invalid email type", { code: "SERVICE.EMAIL.00079.INVALID_QUERY_PARAMS", long_description: `Invalid email type: ${data.params.type}` });
+            ASSERT_USER(false, "Invalid email type", { code: "SERVICE.EMAIL.00081.INVALID_QUERY_PARAMS", long_description: `Invalid email type: ${data.params.type}` });
         }
 
         const emailOptions = await this.processTemplate({ emailData, dbConnection: data.dbConnection });
@@ -84,10 +86,10 @@ class EmailService {
     }
 
     async queueEmail(data) {
-        ASSERT(data.dbConnection, "Missing database connection", { code: "SERVICE.EMAIL.00087.INVALID_INPUT_CONNECTION", long_description: "Missing database connection" });
-        ASSERT(data.emailData, "Missing email data", { code: "SERVICE.EMAIL.00088.INVALID_INPUT_BODY", long_description: "Missing email data" });
-        ASSERT(data.emailData.templateType, "Missing email template type", { code: "SERVICE.EMAIL.00089.INVALID_INPUT_TEMPLATE", long_description: "Missing email template type" });
-        ASSERT(data.emailData.recipient, "Missing email recipient", { code: "SERVICE.EMAIL.00090.INVALID_INPUT_RECIPIENT", long_description: "Missing email recipient" });
+        ASSERT(data.dbConnection, "Missing database connection", { code: "SERVICE.EMAIL.00089.INVALID_INPUT_CONNECTION", long_description: "Missing database connection" });
+        ASSERT(data.emailData, "Missing email data", { code: "SERVICE.EMAIL.00090.INVALID_INPUT_BODY", long_description: "Missing email data" });
+        ASSERT(data.emailData.templateType, "Missing email template type", { code: "SERVICE.EMAIL.00091.INVALID_INPUT_TEMPLATE", long_description: "Missing email template type" });
+        ASSERT(data.emailData.recipient, "Missing email recipient", { code: "SERVICE.EMAIL.00092.INVALID_INPUT_RECIPIENT", long_description: "Missing email recipient" });
 
         const emailRecord = await data.dbConnection.query(
             `INSERT INTO emails (template_type, data_object) 
@@ -104,19 +106,19 @@ class EmailService {
             `SELECT * FROM email_templates WHERE type = $1`,
             [data.emailData.templateType]
         );
-        ASSERT(emailTemplateResult.rows.length === 1, "Template not found", { code: "SERVICE.EMAIL.00107.EMAIL_NOT_FOUND", long_description: "Template not found" });
+        ASSERT(emailTemplateResult.rows.length === 1, "Template not found", { code: "SERVICE.EMAIL.00109.EMAIL_NOT_FOUND", long_description: "Template not found" });
         const emailTemplate = emailTemplateResult.rows[0];
         
         let emailBody = emailTemplate.template;
         for (const placeholder of emailTemplate.placeholders) {
             let placeholderKey = placeholder.replace(/[{}]/g, "");
-            ASSERT(data.emailData.hasOwnProperty(placeholderKey), "Missing email template placeholder", { code: "SERVICE.EMAIL.00113.INVALID_INPUT_TEMPLATE", long_description: `"Missing email template placeholder: ${placeholderKey}` });
+            ASSERT(data.emailData[placeholderKey] !== null, "Missing email template placeholder", { code: "SERVICE.EMAIL.00115.INVALID_INPUT_TEMPLATE", long_description: `"Missing email template placeholder: ${placeholderKey}` });
             
             if(placeholderKey === "order_table") {
-                const htmlTable = this.buildOrderTable({ order: data.emailData[placeholderKey], emailTemplate});
-                emailBody = emailBody.replace(`${placeholder}`, htmlTable);
+                const htmlTable = await this.buildOrderTable({ order: data.emailData[placeholderKey], emailTemplate});
+                emailBody = emailBody.replaceAll(`${placeholder}`, htmlTable);
             } else {
-                emailBody = emailBody.replace(`${placeholder}`, data.emailData[placeholderKey]);
+                emailBody = emailBody.replaceAll(`${placeholder}`, data.emailData[placeholderKey]);
             }
         }
 
@@ -166,64 +168,27 @@ class EmailService {
         }
     }
 
-    buildOrderTable(data) {
-        let orderTable = `
-            <table style="border-collapse: collapse; width: 100%; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color};">
-                <thead>
-                    <tr style="background-color: #f29191;">
-                        <th style="padding: 8px; text-align: left; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color};">Product</th>
-                        <th style="padding: 8px; text-align: left; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color};">Quantity</th>
-                        <th style="padding: 8px; text-align: left; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color};">Price</th>
-                        <th style="padding: 8px; text-align: left; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color};">Total Price</th>
-                    </tr>
-                </thead>
-            <tbody>
-        `;
-        
-        for (const item of data.order.order_items) {
-            orderTable += `
-                <tr>
-                <td style="padding: 8px; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color};">${item.name}</td>
-                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color};">${item.quantity}</td>
-                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color};">${this.formatCurrency(item.unit_price)}</td>
-                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color};">${this.formatCurrency(item.total_price)}</td>
-                </tr>
-            `;
-        };
+    async buildOrderTable(data) {
+        const template = await this.templateLoader.loadTemplate(TEMPLATES.ORDER_TABLE);
+        const templateData = {
+            table_border_width: data.emailTemplate.table_border_width,
+            table_border_color: data.emailTemplate.table_border_color,
+            order_items: data.order.order_items.map(item => ({
+                ...item,
+                unit_price: this.formatCurrency(item.unit_price),
+                total_price: this.formatCurrency(item.total_price)
+            })),
+            ...data.order,
+            total_price: this.formatCurrency(data.order.total_price),
+            discount_amount: this.formatCurrency(data.order.discount_amount),
+            total_price_after_discount: this.formatCurrency(data.order.total_price_after_discount),
+            vat_amount: this.formatCurrency(data.order.vat_amount),
+            voucher_code: data.order.voucher_code || "Not applied",
+            voucher_discount_amount: this.formatCurrency(data.order.voucher_discount_amount),
+            total_price_with_voucher: this.formatCurrency(data.order.total_price_with_voucher)
+        }
 
-        orderTable += `
-            <tr>
-                <td colspan="3" style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">Subtotal:</td>
-                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price)}</td>
-            </tr>
-            <tr>
-                <td colspan="3" style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">Discount (${data.order.discount_percentage}%):</td>
-                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.discount_amount)}</td>
-            </tr>
-            <tr>
-                <td colspan="3" style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">Price after discount:</td>
-                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price_after_discount)}</td>
-            </tr>
-            <tr>
-                <td colspan="3" style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">VAT (${data.order.vat_percentage}%):</td>
-                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.vat_amount)}</td>
-            </tr>
-            <tr>
-                <td colspan="3" style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">Voucher (${data.order.voucher_code || "Not applied"}):</td>
-                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">-${this.formatCurrency(data.order.voucher_discount_amount)}</td>
-            </tr>
-            <tr>
-                <td colspan="3" style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">Total:</td>
-                <td style="padding: 8px; text-align: right; border: ${data.emailTemplate.table_border_width}px solid ${data.emailTemplate.table_border_color}; font-weight: bold;">${this.formatCurrency(data.order.total_price_with_voucher)}</td>
-            </tr>
-        `;
-
-        orderTable += `
-            </tbody>
-        </table>
-        `;
-
-        return orderTable;
+        return template(templateData);
     }
 
     formatCurrency(number) {

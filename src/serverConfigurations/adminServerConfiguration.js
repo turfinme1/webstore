@@ -15,6 +15,7 @@ const ExportService = require("../services/exportService");
 const ExportController = require("../controllers/exportController");
 const { EmailService, transporter } = require("../services/emailService");
 const EmailController = require("../controllers/emailController");
+const { TemplateLoader } = require("./templateLoader");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const AppConfigService = require("../services/appConfigService");
 const AppConfigController = require("../controllers/appConfigController");
@@ -23,7 +24,8 @@ const ReportController = require("../controllers/reportController");
 const Logger = require("./logger");
 
 const entitySchemaCollection = loadEntitySchemas("admin");
-const emailService = new EmailService(transporter);
+const templateLoader = new TemplateLoader();
+const emailService = new EmailService(transporter, templateLoader);
 const emailController = new EmailController(emailService);
 const authService = new AuthService(emailService);
 const authController = new AuthController(authService);
