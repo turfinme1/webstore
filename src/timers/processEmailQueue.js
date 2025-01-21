@@ -7,15 +7,19 @@ const { v4: uuidv4 } = require('uuid');
 
 const BATCH_SIZE = 50;
 const MAX_ATTEMPTS = 5;
-const RETRY_DELAY_MINUTES = 5;
+const RETRY_DELAY_MINUTES = 2;
 
 const EMAIL_STATUS = {
     QUEUED: 'queued',
     SENDING: 'sending',
     SENT: 'sent',
-    FAILED: 'failed',
     RETRY: 'retry',
-    ABANDONED: 'abandoned'
+};
+
+const RETRY_BACKOFF = {
+    INITIAL_DELAY: 5, // minutes
+    MAX_DELAY: 120, // 2 hours
+    MULTIPLIER: 2
 };
 
 const EMAIL_ERROR_TYPES = {
@@ -24,9 +28,6 @@ const EMAIL_ERROR_TYPES = {
     AUTH: 'auth_error',
     RATE_LIMIT: 'rate_limit',
     INVALID_RECIPIENT: 'invalid_recipient',
-    TIMEOUT: 'timeout',
-    CONTENT: 'content_error',
-    UNKNOWN: 'unknown'
 };
 
 (async () => {
@@ -42,6 +43,7 @@ const EMAIL_ERROR_TYPES = {
         logger = new Logger({ dbConnection: new DbConnectionWrapper(client) });
         const lockId = uuidv4();
 
+        await client.query('BEGIN');
         const pendingEmails = await client.query(`
             UPDATE emails
             SET status = $1, 
@@ -53,32 +55,28 @@ const EMAIL_ERROR_TYPES = {
                 AND (last_attempt IS NULL OR last_attempt < NOW() - INTERVAL '${RETRY_DELAY_MINUTES} minutes')
                 AND attempts < $5
                 AND lock_id IS NULL
+                AND retry_after < NOW()
                 AND NOT EXISTS (
                     SELECT 1 FROM emails 
-                    WHERE recipient = e.recipient 
-                    AND created_at > e.created_at - INTERVAL '1 minute'
+                    WHERE created_at > created_at - INTERVAL '1 minute'
                     AND status = $1
                 )
-                ORDER BY priority DESC, created_at ASC
+                ORDER BY priority, created_at ASC
                 LIMIT $6
                 FOR UPDATE SKIP LOCKED
             )
             RETURNING *`,
             [EMAIL_STATUS.SENDING, lockId, EMAIL_STATUS.QUEUED, EMAIL_STATUS.RETRY, MAX_ATTEMPTS, BATCH_SIZE]
         );
+        await client.query('COMMIT');
 
         for (const email of pendingEmails.rows) {
             try {
                 emailId = email.id;
                 const emailOptions = await emailService.processTemplate({ emailData: email.data_object, dbConnection: client });
+                
+                await client.query(`BEGIN`);
                 await emailService.sendEmail(emailOptions);
-                await client.query(
-                    `UPDATE emails
-                    SET status = 'sent', sent_at = NOW() 
-                    WHERE id = $1`,
-                    [email.id]
-                );
-
                 await client.query(`
                     UPDATE emails 
                     SET status = $1,
@@ -88,11 +86,12 @@ const EMAIL_ERROR_TYPES = {
                     WHERE id = $2 AND lock_id = $3`,
                     [EMAIL_STATUS.SENT, email.id, lockId]
                 );
-
+                await client.query(`COMMIT`);
             } catch (error) {
+                await client.query(`ROLLBACK`);
                 const errorType = classifyEmailError(error);
-                const shouldRetry = shouldRetryError(errorType, email.attempts);
-
+                const retryDelay = calculateRetryDelay(email.attempts + 1);
+                
                 await client.query(`
                     UPDATE emails 
                     SET status = $1,
@@ -101,28 +100,24 @@ const EMAIL_ERROR_TYPES = {
                         attempts = attempts + 1,
                         last_attempt = NOW(),
                         lock_id = NULL,
-                        retry_after = CASE 
-                            WHEN $4 THEN NOW() + (INTERVAL '${RETRY_DELAY_MINUTES} minutes' * attempts)
-                            ELSE NULL 
-                        END
+                        retry_after = NOW() + (INTERVAL '1 minute' * $4),
+                        priority = GREATEST(priority - 1, 1)
                     WHERE id = $5 AND lock_id = $6`,
-                    [shouldRetry ? EMAIL_STATUS.RETRY : EMAIL_STATUS.ABANDONED, errorType, error.message, shouldRetry, emailId, lockId]
-                );    
+                    [EMAIL_STATUS.RETRY, errorType, error.message, retryDelay, email.id, lockId]
+                );
+
+                await logger.error(error);
             }
         }
-
-        await client.query('COMMIT');
 
         await client.query(`
             UPDATE emails
             SET lock_id = NULL,
-                status = CASE 
-                    WHEN attempts < $1 THEN $2
-                    ELSE $3
-                END
+                status = $1,
+                retry_after = NOW() + (INTERVAL '1 minute' * $2)
             WHERE processing_started_at < NOW() - INTERVAL '5 minutes'
-            AND status = $4`,
-            [MAX_ATTEMPTS, EMAIL_STATUS.RETRY, EMAIL_STATUS.ABANDONED, EMAIL_STATUS.SENDING]
+            AND status = $3`,
+            [EMAIL_STATUS.RETRY, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]
         );
 
         await logger.info({
@@ -148,6 +143,19 @@ const EMAIL_ERROR_TYPES = {
 
         if(logger) await logger.error(error);
     } finally {
+        try {
+            await client.query(`
+                UPDATE emails
+                SET lock_id = NULL,
+                    status = $1,
+                    retry_after = NOW() + (INTERVAL '1 minute' * $2)
+                WHERE processing_started_at < NOW() - INTERVAL '5 minutes'
+                AND status = $3`,
+                [EMAIL_STATUS.RETRY, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]
+            );
+        } catch (error) {
+            await logger.error(error);
+        }
         if(client){
             client.release();
         }
@@ -155,7 +163,7 @@ const EMAIL_ERROR_TYPES = {
 })();
 
 function classifyEmailError(error) {
-    if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT') {
+    if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT' || error.code === "ESOCKET") {
         return EMAIL_ERROR_TYPES.NETWORK;
     }
     if (error.responseCode) {
@@ -170,16 +178,10 @@ function classifyEmailError(error) {
         }
         return EMAIL_ERROR_TYPES.SMTP;
     }
-    return EMAIL_ERROR_TYPES.UNKNOWN;
+    return error.code;
 }
 
-function shouldRetryError(errorType, attempts) {
-    const RETRYABLE_ERRORS = [
-        EMAIL_ERROR_TYPES.NETWORK,
-        EMAIL_ERROR_TYPES.RATE_LIMIT,
-        EMAIL_ERROR_TYPES.TIMEOUT,
-        EMAIL_ERROR_TYPES.SMTP
-    ];
-    
-    return RETRYABLE_ERRORS.includes(errorType) && attempts < MAX_ATTEMPTS;
+function calculateRetryDelay(attempts) {
+    const delay = RETRY_BACKOFF.INITIAL_DELAY * Math.pow(RETRY_BACKOFF.MULTIPLIER, attempts - 1);
+    return Math.min(delay, RETRY_BACKOFF.MAX_DELAY);
 }

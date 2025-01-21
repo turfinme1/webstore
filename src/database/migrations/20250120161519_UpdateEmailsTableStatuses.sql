@@ -1,24 +1,33 @@
 -- Migration: UpdateEmailsTableStatuses
 -- Created at: 2025-01-20T16:15:19.413Z
 
+-- CREATE table emails (
+--     id BIGSERIAL PRIMARY KEY,
+--     template_type TEXT NOT NULL CHECK (template_type IN ('Email verification', 'Order created', 'Order paid', 'Forgot password')),
+--     data_object JSONB NOT NULL,
+--     attempts INT NOT NULL DEFAULT 0,
+--     last_attempt TIMESTAMPTZ NULL,
+--     sent_at TIMESTAMPTZ NULL,
+--     error_type TEXT,
+--     error TEXT,
+--     priority INT DEFAULT 5,
+--     retry_after TIMESTAMPTZ,
+--     processing_started_at TIMESTAMPTZ,
+--     lock_id UUID;
+--     status TEXT NOT NULL CHECK (status IN ('queued', 'sent')) DEFAULT 'queued',
+--     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+-- );
+
 ALTER TABLE emails 
-ADD COLUMN error_type VARCHAR(50),
-ADD COLUMN message_id VARCHAR(255),
-ADD COLUMN retry_after TIMESTAMPTZ,
+ADD COLUMN error_type TEXT,
 ADD COLUMN error TEXT,
+ADD COLUMN priority INT DEFAULT 5,
+ADD COLUMN retry_after TIMESTAMPTZ,
 ADD COLUMN processing_started_at TIMESTAMPTZ,
 ADD COLUMN lock_id UUID;
 
-CREATE TABLE email_error_logs (
-    id BIGSERIAL PRIMARY KEY,
-    email_id BIGINT REFERENCES emails(id),
-    error_type VARCHAR(50) NOT NULL,
-    error_message TEXT,
-    stack_trace TEXT,
-    smtp_response TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
+ALTER TABLE emails
+DROP CONSTRAINT IF EXISTS emails_status_check;
 
-CREATE INDEX idx_emails_status_attempts ON emails(status, attempts);
-CREATE INDEX idx_emails_recipient_created ON emails(recipient, created_at);
-CREATE INDEX idx_emails_lock_id ON emails(lock_id) WHERE lock_id IS NOT NULL;
+ALTER TABLE emails
+ADD CONSTRAINT emails_status_check CHECK (status IN ('queued', 'sending', 'sent', 'retry'));
