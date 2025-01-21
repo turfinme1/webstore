@@ -55,7 +55,7 @@ const EMAIL_ERROR_TYPES = {
                 AND (last_attempt IS NULL OR last_attempt < NOW() - INTERVAL '${RETRY_DELAY_MINUTES} minutes')
                 AND attempts < $5
                 AND lock_id IS NULL
-                AND retry_after < NOW()
+                AND (retry_after IS NULL OR retry_after < NOW())
                 AND NOT EXISTS (
                     SELECT 1 FROM emails 
                     WHERE created_at > created_at - INTERVAL '1 minute'
