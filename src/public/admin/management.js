@@ -50,7 +50,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div class="card-body">
               <div class="row align-items-center">
                 <div class="col-auto">
-                  <label class="form-label">Date Range (max 1 week):</label>
+                  <label class="form-label">Date Range (1 week):</label>
                 </div>
                 <div class="col-auto">
                   <input type="date" id="start-date" class="form-control">
@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const endDate = new Date();
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 7);
+  startDate.setDate(startDate.getDate() - 6);
   const startDateElement = document.getElementById('start-date');
   const endDateElement = document.getElementById('end-date');
   startDateElement.value = startDate.toISOString().split('T')[0];
@@ -92,8 +92,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const start_date = startDateElement.value;
     const end_date = endDateElement.value;
 
-    if (new Date(end_date) - new Date(start_date) > 7 * 24 * 60 * 60 * 1000) {
-      showToastMessage('Date range cannot exceed 7 days', 'error');
+    if (new Date(end_date) - new Date(start_date) !== 6 * 24 * 60 * 60 * 1000) {
+      showToastMessage('Date range must be 7 days', 'error');
       return;
     }
     

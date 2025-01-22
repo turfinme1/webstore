@@ -33,14 +33,15 @@ const EMAIL_ERROR_TYPES = {
 (async () => {
     let client;
     let logger;
-    let emailId;
+    let loggerClient;
 
     try {
         const templateLoader = new TemplateLoader();
         const emailService = new EmailService(transporter, templateLoader);
         
         client = await pool.connect();
-        logger = new Logger({ dbConnection: new DbConnectionWrapper(client) });
+        loggerClient = await pool.connect();
+        logger = new Logger({ dbConnection: new DbConnectionWrapper(loggerClient) });
         const lockId = uuidv4();
 
         await client.query('BEGIN');
@@ -68,14 +69,12 @@ const EMAIL_ERROR_TYPES = {
             RETURNING *`,
             [EMAIL_STATUS.SENDING, lockId, EMAIL_STATUS.QUEUED, EMAIL_STATUS.RETRY, MAX_ATTEMPTS, BATCH_SIZE]
         );
-        await client.query('COMMIT');
 
         for (const email of pendingEmails.rows) {
             try {
-                emailId = email.id;
+                await client.query('SAVEPOINT email_processing_savepoint');
                 const emailOptions = await emailService.processTemplate({ emailData: email.data_object, dbConnection: client });
                 
-                await client.query(`BEGIN`);
                 await emailService.sendEmail(emailOptions);
                 await client.query(`
                     UPDATE emails 
@@ -86,9 +85,9 @@ const EMAIL_ERROR_TYPES = {
                     WHERE id = $2 AND lock_id = $3`,
                     [EMAIL_STATUS.SENT, email.id, lockId]
                 );
-                await client.query(`COMMIT`);
+                await client.query('RELEASE SAVEPOINT email_processing_savepoint');
             } catch (error) {
-                await client.query(`ROLLBACK`);
+                await client.query('ROLLBACK TO SAVEPOINT email_processing_savepoint');
                 const errorType = classifyEmailError(error);
                 const retryDelay = calculateRetryDelay(email.attempts + 1);
                 
@@ -109,6 +108,8 @@ const EMAIL_ERROR_TYPES = {
                 await logger.error(error);
             }
         }
+        
+        await client.query('COMMIT');
 
         await client.query(`
             UPDATE emails
@@ -126,38 +127,14 @@ const EMAIL_ERROR_TYPES = {
             long_description: 'Email queue process completed'
         });
     } catch (error) {
-        try {
-            if(client) {
-                await client.query('ROLLBACK');
-    
-                await client.query(
-                    `UPDATE emails 
-                    SET attempts = attempts + 1, last_attempt = NOW() 
-                    WHERE id = $1`,
-                    [emailId]
-                );
-            }
-        } catch (error) {
-            console.log("Error while processing email queue: ", error);
-        }
-
+        if(client) await client.query('ROLLBACK');
         if(logger) await logger.error(error);
     } finally {
-        try {
-            await client.query(`
-                UPDATE emails
-                SET lock_id = NULL,
-                    status = $1,
-                    retry_after = NOW() + (INTERVAL '1 minute' * $2)
-                WHERE processing_started_at < NOW() - INTERVAL '5 minutes'
-                AND status = $3`,
-                [EMAIL_STATUS.RETRY, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]
-            );
-        } catch (error) {
-            await logger.error(error);
-        }
         if(client){
             client.release();
+        }
+        if(loggerClient){
+            loggerClient.release();
         }
     }
 })();
