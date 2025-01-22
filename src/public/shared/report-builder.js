@@ -366,9 +366,27 @@ class ReportBuilder {
         const form = document.getElementById('report-form');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData(form);
-            const filters = Object.fromEntries(formData);
-            await this.fetchData(filters);
+
+            if(await this.validateForm()) {
+                const formData = new FormData(form);
+                const filters = Object.fromEntries(formData);
+                await this.fetchData(filters);
+            }
+        });
+
+        this.config.filters.forEach(filter => {
+            if (filter.type === 'number' || filter.type === 'timestamp') {
+                const minInput = document.getElementById(`${filter.key}_minimum`);
+                const maxInput = document.getElementById(`${filter.key}_maximum`);
+                
+                if (minInput && maxInput) {
+                    [minInput, maxInput].forEach(input => {
+                        input.addEventListener('input', () => {
+                            this.validateMinMaxPair(filter, minInput, maxInput);
+                        });
+                    });
+                }
+            }
         });
     }
 
@@ -493,6 +511,170 @@ class ReportBuilder {
             spinner.style.display = 'none';
         }
     }
+
+    async validateForm() {
+        let isValid = true;
+        const errors = [];
+
+        this.clearValidationErrors();
+
+        for (const filter of this.config.filters) {
+            if (filter.type === 'number' || filter.type === 'timestamp') {
+                const minInput = document.getElementById(`${filter.key}_minimum`);
+                const maxInput = document.getElementById(`${filter.key}_maximum`);
+                
+                if (minInput && maxInput) {
+                    const validationResult = ValidationService.validateField(
+                        filter, 
+                        minInput.value, 
+                        maxInput.value
+                    );
+
+                    if (!validationResult.isValid) {
+                        isValid = false;
+                        this.showValidationError(filter.key, validationResult.message);
+                        errors.push(validationResult.message);
+                    }
+                }
+            } else if (filter.type === 'select' && filter.required) {
+                const input = document.getElementById(filter.key);
+                if (input) {
+                    const validationResult = ValidationService.validateField(
+                        filter,
+                        input.value,
+                        filter.options
+                    );
+
+                    if (!validationResult.isValid) {
+                        isValid = false;
+                        this.showValidationError(filter.key, validationResult.message);
+                        errors.push(validationResult.message);
+                    }
+                }
+            } else if (filter.type === 'text') {
+                const input = document.getElementById(filter.key);
+                if (input) {
+                    const validationResult = ValidationService.validateField(
+                        filter,
+                        input.value
+                    );
+
+                    if (!validationResult.isValid) {
+                        isValid = false;
+                        this.showValidationError(filter.key, validationResult.message);
+                        errors.push(validationResult.message);
+                    }
+                }
+            }
+        }
+
+        if (!isValid) {
+            showToastMessage('Please correct the validation errors', 'error');
+        }
+
+        return isValid;
+    }
+
+    showValidationError(filterKey, message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'invalid-feedback d-block';
+        errorDiv.textContent = message;
+        errorDiv.id = `${filterKey}-error`;
+
+        const minInput = document.getElementById(`${filterKey}_minimum`);
+        const maxInput = document.getElementById(`${filterKey}_maximum`);
+        const input = document.getElementById(filterKey);
+
+        if (minInput && maxInput) {
+            minInput.classList.add('is-invalid');
+            maxInput.classList.add('is-invalid');
+            minInput.parentElement.appendChild(errorDiv);
+        } else if (input) {
+            input.classList.add('is-invalid');
+            input.parentElement.appendChild(errorDiv);
+        }
+    }
+
+    clearValidationError(filterKey) {
+        const errorDiv = document.getElementById(`${filterKey}-error`);
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+
+        const inputs = [
+            document.getElementById(`${filterKey}_minimum`),
+            document.getElementById(`${filterKey}_maximum`),
+            document.getElementById(filterKey)
+        ].filter(Boolean);
+
+        inputs.forEach(input => input.classList.remove('is-invalid'));
+    }
+
+    validateMinMaxPair(filter, minInput, maxInput) {
+        const validationResult = ValidationService.validateField(
+            filter,
+            minInput.value,
+            maxInput.value
+        );
+
+        this.clearValidationError(filter.key);
+
+        if (!validationResult.isValid) {
+            this.showValidationError(filter.key, validationResult.message);
+        }
+
+        return validationResult.isValid;
+    }
+
+    clearValidationErrors() {
+        document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    }
 }
 
 export { ReportBuilder };
+
+class ValidationService {
+    static rules = {
+        timestamp: {
+            validate: (min, max) => {
+                if (!min || !max) {
+                    return true;
+                }
+                return new Date(min) <= new Date(max);
+            },
+            message: 'Start date must be before end date',
+        },
+        number: {
+            validate: (min, max) => {
+                if (!min || !max) {
+                    return true;
+                }
+                return parseFloat(min) <= parseFloat(max);
+            },
+            message: 'Minimum value must be less than maximum value',
+        },
+        text: {
+            validate: (value) => {
+                if (!value) {
+                    return true;
+                }
+                return value.length <= 255;
+            },
+            message: 'Text must not exceed 255 characters',
+        },
+    }
+
+    static validateField(filter, value, maxValue) {
+        const rule = this.rules[filter.type];
+        if (!rule) {
+            return { isValid : true };
+        }
+
+        const isValid = rule.validate(value, maxValue);
+        return { 
+            isValid,
+            message: isValid ? '' : rule.message
+        };
+    }
+}
