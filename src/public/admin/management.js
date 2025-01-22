@@ -96,6 +96,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       showToastMessage('Date range must be 7 days', 'error');
       return;
     }
+
+    if (new Date(end_date) > new Date()) {
+      showToastMessage('End date must be in the past', 'error');
+      return;
+    }
+   
     
     await Promise.all([
       renderDashboard(start_date, end_date),

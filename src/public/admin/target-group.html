@@ -206,6 +206,52 @@
                 </div>
 
                 <h2 class="mt-4 mb-3">Target Groups</h2>
+
+                <!-- Add after users filter container -->
+                <div id="target-group-filter-container" class="card mt-4 mb-4" style="display: none;">
+                    <div class="card-body">
+                        <h5 class="card-title">Filter Target Groups</h5>
+                        <form id="target-group-filter-form">
+                            <div class="mb-3">
+                                <label for="name_filter" class="form-label">Name</label>
+                                <input type="text" class="form-control" id="name_filter" name="name">
+                            </div>
+                            <div class="row g-3">
+                                <div class="mb-3 col-auto">
+                                    <label for="user_count_min" class="form-label">User Count (Min)</label>
+                                    <input type="number" step="1" min="0" id="user_count_min" name="user_count_min" class="form-control">
+                                </div>
+                                <div class="mb-3 col-auto">
+                                    <label for="user_count_max" class="form-label">User Count (Max)</label>
+                                    <input type="number" step="1" min="0" id="user_count_max" name="user_count_max" class="form-control">
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="mb-3 col-auto">
+                                    <label for="created_at_min" class="form-label">Created From</label>
+                                    <input type="datetime-local" step="1" id="created_at_min" name="created_at_min" class="form-control">
+                                </div>
+                                <div class="mb-3 col-auto">
+                                    <label for="created_at_max" class="form-label">Created To</label>
+                                    <input type="datetime-local" step="1" id="created_at_max" name="created_at_max" class="form-control">
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="mb-3 col-auto">
+                                    <label for="updated_at_min" class="form-label">Updated From</label>
+                                    <input type="datetime-local" step="1" id="updated_at_min" name="updated_at_min" class="form-control">
+                                </div>
+                                <div class="mb-3 col-auto">
+                                    <label for="updated_at_max" class="form-label">Updated To</label>
+                                    <input type="datetime-local" step="1" id="updated_at_max" name="updated_at_max" class="form-control">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                            <button type="button" class="btn btn-secondary" id="cancel-target-group-filter-btn">Cancel</button>
+                        </form>
+                    </div>
+                </div>
+
                 <div id="target-groups-container" class="table-responsive mb-4">
                     <table class="table table-bordered table-hover">
                         <thead>
@@ -214,6 +260,7 @@
                                 <th>Name</th>
                                 <th>User Count</th>
                                 <th>Created At</th>
+                                <th>Updated At</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
