@@ -453,12 +453,19 @@ class ReportService {
                 groupable: true
             },
             {
+                key: "user_email",
+                label: "User Email",
+                type: "text",
+                placeholder: 'Enter user email',
+                groupable: true
+            },
+            {
                 key: "total_price",
                 label: "Total Price",
                 type: "number",
                 step: '0.01',
                 min: 0,
-                max: 100000000
+                max: 1000000000000
             },
             {
                 key: 'days_since_order',
@@ -466,8 +473,70 @@ class ReportService {
                 type: 'number',
                 step: '1',
                 min: 0,
-                max: 100000000
+                max: 1000000000000
             },
+            {
+                key: "discount_percentage",
+                label: "Discount %",
+                type: "number",
+                step: '0.01',
+                min: 0,
+                max: 100
+            },
+            {
+                key: "discount_amount",
+                label: "Discount Amount",
+                type: "number",
+                step: '0.01',
+                min: 0,
+                max: 1000000000000
+            },
+            {
+                key: "vat_percentage",
+                label: "VAT %",
+                type: "number",
+                step: '0.01',
+                min: 0,
+                max: 100
+            },
+            {
+                key: "vat_amount",
+                label: "VAT",
+                type: "number",
+                step: '0.01',
+                min: 0,
+                max: 1000000000000
+            },
+            {
+                key: "total_price_with_vat",
+                label: "Total Price with VAT",
+                type: "number",
+                step: '0.01',
+                min: 0,
+                max: 1000000000000
+            },
+            {
+                key: "voucher_code",
+                label: "Voucher Code",
+                type: "text",
+                placeholder: 'Enter voucher code',
+            },
+            {
+                key: "voucher_discount_amount",
+                label: "Voucher Discount",
+                type: "number",
+                step: '0.01',
+                min: 0,
+                max: 1000000000000
+            },
+            {
+                key: "paid_amount",
+                label: "Paid Amount",
+                type: "number",
+                step: '0.01',
+                min: 0,
+                max: 1000000000000
+            }
         ],
         tableTemplate: 'groupedHeaders',
         headerGroups: [
@@ -522,6 +591,23 @@ class ReportService {
         total_price_maximum_filter_value: data.body.total_price_maximum,
         days_since_order_minimum_filter_value: data.body.days_since_order_minimum,
         days_since_order_maximum_filter_value: data.body.days_since_order_maximum,
+        user_email_filter_value: data.body.user_email,
+        user_email_grouping_select_value: data.body.user_email_grouping_select_value,
+        discount_percentage_minimum_filter_value: data.body.discount_percentage_minimum,
+        discount_percentage_maximum_filter_value: data.body.discount_percentage_maximum,
+        discount_amount_minimum_filter_value: data.body.discount_amount_minimum,
+        discount_amount_maximum_filter_value: data.body.discount_amount_maximum,
+        vat_percentage_minimum_filter_value: data.body.vat_percentage_minimum,
+        vat_percentage_maximum_filter_value: data.body.vat_percentage_maximum,
+        vat_amount_minimum_filter_value: data.body.vat_amount_minimum,
+        vat_amount_maximum_filter_value: data.body.vat_amount_maximum,
+        total_price_with_vat_minimum_filter_value: data.body.total_price_with_vat_minimum,
+        total_price_with_vat_maximum_filter_value: data.body.total_price_with_vat_maximum,
+        voucher_code_filter_value: data.body.voucher_code,
+        voucher_discount_amount_minimum_filter_value: data.body.voucher_discount_amount_minimum,
+        voucher_discount_amount_maximum_filter_value: data.body.voucher_discount_amount_maximum,
+        paid_amount_minimum_filter_value: data.body.paid_amount_minimum,
+        paid_amount_maximum_filter_value: data.body.paid_amount_maximum,
         created_at_grouping_select_value: data.body.created_at_grouping_select_value,
         status_grouping_select_value: data.body.status_grouping_select_value,
     };
@@ -548,7 +634,7 @@ class ReportService {
         {
             key: "user_email",
             grouping_expression: "U.email",
-            filter_expression: "",
+            filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
         },
         {
@@ -564,9 +650,105 @@ class ReportService {
             type: "number",
         },
         {
+            key: "discount_percentage_minimum",
+            grouping_expression: "",
+            filter_expression: "O.discount_percentage >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "discount_percentage_maximum",
+            grouping_expression: "",
+            filter_expression: "O.discount_percentage <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "discount_amount_minimum",
+            grouping_expression: "",
+            filter_expression: "ROUND(O.total_price * O.discount_percentage / 100, 2) >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "discount_amount_maximum",
+            grouping_expression: "",
+            filter_expression: "ROUND(O.total_price * O.discount_percentage / 100, 2) <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
             key: "vat_percentage",
             grouping_expression: "O.vat_percentage",
             filter_expression: "",
+            type: "number",
+        },
+        {
+            key: "vat_percentage_minimum",
+            grouping_expression: "",
+            filter_expression: "O.vat_percentage >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "vat_percentage_maximum",
+            grouping_expression: "",
+            filter_expression: "O.vat_percentage <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "vat_amount_minimum",
+            grouping_expression: "",
+            filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2) >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "vat_amount_maximum",
+            grouping_expression: "",
+            filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2) <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "total_price_with_vat_minimum",
+            grouping_expression: "",
+            filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2) >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "total_price_with_vat_maximum",
+            grouping_expression: "",
+            filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2) <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "voucher_code",
+            grouping_expression: "O.voucher_code",
+            filter_expression: "STRPOS(LOWER(CAST( O.voucher_code AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+        },
+        {
+            key: "voucher_discount_amount",
+            grouping_expression: "O.voucher_discount_amount",
+            filter_expression: "",
+            type: "number",
+        },
+        {
+            key: "voucher_discount_amount_minimum",
+            grouping_expression: "",
+            filter_expression: "O.voucher_discount_amount >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "voucher_discount_amount_maximum",
+            grouping_expression: "",
+            filter_expression: "O.voucher_discount_amount <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "paid_amount_minimum",
+            grouping_expression: "",
+            filter_expression: "O.paid_amount >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "paid_amount_maximum",
+            grouping_expression: "",
+            filter_expression: "O.paid_amount <= $FILTER_VALUE$",
             type: "number",
         },
         {
@@ -605,55 +787,61 @@ class ReportService {
             filter_expression: "EXTRACT(DAY FROM (NOW() - O.created_at)) <= $FILTER_VALUE$",
             type: "number",
         },
-        {
-            key: "voucher_code",
-            grouping_expression: "O.voucher_code",
-            filter_expression: "",
-            type: "text",
-        },
-        {
-            key: "voucher_discount_amount",
-            grouping_expression: "O.voucher_discount_amount",
-            filter_expression: "",
-            type: "number",
-        },
     ];
 
     let sql = `
-        SELECT
-            $created_at_grouping_expression$  AS "created_at",
-            $days_since_order_grouping_expression$  AS "days_since_order",
-            $order_hash_grouping_expression$  AS "order_hash",
-            $user_email_grouping_expression$  AS "user_email",
-            $status_grouping_expression$  AS "status",
-            $discount_percentage_grouping_expression$ AS "discount_percentage",
-            $vat_percentage_grouping_expression$  AS "vat_percentage",
-            $voucher_code_grouping_expression$ AS "voucher_code",
-            $voucher_discount_amount_grouping_expression$ AS "voucher_discount_amount",
-            SUM(ROUND(O.total_price * O.discount_percentage / 100, 2)) AS "discount_amount",
-            SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2))  AS "vat_amount",
-            SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2))  AS "total_price_with_vat",
-            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0), 2)) AS "total_price_with_voucher",
-            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100), 2)) AS total_price_with_voucher_without_vat,
-            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) - 
-                (GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100)), 2)) AS total_price_with_voucher_vat_amount,
-            SUM(paid_amount) AS "paid_amount",
-            SUM(O.total_price) AS "total_price",
-            COUNT(*) as count
-        FROM orders O
-        JOIN users U ON U.id = O.user_id
-        WHERE TRUE
-            AND $created_at_minimum_filter_expression$
-            AND $created_at_maximum_filter_expression$
-            AND $status_filter_expression$
-            AND $total_price_minimum_filter_expression$
-            AND $total_price_maximum_filter_expression$
-            AND $days_since_order_minimum_filter_expression$
-            AND $days_since_order_maximum_filter_expression$
-        GROUP BY GROUPING SETS (
-            (1, 2, 3, 4, 5, 6, 7, 8, 9),
-            ()
-        )
+        SELECT * FROM (
+            SELECT
+                $created_at_grouping_expression$  AS "created_at",
+                $days_since_order_grouping_expression$  AS "days_since_order",
+                $order_hash_grouping_expression$  AS "order_hash",
+                $user_email_grouping_expression$  AS "user_email",
+                $status_grouping_expression$  AS "status",
+                $discount_percentage_grouping_expression$ AS "discount_percentage",
+                $vat_percentage_grouping_expression$  AS "vat_percentage",
+                $voucher_code_grouping_expression$ AS "voucher_code",
+                $voucher_discount_amount_grouping_expression$ AS "voucher_discount_amount",
+                SUM(ROUND(O.total_price * O.discount_percentage / 100, 2)) AS "discount_amount",
+                SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2))  AS "vat_amount",
+                SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2))  AS "total_price_with_vat",
+                SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0), 2)) AS "total_price_with_voucher",
+                SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100), 2)) AS total_price_with_voucher_without_vat,
+                SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) - 
+                    (GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100)), 2)) AS total_price_with_voucher_vat_amount,
+                SUM(paid_amount) AS "paid_amount",
+                SUM(O.total_price) AS "total_price",
+                COUNT(*) as count
+            FROM orders O
+            JOIN users U ON U.id = O.user_id
+            WHERE TRUE
+                AND $created_at_minimum_filter_expression$
+                AND $created_at_maximum_filter_expression$
+                AND $user_email_filter_expression$
+                AND $status_filter_expression$
+                AND $discount_percentage_minimum_filter_expression$
+                AND $discount_percentage_maximum_filter_expression$
+                AND $discount_amount_minimum_filter_expression$
+                AND $discount_amount_maximum_filter_expression$
+                AND $vat_percentage_minimum_filter_expression$
+                AND $vat_percentage_maximum_filter_expression$
+                AND $vat_amount_minimum_filter_expression$
+                AND $vat_amount_maximum_filter_expression$
+                AND $total_price_with_vat_minimum_filter_expression$
+                AND $total_price_with_vat_maximum_filter_expression$
+                AND $voucher_code_filter_expression$
+                AND $voucher_discount_amount_minimum_filter_expression$
+                AND $voucher_discount_amount_maximum_filter_expression$
+                AND $paid_amount_minimum_filter_expression$
+                AND $paid_amount_maximum_filter_expression$
+                AND $total_price_minimum_filter_expression$
+                AND $total_price_maximum_filter_expression$
+                AND $days_since_order_minimum_filter_expression$
+                AND $days_since_order_maximum_filter_expression$
+            GROUP BY GROUPING SETS (
+                (1, 2, 3, 4, 5, 6, 7, 8, 9),
+                ()
+            )
+        ) subquery
         ORDER BY 1 DESC NULLS FIRST`;
 
     return { reportUIConfig, sql, reportFilters, INPUT_DATA };

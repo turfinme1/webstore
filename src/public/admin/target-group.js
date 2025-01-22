@@ -505,12 +505,12 @@ async function handleFilterUsers(event) {
     return;
   }
 
-  if (daysSinceOrderMin || daysSinceOrderMax) {
+  if (daysSinceOrderMin >= 0 || daysSinceOrderMax >= 0) {
     filterParams["days_since_order"] = {};
-    if(daysSinceOrderMin) {
+    if(daysSinceOrderMin >= 0) {
       filterParams["days_since_order"].min = daysSinceOrderMin;
     }
-    if(daysSinceOrderMax) {
+    if(daysSinceOrderMax >= 0) {
       filterParams["days_since_order"].max = daysSinceOrderMax;
     }
   }
@@ -524,12 +524,12 @@ async function handleFilterUsers(event) {
     return;
   }
 
-  if (daysSinceRegistrationMin || daysSinceRegistrationMax) {
+  if (daysSinceRegistrationMin >= 0|| daysSinceRegistrationMax >= 0) {
     filterParams["days_since_registration"] = {};
-    if(daysSinceRegistrationMin) {
+    if(daysSinceRegistrationMin >= 0) {
       filterParams["days_since_registration"].min = daysSinceRegistrationMin;
     }
-    if(daysSinceRegistrationMax) {
+    if(daysSinceRegistrationMax >= 0) {
       filterParams["days_since_registration"].max = daysSinceRegistrationMax;
     }
   }
