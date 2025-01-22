@@ -12,7 +12,7 @@ const MS_PER_BATCH = Math.floor(MS_PER_DAY / BATCHES_PER_DAY);
 
 async function getRandomProducts(client, count) {
   const result = await client.query(`
-    SELECT id, price 
+    SELECT id, price, stock_price 
     FROM products 
     ORDER BY RANDOM() 
     LIMIT $1`, 
@@ -45,7 +45,8 @@ async function generateOrders(client, count) {
     const orderItems = orderProducts.map(product => ({
       product_id: product.id,
       quantity: faker.number.int({ min: 1, max: 10 }),
-      unit_price: product.price
+      unit_price: product.price,
+      stock_price: product.stock_price
     }));
     const status = faker.helpers.arrayElement([
         "Pending",
@@ -54,12 +55,14 @@ async function generateOrders(client, count) {
         "Cancelled",
     ]);
     const totalPrice = orderItems.reduce((sum, item) => sum + item.quantity * parseFloat(item.unit_price), 0);
+    const totalStockPrice = orderItems.reduce((sum, item) => sum + item.quantity * parseFloat(item.stock_price), 0);
 
     orders.push({
       user_id: user.id,
       items: orderItems,
       status,
       total_price: totalPrice,
+      total_stock_price: totalStockPrice
     });
   }
 
@@ -80,13 +83,15 @@ async function insertOrderBatch(orders, client, logger) {
           ROUND(
             $1::decimal * (1 + settings.vat_percentage / 100),
             2
-          ) as total_with_vat
+          ) as total_with_vat,
+          $4::decimal as total_stock_price
         FROM settings
       )
       INSERT INTO orders (
         user_id, 
         status, 
         total_price,
+        total_stock_price,
         vat_percentage,
         discount_percentage,
         paid_amount
@@ -95,6 +100,7 @@ async function insertOrderBatch(orders, client, logger) {
         $3,
         status,
         base_total,
+        total_stock_price,
         vat_percentage,
         0,
         CASE 
@@ -103,7 +109,7 @@ async function insertOrderBatch(orders, client, logger) {
         END
       FROM total_calc
       RETURNING *`,
-      [order.total_price, order.status, order.user_id]
+      [order.total_price, order.status, order.user_id, order.total_stock_price]
     );
 
     const orderId = orderResult.rows[0].id;

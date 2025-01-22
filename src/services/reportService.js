@@ -925,44 +925,44 @@ class ReportService {
             SELECT
                 COUNT(*) AS registered_users
             FROM users u 
-            WHERE u.created_at <= (SELECT end_date FROM date_filter) AND u.created_at >= (SELECT start_date FROM date_filter)
+            WHERE u.created_at BETWEEN (SELECT start_date FROM date_filter) AND (SELECT end_date FROM date_filter)
         ),
         prev_week_registered_users AS (
             SELECT
                 COUNT(*) AS registered_users
             FROM users u 
-            WHERE u.created_at <= (SELECT (end_date - INTERVAL '7 days')::date FROM date_filter) AND u.created_at >= (SELECT (end_date - INTERVAL '7 days')::date FROM date_filter)
+            WHERE u.created_at BETWEEN (SELECT (start_date - INTERVAL '7 days')::date FROM date_filter) AND (SELECT (end_date - INTERVAL '7 days')::date FROM date_filter)
         ),
         order_metrics AS (
             SELECT 
                 COUNT(DISTINCT user_id) AS active_users,
                 COALESCE(AVG(paid_amount), 0) AS avg_order_price,
                 COALESCE(SUM(paid_amount) / COUNT(DISTINCT(user_id)), 0) AS avg_amount_spent_by_user,
-                COALESCE(SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount), 0) AS net_revenue,
-                COALESCE(SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount) / COUNT(DISTINCT user_id), 0) as avg_net_revenue_by_user
+                COALESCE(SUM(paid_amount - total_stock_price), 0) AS net_revenue,
+                COALESCE(SUM(paid_amount - total_stock_price) / COUNT(DISTINCT user_id), 0) as avg_net_revenue_by_user
             FROM orders
-            WHERE created_at BETWEEN (SELECT start_date FROM date_filter) AND (SELECT end_date FROM date_filter)
+            WHERE status = 'Paid' AND created_at BETWEEN (SELECT start_date FROM date_filter) AND (SELECT end_date FROM date_filter)
         ),
         prev_week_order_metrics AS (
             SELECT 
                 COUNT(DISTINCT user_id) AS active_users,
                 COALESCE(AVG(paid_amount), 0) AS avg_order_price,
                 COALESCE(SUM(paid_amount) / COUNT(DISTINCT(user_id)), 0) AS avg_amount_spent_by_user,
-                COALESCE(SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount), 0) AS net_revenue,
-                COALESCE(SUM(paid_amount - total_price * discount_percentage/ 100 - voucher_discount_amount) / COUNT(DISTINCT user_id), 0) as avg_net_revenue_by_user
+                COALESCE(SUM(paid_amount - total_stock_price), 0) AS net_revenue,
+                COALESCE(SUM(paid_amount - total_stock_price) / COUNT(DISTINCT user_id), 0) as avg_net_revenue_by_user
             FROM orders
-            WHERE created_at BETWEEN (SELECT (start_date - INTERVAL '7 days')::date FROM date_filter) AND (SELECT (end_date - INTERVAL '7 days')::date FROM date_filter)
+            WHERE status = 'Paid' AND created_at BETWEEN (SELECT (start_date - INTERVAL '7 days')::date FROM date_filter) AND (SELECT (end_date - INTERVAL '7 days')::date FROM date_filter)
         ),
-        --
         order_data AS (
             SELECT 
                 date_trunc('month', created_at) AS month_start,
                 COUNT(DISTINCT user_id) AS active_users,
                 AVG(paid_amount) AS avg_order_price,
                 SUM(paid_amount) AS total_revenue,
-                SUM(paid_amount - total_price * discount_percentage / 100 - voucher_discount_amount) AS net_revenue,
+                SUM(paid_amount - total_stock_price) AS net_revenue,
                 COUNT(DISTINCT user_id) AS distinct_users
             FROM orders
+            WHERE status = 'Paid'
             GROUP BY date_trunc('month', created_at)
         ),
         user_data AS (
@@ -991,7 +991,6 @@ class ReportService {
             LEFT JOIN order_data o ON o.month_start = ms.month_start
             LEFT JOIN user_data u ON u.month_start = ms.month_start
         )
-        --
         SELECT 
             jsonb_build_array(
                 jsonb_build_object(
@@ -1077,26 +1076,26 @@ class ReportService {
         ),
         campaign_metrics AS (
         SELECT 
-            COUNT(DISTINCT CASE WHEN o.discount_percentage > 0 OR o.voucher_code IS NOT NULL THEN o.user_id END) AS users_with_campaign_activity,
+            COUNT(DISTINCT o.user_id) AS users_with_campaign_activity,
             COUNT(DISTINCT CASE WHEN o.discount_percentage > 0 THEN o.id END) AS orders_with_promotion,
             COUNT(DISTINCT CASE WHEN o.voucher_code IS NOT NULL THEN o.id END) AS orders_with_voucher,
             SUM(o.paid_amount) AS total_paid_amount,
-            SUM(o.paid_amount - COALESCE(o.voucher_discount_amount, 0) - 
-                COALESCE(o.total_price * o.discount_percentage / 100, 0)) AS net_amount
+            SUM(o.paid_amount - o.total_stock_price) AS net_amount
         FROM orders o
-        WHERE o.created_at BETWEEN (SELECT start_date FROM date_filter) AND (SELECT end_date FROM date_filter)
+        WHERE (o.discount_percentage > 0 OR o.voucher_code IS NOT NULL) 
+            AND o.created_at BETWEEN (SELECT start_date FROM date_filter) 
+            AND (SELECT end_date FROM date_filter)
         ),
         prev_week_campaign_metrics AS (
         SELECT 
-            COUNT(DISTINCT CASE WHEN o.discount_percentage > 0 OR o.voucher_code IS NOT NULL THEN o.user_id END) AS users_with_campaign_activity,
+            COUNT(DISTINCT o.user_id) AS users_with_campaign_activity,
             COUNT(DISTINCT CASE WHEN o.discount_percentage > 0 THEN o.id END) AS orders_with_promotion,
             COUNT(DISTINCT CASE WHEN o.voucher_code IS NOT NULL THEN o.id END) AS orders_with_voucher,
             SUM(o.paid_amount) AS total_paid_amount,
-            SUM(o.paid_amount - COALESCE(o.voucher_discount_amount, 0) - 
-                COALESCE(o.total_price * o.discount_percentage / 100, 0)) AS net_amount
+            SUM(o.paid_amount - o.total_stock_price) AS net_amount
         FROM orders o
-        WHERE o.created_at BETWEEN 
-            (SELECT (start_date - INTERVAL '7 days')::date FROM date_filter) 
+        WHERE (o.discount_percentage > 0 OR o.voucher_code IS NOT NULL)  
+            AND o.created_at BETWEEN (SELECT (start_date - INTERVAL '7 days')::date FROM date_filter) 
             AND (SELECT (end_date - INTERVAL '7 days')::date FROM date_filter)
         )
         SELECT jsonb_build_array(
@@ -1126,14 +1125,14 @@ class ReportService {
                 'current', ROUND(cm.total_paid_amount::numeric, 2),
                 'previous', ROUND(pw.total_paid_amount::numeric, 2),
                 'change', ROUND(((cm.total_paid_amount - pw.total_paid_amount)::float
-                        / NULLIF(pw.total_paid_amount, 0) * 100)::numeric, 2)
+                        / NULLIF(ABS(pw.total_paid_amount), 0) * 100)::numeric, 2)
             ),
             jsonb_build_object(
                 'name', 'Net Revenue',
                 'current', ROUND(cm.net_amount::numeric, 2),
                 'previous', ROUND(pw.net_amount::numeric, 2),
                 'change', ROUND(((cm.net_amount - pw.net_amount)::float
-                        / NULLIF(pw.net_amount, 0) * 100)::numeric, 2)
+                        / NULLIF(ABS(pw.net_amount), 0) * 100)::numeric, 2)
             )
         ) AS campaign_data
         FROM campaign_metrics cm
