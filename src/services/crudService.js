@@ -181,11 +181,11 @@ class CrudService {
             `STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length})) > 0`
           ); 
         } else if (typeof filterValue === "object") {
-          if (filterValue.min) {
+          if (filterValue.min || filterValue.min == 0) {
             searchValues.push(filterValue.min);
             conditions.push(`${filterField} >= $${searchValues.length}`);
           }
-          if (filterValue.max) {
+          if (filterValue.max || filterValue.max == 0) {
             searchValues.push(filterValue.max);
             conditions.push(`${filterField} <= $${searchValues.length}`);
           }
