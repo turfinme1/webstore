@@ -373,21 +373,6 @@ class ReportBuilder {
                 await this.fetchData(filters);
             }
         });
-
-        this.config.filters.forEach(filter => {
-            if (filter.type === 'number' || filter.type === 'timestamp') {
-                const minInput = document.getElementById(`${filter.key}_minimum`);
-                const maxInput = document.getElementById(`${filter.key}_maximum`);
-                
-                if (minInput && maxInput) {
-                    [minInput, maxInput].forEach(input => {
-                        input.addEventListener('input', () => {
-                            this.validateMinMaxPair(filter, minInput, maxInput);
-                        });
-                    });
-                }
-            }
-        });
     }
 
     async fetchData(filters) {
@@ -524,45 +509,51 @@ class ReportBuilder {
                 const maxInput = document.getElementById(`${filter.key}_maximum`);
                 
                 if (minInput && maxInput) {
-                    const validationResult = ValidationService.validateField(
+                    const validationResults = ValidationService.validateField(
                         filter, 
                         minInput.value, 
                         maxInput.value
                     );
 
-                    if (!validationResult.isValid) {
+                    if (validationResults.length > 0) {
                         isValid = false;
-                        this.showValidationError(filter.key, validationResult.message);
-                        errors.push(validationResult.message);
+                        validationResults.forEach(result => {
+                            this.showValidationError(filter.key, result.message, result.field);
+                            errors.push(result.message);
+                        });
                     }
                 }
             } else if (filter.type === 'select' && filter.required) {
                 const input = document.getElementById(filter.key);
                 if (input) {
-                    const validationResult = ValidationService.validateField(
+                    const validationResults = ValidationService.validateField(
                         filter,
                         input.value,
                         filter.options
                     );
 
-                    if (!validationResult.isValid) {
+                    if (validationResults.length > 0) {
                         isValid = false;
-                        this.showValidationError(filter.key, validationResult.message);
-                        errors.push(validationResult.message);
+                        validationResults.forEach(result => {
+                            this.showValidationError(filter.key, result.message, result.field);
+                            errors.push(result.message);
+                        });
                     }
                 }
             } else if (filter.type === 'text') {
                 const input = document.getElementById(filter.key);
                 if (input) {
-                    const validationResult = ValidationService.validateField(
+                    const validationResults = ValidationService.validateField(
                         filter,
                         input.value
                     );
 
-                    if (!validationResult.isValid) {
+                    if (validationResults.length > 0) {
                         isValid = false;
-                        this.showValidationError(filter.key, validationResult.message);
-                        errors.push(validationResult.message);
+                        validationResults.forEach(result => {
+                            this.showValidationError(filter.key, result.message, result.field || 'input');
+                            errors.push(result.message);
+                        });
                     }
                 }
             }
@@ -575,55 +566,34 @@ class ReportBuilder {
         return isValid;
     }
 
-    showValidationError(filterKey, message) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'invalid-feedback d-block';
-        errorDiv.textContent = message;
-        errorDiv.id = `${filterKey}-error`;
+    showValidationError(filterKey, message, field = 'input') {
+        let errorContainer = document.getElementById(`${filterKey}-error-${field}`);
 
-        const minInput = document.getElementById(`${filterKey}_minimum`);
-        const maxInput = document.getElementById(`${filterKey}_maximum`);
-        const input = document.getElementById(filterKey);
+        if (!errorContainer) {
+            errorContainer = document.createElement('div');
+            errorContainer.className = 'invalid-feedback d-block';
+            errorContainer.id = `${filterKey}-error-${field}`;
+            let inputElement;
 
-        if (minInput && maxInput) {
-            minInput.classList.add('is-invalid');
-            maxInput.classList.add('is-invalid');
-            minInput.parentElement.appendChild(errorDiv);
-        } else if (input) {
-            input.classList.add('is-invalid');
-            input.parentElement.appendChild(errorDiv);
-        }
-    }
+            if (field === 'min') {
+                inputElement = document.getElementById(`${filterKey}_minimum`);
+            } else if (field === 'max') {
+                inputElement = document.getElementById(`${filterKey}_maximum`);
+            } else {
+                inputElement = document.getElementById(filterKey);
+            }
 
-    clearValidationError(filterKey) {
-        const errorDiv = document.getElementById(`${filterKey}-error`);
-        if (errorDiv) {
-            errorDiv.remove();
+            if (inputElement) {
+                inputElement.classList.add('is-invalid');
+                inputElement.parentElement.appendChild(errorContainer);
+            }
         }
 
-        const inputs = [
-            document.getElementById(`${filterKey}_minimum`),
-            document.getElementById(`${filterKey}_maximum`),
-            document.getElementById(filterKey)
-        ].filter(Boolean);
-
-        inputs.forEach(input => input.classList.remove('is-invalid'));
-    }
-
-    validateMinMaxPair(filter, minInput, maxInput) {
-        const validationResult = ValidationService.validateField(
-            filter,
-            minInput.value,
-            maxInput.value
-        );
-
-        this.clearValidationError(filter.key);
-
-        if (!validationResult.isValid) {
-            this.showValidationError(filter.key, validationResult.message);
+        if (!errorContainer.textContent.includes(message)) {
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            errorContainer.appendChild(messageElement);
         }
-
-        return validationResult.isValid;
     }
 
     clearValidationErrors() {
@@ -636,45 +606,92 @@ export { ReportBuilder };
 
 class ValidationService {
     static rules = {
-        timestamp: {
-            validate: (min, max) => {
-                if (!min || !max) {
-                    return true;
-                }
-                return new Date(min) <= new Date(max);
+        timestamp: [
+            {
+                validate: (min, max) => {
+                    if (!min || !max) {
+                        return { isValid: true };
+                    }
+                    return {
+                        isValid: new Date(min) <= new Date(max),
+                        field: 'min',
+                        message: 'Start date must be before end date',
+                    };
+                },
             },
-            message: 'Start date must be before end date',
-        },
-        number: {
-            validate: (min, max) => {
-                if (!min || !max) {
-                    return true;
-                }
-                return parseFloat(min) <= parseFloat(max);
+            {
+                validate: (min, max) => {
+                    const errors = [];
+                    const now = new Date();
+                    if (min && new Date(min) > now) {
+                        errors.push({
+                            isValid: false,
+                            field: 'min',
+                            message: 'Start date must be in the past',
+                        });
+                    }
+                    if (max && new Date(max) > now) {
+                        errors.push({
+                            isValid: false,
+                            field: 'max',
+                            message: 'End date must be in the past',
+                        });
+                    }
+                    if (errors.length > 0) {
+                        return errors;
+                    }
+                    return { isValid: true };
+                },
             },
-            message: 'Minimum value must be less than maximum value',
-        },
-        text: {
-            validate: (value) => {
-                if (!value) {
-                    return true;
-                }
-                return value.length <= 255;
+        ],
+        number: [
+            {
+                validate: (min, max) => {
+                    if (!min || !max) {
+                        return { isValid: true };
+                    }
+                    return {
+                        isValid: parseFloat(min) <= parseFloat(max),
+                        field: 'min',
+                        message: 'Minimum value must be less than maximum value',
+                    };
+                },
             },
-            message: 'Text must not exceed 255 characters',
-        },
+        ],
+        text: [    
+            {
+                validate: (value) => {
+                    if (!value) {
+                        return { isValid: true };
+                    }
+                    const isValid = value.length <= 255;
+                    return {
+                        isValid,
+                        field: 'input',
+                        message: 'Text must not exceed 255 characters',
+                    };
+                },
+            },
+        ]
     }
 
     static validateField(filter, value, maxValue) {
-        const rule = this.rules[filter.type];
-        if (!rule) {
-            return { isValid : true };
+        const rules = this.rules[filter.type] || [];
+        let errors = [];
+
+        for (const rule of rules) {
+            const result = rule.validate(value, maxValue);
+            if (Array.isArray(result) && result.length > 0) {
+                errors = errors.concat(result);
+            } else if (!result.isValid) {
+                errors.push(result);
+            }
         }
 
-        const isValid = rule.validate(value, maxValue);
-        return { 
-            isValid,
-            message: isValid ? '' : rule.message
-        };
+        if (errors.length > 0) {
+            return errors;
+        }
+
+        return [];
     }
 }
