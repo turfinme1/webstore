@@ -460,6 +460,12 @@ class ReportService {
                 groupable: true
             },
             {
+                key: "order_id",
+                label: "Order ID",
+                type: "text",
+                placeholder: 'Enter order ID',
+            },
+            {
                 key: "total_price",
                 label: "Total Price",
                 type: "number",
@@ -542,8 +548,8 @@ class ReportService {
         headerGroups: [
             [
                 { label: 'Created At', rowspan: 2 },
+                { label: 'Order ID', rowspan: 2 },
                 { label: 'Days Since Order', rowspan: 2 },
-                { label: 'Order Hash', rowspan: 2 },
                 { label: 'User Email', rowspan: 2 },
                 { label: 'Status', rowspan: 2 },
                 { label: 'Total Price', rowspan: 2 },
@@ -563,8 +569,8 @@ class ReportService {
         ],
         columns: [
             { key: 'created_at', label: 'Created At', format: 'date_time' },
+            { key: 'order_id', label: 'Order ID', align: 'right', format: 'text' },
             { key: 'days_since_order', label: 'Days Since Order', align: 'right', format: 'number' },
-            { key: 'order_hash', label: 'Order Hash', format: 'text' },
             { key: 'user_email', label: 'User Email', format: 'text' },
             { key: 'status', label: 'Status', format: 'text' },
             { key: 'total_price', label: 'Total Price', align: 'right', format: 'currency' },
@@ -586,6 +592,7 @@ class ReportService {
     const INPUT_DATA = {
         created_at_minimum_filter_value: data.body.created_at_minimum,
         created_at_maximum_filter_value: data.body.created_at_maximum,
+        order_id_filter_value: data.body.order_id,
         status_filter_value: data.body.status,
         total_price_minimum_filter_value: data.body.total_price_minimum,
         total_price_maximum_filter_value: data.body.total_price_maximum,
@@ -626,9 +633,9 @@ class ReportService {
             type: "number",
         },
         {
-            key: "order_hash",
-            grouping_expression: "O.order_hash",
-            filter_expression: "",
+            key: "order_id",
+            grouping_expression: "O.id",
+            filter_expression: "O.id = $FILTER_VALUE$",
             type: "text",
         },
         {
@@ -793,8 +800,8 @@ class ReportService {
         SELECT * FROM (
             SELECT
                 $created_at_grouping_expression$  AS "created_at",
+                $order_id_grouping_expression$  AS "order_id",
                 $days_since_order_grouping_expression$  AS "days_since_order",
-                $order_hash_grouping_expression$  AS "order_hash",
                 $user_email_grouping_expression$  AS "user_email",
                 $status_grouping_expression$  AS "status",
                 $discount_percentage_grouping_expression$ AS "discount_percentage",
@@ -816,6 +823,7 @@ class ReportService {
             WHERE TRUE
                 AND $created_at_minimum_filter_expression$
                 AND $created_at_maximum_filter_expression$
+                AND $order_id_filter_expression$
                 AND $user_email_filter_expression$
                 AND $status_filter_expression$
                 AND $discount_percentage_minimum_filter_expression$
