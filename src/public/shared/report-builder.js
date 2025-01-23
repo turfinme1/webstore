@@ -270,7 +270,16 @@ class ReportBuilder {
                 return '---';
             }
             return `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(value)).replace(',', '.').replace(".00", "")}%`;
-        }
+        },
+        boolean: (value) => {
+            if(value === true) {
+                return 'Yes';
+            }
+            if(value === false) {
+                return 'No';
+            }
+            return '---';
+        },
     };
 
     async buildFilterForm() {

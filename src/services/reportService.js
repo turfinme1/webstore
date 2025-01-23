@@ -887,6 +887,16 @@ class ReportService {
                 valueKey: 'id'
             },
             {
+                key: "is_email_verified",
+                label: "Is Email Verified",
+                type: "select",
+                options: [
+                    { value: 'true', label: 'Yes' },
+                    { value: 'false', label: 'No' }
+                ],
+                groupable: true
+            },
+            {
                 key: 'days_since_creation',
                 label: 'Days since creation',
                 type: 'number',
@@ -913,6 +923,7 @@ class ReportService {
         tableTemplate: 'groupedHeaders',
         headerGroups: [
             [
+                { label: 'Created At', rowspan: 2 },
                 { label: 'First Name', rowspan: 2 },
                 { label: 'Last Name', rowspan: 2 },
                 { label: 'Email', rowspan: 2 },
@@ -922,12 +933,12 @@ class ReportService {
                 { label: 'Gender', rowspan: 2 },
                 { label: 'Birth Date', rowspan: 2 },
                 { label: 'Is Email Verified', rowspan: 2 },
-                { label: 'Created At', rowspan: 2 },
                 { label: 'Days Since Creation', rowspan: 2 },
                 { label: 'Count', rowspan: 2 }
             ]
         ],
         columns: [
+            { key: 'created_at', label: 'Created At', format: 'date_time' },
             { key: 'first_name', label: 'First Name', format: 'text' },
             { key: 'last_name', label: 'Last Name', format: 'text' },
             { key: 'email', label: 'Email', format: 'text' },
@@ -936,8 +947,7 @@ class ReportService {
             { key: 'country_name', label: 'Country', format: 'text' },
             { key: 'gender', label: 'Gender', format: 'text' },
             { key: 'birth_date', label: 'Birth Date', format: 'date' },
-            { key: 'is_email_verified', label: 'Is Email Verified', format: 'text' },
-            { key: 'created_at', label: 'Created At', format: 'date_time' },
+            { key: 'is_email_verified', label: 'Is Email Verified', format: 'boolean' },
             { key: 'days_since_creation', label: 'Days Since Creation', align: 'right', format: 'number' },
             { key: 'count', label: 'Count', align: 'right', format: 'number' }
         ]
@@ -956,6 +966,8 @@ class ReportService {
         created_at_grouping_select_value: data.body.created_at_grouping_select_value,
         country_name_grouping_select_value: data.body.country_name_grouping_select_value,
         phone_code_grouping_select_value: data.body.phone_code_grouping_select_value,
+        is_email_verified_filter_value: data.body.is_email_verified,
+        is_email_verified_grouping_select_value: data.body.is_email_verified_grouping_select_value,
     };
 
     const reportFilters = [
@@ -1010,7 +1022,7 @@ class ReportService {
         {
             key: "is_email_verified",
             grouping_expression: "U.is_email_verified",
-            filter_expression: "",
+            filter_expression: "U.is_email_verified = $FILTER_VALUE$",
             type: "text",
         },
         {
@@ -1079,6 +1091,7 @@ class ReportService {
             AND $created_at_maximum_filter_expression$
             AND $days_since_creation_minimum_filter_expression$
             AND $days_since_creation_maximum_filter_expression$
+            AND $is_email_verified_filter_expression$
         GROUP BY GROUPING SETS (
             (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
             ()
