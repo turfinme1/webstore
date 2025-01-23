@@ -73,6 +73,7 @@ class ReportBuilder {
                 <div class="row g-3">
                     <div class="mb-3 col-auto">
                         <label for="${filter.key}_minimum" class="form-label">${filter.label} Start</label>
+                        <div class="text-muted">Time is in GMT+2</div>
                         <input type="datetime-local" step="1" 
                                id="${filter.key}_minimum"
                                value="${new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0, 16)}"
@@ -81,6 +82,7 @@ class ReportBuilder {
                     </div>
                     <div class="mb-3 col-auto">
                         <label for="${filter.key}_maximum" class="form-label">${filter.label} End</label>
+                        <div class="text-muted">Time is in GMT+2</div>
                         <input type="datetime-local" step="1" 
                                id="${filter.key}_maximum"
                                value="${new Date().toISOString().slice(0, 16)}" 
@@ -247,7 +249,6 @@ class ReportBuilder {
                 return '---';
             }
             return new Date(value).toLocaleString('en-US', {
-                timeZone: 'UTC',
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
@@ -632,6 +633,7 @@ class ValidationService {
                 validate: (min, max) => {
                     const errors = [];
                     const now = new Date();
+                    now.setHours(now.getHours() - 2);
                     if (min && new Date(min) > now) {
                         errors.push({
                             isValid: false,
