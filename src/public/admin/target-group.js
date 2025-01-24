@@ -656,6 +656,7 @@ function renderTargetGroupList(targetGroups) {
     targetGroupRow.appendChild(createTableCell(targetGroup.id));
     targetGroupRow.appendChild(createTableCell(targetGroup.name));
     targetGroupRow.appendChild(createTableCell(targetGroup.user_count));
+    targetGroupRow.appendChild(createTableCell(formatFiltersObject(targetGroup.filters)));
     targetGroupRow.appendChild(createTableCell(formatDateTime(targetGroup.created_at)));
     targetGroupRow.appendChild(createTableCell(formatDateTime(targetGroup.updated_at)));
 
@@ -752,3 +753,9 @@ function formatDateTime(dateString) {
       second: '2-digit',
   })
 }
+
+function formatFiltersObject(filters) {
+  if (!filters) return "";
+  return Object.entries(filters).map(([key, value]) => `${key}: ${value}`).join(", ");
+}
+  
