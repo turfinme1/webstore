@@ -755,7 +755,48 @@ function formatDateTime(dateString) {
 }
 
 function formatFiltersObject(filters) {
-  if (!filters) return "";
-  return Object.entries(filters).map(([key, value]) => `${key}: ${value}`).join(", ");
+  if (!filters?.query?.filterParams) return "";
+  
+  function formatValue(value) {
+      if (value === null || value === undefined) return '';
+      
+      if (typeof value === 'object') {
+          if (Array.isArray(value)) {
+              return value.join(', ');
+          }
+          
+          // Handle min/max objects
+          if ('min' in value || 'max' in value) {
+              const parts = [];
+              if ('min' in value) parts.push(`min: ${value.min}`);
+              if ('max' in value) parts.push(`max: ${value.max}`);
+              return parts.join(', ');
+          }
+          
+          // Handle nested objects
+          return Object.entries(value)
+              .map(([k, v]) => `${k}: ${formatValue(v)}`)
+              .join(', ');
+      }
+      
+      return value.toString();
+  }
+
+  return Object.entries(filters.query.filterParams)
+      .map(([key, value]) => {
+        if(key === "gender_id") {
+          key = "gender";
+          if (value == 1) {
+            value = "Male";
+          } else if (value == 2) {
+            value = "Female";
+          } 
+          else {
+            value = "All"
+          }
+        }
+        return `${key.replaceAll("_", " ")}: ${formatValue(value)}`
+      })
+      .join(", ");
 }
   
