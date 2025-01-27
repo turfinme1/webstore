@@ -178,20 +178,23 @@ class ReportBuilder {
                     `).join('')}
                 </thead>
             `,
-            row: (rowData, columns) => `
-                <tr>
-                    ${columns.map((col, index) => `
-                        <td style="text-align: ${col.align || 'left'};">
-                            ${index === 0 && !rowData[col.key] 
-                                ? "Total:"
-                                : col.format 
-                                    ? this.formatters[col.format](rowData[col.key])
-                                    : rowData[col.key] || "---"
-                            }
-                        </td>
-                    `).join('')}
-                </tr>
-            `
+            row: (rowData, columns) => {
+                columns = columns.filter(col => rowData.hasOwnProperty(col.key));
+                return `
+                    <tr>
+                        ${columns.map((col, index) => `
+                            <td style="text-align: ${col.align || 'left'};">
+                                ${index === 0 && !rowData[col.key] 
+                                    ? "Total:"
+                                    : col.format 
+                                        ? this.formatters[col.format](rowData[col.key])
+                                        : rowData[col.key] || "---"
+                                }
+                            </td>
+                        `).join('')}
+                    </tr>
+                `;
+            }
         }
     };
 

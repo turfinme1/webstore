@@ -110,56 +110,14 @@ class ReportService {
     const reportUIConfig =  {
         title: 'Orders Report by User',
         dataEndpoint: '/api/reports/report-orders-by-user',
-        filters: [
-            {
-                key: 'order_total',
-                label: 'Order Amount',
-                type: 'number',
-                step: '0.01',
-                min: 0,
-                max: 100000000
-            },
-            {
-                key: 'user_email',
-                label: 'User Email',
-                type: 'text',
-                placeholder: 'Enter user email'
-            },
-            {
-              key: 'user_id',
-              label: 'User ID',
-              type: "number_single",
-              placeholder: 'Enter user ID'
-            },
-        ],
-        // headerGroups: [
-        //     [
-        //         { label: 'User Email', rowspan: 2},
-        //         { label: 'User ID', rowspan: 2},
-        //         { label: 'Last Day', colspan: 2 },
-        //         { label: 'Last Week', colspan: 2 },
-        //         { label: 'Last Month', colspan: 2 },
-        //         { label: 'Last Year', colspan: 2 }
-        //     ],
-        //     [
-        //         { label: 'Count' },
-        //         { label: 'Total Order Amount' },
-        //         { label: 'Count' },
-        //         { label: 'Total Order Amount' },
-        //         { label: 'Count' },
-        //         { label: 'Total Order Amount' },
-        //         { label: 'Count' },
-        //         { label: 'Total Order Amount' }
-        //     ]
-        // ],
         headerGroups: [
             [
                 { key: 'user_email', label: 'User Email', rowspan: 2, format: 'text' },
                 { key: 'user_id', label: 'User ID', rowspan: 2, align: 'right', format: 'text' },
-                { key: 'orders_last_day', label: 'Last Day', colspan: 2 },
-                { key: 'orders_last_week', label: 'Last Week', colspan: 2 },
-                { key: 'orders_last_month', label: 'Last Month', colspan: 2 },
-                { key: 'orders_last_year', label: 'Last Year', colspan: 2 }
+                { key: 'orders_last_day_col', label: 'Last Day', colspan: 2 },
+                { key: 'orders_last_week_col', label: 'Last Week', colspan: 2 },
+                { key: 'orders_last_month_col', label: 'Last Month', colspan: 2 },
+                { key: 'orders_last_year_col', label: 'Last Year', colspan: 2 }
             ],
             [
                 { key: 'orders_last_day', label: 'Count', align: 'right', format: 'number' },
@@ -172,25 +130,6 @@ class ReportService {
                 { key: 'total_last_year', label: 'Total Order Amount', align: 'right', format: 'currency' }
             ]
         ],
-        // columns: [
-        //   { key: 'user_email', label: 'User Email', format: 'text' },
-        //   { key: 'user_id', label: 'User ID', align: 'right', format: 'text' },
-        //   { key: 'orders_last_day', label: 'Count', align: 'right', format: 'number' },
-        //   { key: 'total_last_day', label: 'Total Order Amount', align: 'right', format: 'currency' },
-        //   { key: 'orders_last_week', label: 'Count', align: 'right', format: 'number' },
-        //   { key: 'total_last_week', label: 'Total Order Amount', align: 'right', format: 'currency' },
-        //   { key: 'orders_last_month', label: 'Count', align: 'right', format: 'number' },
-        //   { key: 'total_last_month', label: 'Total Order Amount', align: 'right', format: 'currency' },
-        //   { key: 'orders_last_year', label: 'Count', align: 'right', format: 'number' },
-        //   { key: 'total_last_year', label: 'Total Order Amount', align: 'right', format: 'currency' }
-        // ]
-    };
-
-    const INPUT_DATA = {
-      user_email_filter_value: data.body.user_email,
-      user_id_filter_value: data.body.user_id,
-      order_total_minimum_filter_value: data.body.order_total_minimum,
-      order_total_maximum_filter_value: data.body.order_total_maximum,
     };
 
     const reportFilters = [
@@ -261,7 +200,7 @@ class ReportService {
         )
         ORDER BY 1 ASC NULLS FIRST`;
 
-    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
+    return { reportUIConfig, sql, reportFilters };
   }
 
   async logsReportDefinition(data) {
