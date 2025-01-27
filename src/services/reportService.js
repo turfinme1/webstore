@@ -54,7 +54,7 @@ class ReportService {
 
     const reportDefinition = await this.reports[data.params.report](data);
     const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body);
-    const reportMetadata = this.formatReportMetadata(reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
+    const reportMetadata = this.formatReportMetadata(reportDefinition.reportFilters, data.body);
     const exportData = {
         res : data.res,
         format: data.params.format,
