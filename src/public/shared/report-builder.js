@@ -3,6 +3,7 @@ import { showToastMessage } from "./page-utility.js";
 class ReportBuilder {
     constructor(config) {
         this.config = config;
+        this.config.filters = this.config.filters.filter(filter => filter.displayInUI);
         this.elements = {};
         this.state = {
             filters: {},
@@ -14,10 +15,10 @@ class ReportBuilder {
         text: {
             template: (filter) => `
                 <div class="mb-3">
-                    <label for="${filter.key}" class="form-label">${filter.label}</label>
+                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
                     <input type="text" 
-                           id="${filter.key}" 
-                           name="${filter.key}" 
+                           id="${filter.key}_filter_value" 
+                           name="${filter.key}_filter_value" 
                            class="form-control" 
                            placeholder="${filter.placeholder || ''}"
                            ${filter.required ? 'required' : ''}>
@@ -28,10 +29,10 @@ class ReportBuilder {
             template: (filter) => `
                 <div class="row g-3">
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_minimum" class="form-label">${filter.label} Min</label>
+                        <label for="${filter.key}_minimum_filter_value" class="form-label">${filter.label} Min</label>
                         <input type="number" 
-                               id="${filter.key}_minimum" 
-                               name="${filter.key}_minimum" 
+                               id="${filter.key}_minimum_filter_value" 
+                               name="${filter.key}_minimum_filter_value" 
                                class="form-control" 
                                step="${filter.step || '1'}"
                                min="${filter.min || '0'}"
@@ -39,10 +40,10 @@ class ReportBuilder {
                                placeholder="Min">
                     </div>
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_maximum" class="form-label">${filter.label} Max</label>
+                        <label for="${filter.key}_maximum_filter_value" class="form-label">${filter.label} Max</label>
                         <input type="number" 
-                               id="${filter.key}_maximum"   
-                               name="${filter.key}_maximum" 
+                               id="${filter.key}_maximum_filter_value"   
+                               name="${filter.key}_maximum_filter_value" 
                                class="form-control" 
                                step="${filter.step || '1'}"
                                min="${filter.min || '0'}"
@@ -55,10 +56,10 @@ class ReportBuilder {
         number_single: {
             template: (filter) => `
                 <div class="mb-3">
-                    <label for="${filter.key}" class="form-label">${filter.label}</label>
+                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
                     <input type="number"
-                            id="${filter.key}"
-                            name="${filter.key}"
+                            id="${filter.key}_filter_value"
+                            name="${filter.key}_filter_value"
                             class="form-control"
                             step="${filter.step || '1'}"
                             min="${filter.min || '0'}"
@@ -72,21 +73,19 @@ class ReportBuilder {
             template: (filter) => `
                 <div class="row g-3">
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_minimum" class="form-label">${filter.label} Start</label>
-                        <div class="text-muted">Time is in UTC</div>
+                        <label for="${filter.key}_minimum_filter_value" class="form-label">${filter.label} Start (Time is in UTC)</label>
                         <input type="datetime-local" step="1" 
-                               id="${filter.key}_minimum"
+                               id="${filter.key}_minimum_filter_value"
                                value="${new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0, 16)}"
-                               name="${filter.key}_minimum" 
+                               name="${filter.key}_minimum_filter_value" 
                                class="form-control">
                     </div>
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_maximum" class="form-label">${filter.label} End</label>
-                        <div class="text-muted">Time is in UTC</div>
+                        <label for="${filter.key}_maximum_filter_value" class="form-label">${filter.label} End (Time is in UTC)</label>
                         <input type="datetime-local" step="1" 
-                               id="${filter.key}_maximum"
+                               id="${filter.key}_maximum_filter_value"
                                value="${new Date().toISOString().slice(0, 16)}" 
-                               name="${filter.key}_maximum" 
+                               name="${filter.key}_maximum_filter_value" 
                                class="form-control">
                     </div>
                 </div>
@@ -95,9 +94,9 @@ class ReportBuilder {
         select: {
             template: (filter) => `
                 <div class="mb-3">
-                    <label for="${filter.key}" class="form-label">${filter.label}</label>
-                    <select id="${filter.key}"
-                            name="${filter.key}"
+                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
+                    <select id="${filter.key}_filter_value"
+                            name="${filter.key}_filter_value"
                             class="form-select"
                             ${filter.required ? 'required' : ''}>
                         <option value="">Select ${filter.label}</option>
@@ -165,29 +164,6 @@ class ReportBuilder {
 
     static tableTemplates = {
         default: {
-            header: (columns) => `
-                <thead class="table-dark">
-                    <tr>
-                        ${columns.map(col => `<th>${col.label}</th>`).join('')}
-                    </tr>
-                </thead>
-            `,
-            row: (rowData, columns) => `
-                <tr>
-                    ${columns.map(col => `
-                        <td style="text-align: ${col.align || 'left'};">
-                             ${index === 0 && !rowData[col.key] 
-                                ? "Total:"
-                                : col.format 
-                                    ? this.formatters[col.format](rowData[col.key])
-                                    : rowData[col.key] || "---"
-                            }
-                        </td>
-                    `).join('')}
-                </tr>
-            `
-        },
-        groupedHeaders: {
             header: (headerGroups) => `
                 <thead class="table-dark">
                     ${headerGroups.map(group => `
@@ -340,7 +316,7 @@ class ReportBuilder {
         
         const table = document.createElement('table');
         table.className = 'table table-bordered table-striped table-hover';
-        const template = ReportBuilder.tableTemplates[this.config.tableTemplate || 'default'];
+        const template = ReportBuilder.tableTemplates['default'];
         table.innerHTML = `
             ${template.header(this.config.headerGroups)}
             <tbody id="report-table-body"></tbody>
@@ -431,7 +407,7 @@ class ReportBuilder {
         if (data?.rows?.length <= 1) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="${this.config.columns.length}" class="text-center">
+                    <td colspan="${this.config.headerGroups.flat().length}" class="text-center">
                         No data available
                     </td>
                 </tr>
@@ -439,8 +415,8 @@ class ReportBuilder {
             return;
         }
         tbody.innerHTML = data.rows.map(row => 
-            ReportBuilder.tableTemplates[this.config.tableTemplate || 'default']
-                .row(row, this.config.columns)
+            ReportBuilder.tableTemplates['default']
+                .row(row, this.config.headerGroups.flat())
         ).join('');
     }
 

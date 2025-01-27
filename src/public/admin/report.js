@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const reportConfig = await reportConfigResponse.json();
+    reportConfig.reportUIConfig.filters = reportConfig.reportFilters;
     const reportUI = new ReportBuilder(reportConfig.reportUIConfig);
     await reportUI.render('main-container');
 });
