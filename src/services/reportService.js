@@ -24,7 +24,7 @@ class ReportService {
             return reportDefinition;
         }
 
-        const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
+        const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body);
         let displayRowLimit = parseInt(data.context.settings.report_row_limit_display);
         const result = await data.dbConnection.query(`${replacedQueryData.sql} LIMIT ${displayRowLimit + 1}`, replacedQueryData.insertValues);
         const overRowDisplayLimit = result.rows.length === displayRowLimit + 1;
@@ -34,7 +34,7 @@ class ReportService {
         return { rows: result.rows, overRowDisplayLimit };
     } else if (this.dashboardReports[data.params.report]) {
         const reportDefinition = await this.dashboardReports[data.params.report](data);
-        const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
+        const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body);
     
         const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
         return { rows: result.rows };
@@ -53,8 +53,8 @@ class ReportService {
     });
 
     const reportDefinition = await this.reports[data.params.report](data);
-    const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
-    const reportMetadata = this.formatReportMetadata(reportDefinition.reportFilters, reportDefinition.INPUT_DATA);
+    const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body);
+    const reportMetadata = this.formatReportMetadata(reportDefinition.reportFilters, data.body);
     const exportData = {
         res : data.res,
         format: data.params.format,
@@ -110,68 +110,26 @@ class ReportService {
     const reportUIConfig =  {
         title: 'Orders Report by User',
         dataEndpoint: '/api/reports/report-orders-by-user',
-        filters: [
-            {
-                key: 'order_total',
-                label: 'Order Amount',
-                type: 'number',
-                step: '0.01',
-                min: 0,
-                max: 100000000
-            },
-            {
-                key: 'user_email',
-                label: 'User Email',
-                type: 'text',
-                placeholder: 'Enter user email'
-            },
-            {
-              key: 'user_id',
-              label: 'User ID',
-              type: "number_single",
-              placeholder: 'Enter user ID'
-            },
-        ],
-        tableTemplate: 'groupedHeaders',
         headerGroups: [
             [
-                { label: 'User Email', rowspan: 2 },
-                { label: 'User ID', rowspan: 2 },
-                { label: 'Last Day', colspan: 2 },
-                { label: 'Last Week', colspan: 2 },
-                { label: 'Last Month', colspan: 2 },
-                { label: 'Last Year', colspan: 2 }
+                { key: 'user_email', label: 'User Email', rowspan: 2, format: 'text' },
+                { key: 'user_id', label: 'User ID', rowspan: 2, align: 'right', format: 'text' },
+                { key: 'orders_last_day_col', label: 'Last Day', colspan: 2 },
+                { key: 'orders_last_week_col', label: 'Last Week', colspan: 2 },
+                { key: 'orders_last_month_col', label: 'Last Month', colspan: 2 },
+                { key: 'orders_last_year_col', label: 'Last Year', colspan: 2 }
             ],
             [
-                { label: 'Count' },
-                { label: 'Total Order Amount' },
-                { label: 'Count' },
-                { label: 'Total Order Amount' },
-                { label: 'Count' },
-                { label: 'Total Order Amount' },
-                { label: 'Count' },
-                { label: 'Total Order Amount' }
+                { key: 'orders_last_day', label: 'Count', align: 'right', format: 'number' },
+                { key: 'total_last_day', label: 'Total Order Amount', align: 'right', format: 'currency' },
+                { key: 'orders_last_week', label: 'Count', align: 'right', format: 'number' },
+                { key: 'total_last_week', label: 'Total Order Amount', align: 'right', format: 'currency' },
+                { key: 'orders_last_month', label: 'Count', align: 'right', format: 'number' },
+                { key: 'total_last_month', label: 'Total Order Amount', align: 'right', format: 'currency' },
+                { key: 'orders_last_year', label: 'Count', align: 'right', format: 'number' },
+                { key: 'total_last_year', label: 'Total Order Amount', align: 'right', format: 'currency' }
             ]
         ],
-        columns: [
-          { key: 'user_email', label: 'User Email', format: 'text' },
-          { key: 'user_id', label: 'User ID', align: 'right', format: 'text' },
-          { key: 'orders_last_day', label: 'Count', align: 'right', format: 'number' },
-          { key: 'total_last_day', label: 'Total Order Amount', align: 'right', format: 'currency' },
-          { key: 'orders_last_week', label: 'Count', align: 'right', format: 'number' },
-          { key: 'total_last_week', label: 'Total Order Amount', align: 'right', format: 'currency' },
-          { key: 'orders_last_month', label: 'Count', align: 'right', format: 'number' },
-          { key: 'total_last_month', label: 'Total Order Amount', align: 'right', format: 'currency' },
-          { key: 'orders_last_year', label: 'Count', align: 'right', format: 'number' },
-          { key: 'total_last_year', label: 'Total Order Amount', align: 'right', format: 'currency' }
-        ]
-    };
-
-    const INPUT_DATA = {
-      user_email_filter_value: data.body.user_email,
-      user_id_filter_value: data.body.user_id,
-      order_total_minimum_filter_value: data.body.order_total_minimum,
-      order_total_maximum_filter_value: data.body.order_total_maximum,
     };
 
     const reportFilters = [
@@ -180,12 +138,19 @@ class ReportService {
             grouping_expression: "U.email",
             filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            label: 'User Email',
+            displayInUI: true,
         },
         {
             key: "user_id",
             grouping_expression: "U.id",
             filter_expression: "U.id = $FILTER_VALUE$",
-            type: "select",
+            type: "number_single",
+            label: "User ID",
+            step: "1",
+            min: 0,
+            max: 100000000,
+            displayInUI: true,
         },
         {
             key: "order_total_minimum",
@@ -198,6 +163,15 @@ class ReportService {
             grouping_expression: "",
             filter_expression: "O.paid_amount <= $FILTER_VALUE$",
             type: "number",
+        },
+        {
+            key: 'order_total',
+            label: 'Order Amount',
+            type: 'number',
+            step: '0.01',
+            min: 0,
+            max: 100000000,
+            displayInUI: true,
         },
     ];
 
@@ -226,94 +200,28 @@ class ReportService {
         )
         ORDER BY 1 ASC NULLS FIRST`;
 
-    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
+    return { reportUIConfig, sql, reportFilters };
   }
 
   async logsReportDefinition(data) {
     const reportUIConfig =  {
         title: 'Logs Report',
         dataEndpoint: '/api/reports/report-logs',
-        filters: [
-            {
-                key: 'created_at',
-                label: 'Period',
-                type: 'timestamp',
-                groupable: true
-            },
-            {
-                key: 'status_code',
-                label: 'Status Code',
-                type: 'text',
-                placeholder: 'Enter status code',
-                groupable: true
-            },
-            {
-                key: 'log_level',
-                label: 'Log Level',
-                type: 'select',
-                placeholder: 'Enter log level',
-                options: [
-                    { value: 'INFO', label: 'INFO' },
-                    { value: 'ERROR', label: 'ERROR' },
-                ],
-                groupable: true
-            },
-            {
-                key: 'audit_type',
-                label: 'Audit Type',
-                type: 'select',
-                placeholder: 'Enter audit type',
-                options:[
-                    { value: 'ASSERT', label: 'ASSERT' },
-                    { value: 'ASSERT_USER', label: 'ASSERT_USER' },
-                    { value: 'ASSERT_PEER', label: 'ASSERT_PEER' },
-                    { value: 'TEMPORARY', label: 'TEMPORARY' },
-                    { value: 'INFO', label: 'INFO' }
-                ],
-                groupable: true
-            }
-        ],
-        tableTemplate: 'groupedHeaders',
         headerGroups: [
             [
-                { label: 'ID', rowspan: 2 },
-                { label: 'Created At', rowspan: 2 },
-                { label: 'Status Code', rowspan: 2 },
-                { label: 'Log Level', rowspan: 2 },
-                { label: 'Audit Type', rowspan: 2 },
-                { label: 'Short Description', rowspan: 2 },
-                { label: 'Long Description', rowspan: 2 },
-                { label: 'Debug Info', rowspan: 2 },
-                { label: 'User ID', rowspan: 2 },
-                { label: 'Admin User ID', rowspan: 2 },
-                { label: 'Count', rowspan: 2 }
+                { key: 'id', label: 'ID', rowspan: 2, align: 'right', format: 'text' },
+                { key: 'created_at', label: 'Created At', rowspan: 2, format: 'date_time' },
+                { key: 'status_code', label: 'Status Code', rowspan: 2, format: 'text' },
+                { key: 'log_level', label: 'Log Level', rowspan: 2, format: 'text' },
+                { key: 'audit_type', label: 'Audit Type', rowspan: 2, format: 'text' },
+                { key: 'short_description', label: 'Short Description', rowspan: 2, format: 'text' },
+                { key: 'long_description', label: 'Long Description', rowspan: 2, format: 'text' },
+                { key: 'debug_info', label: 'Debug Info', rowspan: 2, format: 'text' },
+                { key: 'user_id', label: 'User ID', align: 'right', rowspan: 2, format: 'text' },
+                { key: 'admin_user_id', label: 'Admin User ID', rowspan: 2, align: 'right', format: 'text' },
+                { key: 'count', label: 'Count', align: 'right', rowspan: 2, format: 'number' }
             ]
-        ],
-        columns: [
-          { key: 'id', label: 'ID', align: 'right', format: 'text' },
-          { key: 'created_at', label: 'Created At', format: 'date_time' },
-          { key: 'status_code', label: 'Status Code', format: 'text' },
-          { key: 'log_level', label: 'Log Level', format: 'text' },
-          { key: 'audit_type', label: 'Audit Type', format: 'text' },
-          { key: 'short_description', label: 'Short Description', format: 'text' },
-          { key: 'long_description', label: 'Long Description', format: 'text' },
-          { key: 'debug_info', label: 'Debug Info', format: 'text' },
-          { key: 'user_id', label: 'User ID', align: 'right', format: 'text' },
-          { key: 'admin_user_id', label: 'Admin User ID', align: 'right', format: 'text' },
-          { key: 'count', label: 'Count', align: 'right', format: 'number' }
         ]
-    };
-
-    const INPUT_DATA = {
-      created_at_minimum_filter_value: data.body.created_at_minimum,
-      created_at_maximum_filter_value: data.body.created_at_maximum,
-      status_code_filter_value: data.body.status_code,
-      log_level_filter_value: data.body.log_level,
-      audit_type_filter_value: data.body.audit_type,
-      created_at_grouping_select_value: data.body.created_at_grouping_select_value,
-      status_code_grouping_select_value: data.body.status_code_grouping_select_value,
-      log_level_grouping_select_value: data.body.log_level_grouping_select_value,
-      audit_type_grouping_select_value: data.body.audit_type_grouping_select_value,
     };
 
     const reportFilters = [
@@ -328,6 +236,9 @@ class ReportService {
             grouping_expression: "L.created_at",
             filter_expression: "L.created_at = $FILTER_VALUE$",
             type: "timestamp",
+            label: "Period",
+            groupable: true,
+            displayInUI: true,
         },
         {
             key: "admin_user_id",
@@ -364,17 +275,38 @@ class ReportService {
             grouping_expression: "L.status_code",
             filter_expression: "STRPOS(LOWER(CAST( L.status_code AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            label: 'Status Code',
+            groupable: true,
+            displayInUI: true,
         },
         {
             key: "log_level",
             grouping_expression: "L.log_level",
             filter_expression: "STRPOS(LOWER(CAST( L.log_level AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            label: 'Log Level',
+            options: [
+                { value: 'INFO', label: 'INFO' },
+                { value: 'ERROR', label: 'ERROR' },
+            ],
+            groupable: true,
+            displayInUI: true,
         },
         {
             key: "audit_type",
             grouping_expression: "L.audit_type",
             filter_expression: "L.audit_type = $FILTER_VALUE$",
+            label: 'Audit Type',
+            type: 'select',
+            options:[
+                { value: 'ASSERT', label: 'ASSERT' },
+                { value: 'ASSERT_USER', label: 'ASSERT_USER' },
+                { value: 'ASSERT_PEER', label: 'ASSERT_PEER' },
+                { value: 'TEMPORARY', label: 'TEMPORARY' },
+                { value: 'INFO', label: 'INFO' }
+            ],
+            groupable: true,
+            displayInUI: true,
         },
         {
             key: "created_at_minimum",
@@ -416,7 +348,7 @@ class ReportService {
         )
         ORDER BY 1 DESC NULLS FIRST`;
     
-    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
+    return { reportUIConfig, sql, reportFilters };
   }
 
   async ordersReportDefinition(data) {
@@ -433,190 +365,28 @@ class ReportService {
                 label: 'Export to Excel'
             }
         },
-        filters: [
-            {
-                key: 'created_at',
-                label: 'Period',
-                type: 'timestamp',
-                groupable: true
-            },
-            {
-                key: 'status',
-                label: 'Status',
-                type: 'select',
-                options: [
-                    { value: 'Pending', label: 'Pending' },
-                    { value: 'Paid', label: 'Paid' },
-                    { value: 'Delivered', label: 'Delivered' },
-                    { value: 'Cancelled', label: 'Cancelled' }
-                ],
-                groupable: true
-            },
-            {
-                key: "user_email",
-                label: "User Email",
-                type: "text",
-                placeholder: 'Enter user email',
-                groupable: true
-            },
-            {
-                key: "order_id",
-                label: "Order ID",
-                type: "text",
-                placeholder: 'Enter order ID',
-            },
-            {
-                key: "total_price",
-                label: "Total Price",
-                type: "number",
-                step: '0.01',
-                min: 0,
-                max: 1000000000000
-            },
-            {
-                key: 'days_since_order',
-                label: 'Days Since Order',
-                type: 'number',
-                step: '1',
-                min: 0,
-                max: 1000000000000
-            },
-            {
-                key: "discount_percentage",
-                label: "Discount %",
-                type: "number",
-                step: '0.01',
-                min: 0,
-                max: 100
-            },
-            {
-                key: "discount_amount",
-                label: "Discount Amount",
-                type: "number",
-                step: '0.01',
-                min: 0,
-                max: 1000000000000
-            },
-            {
-                key: "vat_percentage",
-                label: "VAT %",
-                type: "number",
-                step: '0.01',
-                min: 0,
-                max: 100
-            },
-            {
-                key: "vat_amount",
-                label: "VAT",
-                type: "number",
-                step: '0.01',
-                min: 0,
-                max: 1000000000000
-            },
-            {
-                key: "total_price_with_vat",
-                label: "Total Price with VAT",
-                type: "number",
-                step: '0.01',
-                min: 0,
-                max: 1000000000000
-            },
-            {
-                key: "voucher_code",
-                label: "Voucher Code",
-                type: "text",
-                placeholder: 'Enter voucher code',
-            },
-            {
-                key: "voucher_discount_amount",
-                label: "Voucher Discount",
-                type: "number",
-                step: '0.01',
-                min: 0,
-                max: 1000000000000
-            },
-            {
-                key: "paid_amount",
-                label: "Paid Amount",
-                type: "number",
-                step: '0.01',
-                min: 0,
-                max: 1000000000000
-            }
-        ],
-        tableTemplate: 'groupedHeaders',
         headerGroups: [
             [
-                { label: 'Created At', rowspan: 2 },
-                { label: 'Order ID', rowspan: 2 },
-                { label: 'Days Since Order', rowspan: 2 },
-                { label: 'User Email', rowspan: 2 },
-                { label: 'Status', rowspan: 2 },
-                { label: 'Total Price', rowspan: 2 },
-                { label: 'Discount %', rowspan: 2 },
-                { label: 'Discount', rowspan: 2 },
-                { label: 'VAT %', rowspan: 2 },
-                { label: 'VAT', rowspan: 2 },
-                { label: 'Total With VAT', rowspan: 2 },
-                { label: 'Voucher Code', rowspan: 2 },
-                { label: 'Voucher Discount', rowspan: 2 },
-                { label: 'Final Price', rowspan: 2 },
-                { label: 'Final Price without VAT', rowspan: 2 },
-                { label: 'Final Price VAT amount', rowspan: 2 },
-                { label: 'Paid Amount', rowspan: 2 },
-                { label: 'Count', rowspan: 2 }
+                { key: 'created_at', label: 'Created At', format: 'date_time', rowspan: 2 },
+                { key: 'order_id', label: 'Order ID', align: 'right', format: 'text', rowspan: 2 },
+                { key: 'days_since_order', label: 'Days Since Order', align: 'right', format: 'number', rowspan: 2 },
+                { key: 'user_email', label: 'User Email', format: 'text', rowspan: 2 },
+                { key: 'status', label: 'Status', format: 'text', rowspan: 2 },
+                { key: 'total_price', label: 'Total Price', align: 'right', format: 'currency', rowspan: 2 },
+                { key: 'discount_percentage', label: 'Discount %', align: 'right', format: 'percentage', rowspan: 2 },
+                { key: 'discount_amount', label: 'Discount', align: 'right', format: 'currency', rowspan: 2 },
+                { key: 'vat_percentage', label: 'VAT %', align: 'right', format: 'percentage', rowspan: 2 },
+                { key: 'vat_amount', label: 'VAT', align: 'right', format: 'currency', rowspan: 2 },
+                { key: 'total_price_with_vat', label: 'Total With VAT', align: 'right', format: 'currency', rowspan: 2 },
+                { key: 'voucher_code', label: 'Voucher Code', format: 'text', rowspan: 2 },
+                { key: 'voucher_discount_amount', label: 'Voucher Discount', align: 'right', format: 'currency', rowspan: 2 },
+                { key: 'total_price_with_voucher', label: 'Total Price with voucher', align: 'right', format: 'currency', rowspan: 2 },
+                { key: 'total_price_with_voucher_without_vat', label: 'Final Price without VAT', align: 'right', format: 'currency', rowspan: 2 },
+                { key: 'total_price_with_voucher_vat_amount', label: 'Final Price VAT amount', align: 'right', format: 'currency', rowspan: 2 },
+                { key: 'paid_amount', label: 'Paid Amount', align: 'right', format: 'currency', rowspan: 2 },
+                { key: 'count', label: 'Count', align: 'right', format: 'number', rowspan: 2 }
             ]
         ],
-        columns: [
-            { key: 'created_at', label: 'Created At', format: 'date_time' },
-            { key: 'order_id', label: 'Order ID', align: 'right', format: 'text' },
-            { key: 'days_since_order', label: 'Days Since Order', align: 'right', format: 'number' },
-            { key: 'user_email', label: 'User Email', format: 'text' },
-            { key: 'status', label: 'Status', format: 'text' },
-            { key: 'total_price', label: 'Total Price', align: 'right', format: 'currency' },
-            { key: 'discount_percentage', label: 'Discount %', align: 'right', format: 'percentage' },
-            { key: 'discount_amount', label: 'Discount', align: 'right', format: 'currency' },
-            { key: 'vat_percentage', label: 'VAT %', align: 'right', format: 'percentage' },
-            { key: 'vat_amount', label: 'VAT', align: 'right', format: 'currency' },
-            { key: 'total_price_with_vat', label: 'Total With VAT', align: 'right', format: 'currency' },
-            { key: 'voucher_code', label: 'Voucher Code', format: 'text' },
-            { key: 'voucher_discount_amount', label: 'Voucher Discount', align: 'right', format: 'currency' },
-            { key: 'total_price_with_voucher', label: 'Total Price with voucher', align: 'right', format: 'currency' },
-            { key: 'total_price_with_voucher_without_vat', label: 'Final Price without VAT', align: 'right', format: 'currency' },
-            { key: 'total_price_with_voucher_vat_amount', label: 'Final Price VAT amount', align: 'right', format: 'currency' },
-            { key: 'paid_amount', label: 'Paid Amount', align: 'right', format: 'currency' },
-            { key: 'count', label: 'Count', align: 'right', format: 'number' }
-        ]
-    };
-
-    const INPUT_DATA = {
-        created_at_minimum_filter_value: data.body.created_at_minimum,
-        created_at_maximum_filter_value: data.body.created_at_maximum,
-        order_id_filter_value: data.body.order_id,
-        status_filter_value: data.body.status,
-        total_price_minimum_filter_value: data.body.total_price_minimum,
-        total_price_maximum_filter_value: data.body.total_price_maximum,
-        days_since_order_minimum_filter_value: data.body.days_since_order_minimum,
-        days_since_order_maximum_filter_value: data.body.days_since_order_maximum,
-        user_email_filter_value: data.body.user_email,
-        user_email_grouping_select_value: data.body.user_email_grouping_select_value,
-        discount_percentage_minimum_filter_value: data.body.discount_percentage_minimum,
-        discount_percentage_maximum_filter_value: data.body.discount_percentage_maximum,
-        discount_amount_minimum_filter_value: data.body.discount_amount_minimum,
-        discount_amount_maximum_filter_value: data.body.discount_amount_maximum,
-        vat_percentage_minimum_filter_value: data.body.vat_percentage_minimum,
-        vat_percentage_maximum_filter_value: data.body.vat_percentage_maximum,
-        vat_amount_minimum_filter_value: data.body.vat_amount_minimum,
-        vat_amount_maximum_filter_value: data.body.vat_amount_maximum,
-        total_price_with_vat_minimum_filter_value: data.body.total_price_with_vat_minimum,
-        total_price_with_vat_maximum_filter_value: data.body.total_price_with_vat_maximum,
-        voucher_code_filter_value: data.body.voucher_code,
-        voucher_discount_amount_minimum_filter_value: data.body.voucher_discount_amount_minimum,
-        voucher_discount_amount_maximum_filter_value: data.body.voucher_discount_amount_maximum,
-        paid_amount_minimum_filter_value: data.body.paid_amount_minimum,
-        paid_amount_maximum_filter_value: data.body.paid_amount_maximum,
-        created_at_grouping_select_value: data.body.created_at_grouping_select_value,
-        status_grouping_select_value: data.body.status_grouping_select_value,
     };
 
     const reportFilters = [
@@ -625,36 +395,77 @@ class ReportService {
             grouping_expression: "O.created_at",
             filter_expression: "O.created_at = $FILTER_VALUE$",
             type: "timestamp",
+            label: "Period",
+            groupable: true,
+            displayInUI: true,
         },
         {
-            key: "days_since_order",
-            grouping_expression: "EXTRACT(DAY FROM (NOW() - O.created_at))",
-            filter_expression: "",
-            type: "number",
-        },
-        {
-            key: "order_id",
-            grouping_expression: "O.id",
-            filter_expression: "O.id = $FILTER_VALUE$",
-            type: "text",
+            key: "status",
+            grouping_expression: "O.status",
+            filter_expression: "O.status = $FILTER_VALUE$",
+            type: 'select',
+            label: 'Status',
+            options: [
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Paid', label: 'Paid' },
+                { value: 'Delivered', label: 'Delivered' },
+                { value: 'Cancelled', label: 'Cancelled' }
+            ],
+            groupable: true,
+            displayInUI: true,
         },
         {
             key: "user_email",
             grouping_expression: "U.email",
             filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            label: "User Email",
+            groupable: true,
+            displayInUI: true,
         },
         {
-            key: "status",
-            grouping_expression: "O.status",
-            filter_expression: "O.status = $FILTER_VALUE$",
+            key: "order_id",
+            grouping_expression: "O.id",
+            filter_expression: "O.id = $FILTER_VALUE$",
             type: "text",
+            label: "Order ID",
+            displayInUI: true,
         },
+        {
+            key: "total_price",
+            grouping_expression: "O.total_price",
+            filter_expression: "",
+            type: "number",
+            label: "Total Price",
+            step: '0.01',
+            min: 0,
+            max: 1000000000000,
+            displayInUI: true,
+        },
+        {
+            key: "days_since_order",
+            grouping_expression: "EXTRACT(DAY FROM (NOW() - O.created_at))",
+            filter_expression: "",
+            type: "number",
+            label: 'Days Since Order',
+            type: 'number',
+            step: '1',
+            min: 0,
+            max: 1000000000000,
+            displayInUI: true,
+        },
+        
         {
             key: "discount_percentage",
             grouping_expression: "O.discount_percentage",
             filter_expression: "",
             type: "number",
+            label: "Discount %",
+            type: "number",
+            step: '0.01',
+            min: 0,
+            max: 100,
+            displayInUI: true,
         },
         {
             key: "discount_percentage_minimum",
@@ -667,6 +478,15 @@ class ReportService {
             grouping_expression: "",
             filter_expression: "O.discount_percentage <= $FILTER_VALUE$",
             type: "number",
+        },
+        {
+            key: "discount_amount",
+            label: "Discount Amount",
+            type: "number",
+            step: '0.01',
+            min: 0,
+            max: 1000000000000,
+            displayInUI: true,
         },
         {
             key: "discount_amount_minimum",
@@ -685,6 +505,11 @@ class ReportService {
             grouping_expression: "O.vat_percentage",
             filter_expression: "",
             type: "number",
+            label: "VAT %",
+            step: '0.01',
+            min: 0,
+            max: 100,
+            displayInUI: true,
         },
         {
             key: "vat_percentage_minimum",
@@ -699,6 +524,17 @@ class ReportService {
             type: "number",
         },
         {
+            key: "vat_amount",
+            grouping_expression: "",
+            filter_expression: "",
+            label: "VAT",
+            type: "number",
+            step: '0.01',
+            min: 0,
+            max: 1000000000000,
+            displayInUI: true,
+        },
+        {
             key: "vat_amount_minimum",
             grouping_expression: "",
             filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2) >= $FILTER_VALUE$",
@@ -709,6 +545,17 @@ class ReportService {
             grouping_expression: "",
             filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2) <= $FILTER_VALUE$",
             type: "number",
+        },
+        {
+            key: "total_price_with_vat",
+            grouping_expression: "",
+            filter_expression: "",
+            label: "Total Price with VAT",
+            type: "number",
+            step: '0.01',
+            min: 0,
+            max: 1000000000000,
+            displayInUI: true,
         },
         {
             key: "total_price_with_vat_minimum",
@@ -727,12 +574,19 @@ class ReportService {
             grouping_expression: "O.voucher_code",
             filter_expression: "STRPOS(LOWER(CAST( O.voucher_code AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            label: "Voucher Code",
+            displayInUI: true,
         },
         {
             key: "voucher_discount_amount",
             grouping_expression: "O.voucher_discount_amount",
             filter_expression: "",
             type: "number",
+            label: "Voucher Discount",
+            step: '0.01',
+            min: 0,
+            max: 1000000000000,
+            displayInUI: true,
         },
         {
             key: "voucher_discount_amount_minimum",
@@ -745,6 +599,17 @@ class ReportService {
             grouping_expression: "",
             filter_expression: "O.voucher_discount_amount <= $FILTER_VALUE$",
             type: "number",
+        },
+        {
+            key: "paid_amount",
+            grouping_expression: "",
+            filter_expression: "",
+            label: "Paid Amount",
+            type: "number",
+            step: '0.01',
+            min: 0,
+            max: 1000000000000,
+            displayInUI: true,
         },
         {
             key: "paid_amount_minimum",
@@ -770,6 +635,7 @@ class ReportService {
             filter_expression: "O.created_at <= $FILTER_VALUE$",
             type: "timestamp",
         },
+       
         {
             key:"total_price_minimum",
             grouping_expression: "",
@@ -852,160 +718,118 @@ class ReportService {
         ) subquery
         ORDER BY 1 DESC NULLS FIRST`;
 
-    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
+    return { reportUIConfig, sql, reportFilters };
   }
 
   async usersReportDefinition(data) {
     const reportUIConfig = {
         title: 'Users Report',
         dataEndpoint: '/api/reports/report-users',
-        filters: [
-            {
-                key: 'created_at',
-                label: 'Period',
-                type: 'timestamp',
-                groupable: true
-            },
-            {
-                key: 'country_name',
-                label: 'Country',
-                type: 'select',
-                placeholder: 'Enter country',
-                groupable: true,
-                fetchFrom: "/crud/iso-country-codes",
-                displayKey: 'country_name',
-                valueKey: 'id'
-            },
-            {
-                key: 'phone_code',
-                label: 'Phone Code',
-                type: 'select',
-                placeholder: 'Enter phone code',
-                groupable: true,
-                fetchFrom: "/crud/iso-country-codes",
-                displayKey: 'phone_code',
-                valueKey: 'id'
-            },
-            {
-                key: "is_email_verified",
-                label: "Is Email Verified",
-                type: "select",
-                options: [
-                    { value: 'true', label: 'Yes' },
-                    { value: 'false', label: 'No' }
-                ],
-                groupable: true
-            },
-            {
-                key: 'days_since_creation',
-                label: 'Days since creation',
-                type: 'number',
-                step: '1',
-                min: 0,
-                max: 100000000
-            },
-            {
-                key: 'first_name',
-                label: 'First Name',
-                type: 'text',
-            },
-            {
-                key: 'last_name',
-                label: 'Last Name',
-                type: 'text',
-            },
-            {
-                key: 'email',
-                label: 'Email',
-                type: 'text',
-            },
-        ],
-        tableTemplate: 'groupedHeaders',
         headerGroups: [
             [
-                { label: 'Created At', rowspan: 2 },
-                { label: 'First Name', rowspan: 2 },
-                { label: 'Last Name', rowspan: 2 },
-                { label: 'Email', rowspan: 2 },
-                { label: 'Phone Code', rowspan: 2 },
-                { label: 'Phone', rowspan: 2 },
-                { label: 'Country', rowspan: 2 },
-                { label: 'Gender', rowspan: 2 },
-                { label: 'Birth Date', rowspan: 2 },
-                { label: 'Is Email Verified', rowspan: 2 },
-                { label: 'Days Since Creation', rowspan: 2 },
-                { label: 'Count', rowspan: 2 }
+                { key: 'created_at', label: 'Created At', rowspan: 2, format: 'date_time' },
+                { key: 'first_name', label: 'First Name', rowspan: 2, format: 'text' },
+                { key: 'last_name', label: 'Last Name', rowspan: 2, format: 'text' },
+                { key: 'email', label: 'Email', rowspan: 2, format: 'text' },
+                { key: 'phone_code', label: 'Phone Code', rowspan: 2, format: 'text' },
+                { key: 'phone', label: 'Phone', rowspan: 2, format: 'text' },
+                { key: 'country_name', label: 'Country', rowspan: 2, format: 'text' },
+                { key: 'gender', label: 'Gender', rowspan: 2, format: 'text' },
+                { key: 'birth_date', label: 'Birth Date', rowspan: 2, format: 'date' },
+                { key: 'is_email_verified', label: 'Is Email Verified', rowspan: 2, format: 'boolean' },
+                { key: 'days_since_creation', label: 'Days Since Creation', rowspan: 2, align: 'right', format: 'number' },
+                { key: 'count', label: 'Count', rowspan: 2, align: 'right', format: 'number' }
             ]
         ],
-        columns: [
-            { key: 'created_at', label: 'Created At', format: 'date_time' },
-            { key: 'first_name', label: 'First Name', format: 'text' },
-            { key: 'last_name', label: 'Last Name', format: 'text' },
-            { key: 'email', label: 'Email', format: 'text' },
-            { key: 'phone_code', label: 'Phone Code', format: 'text' },
-            { key: 'phone', label: 'Phone', format: 'text' },
-            { key: 'country_name', label: 'Country', format: 'text' },
-            { key: 'gender', label: 'Gender', format: 'text' },
-            { key: 'birth_date', label: 'Birth Date', format: 'date' },
-            { key: 'is_email_verified', label: 'Is Email Verified', format: 'boolean' },
-            { key: 'days_since_creation', label: 'Days Since Creation', align: 'right', format: 'number' },
-            { key: 'count', label: 'Count', align: 'right', format: 'number' }
-        ]
-    };
-
-    const INPUT_DATA = {
-        first_name_filter_value: data.body.first_name,
-        last_name_filter_value: data.body.last_name,
-        email_filter_value: data.body.email,
-        country_name_filter_value: data.body.country_name,
-        phone_code_filter_value: data.body.phone_code,
-        created_at_minimum_filter_value: data.body.created_at_minimum,
-        created_at_maximum_filter_value: data.body.created_at_maximum,
-        days_since_creation_minimum_filter_value: data.body.days_since_creation_minimum,
-        days_since_creation_maximum_filter_value: data.body.days_since_creation_maximum,
-        created_at_grouping_select_value: data.body.created_at_grouping_select_value,
-        country_name_grouping_select_value: data.body.country_name_grouping_select_value,
-        phone_code_grouping_select_value: data.body.phone_code_grouping_select_value,
-        is_email_verified_filter_value: data.body.is_email_verified,
-        is_email_verified_grouping_select_value: data.body.is_email_verified_grouping_select_value,
     };
 
     const reportFilters = [
+        {
+            key: "created_at",
+            grouping_expression: "U.created_at",
+            filter_expression: "U.created_at = $FILTER_VALUE$",
+            type: "timestamp",
+            label: "Period",
+            groupable: true,
+            displayInUI: true,
+        },
+        {
+            key: "country_name",
+            grouping_expression: "cc.country_name",
+            filter_expression: "cc.id = $FILTER_VALUE$",
+            type: "select",
+            label: "Country",
+            groupable: true,
+            fetchFrom: "/crud/iso-country-codes",
+            displayKey: 'country_name',
+            valueKey: 'id',
+            displayInUI: true,
+        },
+        {
+            key: "phone_code",
+            grouping_expression: "icc.phone_code",
+            filter_expression: "icc.id = $FILTER_VALUE$",
+            type: "select",
+            label: "Phone Code",
+            groupable: true,
+            fetchFrom: "/crud/iso-country-codes",
+            displayKey: 'phone_code',
+            valueKey: 'id',
+            displayInUI: true,
+        },
+        {
+            key: "is_email_verified",
+            grouping_expression: "U.is_email_verified",
+            filter_expression: "U.is_email_verified = $FILTER_VALUE$",
+            type: "select",
+            label: "Is Email Verified",
+            groupable: true,
+            options: [
+                { value: 'true', label: 'Yes' },
+                { value: 'false', label: 'No' }
+            ],
+            displayInUI: true,
+        },
+        {
+            key: "days_since_creation",
+            grouping_expression: "DATE_PART('day', CURRENT_DATE - U.created_at)", 
+            filter_expression: "",
+            type: "number",
+            label: "Days Since Creation",
+            step: '1',
+            min: 0,
+            max: 100000000,
+            displayInUI: true,
+        },
         {
             key: "first_name",
             grouping_expression: "U.first_name",
             filter_expression: "STRPOS(LOWER(CAST( U.first_name AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            label: "First Name",
+            displayInUI: true,
         },
         {
             key: "last_name",
             grouping_expression: "U.last_name",
             filter_expression: "STRPOS(LOWER(CAST( U.last_name AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            label: "Last Name",
+            displayInUI: true,
         },
         {
             key: "email",
             grouping_expression: "U.email",
             filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            label: "Email",
+            displayInUI: true,
         },
         {
             key: "phone",
             grouping_expression: "U.phone",
             filter_expression: "",
             type: "text",
-        },
-        {
-            key: "phone_code",
-            grouping_expression: "icc.phone_code",
-            filter_expression: "icc.id = $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "country_name",
-            grouping_expression: "cc.country_name",
-            filter_expression: "cc.id = $FILTER_VALUE$",
-            type: "number",
         },
         {
             key: "gender",
@@ -1020,18 +844,6 @@ class ReportService {
             type: "timestamp",
         },
         {
-            key: "is_email_verified",
-            grouping_expression: "U.is_email_verified",
-            filter_expression: "U.is_email_verified = $FILTER_VALUE$",
-            type: "text",
-        },
-        {
-            key: "created_at",
-            grouping_expression: "U.created_at",
-            filter_expression: "U.created_at = $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
             key: "created_at_minimum",
             grouping_expression: "",
             filter_expression: "U.created_at >= $FILTER_VALUE$",
@@ -1042,12 +854,6 @@ class ReportService {
             grouping_expression: "",
             filter_expression: "U.created_at <= $FILTER_VALUE$",
             type: "timestamp",
-        },
-        {
-            key: "days_since_creation",
-            grouping_expression: "DATE_PART('day', CURRENT_DATE - U.created_at)", 
-            filter_expression: "",
-            type: "number",
         },
         {
             key: "days_since_creation_minimum",
@@ -1098,16 +904,11 @@ class ReportService {
         )
         ORDER BY 1 NULLS FIRST`;
     
-    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
+    return { reportUIConfig, sql, reportFilters };
   }
 
   async storeTrendsReportDefinition(data) {
     const reportUIConfig = {};
-
-    const INPUT_DATA = {
-        start_date_filter_value: data.body.start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        end_date_filter_value: data.body.end_date || new Date().toISOString(),
-    };
 
     const reportFilters = [
         {
@@ -1115,12 +916,16 @@ class ReportService {
             grouping_expression: "",
             filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date)",
             type: "timestamp",
+            label: "Start Date",
+            displayInUI: true,
           },
           {
             key: "end_date", 
             grouping_expression: "",
             filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date + INTERVAL '1 day')",
-            type: "timestamp", 
+            type: "timestamp",
+            label: "End Date",
+            displayInUI: true,
         },
     ];
 
@@ -1251,16 +1056,11 @@ class ReportService {
         CROSS JOIN prev_week_order_metrics;
     `;
   
-    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
+    return { reportUIConfig, sql, reportFilters };
   }
 
   async campaignTrendsReportDefinition(data) {
     const reportUIConfig = {};
-  
-    const INPUT_DATA = {
-      start_date_filter_value: data.body.start_date || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      end_date_filter_value: data.body.end_date || new Date().toISOString(),
-    };
   
     const reportFilters = [
       {
@@ -1268,12 +1068,16 @@ class ReportService {
         grouping_expression: "",
         filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date)",
         type: "timestamp",
+        label: "Start Date",
+        displayInUI: true,
       },
       {
         key: "end_date", 
         grouping_expression: "",
         filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date + INTERVAL '1 day')",
-        type: "timestamp", 
+        type: "timestamp",
+        label: "End Date",
+        displayInUI: true,
       },
     ];
   
@@ -1348,7 +1152,7 @@ class ReportService {
         CROSS JOIN prev_week_campaign_metrics pw;
     `;  
   
-    return { reportUIConfig, sql, reportFilters, INPUT_DATA };
+    return { reportUIConfig, sql, reportFilters };
   }
 
   formatReportMetadata(reportFilters, INPUT_DATA) {

@@ -43,7 +43,6 @@ describe("ReportService", () => {
       expect(result).toHaveProperty("reportUIConfig");
       expect(result).toHaveProperty("sql");
       expect(result).toHaveProperty("reportFilters");
-      expect(result).toHaveProperty("INPUT_DATA");
     });
 
     it("should execute query and return results when metadataRequest is false", async () => {
@@ -75,9 +74,9 @@ describe("ReportService", () => {
 
       const data = {
         body: {
-          status: "Paid",
-          created_at_minimum: "2024-01-01",
-          created_at_maximum: "2024-12-31",
+          status_filter_value: "Paid",
+          created_at_minimum_filter_value: "2024-01-01",
+          created_at_maximum_filter_value: "2024-12-31",
         },
         params: { report: "report-orders" },
         dbConnection: mockDbConnection,
@@ -164,16 +163,9 @@ describe("ReportService", () => {
         expect(result).toHaveProperty("reportUIConfig");
         expect(result).toHaveProperty("sql");
         expect(result).toHaveProperty("reportFilters");
-        expect(result).toHaveProperty("INPUT_DATA");
 
         expect(result.reportUIConfig.title).toBe("Orders Report by User");
-        expect(result.reportUIConfig.filters).toHaveLength(3);
-        expect(result.INPUT_DATA).toEqual({
-          user_email_filter_value: "test@example.com",
-          user_id_filter_value: "1",
-          order_total_minimum_filter_value: "100",
-          order_total_maximum_filter_value: "200",
-        });
+        
       });
 
       it("should have correct SQL query structure", async () => {
@@ -202,30 +194,10 @@ describe("ReportService", () => {
         const result = await reportService.logsReportDefinition(data);
 
         expect(result.reportUIConfig.title).toBe("Logs Report");
-        expect(result.reportUIConfig.filters).toHaveLength(4);
-        expect(result.INPUT_DATA).toEqual({
-          created_at_minimum_filter_value: "2024-01-01",
-          created_at_maximum_filter_value: "2024-12-31",
-          status_code_filter_value: "400",
-          log_level_filter_value: "ERROR",
-          created_at_grouping_select_value: "day",
-          status_code_grouping_select_value: undefined,
-          log_level_grouping_select_value: undefined,
-        });
+        
       });
 
-      it("should include correct filter options", async () => {
-        const data = { body: {} };
-        const result = await reportService.logsReportDefinition(data);
-
-        const logLevelFilter = result.reportUIConfig.filters.find(
-          (f) => f.key === "log_level"
-        );
-        expect(logLevelFilter.options).toEqual([
-          { value: "INFO", label: "INFO" },
-          { value: "ERROR", label: "ERROR" },
-        ]);
-      });
+      
     });
 
     describe("ordersReportDefinition", () => {
@@ -246,12 +218,7 @@ describe("ReportService", () => {
         expect(result.reportUIConfig.exportConfig.csv).toBeDefined();
         expect(result.reportUIConfig.exportConfig.excel).toBeDefined();
 
-        expect(result.INPUT_DATA).toMatchObject({
-          created_at_minimum_filter_value: "2024-01-01",
-          status_filter_value: "Paid",
-          total_price_minimum_filter_value: "100",
-          created_at_grouping_select_value: "month",
-        });
+       
       });
 
       it("should have correct SQL calculations", async () => {

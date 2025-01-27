@@ -19,40 +19,21 @@
                 }
             }
         },
-        "filters": {
-            "type": "array"
-        },
-        "tableTemplate": {
-            "type": "string",
-            "enum": [
-                "groupedHeaders",
-                "simple"
-            ]
-        },
         "headerGroups": {
-            "type": "array"
-        },
-        "columns": {
             "type": "array"
         }
     },
     "required": [
         "title",
         "dataEndpoint",
-        "filters",
-        "tableTemplate",
-        "headerGroups",
-        "columns"
+        "headerGroups"
     ],
     "additionalProperties": true,
     "errorMessage": {
         "required": {
             "title": "Title is required.",
             "dataEndpoint": "Data endpoint is required.",
-            "filters": "Filters are required.",
-            "tableTemplate": "Table template is required.",
-            "headerGroups": "Header groups are required.",
-            "columns": "Columns are required."
+            "headerGroups": "Header groups are required."
         }
     }
 }

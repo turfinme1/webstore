@@ -308,7 +308,7 @@ async function renderDashboard(startDate, endDate) {
     const response = await fetchWithErrorHandling('/api/reports/store-trends', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ start_date: startDate, end_date: endDate })
+      body: JSON.stringify({ start_date_filter_value: startDate, end_date_filter_value: endDate })
     });
 
     if(!response.ok) {
@@ -412,7 +412,7 @@ async function renderCampaignDashboard(startDate, endDate) {
     const response = await fetchWithErrorHandling('/api/reports/campaign-trends', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ start_date: startDate, end_date: endDate })
+      body: JSON.stringify({ start_date_filter_value: startDate, end_date_filter_value: endDate })
     });
 
     if(!response.ok) {
