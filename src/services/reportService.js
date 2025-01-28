@@ -384,6 +384,7 @@ class ReportService {
                 { key: 'total_price_with_voucher_without_vat', label: 'Final Price without VAT', align: 'right', format: 'currency', rowspan: 2 },
                 { key: 'total_price_with_voucher_vat_amount', label: 'Final Price VAT amount', align: 'right', format: 'currency', rowspan: 2 },
                 { key: 'paid_amount', label: 'Paid Amount', align: 'right', format: 'currency', rowspan: 2 },
+                { key: 'total_stock_price', label: 'Total Stock Price', align: 'right', format: 'currency', rowspan: 2 },
                 { key: 'count', label: 'Count', align: 'right', format: 'number', rowspan: 2 }
             ]
         ],
@@ -660,6 +661,12 @@ class ReportService {
             filter_expression: "EXTRACT(DAY FROM (NOW() - O.created_at)) <= $FILTER_VALUE$",
             type: "number",
         },
+        {
+            key: "total_stock_price",
+            grouping_expression: "O.total_stock_price",
+            filter_expression: "O.total_stock_price >= $FILTER_VALUE$",
+            type: "number",
+        }
     ];
 
     let sql = `
@@ -683,6 +690,7 @@ class ReportService {
                     (GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100)), 2)) AS total_price_with_voucher_vat_amount,
                 SUM(paid_amount) AS "paid_amount",
                 SUM(O.total_price) AS "total_price",
+                SUM(O.total_stock_price) AS "total_stock_price",
                 COUNT(*) as count
             FROM orders O
             JOIN users U ON U.id = O.user_id
