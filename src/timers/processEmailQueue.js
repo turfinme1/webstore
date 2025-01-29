@@ -14,6 +14,7 @@ const EMAIL_STATUS = {
     SENDING: 'sending',
     SENT: 'sent',
     RETRY: 'retry',
+    FAILED: 'failed'
 };
 
 const RETRY_BACKOFF = {
@@ -93,7 +94,10 @@ const EMAIL_ERROR_TYPES = {
                 
                 await client.query(`
                     UPDATE emails 
-                    SET status = $1,
+                    SET status = CASE 
+                                    WHEN attempts + 1 >= $7 THEN $8
+                                    ELSE $1 
+                                END,
                         error_type = $2,
                         error = $3,
                         attempts = attempts + 1,
@@ -102,7 +106,7 @@ const EMAIL_ERROR_TYPES = {
                         retry_after = NOW() + (INTERVAL '1 minute' * $4),
                         priority = GREATEST(priority - 1, 1)
                     WHERE id = $5 AND lock_id = $6`,
-                    [EMAIL_STATUS.RETRY, errorType, error.message, retryDelay, email.id, lockId]
+                    [EMAIL_STATUS.RETRY, errorType, error.message, retryDelay, email.id, lockId, MAX_ATTEMPTS, EMAIL_STATUS.FAILED]
                 );
 
                 await logger.error(error);
