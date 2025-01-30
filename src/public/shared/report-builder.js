@@ -7,7 +7,8 @@ class ReportBuilder {
         this.elements = {};
         this.state = {
             filters: {},
-            tableData: null
+            tableData: null,
+            sortCriteria: [],
         };
     }
 
@@ -170,7 +171,9 @@ class ReportBuilder {
                         <tr>
                             ${group.map(header => `
                                 <th colspan="${header.colspan || 1}" 
-                                    rowspan="${header.rowspan || 1}">
+                                    rowspan="${header.rowspan || 1}"
+                                    ${header.sortable !== false ? `data-sort-key="${header.key}"` : ''}
+                                    class="${header.sortable !== false ? 'sortable' : ''}">
                                     ${header.label}
                                 </th>
                             `).join('')}
@@ -360,21 +363,65 @@ class ReportBuilder {
                 const formData = new FormData(form);
                 const filters = Object.fromEntries(formData);
                 await this.fetchData(filters);
+                this.state.sortCriteria = [];
+                this.updateSortIndicators();
             }
+        });
+        document.querySelectorAll('th.sortable').forEach(header => {
+            header.addEventListener('click', async (e) => {
+                await this.handleSortChange(e);
+            });
         });
     }
 
-    async fetchData(filters) {
+    async handleSortChange(e) {
+        const key = e.currentTarget.dataset.sortKey;
+        const currentCriteria = [...this.state.sortCriteria];
+        const existingIndex = currentCriteria.findIndex(c => c.key === key);
+    
+        let newDirection;
+        if (existingIndex === -1) {
+            newDirection = 'ASC';
+        } else {
+            const currentDirection = currentCriteria[existingIndex].direction;
+            newDirection = currentDirection === 'ASC' ? 'DESC' : 'none';
+        }
+    
+        if (existingIndex !== -1) currentCriteria.splice(existingIndex, 1);
+        if (newDirection !== 'none') currentCriteria.unshift({ key, direction: newDirection });
+    
+        this.state.sortCriteria = currentCriteria;
+
+        if(await this.validateForm()) {
+            const formData = new FormData(document.getElementById('report-form'));
+            const filters = Object.fromEntries(formData);
+            await this.fetchData(filters, this.state.sortCriteria);
+        }
+    }
+
+    updateSortIndicators() {
+        document.querySelectorAll('th[data-sort-key]').forEach(header => {
+            const key = header.dataset.sortKey;
+            const sortEntry = this.state.sortCriteria.find(c => c.key === key);
+            const sortEntryPosition = this.state.sortCriteria.findIndex(c => c.key === key);
+            header.innerHTML = header.innerHTML.replace(/\d+/s, '');
+            header.innerHTML = header.innerHTML.replace(/ ↑| ↓/g, '');
+            if (sortEntry) header.innerHTML += sortEntry.direction === 'ASC' ? ` ${sortEntryPosition+1}↑` : `${sortEntryPosition+1}↓`;
+        });
+    }
+
+    async fetchData(filters, sortCriteria) {
         const spinner = document.getElementById('spinner');
         const button = document.querySelector('button[type="submit"]');
         button.disabled = true;
         spinner.style.display = 'block';
+        document.querySelectorAll('th.sortable').forEach(header => header.style.pointerEvents = 'none');
 
         try {
             const response = await fetch(this.config.dataEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(filters)
+                body: JSON.stringify({ ...filters, sortCriteria })
             });
             
             const data = await response.json();
@@ -392,6 +439,7 @@ class ReportBuilder {
         } finally {
             button.disabled = false;
             spinner.style.display = 'none';
+            document.querySelectorAll('th.sortable').forEach(header => header.style.pointerEvents = 'auto');
         }
     }
 
@@ -421,6 +469,8 @@ class ReportBuilder {
             ReportBuilder.tableTemplates['default']
                 .row(row, this.config.headerGroups.flat())
         ).join('');
+
+        this.updateSortIndicators();
     }
 
     buildExportSection(exportConfig) {

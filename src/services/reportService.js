@@ -97,13 +97,33 @@ class ReportService {
 
         insertValues.push(filterValue);
         filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
-        sql = sql.replace(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
+        sql = sql.replaceAll(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
       } else {
-        sql = sql.replace(`$${reportFilter.key}_filter_expression$`, 'TRUE');
+        sql = sql.replaceAll(`$${reportFilter.key}_filter_expression$`, 'TRUE');
       }
     }
 
-    return {sql, insertValues};
+    if (INPUT_DATA.sortCriteria && Array.isArray(INPUT_DATA.sortCriteria)) {
+        const validDirections = ['ASC', 'DESC'];
+        const orderClauses = INPUT_DATA.sortCriteria
+            .filter(criteria => {
+                const filterExists = reportFilters.some(filter => filter.key === criteria.key);
+                const isValidDirection = validDirections.includes(criteria.direction);
+                return filterExists && isValidDirection;
+            })
+            .map(criteria => {
+                const filter = reportFilters.find(f => f.key === criteria.key);
+                return `${filter.key} ${criteria.direction} `;
+            });
+
+        if (orderClauses.length > 0) {
+            const orderByClause = ` ${orderClauses.join(', ')}`;
+            // sql = sql.replace(/ORDER BY.*?(LIMIT|$)/i, `${orderByClause} `);
+            sql = sql.replace('1 DESC', `${orderByClause} `);
+        }
+    }
+
+    return { sql, insertValues };
   }
 
   async ordersByUserReportDefinition(data) {
@@ -173,9 +193,63 @@ class ReportService {
             max: 100000000,
             displayInUI: true,
         },
+        {
+            key: "orders_last_day",
+            type: "number",
+        },
+        {
+            key: "total_last_day",
+            type: "number",
+        },
+        {
+            key: "orders_last_week",
+            type: "number",
+        },
+        {
+            key: "total_last_week",
+            type: "number",
+        },
+        {
+            key: "orders_last_month",
+            type: "number",
+        },
+        {
+            key: "total_last_month",
+            type: "number",
+        },
+        {
+            key: "orders_last_year",
+            type: "number",
+        },
+        {
+            key: "total_last_year",
+            type: "number",
+        },
     ];
 
     let sql = `
+        SELECT
+            NULL AS "user_email",
+            NULL AS "user_id",
+            COUNT(CASE WHEN O.created_at >= NOW() - INTERVAL '1 day' THEN 1 END) AS "orders_last_day",
+            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 day' THEN O.paid_amount END), 0) AS "total_last_day",
+            COUNT(CASE WHEN O.created_at >= NOW() - INTERVAL '1 week' THEN 1 END) AS "orders_last_week",
+            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 week' THEN O.paid_amount END), 0) AS "total_last_week",
+            COUNT(CASE WHEN O.created_at >= NOW() - INTERVAL '1 month' THEN 1 END) AS "orders_last_month",
+            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 month' THEN O.paid_amount END), 0) AS "total_last_month",
+            COUNT(CASE WHEN O.created_at >= NOW() - INTERVAL '1 year' THEN 1 END) AS "orders_last_year",
+            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 year' THEN O.paid_amount END), 0) AS "total_last_year",
+            0 AS "sort_order" 
+        FROM orders O
+        JOIN users U ON U.id = O.user_id
+        WHERE TRUE
+            AND $user_email_filter_expression$
+            AND $user_id_filter_expression$
+            AND $order_total_minimum_filter_expression$
+            AND $order_total_maximum_filter_expression$
+
+        UNION ALL
+
         SELECT
             $user_email_grouping_expression$ AS "user_email",
             $user_id_grouping_expression$ AS "user_id",
@@ -186,7 +260,8 @@ class ReportService {
             COUNT(CASE WHEN O.created_at >= NOW() - INTERVAL '1 month' THEN 1 END) AS "orders_last_month",
             COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 month' THEN O.paid_amount END), 0) AS "total_last_month",
             COUNT(CASE WHEN O.created_at >= NOW() - INTERVAL '1 year' THEN 1 END) AS "orders_last_year",
-            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 year' THEN O.paid_amount END), 0) AS "total_last_year"
+            COALESCE(SUM(CASE WHEN O.created_at >= NOW() - INTERVAL '1 year' THEN O.paid_amount END), 0) AS "total_last_year",
+            1 AS "sort_order" 
         FROM orders O
         JOIN users U ON U.id = O.user_id
         WHERE TRUE
@@ -194,11 +269,8 @@ class ReportService {
             AND $user_id_filter_expression$
             AND $order_total_minimum_filter_expression$
             AND $order_total_maximum_filter_expression$
-        GROUP BY GROUPING SETS (
-            (1, 2),
-            ()
-        )
-        ORDER BY 1 ASC NULLS FIRST`;
+        GROUP BY 1, 2
+        ORDER BY sort_order ASC, 1 DESC`;
 
     return { reportUIConfig, sql, reportFilters };
   }
@@ -209,8 +281,8 @@ class ReportService {
         dataEndpoint: '/api/reports/report-logs',
         headerGroups: [
             [
-                { key: 'id', label: 'ID', rowspan: 2, align: 'right', format: 'text' },
                 { key: 'created_at', label: 'Created At', rowspan: 2, format: 'date_time' },
+                { key: 'id', label: 'ID', rowspan: 2, align: 'right', format: 'text' },
                 { key: 'status_code', label: 'Status Code', rowspan: 2, format: 'text' },
                 { key: 'log_level', label: 'Log Level', rowspan: 2, format: 'text' },
                 { key: 'audit_type', label: 'Audit Type', rowspan: 2, format: 'text' },
@@ -320,12 +392,41 @@ class ReportService {
             filter_expression: "L.created_at <= $FILTER_VALUE$",
             type: "timestamp",
         },
+        {
+            key: "count",
+            grouping_expression: "",
+            filter_expression: "",
+            type: "number",
+        }
     ];
 
     let sql = `
         SELECT
-            $id_grouping_expression$ AS "id",
+            NULL AS "created_at",
+            NULL AS "id",
+            NULL AS "admin_user_id",
+            NULL AS "user_id",
+            NULL AS "status_code",
+            NULL AS "log_level",
+            NULL AS "audit_type",
+            NULL AS "short_description",
+            NULL AS "long_description",
+            NULL AS "debug_info",
+            COUNT(*) AS "count",
+            0 AS "sort_order" 
+        FROM logs L
+        WHERE TRUE
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
+            AND $status_code_filter_expression$
+            AND $log_level_filter_expression$
+            AND $audit_type_filter_expression$
+        
+        UNION ALL
+        
+        SELECT
             $created_at_grouping_expression$ AS "created_at",
+            $id_grouping_expression$ AS "id",
             $admin_user_id_grouping_expression$ AS "admin_user_id",
             $user_id_grouping_expression$ AS "user_id",
             $status_code_grouping_expression$ AS "status_code",
@@ -334,7 +435,8 @@ class ReportService {
             $short_description_grouping_expression$ AS "short_description",
             $long_description_grouping_expression$ AS "long_description",
             $debug_info_grouping_expression$ AS "debug_info",
-            COUNT(*) AS "count"
+            COUNT(*) AS "count",
+            1 AS "sort_order" 
         FROM logs L
         WHERE TRUE
             AND $created_at_minimum_filter_expression$
@@ -342,11 +444,8 @@ class ReportService {
             AND $status_code_filter_expression$
             AND $log_level_filter_expression$
             AND $audit_type_filter_expression$
-        GROUP BY GROUPING SETS (
-            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
-            ()
-        )
-        ORDER BY 1 DESC NULLS FIRST`;
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+        ORDER BY sort_order ASC, 1 DESC`;
     
     return { reportUIConfig, sql, reportFilters };
   }
@@ -666,65 +765,128 @@ class ReportService {
             grouping_expression: "O.total_stock_price",
             filter_expression: "O.total_stock_price >= $FILTER_VALUE$",
             type: "number",
-        }
+        },
+        {
+            key: "total_price_with_voucher",
+            type: "number",
+        },
+        {
+            key: "total_price_with_voucher_without_vat",
+            type: "number",
+        },
+        {
+            key: "total_price_with_voucher_vat_amount",
+        },
+        {
+            key: "count",
+            type: "number",
+        }, 
     ];
 
     let sql = `
-        SELECT * FROM (
-            SELECT
-                $created_at_grouping_expression$  AS "created_at",
-                $order_id_grouping_expression$  AS "order_id",
-                $days_since_order_grouping_expression$  AS "days_since_order",
-                $user_email_grouping_expression$  AS "user_email",
-                $status_grouping_expression$  AS "status",
-                $discount_percentage_grouping_expression$ AS "discount_percentage",
-                $vat_percentage_grouping_expression$  AS "vat_percentage",
-                $voucher_code_grouping_expression$ AS "voucher_code",
-                $voucher_discount_amount_grouping_expression$ AS "voucher_discount_amount",
-                SUM(ROUND(O.total_price * O.discount_percentage / 100, 2)) AS "discount_amount",
-                SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2))  AS "vat_amount",
-                SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2))  AS "total_price_with_vat",
-                SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0), 2)) AS "total_price_with_voucher",
-                SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100), 2)) AS total_price_with_voucher_without_vat,
-                SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) - 
-                    (GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100)), 2)) AS total_price_with_voucher_vat_amount,
-                SUM(paid_amount) AS "paid_amount",
-                SUM(O.total_price) AS "total_price",
-                SUM(O.total_stock_price) AS "total_stock_price",
-                COUNT(*) as count
-            FROM orders O
-            JOIN users U ON U.id = O.user_id
-            WHERE TRUE
-                AND $created_at_minimum_filter_expression$
-                AND $created_at_maximum_filter_expression$
-                AND $order_id_filter_expression$
-                AND $user_email_filter_expression$
-                AND $status_filter_expression$
-                AND $discount_percentage_minimum_filter_expression$
-                AND $discount_percentage_maximum_filter_expression$
-                AND $discount_amount_minimum_filter_expression$
-                AND $discount_amount_maximum_filter_expression$
-                AND $vat_percentage_minimum_filter_expression$
-                AND $vat_percentage_maximum_filter_expression$
-                AND $vat_amount_minimum_filter_expression$
-                AND $vat_amount_maximum_filter_expression$
-                AND $total_price_with_vat_minimum_filter_expression$
-                AND $total_price_with_vat_maximum_filter_expression$
-                AND $voucher_code_filter_expression$
-                AND $voucher_discount_amount_minimum_filter_expression$
-                AND $voucher_discount_amount_maximum_filter_expression$
-                AND $paid_amount_minimum_filter_expression$
-                AND $paid_amount_maximum_filter_expression$
-                AND $total_price_minimum_filter_expression$
-                AND $total_price_maximum_filter_expression$
-                AND $days_since_order_minimum_filter_expression$
-                AND $days_since_order_maximum_filter_expression$
-            GROUP BY GROUPING SETS (
-                (1, 2, 3, 4, 5, 6, 7, 8, 9),
-                ()
-            )
-        ) subquery
-        ORDER BY 1 DESC NULLS FIRST`;
+        SELECT
+            NULL  AS "created_at",
+            NULL  AS "order_id",
+            NULL  AS "days_since_order",
+            NULL  AS "user_email",
+            NULL  AS "status",
+            NULL  AS "discount_percentage",
+            NULL  AS "vat_percentage",
+            NULL  AS "voucher_code",
+            NULL  AS "voucher_discount_amount",
+            SUM(ROUND(O.total_price * O.discount_percentage / 100, 2)) AS "discount_amount",
+            SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2))  AS "vat_amount",
+            SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2))  AS "total_price_with_vat",
+            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0), 2)) AS "total_price_with_voucher",
+            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100), 2)) AS total_price_with_voucher_without_vat,
+            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) - 
+                (GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100)), 2)) AS total_price_with_voucher_vat_amount,
+            SUM(paid_amount) AS "paid_amount",
+            SUM(O.total_price) AS "total_price",
+            SUM(O.total_stock_price) AS "total_stock_price",
+            COUNT(*) as count,
+            0 AS "sort_order" 
+        FROM orders O
+        JOIN users U ON U.id = O.user_id
+        WHERE TRUE
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
+            AND $order_id_filter_expression$
+            AND $user_email_filter_expression$
+            AND $status_filter_expression$
+            AND $discount_percentage_minimum_filter_expression$
+            AND $discount_percentage_maximum_filter_expression$
+            AND $discount_amount_minimum_filter_expression$
+            AND $discount_amount_maximum_filter_expression$
+            AND $vat_percentage_minimum_filter_expression$
+            AND $vat_percentage_maximum_filter_expression$
+            AND $vat_amount_minimum_filter_expression$
+            AND $vat_amount_maximum_filter_expression$
+            AND $total_price_with_vat_minimum_filter_expression$
+            AND $total_price_with_vat_maximum_filter_expression$
+            AND $voucher_code_filter_expression$
+            AND $voucher_discount_amount_minimum_filter_expression$
+            AND $voucher_discount_amount_maximum_filter_expression$
+            AND $paid_amount_minimum_filter_expression$
+            AND $paid_amount_maximum_filter_expression$
+            AND $total_price_minimum_filter_expression$
+            AND $total_price_maximum_filter_expression$
+            AND $days_since_order_minimum_filter_expression$
+            AND $days_since_order_maximum_filter_expression$
+        
+        UNION ALL
+
+        SELECT
+            $created_at_grouping_expression$  AS "created_at",
+            $order_id_grouping_expression$  AS "order_id",
+            $days_since_order_grouping_expression$  AS "days_since_order",
+            $user_email_grouping_expression$  AS "user_email",
+            $status_grouping_expression$  AS "status",
+            $discount_percentage_grouping_expression$ AS "discount_percentage",
+            $vat_percentage_grouping_expression$  AS "vat_percentage",
+            $voucher_code_grouping_expression$ AS "voucher_code",
+            $voucher_discount_amount_grouping_expression$ AS "voucher_discount_amount",
+            SUM(ROUND(O.total_price * O.discount_percentage / 100, 2)) AS "discount_amount",
+            SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2))  AS "vat_amount",
+            SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2))  AS "total_price_with_vat",
+            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0), 2)) AS "total_price_with_voucher",
+            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100), 2)) AS total_price_with_voucher_without_vat,
+            SUM(ROUND(GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) - 
+                (GREATEST(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100) - O.voucher_discount_amount, 0) / (1 + O.vat_percentage / 100)), 2)) AS total_price_with_voucher_vat_amount,
+            SUM(paid_amount) AS "paid_amount",
+            SUM(O.total_price) AS "total_price",
+            SUM(O.total_stock_price) AS "total_stock_price",
+            COUNT(*) as count,
+            1 AS "sort_order" 
+        FROM orders O
+        JOIN users U ON U.id = O.user_id
+        WHERE TRUE
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
+            AND $order_id_filter_expression$
+            AND $user_email_filter_expression$
+            AND $status_filter_expression$
+            AND $discount_percentage_minimum_filter_expression$
+            AND $discount_percentage_maximum_filter_expression$
+            AND $discount_amount_minimum_filter_expression$
+            AND $discount_amount_maximum_filter_expression$
+            AND $vat_percentage_minimum_filter_expression$
+            AND $vat_percentage_maximum_filter_expression$
+            AND $vat_amount_minimum_filter_expression$
+            AND $vat_amount_maximum_filter_expression$
+            AND $total_price_with_vat_minimum_filter_expression$
+            AND $total_price_with_vat_maximum_filter_expression$
+            AND $voucher_code_filter_expression$
+            AND $voucher_discount_amount_minimum_filter_expression$
+            AND $voucher_discount_amount_maximum_filter_expression$
+            AND $paid_amount_minimum_filter_expression$
+            AND $paid_amount_maximum_filter_expression$
+            AND $total_price_minimum_filter_expression$
+            AND $total_price_maximum_filter_expression$
+            AND $days_since_order_minimum_filter_expression$
+            AND $days_since_order_maximum_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
+        ORDER BY sort_order ASC, 1 DESC`;
 
     return { reportUIConfig, sql, reportFilters };
   }
@@ -875,22 +1037,27 @@ class ReportService {
             filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) <= $FILTER_VALUE$",
             type: "number",
         },
+        {
+            key: "count",
+            type: "number",
+        }
     ];
 
     let sql = `
         SELECT
-            $first_name_grouping_expression$ AS "first_name",
-            $last_name_grouping_expression$  AS "last_name",
-            $email_grouping_expression$  AS "email",
-            $phone_grouping_expression$  AS "phone",
-            $phone_code_grouping_expression$ AS "phone_code",
-            $country_name_grouping_expression$ AS "country_name",
-            $gender_grouping_expression$ AS "gender",
-            $birth_date_grouping_expression$ AS "birth_date",
-            $is_email_verified_grouping_expression$ AS "is_email_verified",
-            $created_at_grouping_expression$ AS "created_at",
-            $days_since_creation_grouping_expression$ AS "days_since_creation",
-            COUNT(*) AS "count"
+            NULL AS "created_at",
+            NULL AS "first_name",
+            NULL AS "last_name",
+            NULL AS "email",
+            NULL AS "phone",
+            NULL AS "phone_code",
+            NULL AS "country_name",
+            NULL AS "gender",
+            NULL AS "birth_date",
+            NULL AS "is_email_verified",
+            NULL AS "days_since_creation",
+            COUNT(*) AS "count",
+            0 AS "sort_order" 
         FROM users U
         LEFT JOIN iso_country_codes icc ON U.iso_country_code_id = icc.id
         LEFT JOIN iso_country_codes cc ON U.country_id = cc.id
@@ -906,11 +1073,40 @@ class ReportService {
             AND $days_since_creation_minimum_filter_expression$
             AND $days_since_creation_maximum_filter_expression$
             AND $is_email_verified_filter_expression$
-        GROUP BY GROUPING SETS (
-            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
-            ()
-        )
-        ORDER BY 1 NULLS FIRST`;
+
+        UNION ALL
+
+        SELECT
+            $created_at_grouping_expression$ AS "created_at",
+            $first_name_grouping_expression$ AS "first_name",
+            $last_name_grouping_expression$  AS "last_name",
+            $email_grouping_expression$  AS "email",
+            $phone_grouping_expression$  AS "phone",
+            $phone_code_grouping_expression$ AS "phone_code",
+            $country_name_grouping_expression$ AS "country_name",
+            $gender_grouping_expression$ AS "gender",
+            $birth_date_grouping_expression$ AS "birth_date",
+            $is_email_verified_grouping_expression$ AS "is_email_verified",
+            $days_since_creation_grouping_expression$ AS "days_since_creation",
+            COUNT(*) AS "count",
+            1 AS "sort_order" 
+        FROM users U
+        LEFT JOIN iso_country_codes icc ON U.iso_country_code_id = icc.id
+        LEFT JOIN iso_country_codes cc ON U.country_id = cc.id
+        LEFT JOIN genders ON U.gender_id = genders.id
+        WHERE U.is_active = TRUE
+            AND $first_name_filter_expression$
+            AND $last_name_filter_expression$
+            AND $email_filter_expression$
+            AND $country_name_filter_expression$
+            AND $phone_code_filter_expression$
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
+            AND $days_since_creation_minimum_filter_expression$
+            AND $days_since_creation_maximum_filter_expression$
+            AND $is_email_verified_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+        ORDER BY sort_order ASC, 1 DESC`;
     
     return { reportUIConfig, sql, reportFilters };
   }

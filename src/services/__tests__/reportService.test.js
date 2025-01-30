@@ -175,7 +175,7 @@ describe("ReportService", () => {
         expect(result.sql).toContain("SELECT");
         expect(result.sql).toContain("FROM orders O");
         expect(result.sql).toContain("JOIN users U ON U.id = O.user_id");
-        expect(result.sql).toContain("GROUP BY GROUPING SETS");
+        expect(result.sql).toContain("GROUP BY");
       });
     });
 
