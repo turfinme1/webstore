@@ -8,7 +8,7 @@ class ReportBuilder {
         this.state = {
             filters: {},
             tableData: null,
-            sortOrders: [],
+            sortCriteria: [],
         };
     }
 
@@ -165,20 +165,16 @@ class ReportBuilder {
 
     static tableTemplates = {
         default: {
-            header: (headerGroups, sortOrders) => `
+            header: (headerGroups) => `
                 <thead class="table-dark">
                     ${headerGroups.map(group => `
                         <tr>
                             ${group.map(header => `
                                 <th colspan="${header.colspan || 1}" 
                                     rowspan="${header.rowspan || 1}"
-                                    ${header.key ? `data-sort-key="${header.key}"` : ''}
-                                    class="${header.key ? 'sortable' : ''}"
-                                    style="cursor: ${header.key ? 'pointer' : 'default'}">
-                                    <div class="d-flex align-items-center justify-content-${header.align || 'left'}">
-                                        ${header.label}
-                                        ${header.key ? this.getSortIndicator(header.key, sortOrders) : ''}
-                                    </div>
+                                    ${header.sortable !== false ? `data-sort-key="${header.key}"` : ''}
+                                    class="${header.sortable !== false ? 'sortable' : ''}">
+                                    ${header.label}
                                 </th>
                             `).join('')}
                         </tr>
@@ -269,75 +265,6 @@ class ReportBuilder {
         },
     };
 
-    static getSortIndicator(key, sortOrders) {
-        const sortOrder = sortOrders.find(order => order.column === key);
-        if (!sortOrder) return '<span class="ms-2">↕</span>';
-        return `<span class="ms-2">${sortOrder.direction === 'asc' ? '↑' : '↓'}</span>`;
-    }
-
-    handleHeaderClick(event) {
-        const th = event.target.closest('th');
-        if (!th || !th.dataset.sortKey) return;
-
-        const column = th.dataset.sortKey;
-        this.updateSortOrders(column);
-        this.fetchData(this.getFormData());
-    }
-
-    updateSortOrders(column) {
-        const existingOrder = this.state.sortOrders.find(order => order.column === column);
-        
-        if (!existingOrder) {
-            // First click - add ascending sort
-            this.state.sortOrders.unshift({ column, direction: 'asc' });
-        } else {
-            // Remove existing order
-            this.state.sortOrders = this.state.sortOrders.filter(order => order.column !== column);
-            
-            // Cycle through sort states
-            if (existingOrder.direction === 'asc') {
-                this.state.sortOrders.unshift({ column, direction: 'desc' });
-            } else if (existingOrder.direction === 'desc') {
-                // Don't add back - removing it effectively makes it unsorted
-            }
-        }
-    }
-
-    getFormData() {
-        const form = document.getElementById('report-form');
-        const formData = new FormData(form);
-        const filters = Object.fromEntries(formData);
-        
-        // Add sort orders to filters
-        if (this.state.sortOrders.length > 0) {
-            filters.orderBy = JSON.stringify(this.state.sortOrders);
-        }
-        
-        return filters;
-    }
-
-    async render(containerId) {
-        const container = document.getElementById(containerId);
-        container.innerHTML = '';
-
-        // Add title
-        const title = document.createElement('h1');
-        title.className = 'text-start mb-4';
-        title.textContent = this.config.title;
-        container.appendChild(title);
-
-        // Add export section
-        container.appendChild(this.buildExportSection(this.config.exportConfig));
-
-        // Add filter form
-        container.appendChild(await this.buildFilterForm());
-
-        // Add table
-        container.appendChild(this.buildTable());
-
-        this.attachEventListeners();
-    }
-
     async buildFilterForm() {
         const formContainer = document.createElement('div');
         formContainer.className = 'bg-white p-4 rounded shadow-sm mb-5';
@@ -397,12 +324,34 @@ class ReportBuilder {
         table.className = 'table table-bordered table-striped table-hover';
         const template = ReportBuilder.tableTemplates['default'];
         table.innerHTML = `
-            ${template.header(this.config.headerGroups, this.state.sortOrders)}
+            ${template.header(this.config.headerGroups)}
             <tbody id="report-table-body"></tbody>
         `;
         tableContainer.appendChild(table);
 
         return tableContainer;
+    }
+
+    async render(containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        // Add title
+        const title = document.createElement('h1');
+        title.className = 'text-start mb-4';
+        title.textContent = this.config.title;
+        container.appendChild(title);
+
+        // Add export section
+        container.appendChild(this.buildExportSection(this.config.exportConfig));
+
+        // Add filter form
+        container.appendChild(await this.buildFilterForm());
+
+        // Add table
+        container.appendChild(this.buildTable());
+
+        this.attachEventListeners();
     }
 
     attachEventListeners() {
@@ -414,23 +363,65 @@ class ReportBuilder {
                 const formData = new FormData(form);
                 const filters = Object.fromEntries(formData);
                 await this.fetchData(filters);
+                this.state.sortCriteria = [];
+                this.updateSortIndicators();
             }
         });
-        const table = document.querySelector('table');
-        table.addEventListener('click', (e) => this.handleHeaderClick(e));
+        document.querySelectorAll('th.sortable').forEach(header => {
+            header.addEventListener('click', async (e) => {
+                await this.handleSortChange(e);
+            });
+        });
     }
 
-    async fetchData(filters) {
+    async handleSortChange(e) {
+        const key = e.currentTarget.dataset.sortKey;
+        const currentCriteria = [...this.state.sortCriteria];
+        const existingIndex = currentCriteria.findIndex(c => c.key === key);
+    
+        let newDirection;
+        if (existingIndex === -1) {
+            newDirection = 'ASC';
+        } else {
+            const currentDirection = currentCriteria[existingIndex].direction;
+            newDirection = currentDirection === 'ASC' ? 'DESC' : 'none';
+        }
+    
+        if (existingIndex !== -1) currentCriteria.splice(existingIndex, 1);
+        if (newDirection !== 'none') currentCriteria.unshift({ key, direction: newDirection });
+    
+        this.state.sortCriteria = currentCriteria;
+
+        if(await this.validateForm()) {
+            const formData = new FormData(document.getElementById('report-form'));
+            const filters = Object.fromEntries(formData);
+            await this.fetchData(filters, this.state.sortCriteria);
+        }
+    }
+
+    updateSortIndicators() {
+        document.querySelectorAll('th[data-sort-key]').forEach(header => {
+            const key = header.dataset.sortKey;
+            const sortEntry = this.state.sortCriteria.find(c => c.key === key);
+            const sortEntryPosition = this.state.sortCriteria.findIndex(c => c.key === key);
+            header.innerHTML = header.innerHTML.replace(/\d+/s, '');
+            header.innerHTML = header.innerHTML.replace(/ ↑| ↓/g, '');
+            if (sortEntry) header.innerHTML += sortEntry.direction === 'ASC' ? ` ${sortEntryPosition+1}↑` : `${sortEntryPosition+1}↓`;
+        });
+    }
+
+    async fetchData(filters, sortCriteria) {
         const spinner = document.getElementById('spinner');
         const button = document.querySelector('button[type="submit"]');
         button.disabled = true;
         spinner.style.display = 'block';
+        document.querySelectorAll('th.sortable').forEach(header => header.style.pointerEvents = 'none');
 
         try {
             const response = await fetch(this.config.dataEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(filters)
+                body: JSON.stringify({ ...filters, sortCriteria })
             });
             
             const data = await response.json();
@@ -448,6 +439,7 @@ class ReportBuilder {
         } finally {
             button.disabled = false;
             spinner.style.display = 'none';
+            document.querySelectorAll('th.sortable').forEach(header => header.style.pointerEvents = 'auto');
         }
     }
 
@@ -459,12 +451,6 @@ class ReportBuilder {
     };
 
     renderTableData(data) {
-        const thead = document.querySelector('table thead');
-        thead.outerHTML = ReportBuilder.tableTemplates.default.header(
-            this.config.headerGroups,
-            this.state.sortOrders
-        );
-
         const tbody = document.getElementById('report-table-body');
         const totalRowCountDiv = document.getElementById('total-row-count');
         totalRowCountDiv.textContent = `Total rows: ${data?.rows?.length > 1 ? data.rows.length - 1 : 0}`;
@@ -483,6 +469,8 @@ class ReportBuilder {
             ReportBuilder.tableTemplates['default']
                 .row(row, this.config.headerGroups.flat())
         ).join('');
+
+        this.updateSortIndicators();
     }
 
     buildExportSection(exportConfig) {
