@@ -1,0 +1,93 @@
+{
+    "type": "object",
+    "name": "notifications",
+    "table": "notifications",
+    "views": "notifications_view",
+    "queryValidationSchema": "notificationQueryParamsSchema",
+    "properties": {
+        "name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z_-]+$",
+            "label": "Notification Campaign Name",
+            "placeholder": "Enter Notification Campaign Name",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for Notification name."
+            }
+        },
+        "template_id": {
+            "type": "integer",
+            "label": "Template",
+            "placeholder": "Enter Template",
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "renderConfig": {
+                "type": "select",
+                "fetchFrom": "/crud/email-templates",
+                "displayKey": "type"
+            },
+            "errorMessage": {
+                "type": "Invalid value for template."
+            }
+        },
+        "user_ids": {
+            "type": "string",
+            "label": "Users (Comma separated User IDs)",
+            "pattern": "^[0-9,]+$",
+            "placeholder": "Enter User IDs",
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for users."
+            }
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "label": "Created At",
+            "placeholder": "Enter Created At",
+            "hideInCreate": true,
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "date"
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for created at."
+            }
+        }
+    },
+    "table_display_columns": [
+        "created_at",
+        "name",
+        "template_type",
+        "user_ids"
+    ],
+    "required": [
+        "name",
+        "template_id",
+        "user_ids"
+    ],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+           "name": "Notification name is required.",
+            "template_id": "Template is required.",
+            "user_ids": "Users are required."
+        },
+         "additionalProperties": "No additional properties are allowed."
+    }
+}

@@ -114,6 +114,15 @@ function createBackofficeNavigation(userStatus) {
       permission: "view",
       interface: "campaigns",
     },
+    {
+      id: "crud-notification-link",
+      text: "CRUD Notifications",
+      href: "/crud-notification",
+      // permission: "view",
+      // interface: "notifications",
+      permission: "view",
+      interface: "campaigns",
+    },
     // {
     //   id: "logs-link",
     //   text: "Report Logs",

@@ -22,24 +22,34 @@
         <div class="profile-content">
             <!-- Dynamic content will be rendered here -->
             <!-- <div id="content-area"></div> -->
+			
 			<div class="container mt-5 p-4 border rounded shadow-sm" id="main-container">
-				<h1 class="mb-4">Email Template Management</h1>
-		
+				<button type="button" class="btn btn-primary" id="add-template">Add Notification Template</button>
+				<button type="button" class="btn btn-primary" id="edit-template" >Edit Templates</button>
+				<h1 class="mb-4">Template Management</h1>
+				
 				<div class="card-body">
 					<form id="template-form">
-						
 						<div class="mb-3">
 							<label for="type" class="form-label">Type of Template</label>
 							<select id="type" class="form-select" name="type">
+								<option value="Email">Email</option>
+								<option value="Notification">Notification</option>
+							</select>
+						</div>
+						<div class="mb-3">
+							<label for="type" class="form-label">Name of Template</label>
+							<input type="text" class="form-control" id="template_name" name="template_name" style="display: none;" />
+							<select id="name" class="form-select" name="name">
 								
 							</select>
 						</div>
 						<div class="mb-3">
-							<label for="subject" class="form-label">Email Subject</label>
+							<label for="subject" class="form-label">Subject</label>
 							<input type="text" class="form-control" id="subject" name="subject" required />
 						</div>
 						<div class="mb-3">
-							<label for="template" class="form-label">Email Body</label>
+							<label for="template" class="form-label"> Body</label>
 							<textarea id="template" class="form-control" name="template" rows="10" required></textarea>
 						</div>
 						<div class="mb-3" id="placeholders">
@@ -81,10 +91,12 @@
 							</select>
 						</div>
 						
-						<button type="submit" class="btn btn-primary">Save</button>
+						<button type="submit" class="btn btn-primary" id="create-template" >Create Template</button>
+						<button type="submit" class="btn btn-primary" id="save">Save</button>
 						<button type="button" class="btn btn-secondary" id="send-test-email">Send Test Email</button>
 						<button type="button" class="btn btn-secondary" id="preview-email" >Preview Email</button>
 					</form>
+
 				</div>
 			</div>
         </div>

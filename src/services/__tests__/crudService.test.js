@@ -1343,4 +1343,216 @@ describe("CrudService", () => {
       );
     });
   });
+
+  describe('targetGroupCreateHook', () => {
+    let mockData;
+    let mockMainEntity;
+
+    beforeEach(() => {
+        mockData = {
+            params: { entity: 'testEntity' },
+            body: {
+                users: {
+                    query: {
+                        searchParams: {},
+                        filterParams: { email: 'test@test.com' }
+                    }
+                }
+            },
+            dbConnection: {
+                query: jest.fn()
+            }
+        };
+
+        mockMainEntity = {
+            id: 123
+        };
+
+        crudService.buildFilteredPaginatedQuery = jest.fn().mockReturnValue({
+            query: 'SELECT * FROM users_view WHERE email LIKE $1',
+            searchValues: ['%test@test.com%']
+        });
+    });
+
+    it('should create target group associations correctly', async () => {
+        mockDbConnection.query.mockResolvedValueOnce({ rows: [{ id: 1 }] });
+        await crudService.targetGroupCreateHook(mockData, mockMainEntity);
+        expect(crudService.buildFilteredPaginatedQuery).toHaveBeenCalledTimes(1);
+    });
+
+    describe('emailTemplateUpdateHook', () => {
+      let mockData;
+      let mockInsertObject;
+  
+      beforeEach(() => {
+          mockData = {
+              params: { id: '1' },
+              body: {},
+              dbConnection: {
+                  query: jest.fn()
+              }
+          };
+          mockInsertObject = {};
+      });
+  
+      it('should update email template with stringified placeholders', async () => {
+          const mockTemplate = {
+              id: 1,
+              placeholders: ['placeholder1', 'placeholder2']
+          };
+          
+          mockData.dbConnection.query.mockResolvedValueOnce({
+              rows: [mockTemplate]
+          });
+  
+          await crudService.emailTemplateUpdateHook(mockData, mockInsertObject);
+  
+          expect(mockData.dbConnection.query).toHaveBeenCalledWith(
+              expect.stringContaining('SELECT * FROM email_templates'),
+              [mockData.params.id]
+          );
+          expect(mockData.body.placeholders).toBe(JSON.stringify(mockTemplate.placeholders));
+      });
+  
+      it('should throw error when template not found', async () => {
+          mockData.dbConnection.query.mockResolvedValueOnce({
+              rows: []
+          });
+  
+          await expect(crudService.emailTemplateUpdateHook(mockData, mockInsertObject))
+              .rejects
+              .toThrow('Email template not found');
+  
+          expect(mockData.dbConnection.query).toHaveBeenCalledWith(
+              expect.stringContaining('SELECT * FROM email_templates'),
+              [mockData.params.id]
+          );
+      });
+  
+      it('should handle null placeholders', async () => {
+          const mockTemplate = {
+              id: 1,
+              placeholders: null
+          };
+          
+          mockData.dbConnection.query.mockResolvedValueOnce({
+              rows: [mockTemplate]
+          });
+  
+          await crudService.emailTemplateUpdateHook(mockData, mockInsertObject);
+  
+          expect(mockData.body.placeholders).toBe('null');
+      });
+    });
+
+    describe('notificationCreateHook', () => {
+      let mockData;
+      let mockMainEntity;
+  
+      beforeEach(() => {
+          mockData = {
+              dbConnection: {
+                  query: jest.fn()
+              }
+          };
+  
+          mockMainEntity = {
+              id: 1,
+              template_id: 123,
+              user_ids: '1,2,3'
+          };
+      });
+  
+      it('should create notifications for all users successfully', async () => {
+          // Mock template query
+          mockData.dbConnection.query.mockResolvedValueOnce({
+              rows: [{
+                  id: 123,
+                  subject: 'Test Subject',
+                  template: 'Hello {first_name} {last_name}!',
+                  placeholders: ['{first_name}', '{last_name}']
+              }]
+          });
+  
+          // Mock users query
+          mockData.dbConnection.query.mockResolvedValueOnce({
+              rows: [
+                  { id: 1, email: 'user1@test.com', first_name: 'John', last_name: 'Doe' },
+                  { id: 2, email: 'user2@test.com', first_name: 'Jane', last_name: 'Smith' }
+              ]
+          });
+  
+          // Mock email insertions
+          mockData.dbConnection.query.mockResolvedValue({ rows: [{ id: 1 }] });
+  
+          await crudService.notificationCreateHook(mockData, mockMainEntity);
+  
+          // Verify template query
+          expect(mockData.dbConnection.query).toHaveBeenNthCalledWith(1,
+              expect.stringContaining('SELECT * FROM email_templates'),
+              [123]
+          );
+  
+          // Verify users query
+          expect(mockData.dbConnection.query).toHaveBeenNthCalledWith(2,
+              expect.stringContaining('SELECT id, email, first_name, last_name'),
+              [[1, 2, 3]]
+          );
+  
+          // Verify email insertions
+          expect(mockData.dbConnection.query).toHaveBeenNthCalledWith(3,
+              expect.stringContaining('INSERT INTO emails'),
+              [1, 'user1@test.com', 'Test Subject', 'Hello John Doe!', 1]
+          );
+      });
+  
+      it('should throw error when template not found', async () => {
+          mockData.dbConnection.query.mockResolvedValueOnce({ rows: [] });
+  
+          await expect(crudService.notificationCreateHook(mockData, mockMainEntity))
+              .rejects
+              .toThrow('Template not found');
+      });
+  
+      it('should throw error when user data missing placeholder values', async () => {
+          mockData.dbConnection.query.mockResolvedValueOnce({
+              rows: [{
+                  id: 123,
+                  subject: 'Test Subject',
+                  template: 'Hello {first_name}!',
+                  placeholders: ['{first_name}']
+              }]
+          });
+  
+          mockData.dbConnection.query.mockResolvedValueOnce({
+              rows: [
+                  { id: 1, email: 'user1@test.com', first_name: null }
+              ]
+          });
+  
+          await expect(crudService.notificationCreateHook(mockData, mockMainEntity))
+              .rejects
+              .toThrow('Missing email template placeholder');
+      });
+  
+      it('should handle empty user_ids', async () => {
+          mockMainEntity.user_ids = '';
+  
+          mockData.dbConnection.query.mockResolvedValueOnce({
+              rows: [{
+                  id: 123,
+                  subject: 'Test Subject',
+                  template: 'Hello {first_name}!',
+                  placeholders: ['{first_name}']
+              }]
+          });
+  
+          mockData.dbConnection.query.mockResolvedValueOnce({ rows: [] });
+  
+          await crudService.notificationCreateHook(mockData, mockMainEntity);
+  
+          expect(mockData.dbConnection.query).toHaveBeenCalledTimes(2);
+      });
+    });
+  });
 });

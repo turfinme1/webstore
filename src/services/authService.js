@@ -200,6 +200,7 @@ class AuthService {
     
     let userStatus = result.rows[0];
     userStatus.role_permissions = data.session.role_permissions;
+    userStatus.user_type = data.entitySchemaCollection.userManagementSchema.user_type;
     return userStatus;
   }
 

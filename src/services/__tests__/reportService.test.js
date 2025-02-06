@@ -104,6 +104,60 @@ describe("ReportService", () => {
 
       await expect(reportService.getReport(data)).rejects.toThrow();
     });
+
+    describe("dashboard reports", () => {
+      const mockContext = {
+          settings: { report_row_limit_display: "100" }
+      };
+
+      it("should return dashboard report data when requesting valid dashboard report", async () => {
+          const data = {
+              body: {},
+              params: { report: "store-trends" },
+              dbConnection: mockDbConnection,
+              entitySchemaCollection: mockEntitySchema,
+              context: mockContext
+          };
+
+          const mockRows = [{ metric1: 'value1' }];
+          mockDbConnection.query.mockResolvedValue({ rows: mockRows });
+
+          const result = await reportService.getReport(data);
+
+          expect(result).toEqual({ rows: mockRows });
+          expect(mockDbConnection.query).toHaveBeenCalled();
+      });
+
+      it("should throw error when requesting invalid dashboard report", async () => {
+          const data = {
+              body: {},
+              params: { report: "invalid-dashboard-report" },
+              dbConnection: mockDbConnection,
+              entitySchemaCollection: mockEntitySchema,
+              context: mockContext
+          };
+
+          await expect(reportService.getReport(data)).rejects.toThrow("Report invalid-dashboard-report not found");
+      });
+
+      it("should process dashboard report without requiring metadata validation", async () => {
+          const data = {
+              body: { metadataRequest: true },
+              params: { report: "store-trends" },
+              dbConnection: mockDbConnection,
+              entitySchemaCollection: mockEntitySchema,
+              context: mockContext
+          };
+
+          const mockRows = [{ metric1: 'value1' }];
+          mockDbConnection.query.mockResolvedValue({ rows: mockRows });
+
+          const result = await reportService.getReport(data);
+
+          expect(result).toEqual({ rows: mockRows });
+          expect(mockDbConnection.query).toHaveBeenCalled();
+      });
+    });
   });
 
   describe("exportReport", () => {
@@ -376,6 +430,18 @@ describe("ReportService", () => {
 
   describe('replaceFilterExpressions', () => {
     let reportService;
+    const mockReportFilters = [
+      {
+          key: 'created_at',
+          grouping_expression: 'N.created_at',
+          filter_expression: 'N.created_at = $FILTER_VALUE$',
+      },
+      {
+          key: 'name',
+          grouping_expression: 'N.name',
+          filter_expression: 'N.name = $FILTER_VALUE$',
+      }
+    ];
   
     beforeEach(() => {
       reportService = new ReportService({});
@@ -460,6 +526,75 @@ describe("ReportService", () => {
   
       const result = reportService.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
       expect(result.sql).toBe("SELECT 'All', DATE_TRUNC('month', table.date) FROM table");
+    });
+
+    it('should replace ORDER BY clause with valid sort criteria', () => {
+      const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+      const INPUT_DATA = {
+          sortCriteria: [
+              { key: 'created_at', direction: 'ASC' },
+              { key: 'name', direction: 'DESC' }
+          ]
+      };
+
+      const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+      expect(result.sql).toBe('SELECT * FROM table ORDER BY  created_at ASC , name DESC  ');
+    });
+
+    it('should ignore invalid sort directions', () => {
+        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+        const INPUT_DATA = {
+            sortCriteria: [
+                { key: 'created_at', direction: 'INVALID' },
+                { key: 'name', direction: 'DESC' }
+            ]
+        };
+
+        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+        expect(result.sql).toBe('SELECT * FROM table ORDER BY  name DESC  ');
+    });
+
+    it('should ignore non-existent filter keys', () => {
+        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+        const INPUT_DATA = {
+            sortCriteria: [
+                { key: 'non_existent', direction: 'ASC' },
+                { key: 'name', direction: 'DESC' }
+            ]
+        };
+
+        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+        expect(result.sql).toBe('SELECT * FROM table ORDER BY  name DESC  ');
+    });
+
+    it('should keep original ORDER BY when no valid sort criteria', () => {
+        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+        const INPUT_DATA = {
+            sortCriteria: [
+                { key: 'non_existent', direction: 'INVALID' }
+            ]
+        };
+
+        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+        expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
+    });
+
+    it('should handle empty sort criteria array', () => {
+        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+        const INPUT_DATA = {
+            sortCriteria: []
+        };
+
+        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+        expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
+    });
+
+    it('should handle missing sortCriteria', () => {
+        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+        const INPUT_DATA = {};
+
+        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+        expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
     });
   });
 });
