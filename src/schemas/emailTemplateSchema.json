@@ -4,13 +4,26 @@
     "table": "email_templates",
     "views": "email_templates_view",
     "properties": {
-        "type": {
+        "name": {
             "type": "string",
             "enum": [
                 "Email verification",
                 "Order created",
                 "Order paid"
             ],
+            "label": "Name",
+            "placeholder": "Select Name",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for type."
+            }
+        },
+        "type": {
+            "type": "string",
             "label": "Type",
             "placeholder": "Select Type",
             "filterable": true,
@@ -69,14 +82,24 @@
             "errorMessage": {
                 "type": "Invalid value for table border color."
             }
+        },
+        "placeholders": {
+            "type": "object",
+            "label": "Placeholders",
+            "placeholder": "Enter Placeholders",
+            "required": {
+                "create": true,
+                "update": false
+            }
         }
     },
     "table_display_columns": [
+        "name",
         "type",
         "subject"
     ],
     "required": [
-        "type",
+        "name",
         "subject"
     ],
     "additionalProperties": false,

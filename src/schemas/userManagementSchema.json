@@ -1,6 +1,7 @@
 { 
   "name": "userManagementSchema",
   "admin": {
+    "user_type": "admin",
     "user_id": "admin_user_id",
     "user_table": "admin_users",
     "session_table": "admin_sessions",
@@ -10,6 +11,7 @@
     "cookie_name": "admin_session_id"
   },
   "user": {
+    "user_type": "user",
     "user_id": "user_id",
     "user_table": "users",
     "session_table": "sessions",
