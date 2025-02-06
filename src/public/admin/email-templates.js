@@ -9,7 +9,7 @@ let state = {
 const elements = {
   mainContainer: document.getElementById("main-container"),
   templateForm: document.getElementById("template-form"),
-  templateTypeSelect: document.getElementById("type"),
+  templateNameSelect: document.getElementById("name"),
   subjectInput: document.getElementById("subject"),
   templateInput: document.getElementById("template"),
   placeholderArea: document.getElementById("placeholders"),
@@ -18,6 +18,13 @@ const elements = {
   borderCustomizationElements: document.querySelectorAll(".border-customization"),
   sendTestEmailButton: document.getElementById("send-test-email"),
   previewEmailButton: document.getElementById("preview-email"),
+  createTemplateButton: document.getElementById("create-template"),
+  typeSelect: document.getElementById("type"),
+  nameSelect: document.getElementById("name"),
+  nameInput: document.getElementById("template_name"),
+  displayCreateTemplateButton: document.getElementById("add-template"),
+  displayEditTemplateButton: document.getElementById("edit-template"),
+  saveButton: document.getElementById("save"),
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -36,12 +43,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   await getTemplates();
-  populateTemplateTypeSelect();
+  populateTemplateNameSelect("Email");
   attachEventListeners();
 
   if (state.templates.length > 0) {
-    state.emailTemplateId = state.templates[0].id;
-    populateTemplateForm(state.templates[0]);
+    const firstTemplate = state.templates.filter(template=> template.type === "Email")[0];
+    state.emailTemplateId = firstTemplate.id;
+    populateTemplateForm(firstTemplate);
   }
   await loadCurrentTemplate();
 });
@@ -60,34 +68,64 @@ async function getTemplates() {
   }
 }
 
-async function populateTemplateTypeSelect() {
-  const templateTypes = state.templates.map((template) => template.type);
+async function populateTemplateNameSelect(templateTypeFilter) {
+  elements.templateNameSelect.innerHTML = "";
+  const templateTypes = state.templates.filter(template=> template.type === templateTypeFilter).map((template) => template.name);
   templateTypes.forEach((type) => {
     const option = document.createElement("option");
     option.value = type;
     option.textContent = type;
-    elements.templateTypeSelect.appendChild(option);
+    elements.templateNameSelect.appendChild(option);
   });
 }
 
 function attachEventListeners() {
   elements.templateForm.addEventListener("submit", handleTemplateFormSubmit);
-  elements.templateTypeSelect.addEventListener("change", loadCurrentTemplate);
+  elements.templateNameSelect.addEventListener("change", loadCurrentTemplate);
   elements.sendTestEmailButton.addEventListener("click", handleSendTestEmail);
   elements.previewEmailButton.addEventListener("click", handlePreviewEmail);
+  elements.createTemplateButton.addEventListener("click", handleCreateTemplate);
+  elements.displayCreateTemplateButton.addEventListener("click", handleDisplayCreateTemplate);
+  elements.displayEditTemplateButton.addEventListener("click", handleDisplayEditTemplate);
+  elements.typeSelect.addEventListener("change", handleTypeSelectChange);
+}
+
+function handleDisplayCreateTemplate() {
+  elements.nameInput.style.display = "block";
+  elements.typeSelect.value = "Notification";
+  elements.typeSelect.disabled = true;
+  elements.nameInput.value = "";
+  elements.nameSelect.style.display = "none";
+  const notificationTemplate = state.templates.find(template => template.type === "Notification");
+  populateTemplateForm(notificationTemplate);
+  elements.borderCustomizationElements.forEach(element => element.style.display = "none");
+  elements.createTemplateButton.style.display = "";
+  elements.saveButton.style.display = "none";
+}
+
+function handleDisplayEditTemplate() {
+  elements.nameInput.style.display = "none";
+  elements.typeSelect.style.display = "block";
+  elements.nameInput.value = "";
+  elements.nameSelect.style.display = "";
+  elements.saveButton.style.display = "";
+  elements.typeSelect.value = "Email";
+  elements.typeSelect.disabled = false;
+  const notificationTemplate = state.templates.find(template => template.type !== "Notification");
+  populateTemplateForm(notificationTemplate);
 }
 
 async function handleTemplateFormSubmit(event) {
   event.preventDefault();
 
   const formData = new FormData(elements.templateForm);
-  const type = formData.get("type");
+  const name = formData.get("name");
   const subject = formData.get("subject");
   const template = CKEDITOR.instances.template.getData();
-  console.log({ type, subject, template });
+  console.log({ name: name, subject, template });
   const data = Object.fromEntries(formData);
   data.template = template;
-  if(elements.templateTypeSelect.value === "Email verification") {
+  if(elements.templateNameSelect.value === "Email verification") {
     data.table_border_color = null;
     data.table_border_width = null;
   }
@@ -111,9 +149,9 @@ async function handleTemplateFormSubmit(event) {
 }
 
 async function loadCurrentTemplate() {
-  const type = elements.templateTypeSelect.value;
+  const name = elements.templateNameSelect.value;
   const currentTemplate = state.templates.find(
-    (template) => template.type === type
+    (template) => template.name === name
   );
   const templateId = currentTemplate.id;
   state.emailTemplateId = templateId;
@@ -136,14 +174,16 @@ async function loadCurrentTemplate() {
 
 function populateTemplateForm(template) {
  
-  if (elements.templateTypeSelect.value  === "Order created" || elements.templateTypeSelect.value  === "Order paid") {
+  if (elements.templateNameSelect.value  === "Order created" || elements.templateNameSelect.value  === "Order paid") {
     elements.borderCustomizationElements.forEach(element => element.style.display = "block");
     elements.tableBorderColorInput.value = template.table_border_color;
     elements.tableBorderWidthInput.value = template.table_border_width;
+    elements.createTemplateButton.style.display = "none";
   } else {
       elements.borderCustomizationElements.forEach(element => element.style.display = "none");
+      elements.createTemplateButton.style.display = "none";
   }
-  elements.templateTypeSelect.value = template.type;
+  elements.templateNameSelect.value = template.name;
   elements.subjectInput.value = template.subject;
   CKEDITOR.instances.template.setData(template.template);
   elements.placeholderArea.innerHTML =
@@ -152,7 +192,7 @@ function populateTemplateForm(template) {
 }
 
 async function handleSendTestEmail() {
-  const emailType = elements.templateTypeSelect.value.replace(/\s/g, "-").toLowerCase();
+  const emailType = elements.templateNameSelect.value.replace(/\s/g, "-").toLowerCase();
   const response = await fetchWithErrorHandling(`/api/test-email/${emailType}`);
 
   if (response.ok) {
@@ -163,7 +203,7 @@ async function handleSendTestEmail() {
 }
 
 async function handlePreviewEmail() {
-  const emailType = elements.templateTypeSelect.value.replace(/\s/g, "-").toLowerCase();
+  const emailType = elements.templateNameSelect.value.replace(/\s/g, "-").toLowerCase();
   const response = await fetchWithErrorHandling(`/api/preview-email/${emailType}`);
 
   try {
@@ -199,4 +239,50 @@ async function handlePreviewEmail() {
   catch (error) {
     console.error("fetch error", error);
   }
+}
+
+async function handleCreateTemplate(event) {
+  event.preventDefault();
+
+  const formData = new FormData(elements.templateForm);
+  const type = formData.get("type");
+  const subject = formData.get("subject");
+  const template = CKEDITOR.instances.template.getData();
+  console.log({ type, subject, template });
+  const data = Object.fromEntries(formData);
+  data.template = template;
+  data.table_border_color = null;
+  data.table_border_width = null;
+  data.name = data.template_name;
+  data.type = "Notification";
+  const notificationTemplate = state.templates.find(template => template.type === "Notification");
+  data.placeholders = JSON.stringify(notificationTemplate.placeholders);
+  if(data.template_name.length <= 2) {
+    showToastMessage("Please select a type", "error");
+    return;
+  }
+  if(data.subject.length <= 2) {
+    showToastMessage("Please enter a subject", "error");
+    return;
+  }
+  const response = await fetchWithErrorHandling(`/crud/email-templates`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    }
+  );
+
+  if (response.ok) {
+    showToastMessage("Template saved", "success");
+    await getTemplates();
+  } else {
+    showToastMessage(response.error, "error");
+  }
+}
+
+async function handleTypeSelectChange() {
+  populateTemplateNameSelect(elements.typeSelect.value);
 }

@@ -416,7 +416,7 @@ function createNavigation(userStatus) {
                       ${
                         userStatus.session_type === "Authenticated"
                           ? `
-                       <li class="nav-item">
+                      <li class="nav-item">
                           <a class="nav-link" href="/user-profile">${
                             userStatus.has_first_login
                               ? userStatus.first_name
@@ -426,12 +426,21 @@ function createNavigation(userStatus) {
                       <li class="nav-item">
                           <a class="nav-link logout-btn" href="/logout">Logout</a>
                       </li>
+                      ${userStatus.user_type !== "admin" 
+                        ? `
+                        <li class="nav-item position-relative">
+                            <a class="nav-link" href="#" id="notification-bell" data-bs-toggle="modal" data-bs-target="#notificationsModal">
+                                <div>🔔</div>
+                                <span id="notification-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none"></span>
+                            </a>
+                        </li>`
+                        : ""}
                       `
                           : `
                       <li class="nav-item">
                           <a class="nav-link" href="/register.html">Register</a>
                       </li>
-                       <li class="nav-item">
+                      <li class="nav-item">
                           <a class="nav-link" href="/forgot-password.html">Forgot Password</a>
                       </li>
                       <li class="nav-item">
@@ -442,7 +451,31 @@ function createNavigation(userStatus) {
                   </ul>
               </div>
           </div>
-      `;
+
+        <!-- Notifications Modal -->
+        <div class="modal fade" id="notificationsModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-light">
+                        <h5 class="modal-title">
+                            <i class="fas fa-bell me-2"></i>
+                            Notifications
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div id="notifications-list" class="notifications-container">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+  `;
 
   document.body.prepend(navBar);
 
@@ -453,7 +486,138 @@ function createNavigation(userStatus) {
     const response = await fetch("/auth/logout");
     window.location.href = "/index";
   });
+
+  if (userStatus.session_type === "Authenticated" && userStatus.user_type === "user") {
+    updateNotificationsList();
+    setInterval(updateNotificationsList, 60000); // Update every 30 seconds
+  }
 }
+
+async function updateNotificationsList() {
+  const notifications = await loadNotifications();
+  const notificationCount = document.getElementById('notification-count');
+  const bellIcon = document.getElementById('notification-bell');
+  
+  if (notifications.length > 0) {
+      notificationCount.textContent = notifications.length;
+      notificationCount.style.display = 'inline';
+  } else {
+      notificationCount.style.display = 'none';
+  }
+
+  const notificationsList = document.getElementById('notifications-list');
+  const notificationsHtml = notifications.length ? notifications.map(notification => `
+    <div class="notification-card" 
+         data-id="${notification.id}" 
+         data-read="${notification.status === 'seen'}"
+         style="padding: 1rem; 
+                border-bottom: 1px solid #dee2e6; 
+                cursor: pointer; 
+                transition: background-color 0.2s ease;">
+        <div style="display: flex; 
+                    justify-content: space-between; 
+                    align-items: center;">
+            <div style="font-weight: ${notification.status === 'seen' ? 'normal' : '500'}; 
+                        color: #212529;">
+                <i class="fas ${notification.status === 'seen' ? 'fa-envelope-open' : 'fa-envelope'} me-2"></i>
+                ${notification.subject}
+            </div>
+            <div style="font-size: 0.875rem; color: #6c757d;">
+                ${new Date(notification.created_at).toLocaleString()}
+            </div>
+        </div>
+        <div style="display: none; 
+                    margin-top: 1rem; 
+                    padding-top: 1rem; 
+                    border-top: 1px solid #dee2e6; 
+                    transition: max-height 0.3s ease-out; 
+                    overflow: hidden;">
+            ${notification.text_content}
+        </div>
+    </div>
+  `).join('') : `
+      <div style="text-align: center; padding: 1.5rem 0;">
+          <i class="fas fa-check-circle fa-2x mb-2" style="color: #6c757d;"></i>
+          <p style="margin-bottom: 0;">No new notifications</p>
+      </div>
+  `;
+  notificationsList.innerHTML = notificationsHtml;
+
+  notificationsList.querySelectorAll('.notification-card').forEach(card => {
+    card.addEventListener('mouseenter', () => {
+        card.style.backgroundColor = '#f8f9fa';
+    });
+    
+    card.addEventListener('mouseleave', () => {
+        card.style.backgroundColor = 'transparent';
+    });
+
+    card.addEventListener('click', async function() {
+        const content = this.children[1];
+        const isRead = this.dataset.read === 'true';
+        const id = this.dataset.id;
+
+        if (!isRead) {
+            await markNotificationAsRead(id);
+            this.dataset.read = 'true';
+            this.children[0].children[0].style.fontWeight = 'normal';
+            this.querySelector('.fa-envelope').classList.replace('fa-envelope', 'fa-envelope-open');
+            updateNotificationCount();
+        }
+
+        // Toggle content
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            content.style.maxHeight = content.scrollHeight + 'px';
+        } else {
+            content.style.maxHeight = null;
+            content.style.display = 'none';
+        }
+    });
+  });
+
+  notificationsList.querySelectorAll('.mark-read').forEach(button => {
+      button.addEventListener('click', async () => {
+          await markNotificationAsRead(button.dataset.id);
+          await updateNotificationsList();
+      });
+  });
+}
+
+async function updateNotificationCount() {
+  const notifications = await loadNotifications();
+  const notificationCount = document.getElementById('notification-count');
+  
+  if (notifications.length > 0) {
+      notificationCount.textContent = notifications.length;
+      notificationCount.style.display = 'inline';
+  } else {
+      notificationCount.style.display = 'none';
+  }
+}
+
+async function loadNotifications() {
+  try {
+      const response = await fetch('/api/notifications');
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data;
+  } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return [];
+  }
+}
+
+async function markNotificationAsRead(notificationId) {
+  try {
+      await fetch(`/api/notifications/${notificationId}`, {
+          method: 'PUT'
+      });
+  } catch (error) {
+      console.error('Error marking notification as read:', error);
+  }
+}
+
 
 function createBackofficeNavigation(userStatus) {
   const navContainer = document.getElementById("dynamic-nav");
@@ -523,6 +687,13 @@ function createBackofficeNavigation(userStatus) {
       permission: "view",
       interface: "campaigns",
     },
+    {
+      id: "crud-notification-link",
+      text: "CRUD Notifications",
+      href: "/crud-notification",
+      permission: "view",
+      interface: "notifications",
+    },
     // {
     //   id: "logs-link",
     //   text: "Report Logs",
@@ -572,6 +743,20 @@ function createBackofficeNavigation(userStatus) {
       href: "/report?report=report-users",
       permission: "view",
       // to be changed to the correct interface
+      interface: "report-orders",
+    },
+    {
+      id: "report-link",
+      text: "Report Notifications",
+      href: "/report?report=report-notifications",
+      permission: "view",
+      interface: "report-orders",
+    },
+    {
+      id: "report-link",
+      text: "Report Notification Status",
+      href: "/report?report=report-notifications-status",
+      permission: "view",
       interface: "report-orders",
     },
     {

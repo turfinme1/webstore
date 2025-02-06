@@ -3,17 +3,17 @@ const { EmailService, transporter } = require("../services/emailService");
 const { TemplateLoader } = require("../serverConfigurations/templateLoader");
 const Logger = require("../serverConfigurations/logger");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
-const { v4: uuidv4 } = require('uuid');
 
 const BATCH_SIZE = 50;
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MINUTES = 2;
+const MESSAGE_TYPE = 'Email';
 
 const EMAIL_STATUS = {
-    QUEUED: 'queued',
+    PENDING: 'pending',
     SENDING: 'sending',
     SENT: 'sent',
-    RETRY: 'retry',
+    SEEN: 'seen',
     FAILED: 'failed'
 };
 
@@ -43,71 +43,69 @@ const EMAIL_ERROR_TYPES = {
         client = await pool.connect();
         loggerClient = await pool.connect();
         logger = new Logger({ dbConnection: new DbConnectionWrapper(loggerClient) });
-        const lockId = uuidv4();
 
         await client.query('BEGIN');
+
         const pendingEmails = await client.query(`
-            UPDATE emails
-            SET status = $1, 
-                processing_started_at = NOW(),
-                lock_id = $2
-            WHERE id IN (
-                SELECT id FROM emails
-                WHERE status IN ($3, $4)
-                AND (last_attempt IS NULL OR last_attempt < NOW() - INTERVAL '${RETRY_DELAY_MINUTES} minutes')
-                AND attempts < $5
-                AND lock_id IS NULL
-                AND (retry_after IS NULL OR retry_after < NOW())
-                AND NOT EXISTS (
-                    SELECT 1 FROM emails 
-                    WHERE created_at > created_at - INTERVAL '1 minute'
-                    AND status = $1
-                )
+            WITH cte AS (
+                SELECT id
+                FROM emails
+                WHERE type = $1
+                  AND status = $2
+                  AND (last_attempt IS NULL OR last_attempt < NOW() - INTERVAL '${RETRY_DELAY_MINUTES} minutes')
+                  AND attempts < $3
+                  AND (retry_after IS NULL OR retry_after < NOW())
                 ORDER BY priority, created_at ASC
-                LIMIT $6
+                LIMIT $4
                 FOR UPDATE SKIP LOCKED
             )
-            RETURNING *`,
-            [EMAIL_STATUS.SENDING, lockId, EMAIL_STATUS.QUEUED, EMAIL_STATUS.RETRY, MAX_ATTEMPTS, BATCH_SIZE]
-        );
+            UPDATE emails
+            SET status = $5,
+                processing_started_at = NOW()
+            FROM cte
+            WHERE emails.id = cte.id
+            RETURNING emails.*;
+        `, [MESSAGE_TYPE, EMAIL_STATUS.PENDING, MAX_ATTEMPTS, BATCH_SIZE, EMAIL_STATUS.SENDING]);
 
         for (const email of pendingEmails.rows) {
             try {
                 await client.query('SAVEPOINT email_processing_savepoint');
-                const emailOptions = await emailService.processTemplate({ emailData: email.data_object, dbConnection: client });
-                
+
+                const emailOptions = { 
+                    from: "no-reply@web-store4eto.com",
+                    to: email.recipient_email,
+                    subject: email.subject,
+                    html: email.text_content
+                };
                 await emailService.sendEmail(emailOptions);
+
                 await client.query(`
                     UPDATE emails 
                     SET status = $1,
                         sent_at = NOW(),
-                        lock_id = NULL,
                         error = NULL
-                    WHERE id = $2 AND lock_id = $3`,
-                    [EMAIL_STATUS.SENT, email.id, lockId]
-                );
+                    WHERE id = $2
+                `, [EMAIL_STATUS.SENT, email.id]);
+
                 await client.query('RELEASE SAVEPOINT email_processing_savepoint');
             } catch (error) {
                 await client.query('ROLLBACK TO SAVEPOINT email_processing_savepoint');
                 const errorType = classifyEmailError(error);
                 const retryDelay = calculateRetryDelay(email.attempts + 1);
                 
+                const newStatus = (email.attempts + 1 >= MAX_ATTEMPTS) ? EMAIL_STATUS.FAILED : EMAIL_STATUS.PENDING;
+                
                 await client.query(`
                     UPDATE emails 
-                    SET status = CASE 
-                                    WHEN attempts + 1 >= $7 THEN $8
-                                    ELSE $1 
-                                END,
+                    SET status = $1,
                         error_type = $2,
                         error = $3,
                         attempts = attempts + 1,
                         last_attempt = NOW(),
-                        lock_id = NULL,
                         retry_after = NOW() + (INTERVAL '1 minute' * $4),
                         priority = GREATEST(priority - 1, 1)
-                    WHERE id = $5 AND lock_id = $6`,
-                    [EMAIL_STATUS.RETRY, errorType, error.message, retryDelay, email.id, lockId, MAX_ATTEMPTS, EMAIL_STATUS.FAILED]
-                );
+                    WHERE id = $5
+                `, [newStatus, errorType, error.message, retryDelay, email.id]);
 
                 await logger.error(error);
             }
@@ -117,13 +115,11 @@ const EMAIL_ERROR_TYPES = {
 
         await client.query(`
             UPDATE emails
-            SET lock_id = NULL,
-                status = $1,
+            SET status = $1,
                 retry_after = NOW() + (INTERVAL '1 minute' * $2)
             WHERE processing_started_at < NOW() - INTERVAL '5 minutes'
-            AND status = $3`,
-            [EMAIL_STATUS.RETRY, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]
-        );
+            AND status = $3
+        `, [EMAIL_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]);
 
         await logger.info({
             code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EMAIL_QUEUE_PROCESS_SUCCESS',
@@ -131,13 +127,13 @@ const EMAIL_ERROR_TYPES = {
             long_description: 'Email queue process completed'
         });
     } catch (error) {
-        if(client) await client.query('ROLLBACK');
-        if(logger) await logger.error(error);
+        if (client) await client.query('ROLLBACK');
+        if (logger) await logger.error(error);
     } finally {
-        if(client){
+        if (client) {
             client.release();
         }
-        if(loggerClient){
+        if (loggerClient) {
             loggerClient.release();
         }
     }

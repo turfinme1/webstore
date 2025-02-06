@@ -1,5 +1,5 @@
 const bcrypt = require("bcrypt");
-const { ASSERT_USER } = require("../serverConfigurations/assert");
+const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
 
 class CrudService {
   constructor() {
@@ -31,7 +31,7 @@ class CrudService {
     await this.handleMappingInsertions(data, schema, insertedEntity.id);
 
     if (this.hooks().create[data.params.entity]?.after) {
-      await this.hooks().create[data.params.entity].after(data, insertedEntity.id);
+      await this.hooks().create[data.params.entity].after(data, insertedEntity);
     }
 
     return insertedEntity;
@@ -409,6 +409,9 @@ class CrudService {
         "target-groups": {
           after: this.targetGroupCreateHook.bind(this),
         },
+        notifications: {
+          after: this.notificationCreateHook.bind(this),
+        }
       },
       update: {
         roles: {
@@ -417,6 +420,9 @@ class CrudService {
         "admin-users": {
           before: this.adminUsersUpdateHook,
         },
+        "email-templates": {
+          before: this.emailTemplateUpdateHook,
+        }
       },
     }
   };
@@ -590,7 +596,7 @@ class CrudService {
     );
   }
 
-  async targetGroupCreateHook(data, mainEntityId) {
+  async targetGroupCreateHook(data, mainEntity) {
     data.params.entity = "users";
     data.query = data.body.users.query;
 
@@ -603,9 +609,58 @@ class CrudService {
       RETURNING *
     `;
   
-    const queryValues = [...innerInsertQuery.searchValues, mainEntityId];
+    const queryValues = [...innerInsertQuery.searchValues, mainEntity.id];
   
     const result = await data.dbConnection.query(insertQuery, queryValues);
+  }
+
+  async emailTemplateUpdateHook(data, insertObject) {
+    const currentEmailTemplateResult = await data.dbConnection.query(`
+      SELECT * FROM email_templates
+      WHERE id = $1`,
+      [data.params.id]
+    );
+    ASSERT_USER(currentEmailTemplateResult.rows.length > 0, "Email template not found", { code: "SERVICE.CRUD.00620.INVALID_INPUT_UPDATE_EMAIL_TEMPLATE_NOT_FOUND", long_description: "Email template not found" });
+    const currentEmailTemplate = currentEmailTemplateResult.rows[0];
+    data.body.placeholders = JSON.stringify(currentEmailTemplate.placeholders);
+  }
+
+  async notificationCreateHook(data, mainEntity) {
+    const templateResult = await data.dbConnection.query(
+        `SELECT * FROM email_templates WHERE id = $1`,
+        [mainEntity.template_id]
+    );
+    ASSERT_USER(templateResult.rows.length > 0, "Template not found", {
+        code: "SERVICE.CRUD.00630.TEMPLATE_NOT_FOUND",
+        long_description: "Notification template not found"
+    });
+    
+    const template = templateResult.rows[0];
+    
+    // Get users data
+    const userIds = mainEntity.user_ids.split(',').map(id => parseInt(id.trim()));
+    const usersResult = await data.dbConnection.query(
+      `SELECT id, email, first_name, last_name, phone 
+      FROM users 
+      WHERE id = ANY($1)`,
+      [userIds]
+    );
+    
+    // Create emails for each user
+    for (const user of usersResult.rows) {
+        let text_content = template.template;
+        for (const placeholder of template.placeholders) {
+          let placeholderKey = placeholder.replace(/[{}]/g, "");
+          ASSERT(user[placeholderKey] !== null, "Missing email template placeholder", { code: "SERVICE.EMAIL.00115.INVALID_INPUT_TEMPLATE", long_description: `"Missing email template placeholder: ${placeholderKey}` });
+          text_content = text_content.replaceAll(`${placeholder}`, user[placeholderKey]);
+        }
+        
+        await data.dbConnection.query(
+          `INSERT INTO emails (recipient_id, recipient_email, subject, text_content, notification_id, type) 
+          VALUES ($1, $2, $3, $4, $5, 'Notification')`,
+          [user.id, user.email, template.subject, text_content, mainEntity.id]
+        );
+    }
   }
 }
 

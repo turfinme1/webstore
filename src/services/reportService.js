@@ -1,3 +1,4 @@
+const { options } = require("yargs");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateObject } = require("../serverConfigurations/validation");
 
@@ -9,6 +10,8 @@ class ReportService {
         "report-logs": this.logsReportDefinition.bind(this),
         "report-orders": this.ordersReportDefinition.bind(this),
         "report-users": this.usersReportDefinition.bind(this),
+        "report-notifications": this.notificationsReportDefinition.bind(this),
+        "report-notifications-status": this.notificationsStatusReportDefinition.bind(this),
     }
     this.dashboardReports = {
         "store-trends": this.storeTrendsReportDefinition.bind(this),
@@ -1358,6 +1361,219 @@ class ReportService {
   
     return { reportUIConfig, sql, reportFilters };
   }
+
+  async notificationsReportDefinition(data) {
+    const reportUIConfig = {
+        title: 'Notifications Report',
+        dataEndpoint: '/api/reports/report-notifications',
+        headerGroups: [
+            [
+                { key: 'created_at', label: 'Created At', rowspan: 2, format: 'date_time' },
+                { key: 'type', label: 'Notification Type', rowspan: 2, format: 'text' },
+                { key: 'user_email', label: 'User Email', rowspan: 2, format: 'text' },
+                { key: 'status', label: 'Status', rowspan: 2, format: 'text' },
+                { key: 'subject' , label: 'Subject', rowspan: 2, format: 'text' },
+                { key: 'text_content', label: 'Text Content', rowspan: 2, format: 'text' },
+                { key: 'count', label: 'Count', rowspan: 2, align: 'right', format: 'number' }
+            ]
+        ],
+    };
+
+    const reportFilters = [
+        {
+            key: "created_at",
+            grouping_expression: "N.created_at",
+            filter_expression: "N.created_at = $FILTER_VALUE$",
+            type: "timestamp",
+            label: "Period",
+            groupable: true,
+            displayInUI: true,
+        },
+        {
+            key: "type",
+            grouping_expression: "N.type",
+            filter_expression: "N.type = $FILTER_VALUE$",
+            type: "select",
+            label: "Notification Type",
+            options: [
+                { value: 'Email', label: 'Email' },
+                { value: 'Notification', label: 'Notification' },
+            ],
+            groupable: true,
+            displayInUI: true,
+        },
+        {
+            key: "user_email",
+            grouping_expression: "N.recipient_email",
+            filter_expression: "STRPOS(LOWER(CAST( N.recipient_email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "User Email",
+            groupable: true,
+            displayInUI: true,
+        },
+        {
+            key: "status",
+            grouping_expression: "N.status",
+            filter_expression: "N.status = $FILTER_VALUE$",
+            type: 'select',
+            label: 'Status',
+            options: [
+                { value: 'pending', label: 'Pending' },
+                { value: 'sending', label: 'Sending' },
+                { value: 'sent', label: 'Sent' },
+                { value: 'seen', label: 'Seen' }
+            ],
+            groupable: true,
+            displayInUI: true,
+        },
+        {
+            key: "subject",
+            grouping_expression: "N.subject",
+            filter_expression: "STRPOS(LOWER(CAST( N.subject AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "Subject",
+            displayInUI: true,
+        },
+        {
+            key: "text_content",
+            grouping_expression: "N.text_content",
+            filter_expression: "STRPOS(LOWER(CAST( N.text_content AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "Text Content",
+            displayInUI: true,
+        },
+        {
+            key: "count",
+            type: "number",
+        },
+    ];
+
+    let sql = `
+        SELECT
+            NULL AS "created_at",
+            NULL AS "type",
+            NULL AS "user_email",
+            NULL AS "status",
+            NULL AS "subject",
+            NULL AS "text_content",
+            COUNT(*) AS "count",
+            0 AS "sort_order"
+        FROM emails N
+        WHERE TRUE
+            AND $created_at_filter_expression$
+            AND $type_filter_expression$
+            AND $user_email_filter_expression$
+            AND $status_filter_expression$
+            AND $subject_filter_expression$
+            AND $text_content_filter_expression$
+        
+        UNION ALL
+
+        SELECT
+            $created_at_grouping_expression$ AS "created_at",
+            $type_grouping_expression$ AS "type",
+            $user_email_grouping_expression$ AS "user_email",
+            $status_grouping_expression$ AS "status",
+            $subject_grouping_expression$ AS "subject",
+            $text_content_grouping_expression$ AS "text_content",
+            COUNT(*) AS "count",
+            1 AS "sort_order"
+        FROM emails N
+        WHERE TRUE
+            AND $created_at_filter_expression$
+            AND $type_filter_expression$
+            AND $user_email_filter_expression$
+            AND $status_filter_expression$
+            AND $subject_filter_expression$
+            AND $text_content_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5, 6
+        ORDER BY sort_order ASC, 1 DESC`;
+
+    return { reportUIConfig, sql, reportFilters };
+  }
+
+  async notificationsStatusReportDefinition(data) {
+    const reportUIConfig = {
+        title: 'Notifications Status Report',
+        dataEndpoint: '/api/reports/report-notifications-status',
+        headerGroups: [
+            [   
+                { key: 'created_at', label: 'Created At', rowspan: 2, format: 'date_time' },
+                { key: 'name', label: 'Notification Campaign Name', format: 'text' },
+                { key: 'subject', label: 'Subject', format: 'text' },
+                { key: 'users_count', label: 'Users Count', align: 'right', format: 'number' },
+                { key: 'status_pending', label: 'Pending', align: 'right', format: 'number' },
+                { key: 'status_sent', label: 'Sent', align: 'right', format: 'number' },
+                { key: 'status_seen', label: 'Seen', align: 'right', format: 'number' }
+            ]
+        ]
+    };
+
+    const reportFilters = [
+        {
+            key: "created_at",
+            grouping_expression: "N.created_at",
+            filter_expression: "N.created_at = $FILTER_VALUE$",
+            type: "timestamp",
+            label: "Period",
+            groupable: true,
+            displayInUI: true,
+        },
+        {
+            key: "name",
+            grouping_expression: "N.name",
+            filter_expression: "STRPOS(LOWER(CAST(N.name AS text)), LOWER($FILTER_VALUE$)) > 0",
+            type: "text",
+            label: "Notification Campaign Name",
+            displayInUI: true
+        },
+        {
+            key: "subject",
+            grouping_expression: "E.subject",
+            filter_expression: "STRPOS(LOWER(CAST(E.subject AS text)), LOWER($FILTER_VALUE$)) > 0",
+            type: "text",
+            label: "Subject",
+            displayInUI: true
+        }
+    ];
+
+    const sql = `
+        SELECT
+            NULL AS "created_at",
+            NULL AS name,
+            NULL AS subject,
+            COUNT(E.id) AS users_count,
+            COUNT(CASE WHEN E.status = 'queued' THEN 1 END) AS status_pending,
+            COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
+            COUNT(CASE WHEN E.status = 'seen' THEN 1 END) AS status_seen,
+            0 AS "sort_order"
+        FROM notifications N	
+        JOIN emails E ON N.id = E.notification_id
+        WHERE TRUE
+            AND $name_filter_expression$
+            AND $subject_filter_expression$
+
+        UNION ALL
+
+        SELECT
+            $created_at_grouping_expression$ AS "created_at",
+            $name_grouping_expression$ as name,
+            $subject_grouping_expression$ as subject,
+            COUNT(E.id) AS users_count,
+            COUNT(CASE WHEN E.status = 'queued' THEN 1 END) AS status_pending,
+            COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
+            COUNT(CASE WHEN E.status = 'seen' THEN 1 END) AS status_seen,
+            1 AS "sort_order"
+        FROM notifications N	
+        JOIN emails E ON N.id = E.notification_id
+        WHERE TRUE
+            AND $name_filter_expression$
+            AND $subject_filter_expression$
+        GROUP BY 1, 2, 3
+        ORDER BY sort_order ASC, 1 DESC`;
+
+    return { reportUIConfig, sql, reportFilters };
+  }   
 
   formatReportMetadata(reportFilters, INPUT_DATA) {
     const filters = {};

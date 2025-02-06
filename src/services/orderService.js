@@ -157,7 +157,7 @@ class OrderService {
       dbConnection: data.dbConnection,
       emailData: {
         templateType: "Order created",
-        recipient: orderView.email,
+        recipient_email: orderView.email,
         first_name: user.first_name,
         last_name: user.last_name,
         order_table: orderView,
@@ -413,7 +413,7 @@ class OrderService {
       dbConnection: data.dbConnection,
       emailData: {
         templateType: "Order paid",
-        recipient: order.email,
+        recipient_email: order.email,
         first_name: user.first_name,
         last_name: user.last_name,
         order_table: order,

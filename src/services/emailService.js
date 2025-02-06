@@ -49,7 +49,7 @@ class EmailService {
             `SELECT * FROM admin_users WHERE id = $1`,
             [data.session.admin_user_id]
         );
-        emailData.recipient = userResult.rows[0].email;
+        emailData.recipient_email = userResult.rows[0].email;
         emailData.first_name = userResult.rows[0].first_name;
         emailData.last_name = userResult.rows[0].last_name;
 
@@ -89,21 +89,28 @@ class EmailService {
         ASSERT(data.dbConnection, "Missing database connection", { code: "SERVICE.EMAIL.00089.INVALID_INPUT_CONNECTION", long_description: "Missing database connection" });
         ASSERT(data.emailData, "Missing email data", { code: "SERVICE.EMAIL.00090.INVALID_INPUT_BODY", long_description: "Missing email data" });
         ASSERT(data.emailData.templateType, "Missing email template type", { code: "SERVICE.EMAIL.00091.INVALID_INPUT_TEMPLATE", long_description: "Missing email template type" });
-        ASSERT(data.emailData.recipient, "Missing email recipient", { code: "SERVICE.EMAIL.00092.INVALID_INPUT_RECIPIENT", long_description: "Missing email recipient" });
+        ASSERT(data.emailData.recipient_email, "Missing email recipient", { code: "SERVICE.EMAIL.00092.INVALID_INPUT_RECIPIENT", long_description: "Missing email recipient" });
 
-        const emailRecord = await data.dbConnection.query(
-            `INSERT INTO emails (template_type, data_object) 
-             VALUES ($1, $2) 
-             RETURNING *`,
-            [data.emailData.templateType, data.emailData]
+        const processedEmail = await this.processTemplate(data);
+        const emailRecord = await data.dbConnection.query(`
+            INSERT INTO emails (recipient_email, subject, text_content)
+            VALUES ($1, $2, $3)`,
+            [data.emailData.recipient_email, processedEmail.subject, processedEmail.html]
         );
+
+        // const emailRecord = await data.dbConnection.query(
+        //     `INSERT INTO emails (template_type, data_object) 
+        //      VALUES ($1, $2) 
+        //      RETURNING *`,
+        //     [data.emailData.templateType, data.emailData]
+        // );
 
         return emailRecord.rows[0];
     }
 
     async processTemplate(data) {
         const emailTemplateResult = await data.dbConnection.query(
-            `SELECT * FROM email_templates WHERE type = $1`,
+            `SELECT * FROM email_templates WHERE name = $1`,
             [data.emailData.templateType]
         );
         ASSERT(emailTemplateResult.rows.length === 1, "Template not found", { code: "SERVICE.EMAIL.00109.EMAIL_NOT_FOUND", long_description: "Template not found" });
@@ -124,7 +131,7 @@ class EmailService {
 
         return { 
             from: "no-reply@web-store4eto.com",
-            to: data.emailData.recipient,
+            to: data.emailData.recipient_email,
             subject: emailTemplate.subject,
             html: emailBody
         };
