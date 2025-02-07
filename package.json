@@ -8,8 +8,7 @@
     "test:coverage": "jest --coverage",
     "start": "nodemon server.js",
     "admin": "nodemon adminServer.js",
-    "payment": "nodemon paymentServer.js",
-    "typeorm": "typeorm-ts-node-commonjs"
+    "payment": "nodemon paymentServer.js"
   },
   "author": "Borislav Angelov",
   "license": "ISC",
@@ -32,16 +31,10 @@
   "devDependencies": {
     "@eslint/js": "^9.10.0",
     "@faker-js/faker": "^9.0.1",
-    "@types/node": "^22.13.1",
     "eslint": "^9.10.0",
     "globals": "^15.9.0",
     "jest": "^29.7.0",
-    "nodemon": "^3.1.4",
-    "reflect-metadata": "^0.2.2",
-    "ts-node": "^10.9.2",
-    "typeorm": "^0.3.20",
-    "typeorm-model-generator": "^0.4.6",
-    "typescript": "^5.7.3"
+    "nodemon": "^3.1.4"
   },
   "jest": {
     "coverageReporters": [
