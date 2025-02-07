@@ -1,15 +1,16 @@
 -- Migration: ChangeEmailTemplatesTableToNotifications
 -- Created at: 2025-02-03T08:41:42.061Z
 
+ALTER TABLE email_templates RENAME COLUMN type TO name;
+ALTER TABLE email_templates ADD COLUMN type TEXT NOT NULL CHECK (type IN ('Notification', 'Email')) DEFAULT 'Email';
+
 ALTER TABLE email_templates DROP CONSTRAINT IF EXISTS email_templates_type_check;
 INSERT INTO email_templates (type, subject, name, placeholders, template, table_border_width, table_border_color) VALUES
 ('Notification', 'Notification', 'Notification 1 HEllo wrld','["{first_name}", "{last_name}", "{email}", "{phone}"]', 'Hello, {first_name} {last_name}! You have a new notification. Your email is {email} and your phone number is {phone}', NULL, NULL);
 
-ALTER TABLE email_templates RENAME COLUMN type TO name;
-ALTER TABLE email_templates ADD COLUMN type TEXT NOT NULL CHECK (type IN ('Notification', 'Email')) DEFAULT 'Email';
 
 ALTER TABLE email_templates 
-    ADD CONSTRAINT email_templates_type_unique UNIQUE (type),
+    ADD CONSTRAINT email_templates_name_unique UNIQUE (name),
     ADD CONSTRAINT email_templates_type_length_check CHECK (length(type) > 3);
 
 ALTER TABLE emails ADD COLUMN IF NOT EXISTS recipient_id BIGINT;
@@ -59,7 +60,6 @@ CREATE TRIGGER enforce_email_status_transition
 
 COMMENT ON FUNCTION check_email_status_transition() IS 'Enforces valid email status transitions';
 
-
 INSERT INTO interfaces (name) VALUES ('notifications');
 INSERT INTO permissions (name, interface_id) VALUES
 ('view', 14),
@@ -77,7 +77,7 @@ CREATE TABLE notifications (
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 CREATE VIEW notifications_view AS
-SELECT notifications.id, name, template_id, user_ids, notifications.created_at, email_templates.type as template_type
+SELECT notifications.id, notifications.name, template_id, user_ids, notifications.created_at, email_templates.type as template_type
 FROM notifications
 JOIN email_templates ON notifications.template_id = email_templates.id
 WHERE is_active = TRUE;
