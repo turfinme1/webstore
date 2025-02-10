@@ -52,16 +52,16 @@ const EMAIL_ERROR_TYPES = {
                 FROM emails
                 WHERE type = $1
                   AND status = $2
-                  AND (last_attempt IS NULL OR last_attempt < NOW() - INTERVAL '${RETRY_DELAY_MINUTES} minutes')
-                  AND attempts < $3
-                  AND (retry_after IS NULL OR retry_after < NOW())
-                ORDER BY priority, created_at ASC
+                  AND (email_last_attempt IS NULL OR email_last_attempt < NOW() - INTERVAL '${RETRY_DELAY_MINUTES} minutes')
+                  AND email_attempts < $3
+                  AND (email_retry_after IS NULL OR email_retry_after < NOW())
+                ORDER BY email_priority DESC, created_at ASC
                 LIMIT $4
                 FOR UPDATE SKIP LOCKED
             )
             UPDATE emails
             SET status = $5,
-                processing_started_at = NOW()
+                email_processing_started_at = NOW()
             FROM cte
             WHERE emails.id = cte.id
             RETURNING emails.*;
@@ -82,8 +82,7 @@ const EMAIL_ERROR_TYPES = {
                 await client.query(`
                     UPDATE emails 
                     SET status = $1,
-                        sent_at = NOW(),
-                        error = NULL
+                        sent_at = NOW()
                     WHERE id = $2
                 `, [EMAIL_STATUS.SENT, email.id]);
 
@@ -91,21 +90,19 @@ const EMAIL_ERROR_TYPES = {
             } catch (error) {
                 await client.query('ROLLBACK TO SAVEPOINT email_processing_savepoint');
                 const errorType = classifyEmailError(error);
-                const retryDelay = calculateRetryDelay(email.attempts + 1);
+                const retryDelay = calculateRetryDelay(email.email_attempts + 1);
                 
-                const newStatus = (email.attempts + 1 >= MAX_ATTEMPTS) ? EMAIL_STATUS.FAILED : EMAIL_STATUS.PENDING;
+                const newStatus = (email.email_attempts + 1 >= MAX_ATTEMPTS) ? EMAIL_STATUS.FAILED : EMAIL_STATUS.PENDING;
                 
                 await client.query(`
                     UPDATE emails 
                     SET status = $1,
-                        error_type = $2,
-                        error = $3,
-                        attempts = attempts + 1,
-                        last_attempt = NOW(),
-                        retry_after = NOW() + (INTERVAL '1 minute' * $4),
-                        priority = GREATEST(priority - 1, 1)
-                    WHERE id = $5
-                `, [newStatus, errorType, error.message, retryDelay, email.id]);
+                        email_attempts = email_attempts + 1,
+                        email_last_attempt = NOW(),
+                        email_retry_after = NOW() + (INTERVAL '1 minute' * $2),
+                        email_priority = GREATEST(email_priority - 1, 1)
+                    WHERE id = $3
+                `, [newStatus, retryDelay, email.id]);
 
                 await logger.error(error);
             }
@@ -116,8 +113,8 @@ const EMAIL_ERROR_TYPES = {
         await client.query(`
             UPDATE emails
             SET status = $1,
-                retry_after = NOW() + (INTERVAL '1 minute' * $2)
-            WHERE processing_started_at < NOW() - INTERVAL '5 minutes'
+                email_retry_after = NOW() + (INTERVAL '1 minute' * $2)
+            WHERE email_processing_started_at < NOW() - INTERVAL '5 minutes'
             AND status = $3
         `, [EMAIL_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]);
 

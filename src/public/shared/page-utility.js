@@ -499,7 +499,7 @@ async function updateNotificationsList() {
   const bellIcon = document.getElementById('notification-bell');
   
   if (notifications.length > 0) {
-      notificationCount.textContent = notifications.length;
+      notificationCount.textContent = notifications.filter(n => n.status !== 'seen').length;
       notificationCount.style.display = 'inline';
   } else {
       notificationCount.style.display = 'none';
@@ -589,7 +589,7 @@ async function updateNotificationCount() {
   const notificationCount = document.getElementById('notification-count');
   
   if (notifications.length > 0) {
-      notificationCount.textContent = notifications.length;
+      notificationCount.textContent = notifications.filter(n => n.status !== 'seen').length;
       notificationCount.style.display = 'inline';
   } else {
       notificationCount.style.display = 'none';

@@ -98,13 +98,6 @@ class EmailService {
             [data.emailData.recipient_email, processedEmail.subject, processedEmail.html]
         );
 
-        // const emailRecord = await data.dbConnection.query(
-        //     `INSERT INTO emails (template_type, data_object) 
-        //      VALUES ($1, $2) 
-        //      RETURNING *`,
-        //     [data.emailData.templateType, data.emailData]
-        // );
-
         return emailRecord.rows[0];
     }
 
@@ -135,44 +128,6 @@ class EmailService {
             subject: emailTemplate.subject,
             html: emailBody
         };
-    }
-
-    async processEmailQueue(pool) {
-        let dbConnection;
-        let emailId;
-        try {
-            dbConnection = await pool.connect();
-            const pendingEmails = await dbConnection.query(
-                `SELECT * FROM emails 
-                WHERE status = 'queued' 
-                AND (last_attempt IS NULL OR last_attempt > NOW() - INTERVAL '25 minutes')
-                AND attempts < 3
-                ORDER BY created_at ASC`
-            );
-            
-            for (const email of pendingEmails.rows) {
-                emailId = email.id;
-                const emailOptions = await this.processTemplate({ emailData: email.data_object, dbConnection });
-                await this.sendEmail(emailOptions);
-                await dbConnection.query(
-                    `UPDATE emails 
-                    SET status = 'sent', sent_at = NOW() 
-                    WHERE id = $1`,
-                    [email.id]
-                );
-            }
-        } catch (error) {
-            await dbConnection.query(
-                `UPDATE emails 
-                SET attempts = attempts + 1, last_attempt = NOW() 
-                WHERE id = $1`,
-                [emailId]
-            );
-        } finally {
-            if(dbConnection){
-                dbConnection.release();
-            }
-        }
     }
 
     async buildOrderTable(data) {
