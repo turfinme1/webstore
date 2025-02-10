@@ -9,6 +9,7 @@ import {
 import { Products } from "./Products";
 
 @Index("images_pkey", ["id"], { unique: true })
+@Index("idx_images_product_id", ["product"])
 @Entity("images", { schema: "public" })
 export class Images {
   @PrimaryGeneratedColumn({ type: "bigint", name: "id" })
