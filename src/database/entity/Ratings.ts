@@ -13,6 +13,7 @@ import { Users } from "./Users";
 @Index("ratings_product_id_user_id_key", ["productId", "userId"], {
   unique: true,
 })
+@Index("idx_ratings_product_id", ["product"])
 @Entity("ratings", { schema: "public" })
 export class Ratings {
   @PrimaryGeneratedColumn({ type: "bigint", name: "id" })
