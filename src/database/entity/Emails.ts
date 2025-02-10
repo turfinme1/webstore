@@ -14,14 +14,11 @@ export class Emails {
   @PrimaryGeneratedColumn({ type: "bigint", name: "id" })
   id: string;
 
-  @Column("jsonb", { name: "data_object", nullable: true })
-  dataObject: object | null;
+  @Column("integer", { name: "email_attempts", default: () => "0" })
+  emailAttempts: number;
 
-  @Column("integer", { name: "attempts", default: () => "0" })
-  attempts: number;
-
-  @Column("timestamp with time zone", { name: "last_attempt", nullable: true })
-  lastAttempt: Date | null;
+  @Column("timestamp with time zone", { name: "email_last_attempt", nullable: true })
+  emailLastAttempt: Date | null;
 
   @Column("timestamp with time zone", { name: "sent_at", nullable: true })
   sentAt: Date | null;
@@ -35,26 +32,17 @@ export class Emails {
   })
   createdAt: Date;
 
-  @Column("text", { name: "error_type", nullable: true })
-  errorType: string | null;
+  @Column("integer", { name: "email_priority", nullable: true, default: () => "5" })
+  emailPriority: number | null;
 
-  @Column("text", { name: "error", nullable: true })
-  error: string | null;
-
-  @Column("integer", { name: "priority", nullable: true, default: () => "5" })
-  priority: number | null;
-
-  @Column("timestamp with time zone", { name: "retry_after", nullable: true })
-  retryAfter: Date | null;
+  @Column("timestamp with time zone", { name: "email_retry_after", nullable: true })
+  emailRetryAfter: Date | null;
 
   @Column("timestamp with time zone", {
-    name: "processing_started_at",
+    name: "email_processing_started_at",
     nullable: true,
   })
-  processingStartedAt: Date | null;
-
-  @Column("uuid", { name: "lock_id", nullable: true })
-  lockId: string | null;
+  emailProcessingStartedAt: Date | null;
 
   @Column("bigint", { name: "recipient_id", nullable: true })
   recipientId: string | null;
