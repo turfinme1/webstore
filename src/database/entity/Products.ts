@@ -16,6 +16,7 @@ import { Ratings } from "./Ratings";
 
 @Index("products_code_key", ["code"], { unique: true })
 @Index("products_pkey", ["id"], { unique: true })
+@Index("products_price_idx", ["price"])
 @Entity("products", { schema: "public" })
 export class Products {
   @PrimaryGeneratedColumn({ type: "bigint", name: "id" })
