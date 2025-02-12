@@ -321,6 +321,7 @@ async function renderDashboard(startDate, endDate) {
     yearBefore.setFullYear(yearBefore.getFullYear() - 1);
     dashboardContainer.innerHTML = `
       <div class="container mt-4">
+      <h2 class="mb-4">Overall KPI</h2>
         <div class="row g-4">
           ${metrics.map((metric, index) => `
             <div class="col-md-4">
@@ -425,6 +426,7 @@ async function renderCampaignDashboard(startDate, endDate) {
 
     dashboardContainer.innerHTML = `
       <div class="col-12">
+       <h2 class="mb-4">Campaigns KPI</h2>
         <div class="card shadow-sm">
           <div class="card-body p-0">
             <div class="table-responsive">
