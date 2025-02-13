@@ -3,6 +3,8 @@ package com.webstore.backoffice.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Generated;
 
 import java.time.OffsetDateTime;
 
@@ -10,7 +12,7 @@ import java.time.OffsetDateTime;
 @Table(name = "logs")
 public class Log {
     @Id
-    @ColumnDefault("nextval('logs_id_seq')")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 
@@ -40,8 +42,7 @@ public class Log {
     @Column(name = "debug_info", length = Integer.MAX_VALUE)
     private String debugInfo;
 
-    @NotNull
-    @ColumnDefault("now()")
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 

@@ -1,14 +1,16 @@
 package com.webstore.backoffice.asserts;
 
-public class PeerError extends RuntimeException {
-    private final Object[] params;
+import java.util.Map;
 
-    public PeerError(String message, Object... params) {
+public class PeerError extends RuntimeException {
+    private Map<String, Object> params;
+
+    public PeerError(String message, Map<String, Object> params) {
         super(message);
         this.params = params;
     }
 
-    public Object[] getParams() {
+    public Map<String, Object> getParams() {
         return params;
     }
 }

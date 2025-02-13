@@ -1,14 +1,16 @@
 package com.webstore.backoffice.asserts;
 
-public class UserError extends RuntimeException {
-    private final Object[] params;
+import java.util.Map;
 
-    public UserError(String message, Object... params) {
+public class UserError extends RuntimeException {
+    private Map<String, Object> params;
+
+    public UserError(String message, Map<String, Object> params) {
         super(message);
         this.params = params;
     }
 
-    public Object[] getParams() {
+    public Map<String, Object> getParams() {
         return params;
     }
 }
