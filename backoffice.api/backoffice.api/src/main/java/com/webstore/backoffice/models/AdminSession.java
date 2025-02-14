@@ -11,7 +11,7 @@ import java.util.UUID;
 @Table(name = "admin_sessions")
 public class AdminSession {
     @Id
-    @ColumnDefault("nextval('admin_sessions_id_seq')")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 

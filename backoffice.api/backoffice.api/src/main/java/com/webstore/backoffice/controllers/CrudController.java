@@ -3,7 +3,12 @@ package com.webstore.backoffice.controllers;
 import com.webstore.backoffice.dtos.UserDTO;
 import com.webstore.backoffice.models.User;
 import com.webstore.backoffice.services.CrudService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+
+import static com.webstore.backoffice.asserts.AssertUtil.*;
 
 @RestController
 @RequestMapping("/api")
@@ -23,9 +28,14 @@ public class CrudController {
 //    public PromotionsView getEntityById(@PathVariable Long id) {
 //        return crudService.getEntityById(id);
 //    }
-
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users/{id}")
     public UserDTO getEntityById(@PathVariable Long id) {
+
+//        ASSERT_USER(false, "User not found", new HashMap<>() {{
+//            put("code", "USER_CONDITION_FAILED");
+//            put("long_description", "User not found");
+//        }});
         return crudService.getEntityById(id);
     }
 
