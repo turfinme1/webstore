@@ -25,10 +25,11 @@ public class CustomSessionAuthenticationFilter extends OncePerRequestFilter {
         this.sessionCookieName = sessionCookieName;
     }
 
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         // Get session hash from cookie
-        String sessionHash = extractSessionHashFromCookie(request.getCookies());
+        UUID sessionHash = extractSessionHashFromCookie(request.getCookies());
         if (sessionHash != null) {
             // Validate the session and load the session record (which contains user details)
             Optional<AdminSession> sessionOpt = authService.getValidSession(sessionHash);
@@ -56,11 +57,11 @@ public class CustomSessionAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private String extractSessionHashFromCookie(Cookie[] cookies) {
+    private UUID extractSessionHashFromCookie(Cookie[] cookies) {
         if (cookies == null) return null;
         for (Cookie cookie : cookies) {
             if (sessionCookieName.equals(cookie.getName())) {
-                return cookie.getValue();
+                return UUID.fromString(cookie.getValue());
             }
         }
         return null;

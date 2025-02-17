@@ -20,14 +20,14 @@ public class AdminSession {
     @Column(name = "session_hash", nullable = false)
     private UUID sessionHash;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "admin_user_id")
     private AdminUser adminUser;
 
     @Column(name = "ip_address", length = Integer.MAX_VALUE)
     private String ipAddress;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "session_type_id")
     private SessionType sessionType;
 

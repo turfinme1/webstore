@@ -23,13 +23,9 @@ public class AuthService {
         this.adminUserRepository = adminUserRepository;
     }
 
-    public Optional<AdminSession> getValidSession(String sessionHash) {
-        // Query your session table by sessionHash and check that is_active is true and not expired.
-        // For example, using a repository:
-        // return adminSessionRepository.findBySessionHashAndIsActiveTrue(sessionHash)
-        //     .filter(session -> session.getExpiresAt().isAfter(OffsetDateTime.now()));
-        // For this example, we'll return Optional.empty();
-        return Optional.empty();
+    public Optional<AdminSession> getValidSession(UUID sessionHash) {
+        return adminSessionRepository.findBySessionHashAndIsActiveTrue(sessionHash)
+                .filter(session -> session.getExpiresAt().isAfter(OffsetDateTime.now()));
     }
 
     public Optional<AdminSession> createSession() {

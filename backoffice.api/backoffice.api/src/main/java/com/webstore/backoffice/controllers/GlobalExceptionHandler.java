@@ -8,6 +8,7 @@ import com.webstore.backoffice.models.Log;
 import com.webstore.backoffice.services.LoggerService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -41,7 +42,7 @@ public class GlobalExceptionHandler {
         this.loggerService = loggerService;
     }
 
-    @ExceptionHandler({ApplicationError.class, UserError.class, PeerError.class})
+    @ExceptionHandler({ApplicationError.class, UserError.class, PeerError.class, AuthorizationDeniedException.class})
     public ResponseEntity<?> handleCustomErrors(RuntimeException ex) {
         AuditType auditType;
         Map<String, Object> params;
@@ -52,7 +53,11 @@ public class GlobalExceptionHandler {
         } else if (ex instanceof PeerError) {
             auditType = AuditType.TEMPORARY;
             params = ((PeerError) ex).getParams();
-        } else {
+        } else if (ex instanceof AuthorizationDeniedException) {
+            auditType = AuditType.ASSERT_USER;
+            params = null;
+        }
+        else {
             auditType = AuditType.ASSERT;
             params = ((ApplicationError) ex).getParams();
         }

@@ -3,6 +3,7 @@ package com.webstore.backoffice.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -12,14 +13,14 @@ import java.util.UUID;
 @Table(name = "users")
 public class User {
     @Id
-    @ColumnDefault("nextval('users_id_seq')")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 
     @NotNull
     @ColumnDefault("uuid_generate_v4()")
     @Column(name = "user_hash", nullable = false)
-    private UUID userHash;
+    private UUID userHash = UUID.randomUUID();
 
     @NotNull
     @Column(name = "password_hash", nullable = false, length = Integer.MAX_VALUE)
@@ -69,15 +70,16 @@ public class User {
     @NotNull
     @ColumnDefault("true")
     @Column(name = "is_active", nullable = false)
-    private Boolean isActive = false;
+    private Boolean isActive = true;
 
     @Column(name = "birth_date")
     private LocalDate birthDate;
 
     @NotNull
     @ColumnDefault("now()")
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
+    private OffsetDateTime createdAt = OffsetDateTime.now();
 
     public Long getId() {
         return id;

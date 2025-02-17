@@ -1,5 +1,7 @@
-package com.webstore.backoffice.dtos;
+package com.webstore.backoffice.dtos.user;
 
+import com.webstore.backoffice.dtos.GenderDTO;
+import com.webstore.backoffice.dtos.IsoCountryCodeDTO;
 import com.webstore.backoffice.models.User;
 
 import java.time.LocalDate;
