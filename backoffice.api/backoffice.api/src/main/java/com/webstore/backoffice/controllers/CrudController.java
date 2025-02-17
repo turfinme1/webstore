@@ -36,9 +36,9 @@ public class CrudController {
 //        return crudService.getEntityById(id);
 //    }
 
-    @GetMapping("/users/filtered")
-    public ResponseEntity<?> getAllEntitiesFiltered(@RequestParam Map<String,String> allParams) {
-//        return ResponseEntity.status(HttpStatus.OK).body(crudService.getAllEntities());
+    @GetMapping("/{entity}/filtered")
+    public ResponseEntity<?> getAllEntitiesFiltered(@PathVariable String entity, @RequestParam Map<String,String> allParams) {
+        var body = crudService.getAllEntitiesFiltered(entity, allParams);
         return ResponseEntity.noContent().build();
     }
 

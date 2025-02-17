@@ -1,5 +1,7 @@
 package com.webstore.backoffice.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.webstore.backoffice.configurations.SchemaRegistry;
 import com.webstore.backoffice.dtos.user.UserDTO;
 import com.webstore.backoffice.dtos.user.UserMutateDTO;
 import com.webstore.backoffice.models.User;
@@ -9,6 +11,9 @@ import com.webstore.backoffice.repositories.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -18,15 +23,76 @@ public class CrudService {
     private final GenderRepository genderRepository;
     private final IsoCountryCodeRepository isoCountryCodeRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final SchemaRegistry schemaRegistry;
 
     public CrudService(UserRepository userRepository,
                        GenderRepository genderRepository,
                        IsoCountryCodeRepository isoCountryCodeRepository,
-                       BCryptPasswordEncoder bCryptPasswordEncoder) {
+                       BCryptPasswordEncoder bCryptPasswordEncoder,
+                       SchemaRegistry schemaRegistry) {
         this.userRepository = userRepository;
         this.genderRepository = genderRepository;
         this.isoCountryCodeRepository = isoCountryCodeRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+        this.schemaRegistry = schemaRegistry;
+    }
+
+    public Optional<?> getAllEntitiesFiltered(String entity, Map<String, String> allParams) {
+        return Optional.empty();
+    }
+
+    public void buildQuery(String entityName, FilterRequest request) {
+        JsonNode schema = schemaRegistry.getSchema(entityName);
+        JsonNode properties = schema.get("properties");
+
+        List<Object> params = new ArrayList<>();
+        List<String> conditions = new ArrayList<>();
+
+        // Process filters
+        request.getFilterParams().forEach((field, value) -> {
+            JsonNode fieldSchema = properties.get(field);
+            if (fieldSchema != null) {
+                processFilter(field, value, fieldSchema, conditions, params);
+            }
+        });
+
+        // Build base query from schema
+        String view = schema.get("views").asText();
+        String orderBy = buildOrderBy(request, schema);
+
+        String baseQuery = String.format("SELECT * FROM %s", view);
+        String whereClause = conditions.isEmpty() ? "" : "WHERE " + String.join(" AND ", conditions);
+        String paginatedQuery = String.format("%s %s ORDER BY %s LIMIT ? OFFSET ?",
+                baseQuery, whereClause, orderBy);
+
+        String countQuery = String.format("SELECT COUNT(*) FROM %s %s", view, whereClause);
+
+    }
+
+    private void processFilter(String field,
+                               Object value,
+                               JsonNode fieldSchema,
+                               List<String> conditions,
+                               List<Object> params) {
+
+        String format = fieldSchema.path("format").asText();
+        String type = fieldSchema.path("type").asText();
+
+        if (format.equals("date-time-no-year")) {
+            conditions.add(String.format(
+                    "(EXTRACT(MONTH FROM %1$s), EXTRACT(DAY FROM %1$s) = " +
+                            "(EXTRACT(MONTH FROM ?::date), EXTRACT(DAY FROM ?::date))", field));
+            params.add(value);
+            params.add(value);
+        }
+        else if (format.equals("date-time")) {
+            // Handle date range logic
+        }
+        else if (type.equals("string")) {
+            conditions.add(String.format("LOWER(%s) LIKE LOWER(?)", field));
+            params.add("%" + value + "%");
+        }
+        // Add other type handlers...
     }
 
     public Optional<UserDTO> getEntityById(Long id) {
