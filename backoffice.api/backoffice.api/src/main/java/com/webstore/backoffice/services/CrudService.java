@@ -1,20 +1,31 @@
 package com.webstore.backoffice.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webstore.backoffice.configurations.SchemaRegistry;
+import com.webstore.backoffice.dtos.FilteredRequestParams;
+import com.webstore.backoffice.dtos.PaginatedResponse;
 import com.webstore.backoffice.dtos.user.UserDTO;
 import com.webstore.backoffice.dtos.user.UserMutateDTO;
+import com.webstore.backoffice.models.Product;
 import com.webstore.backoffice.models.User;
 import com.webstore.backoffice.repositories.GenderRepository;
 import com.webstore.backoffice.repositories.IsoCountryCodeRepository;
 import com.webstore.backoffice.repositories.UserRepository;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class CrudService {
@@ -24,75 +35,106 @@ public class CrudService {
     private final IsoCountryCodeRepository isoCountryCodeRepository;
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final SchemaRegistry schemaRegistry;
+    private final ObjectMapper objectMapper;
+    private final Map<String, JpaSpecificationExecutor<?>> repositories;
+    private final SpecificationBuilder<?> specificationBuilder;
+    private final Map<Class<?>, JpaSpecificationExecutor<?>> typedRepositories;
 
     public CrudService(UserRepository userRepository,
                        GenderRepository genderRepository,
                        IsoCountryCodeRepository isoCountryCodeRepository,
                        BCryptPasswordEncoder bCryptPasswordEncoder,
-                       SchemaRegistry schemaRegistry) {
+                       SchemaRegistry schemaRegistry,
+                       ObjectMapper objectMapper,
+                       Map<String, JpaSpecificationExecutor<?>> repositories,
+                       SpecificationBuilder<?> specificationBuilder,
+                       Map<Class<?>, JpaSpecificationExecutor<?>> typedRepositories) {
         this.userRepository = userRepository;
         this.genderRepository = genderRepository;
         this.isoCountryCodeRepository = isoCountryCodeRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.schemaRegistry = schemaRegistry;
+        this.objectMapper = objectMapper;
+        this.repositories = repositories;
+        this.specificationBuilder = specificationBuilder;
+        this.typedRepositories = typedRepositories;
     }
 
-    public Optional<?> getAllEntitiesFiltered(String entity, Map<String, String> allParams) {
-        return Optional.empty();
+    public PaginatedResponse<?> getAllEntitiesFiltered(String entity, Map<String, String> allParams) throws JsonProcessingException {
+        ///  assert entity exists in schema registry
+
+        FilteredRequestParams params = new FilteredRequestParams();
+        var pageNumber = Integer.parseInt(allParams.getOrDefault("pageNumber", "1"));
+        var pageSize = Integer.parseInt(allParams.getOrDefault("pageSize", "10"));
+        params.setPage(Integer.parseInt(allParams.getOrDefault("pageNumber", "1")));
+        params.setPageSize(Integer.parseInt(allParams.getOrDefault("pageSize", "10")));
+        params.setFilterParams(objectMapper.readValue(allParams.get("filterParams"), new TypeReference<Map<String, Object>>(){}));
+        params.setOrderParams(objectMapper.readValue(allParams.get("orderParams"), new com.fasterxml.jackson.core.type.TypeReference<List<List<String>>>() {}));
+
+        JsonNode schema = schemaRegistry.getSchema(entity);
+        Class<?> entityClass = resolveEntityClass(entity);
+
+        Specification<?> specification = specificationBuilder.buildSpecification(
+                schemaRegistry.getSchema(entity),
+                params.getFilterParams()
+        );
+
+        Sort sort = buildSort(params.getOrderParams());
+
+        JpaSpecificationExecutor<Object> repository = (JpaSpecificationExecutor<Object>) typedRepositories.get(entityClass);
+
+
+        PageRequest pageRequest = PageRequest.of(
+                params.getPage() - 1,
+                params.getPageSize(),
+                sort
+        );
+
+        Page<Object> result = repository.findAll((Specification<Object>) specification, pageRequest);
+        List<UserDTO> userDTOs = result.getContent().stream()
+                .map(object -> new UserDTO((User) object))
+                .toList();
+
+        return new PaginatedResponse<>(userDTOs, result.getTotalElements());
     }
 
-    public void buildQuery(String entityName, FilterRequest request) {
-        JsonNode schema = schemaRegistry.getSchema(entityName);
-        JsonNode properties = schema.get("properties");
+    private Sort buildSort(List<List<String>> orderParams) {
+        if (orderParams.isEmpty()) {
+            return Sort.by("id").ascending();
+        }
 
-        List<Object> params = new ArrayList<>();
-        List<String> conditions = new ArrayList<>();
+        List<Sort.Order> orders = orderParams.stream()
+                .map(params -> {
+                    String property = params.get(0);
+                    String direction = params.get(1);
+                    // Convert the property from snake_case to camelCase:
+                    property = toCamelCase(property);
+                    return direction.equalsIgnoreCase("desc")
+                            ? Sort.Order.desc(property)
+                            : Sort.Order.asc(property);
+                })
+                .collect(Collectors.toList());
 
-        // Process filters
-        request.getFilterParams().forEach((field, value) -> {
-            JsonNode fieldSchema = properties.get(field);
-            if (fieldSchema != null) {
-                processFilter(field, value, fieldSchema, conditions, params);
+        return Sort.by(orders);
+    }
+
+    private String toCamelCase(String snakeCase) {
+        String[] parts = snakeCase.split("_");
+        if (parts.length == 0) return snakeCase;
+        StringBuilder camelCase = new StringBuilder(parts[0]);
+        for (int i = 1; i < parts.length; i++) {
+            if (!parts[i].isEmpty()) {
+                camelCase.append(parts[i].substring(0, 1).toUpperCase()).append(parts[i].substring(1));
             }
-        });
-
-        // Build base query from schema
-        String view = schema.get("views").asText();
-        String orderBy = buildOrderBy(request, schema);
-
-        String baseQuery = String.format("SELECT * FROM %s", view);
-        String whereClause = conditions.isEmpty() ? "" : "WHERE " + String.join(" AND ", conditions);
-        String paginatedQuery = String.format("%s %s ORDER BY %s LIMIT ? OFFSET ?",
-                baseQuery, whereClause, orderBy);
-
-        String countQuery = String.format("SELECT COUNT(*) FROM %s %s", view, whereClause);
-
+        }
+        return camelCase.toString();
     }
-
-    private void processFilter(String field,
-                               Object value,
-                               JsonNode fieldSchema,
-                               List<String> conditions,
-                               List<Object> params) {
-
-        String format = fieldSchema.path("format").asText();
-        String type = fieldSchema.path("type").asText();
-
-        if (format.equals("date-time-no-year")) {
-            conditions.add(String.format(
-                    "(EXTRACT(MONTH FROM %1$s), EXTRACT(DAY FROM %1$s) = " +
-                            "(EXTRACT(MONTH FROM ?::date), EXTRACT(DAY FROM ?::date))", field));
-            params.add(value);
-            params.add(value);
-        }
-        else if (format.equals("date-time")) {
-            // Handle date range logic
-        }
-        else if (type.equals("string")) {
-            conditions.add(String.format("LOWER(%s) LIKE LOWER(?)", field));
-            params.add("%" + value + "%");
-        }
-        // Add other type handlers...
+    private Class<?> resolveEntityClass(String entity) {
+        return switch (entity.toLowerCase()) {
+            case "users" -> User.class;
+            case "products" -> Product.class;
+            default -> throw new IllegalArgumentException("Unknown entity: " + entity);
+        };
     }
 
     public Optional<UserDTO> getEntityById(Long id) {

@@ -1,60 +1,38 @@
 package com.webstore.backoffice.repositories;
 
-import org.springframework.stereotype.Repository;
+import com.webstore.backoffice.models.Product;
+import com.webstore.backoffice.models.User;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-@Repository
+import java.util.HashMap;
+import java.util.Map;
+
+@Configuration
 public class RepositoryManager {
 
-    private final AdminSessionRepository adminSessionRepository;
-    private final AdminUserRepository adminUserRepository;
-    private final GenderRepository genderRepository;
-    private final IsoCountryCodeRepository isoCountryCodeRepository;
-    private final LogRepository logRepository;
-    private final SessionTypeRepository sessionTypeRepository;
     private final UserRepository userRepository;
+    private final ProductRepository productRepository;
 
-    public RepositoryManager(AdminSessionRepository adminSessionRepository,
-                             AdminUserRepository adminUserRepository,
-                             GenderRepository genderRepository,
-                             IsoCountryCodeRepository isoCountryCodeRepository,
-                             LogRepository logRepository,
-                             SessionTypeRepository sessionTypeRepository,
-                             UserRepository userRepository) {
-        this.adminSessionRepository = adminSessionRepository;
-        this.adminUserRepository = adminUserRepository;
-        this.genderRepository = genderRepository;
-        this.isoCountryCodeRepository = isoCountryCodeRepository;
-        this.logRepository = logRepository;
-        this.sessionTypeRepository = sessionTypeRepository;
+    public RepositoryManager(UserRepository userRepository, ProductRepository productRepository) {
         this.userRepository = userRepository;
+        this.productRepository = productRepository;
     }
 
-
-    public AdminSessionRepository getAdminSessionRepository() {
-        return adminSessionRepository;
+    @Bean
+    public Map<String, JpaSpecificationExecutor<?>> repositories() {
+        Map<String, JpaSpecificationExecutor<?>> repos = new HashMap<>();
+        repos.put("users", userRepository);
+        repos.put("products", productRepository);
+        return repos;
     }
 
-    public AdminUserRepository getAdminUserRepository() {
-        return adminUserRepository;
-    }
-
-    public GenderRepository getGenderRepository() {
-        return genderRepository;
-    }
-
-    public IsoCountryCodeRepository getIsoCountryCodeRepository() {
-        return isoCountryCodeRepository;
-    }
-
-    public LogRepository getLogRepository() {
-        return logRepository;
-    }
-
-    public SessionTypeRepository getSessionTypeRepository() {
-        return sessionTypeRepository;
-    }
-
-    public UserRepository getUserRepository() {
-        return userRepository;
+    @Bean
+    public Map<Class<?>, JpaSpecificationExecutor<?>> typedRepositories() {
+        Map<Class<?>, JpaSpecificationExecutor<?>> repos = new HashMap<>();
+        repos.put(User.class, userRepository);
+        repos.put(Product.class, productRepository);
+        return repos;
     }
 }

@@ -1,5 +1,6 @@
 package com.webstore.backoffice.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.webstore.backoffice.dtos.user.UserDTO;
 import com.webstore.backoffice.dtos.user.UserMutateDTO;
 import com.webstore.backoffice.services.CrudService;
@@ -37,9 +38,9 @@ public class CrudController {
 //    }
 
     @GetMapping("/{entity}/filtered")
-    public ResponseEntity<?> getAllEntitiesFiltered(@PathVariable String entity, @RequestParam Map<String,String> allParams) {
+    public ResponseEntity<?> getAllEntitiesFiltered(@PathVariable String entity, @RequestParam Map<String,String> allParams) throws JsonProcessingException {
         var body = crudService.getAllEntitiesFiltered(entity, allParams);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.status(HttpStatus.OK).body(body);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
