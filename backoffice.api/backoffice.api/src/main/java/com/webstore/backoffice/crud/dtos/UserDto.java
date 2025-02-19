@@ -29,13 +29,11 @@ public class UserDto extends BaseDto<User>{
     @NotNull(message = "Country ID is required")
     private Long countryId;
 
-    @NotNull(message = "Birth date is required")
     private LocalDate birthDate;
 
     @NotNull(message = "Gender ID is required")
     private Long genderId;
 
-    @NotBlank(message = "Address is required")
     private String address;
 
     @NotNull(message = "Email verification status is required")

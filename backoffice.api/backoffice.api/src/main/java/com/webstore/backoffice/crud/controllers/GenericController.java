@@ -11,19 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-//public abstract class GenericController<D extends BaseDto<E>, E extends BaseEntity<ID>, ID> {
-//
-//    private final GenericAppService<D, E, ID> appService;
-//
-//    public GenericController(GenericAppService<D, E, ID> appService) {
-//        this.appService = appService;
-//    }
-//
-//    public ResponseEntity<D> create(@RequestBody D dto) {
-//        return ResponseEntity.ok(appService.create(dto));
-//    }
-//}
-
 public abstract class GenericController<D extends BaseDto<E>, E extends BaseEntity<ID>, ID> {
 
     private final GenericAppService<D, ?, ID> service;
@@ -32,32 +19,32 @@ public abstract class GenericController<D extends BaseDto<E>, E extends BaseEnti
         this.service = service;
     }
 
-    @GetMapping("/{id}")
     @Transactional
+    @GetMapping("/{id}")
     public ResponseEntity<D> getById(@PathVariable ID id) {
         return ResponseEntity.ok(service.findById(id));
     }
 
-    @GetMapping("/filtered")
     @Transactional
+    @GetMapping("/filtered")
     public ResponseEntity<?> findAll(@RequestParam Map<String,String> allParams) throws JsonProcessingException {
         return ResponseEntity.ok(service.findAll(allParams));
     }
 
-    @PostMapping
     @Transactional
+    @PostMapping
     public ResponseEntity<D> create(@Valid @RequestBody D dto) {
         return ResponseEntity.ok().body(service.create(dto));
     }
 
-    @PutMapping("/{id}")
     @Transactional
-    public ResponseEntity<D> update(@PathVariable ID id, @RequestBody D dto) {
+    @PutMapping("/{id}")
+    public ResponseEntity<D> update(@PathVariable ID id,@Valid @RequestBody D dto) {
         return ResponseEntity.ok(service.update(id, dto));
     }
 
-    @DeleteMapping("/{id}")
     @Transactional
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable ID id) {
         service.delete(id);
         return ResponseEntity.ok().build();

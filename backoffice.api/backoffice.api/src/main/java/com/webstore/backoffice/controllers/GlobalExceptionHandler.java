@@ -42,40 +42,44 @@ public class GlobalExceptionHandler {
         this.loggerService = loggerService;
     }
 
-    @ExceptionHandler({ApplicationError.class, UserError.class, PeerError.class, AuthorizationDeniedException.class})
+    @ExceptionHandler({ApplicationError.class, UserError.class, PeerError.class, AuthorizationDeniedException.class, Exception.class})
     public ResponseEntity<?> handleCustomErrors(RuntimeException ex) {
-        AuditType auditType;
-        Map<String, Object> params;
+        try {
+            AuditType auditType;
+            Map<String, Object> params;
 
-        if (ex instanceof UserError) {
-            auditType = AuditType.ASSERT_USER;
-            params = ((UserError) ex).getParams();
-        } else if (ex instanceof PeerError) {
-            auditType = AuditType.TEMPORARY;
-            params = ((PeerError) ex).getParams();
-        } else if (ex instanceof AuthorizationDeniedException) {
-            auditType = AuditType.ASSERT_USER;
-            params = null;
+            if (ex instanceof UserError) {
+                auditType = AuditType.ASSERT_USER;
+                params = ((UserError) ex).getParams();
+            } else if (ex instanceof PeerError) {
+                auditType = AuditType.TEMPORARY;
+                params = ((PeerError) ex).getParams();
+            } else if (ex instanceof AuthorizationDeniedException) {
+                auditType = AuditType.ASSERT_USER;
+                params = null;
+            } else if (ex instanceof ApplicationError) {
+                auditType = AuditType.ASSERT;
+                params = ((ApplicationError) ex).getParams();
+            } else {
+                auditType = AuditType.ASSERT;
+                params = null;
+            }
+
+            Log log = buildLogFromException(ex, params, auditType.getValue(), LOG_LEVEL_ERROR);
+            loggerService.logError(log);
+
+            CustomErrorResponse errorResponse = new CustomErrorResponse(ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        } catch (Exception e) {
+            try {
+                Log log = buildLogFromException(e, null, AuditType.ASSERT.getValue(), LOG_LEVEL_ERROR);
+                loggerService.logError(log);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CustomErrorResponse("Internal error"));
+            } catch (Exception e2) {
+                e2.printStackTrace();
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new CustomErrorResponse("Internal error"));
+            }
         }
-        else {
-            auditType = AuditType.ASSERT;
-            params = ((ApplicationError) ex).getParams();
-        }
-
-        Log log = buildLogFromException(ex, params, auditType.getValue(), LOG_LEVEL_ERROR);
-        loggerService.logError(log);
-
-        CustomErrorResponse errorResponse = new CustomErrorResponse(ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGeneralException(Exception ex) {
-        Log log = buildLogFromException(ex, null, AuditType.ASSERT.getValue(), LOG_LEVEL_ERROR);
-        loggerService.logError(log);
-
-        CustomErrorResponse errorResponse = new CustomErrorResponse("Internal Server Error");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 
     private Log buildLogFromException(Exception ex, Map<String, Object> params, String auditType, String logLevel) {

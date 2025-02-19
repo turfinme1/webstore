@@ -13,7 +13,9 @@ import com.webstore.backoffice.models.BaseEntity;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import static com.webstore.backoffice.asserts.AssertUtil.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,9 +40,10 @@ public abstract class GenericAppService<D extends BaseDto<E>, E extends BaseEnti
 
     public D create(D dto) {
         E entity = dto.toDomainEntity();
-        if (!entity.isValid()) {
-            throw new IllegalArgumentException("Invalid entity");
-        }
+        ASSERT_USER(entity.isValid(), "Invalid object", new HashMap<>() {{
+            put("code", "APP_SRV_00001_INVALID_OBJECT");
+            put("long_description", "Provided dto object is invalid");
+        }});
         return convertToDto(repository.save(entity));
     }
 
@@ -59,6 +62,10 @@ public abstract class GenericAppService<D extends BaseDto<E>, E extends BaseEnti
     public D update(ID id, D dto) {
         E entity = dto.toDomainEntity();
         entity.setId(id);
+        ASSERT_USER(entity.isValid(), "Invalid object", new HashMap<>() {{
+            put("code", "APP_SRV_00001_INVALID_OBJECT");
+            put("long_description", "Provided dto object is invalid");
+        }});
         return convertToDto(repository.save(entity));
     }
 
