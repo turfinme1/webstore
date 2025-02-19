@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "users")
-public class User {
+public class User extends BaseEntity<Long> {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -67,10 +67,7 @@ public class User {
     @Column(name = "has_first_login", nullable = false)
     private Boolean hasFirstLogin = false;
 
-    @NotNull
-    @ColumnDefault("true")
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive = true;
+
 
     @Column(name = "birth_date")
     private LocalDate birthDate;
@@ -80,6 +77,11 @@ public class User {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
+
+    @Override
+    public boolean isValid() {
+        return true;
+    }
 
     public Long getId() {
         return id;
@@ -186,11 +188,11 @@ public class User {
     }
 
     public Boolean getIsActive() {
-        return isActive;
+        return super.isActive();
     }
 
     public void setIsActive(Boolean isActive) {
-        this.isActive = isActive;
+        super.setActive(isActive);
     }
 
     public LocalDate getBirthDate() {

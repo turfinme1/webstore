@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/crud")
+@RequestMapping("/crud2")
 public class CrudController {
     private final CrudService crudService;
 

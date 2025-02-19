@@ -9,7 +9,7 @@ import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "genders")
-public class Gender {
+public class Gender extends BaseEntity<Long> {
     @Id
     @ColumnDefault("nextval('genders_id_seq')")
     @Column(name = "id", nullable = false)
@@ -18,6 +18,11 @@ public class Gender {
     @NotNull
     @Column(name = "type", nullable = false, length = Integer.MAX_VALUE)
     private String type;
+
+    @Override
+    public boolean isValid() {
+        return true;
+    }
 
     public Long getId() {
         return id;

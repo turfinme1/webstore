@@ -9,7 +9,7 @@ import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "iso_country_codes")
-public class IsoCountryCode {
+public class IsoCountryCode extends BaseEntity<Long> {
     @Id
     @ColumnDefault("nextval('iso_country_codes_id_seq')")
     @Column(name = "id", nullable = false)
@@ -26,6 +26,11 @@ public class IsoCountryCode {
     @NotNull
     @Column(name = "phone_code", nullable = false, length = Integer.MAX_VALUE)
     private String phoneCode;
+
+    @Override
+    public boolean isValid() {
+        return true;
+    }
 
     public Long getId() {
         return id;
