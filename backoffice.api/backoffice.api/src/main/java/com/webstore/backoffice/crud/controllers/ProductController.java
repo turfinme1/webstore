@@ -5,13 +5,12 @@ import com.webstore.backoffice.crud.services.ProductService;
 import com.webstore.backoffice.crud.models.Product;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/crud/products")
@@ -21,15 +20,26 @@ public class ProductController extends GenericController<ProductDto, Product, Lo
         super(service);
     }
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ProductDto> create(@RequestPart(value = "name", required = false) String name,
-                                             @RequestPart(value = "price", required = false) BigDecimal price,
-                                             @RequestPart(value = "short_description", required = false) String shortDescription,
-                                             @RequestPart(value = "long_description", required = false) String longDescription,
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ProductDto> create(@RequestParam("name") String name,
+                                             @RequestParam("price") BigDecimal price,
+                                             @RequestParam("short_description") String shortDescription,
+                                             @RequestParam("long_description") String longDescription,
+                                             @RequestParam("categories") String categories,
                                              @RequestPart(value = "file1", required = false) MultipartFile image1,
                                              @RequestPart(value = "file2", required = false) MultipartFile image2,
                                              @RequestPart(value = "file3", required = false) MultipartFile image3) {
-//        return super.create(dto);
-        return super.create(new ProductDto());
+        var dto = new ProductDto();
+        dto.setName(name);
+        dto.setPrice(price);
+        dto.setShortDescription(shortDescription);
+        dto.setLongDescription(longDescription);
+        var parsedCategories = Arrays
+                .stream(categories.replaceAll("[\\[\\]\"]", "").split(","))
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .collect(Collectors.toList());
+        dto.setCategories(parsedCategories);
+        return super.create(dto);
     }
 }

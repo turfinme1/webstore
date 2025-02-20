@@ -35,6 +35,7 @@ public final class CrudConstants {
     public static final String LONG_DESCRIPTION_REQUIRED = "Long description is required";
     public static final String URL_REQUIRED = "URL is required";
     public static final String PRODUCT_ID_REQUIRED = "Product ID is required";
+    public static final String CATEGORIES_REQUIRED = "Categories is required";
 
     private CrudConstants() {
     }

@@ -1,5 +1,7 @@
 import { createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage, hasPermission, getUrlParams, updateUrlParams } from "./page-utility.js";
 
+const javaApiUrl = "http://localhost:8080";
+
 document.addEventListener("DOMContentLoaded", async () => {
   const mainContainer = document.getElementById("main-container");
   const createProductButton = document.getElementById("create-product-btn");
@@ -177,7 +179,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     formData.set("categories", JSON.stringify(categories)); // Add selected categories to the form data
     console.log(formData);
     try {
-      const response = await fetch("/api/products", {
+      const response = await fetch(`${javaApiUrl}/crud/products`, {
         method: "POST",
         body: formData,
       });
