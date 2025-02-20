@@ -3,7 +3,7 @@ package com.webstore.backoffice.crud.controllers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.webstore.backoffice.crud.dtos.BaseDto;
 import com.webstore.backoffice.crud.services.GenericAppService;
-import com.webstore.backoffice.models.BaseEntity;
+import com.webstore.backoffice.crud.models.BaseEntity;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@CrossOrigin(origins = "http://localhost:4000")
 public abstract class GenericController<D extends BaseDto<E>, E extends BaseEntity<ID>, ID> {
 
     private final GenericAppService<D, ?, ID> service;

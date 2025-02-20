@@ -4,12 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.webstore.backoffice.configurations.SchemaRegistry;
+import com.webstore.backoffice.crud.configurations.SchemaRegistry;
 import com.webstore.backoffice.crud.configurations.GenericSpecificationBuilder;
+import com.webstore.backoffice.crud.constants.CrudConstants;
 import com.webstore.backoffice.crud.dtos.BaseDto;
-import com.webstore.backoffice.dtos.FilteredRequestParams;
-import com.webstore.backoffice.dtos.PaginatedResponse;
-import com.webstore.backoffice.models.BaseEntity;
+import com.webstore.backoffice.crud.dtos.FilteredRequestParams;
+import com.webstore.backoffice.crud.dtos.PaginatedResponse;
+import com.webstore.backoffice.crud.models.BaseEntity;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -40,10 +41,6 @@ public abstract class GenericAppService<D extends BaseDto<E>, E extends BaseEnti
 
     public D create(D dto) {
         E entity = dto.toDomainEntity();
-        ASSERT_USER(entity.isValid(), "Invalid object", new HashMap<>() {{
-            put("code", "APP_SRV_00001_INVALID_OBJECT");
-            put("long_description", "Provided dto object is invalid");
-        }});
         return convertToDto(repository.save(entity));
     }
 
@@ -62,15 +59,11 @@ public abstract class GenericAppService<D extends BaseDto<E>, E extends BaseEnti
     public D update(ID id, D dto) {
         E entity = dto.toDomainEntity();
         entity.setId(id);
-        ASSERT_USER(entity.isValid(), "Invalid object", new HashMap<>() {{
-            put("code", "APP_SRV_00001_INVALID_OBJECT");
-            put("long_description", "Provided dto object is invalid");
-        }});
         return convertToDto(repository.save(entity));
     }
 
     public PaginatedResponse<D> findAll(Map<String, String> allParams) throws JsonProcessingException {
-        JsonNode schema = schemaRegistry.getSchema("users");
+        JsonNode schema = schemaRegistry.getSchema(getSchemaName());
         var params = parseFilterParams(allParams);
         var queryWrapper = specificationBuilder.buildSpecification(schema, params);
         var result = specExecutor.findAll((Specification<E>) queryWrapper.getSpecification(), queryWrapper.getPageRequest());
@@ -82,13 +75,34 @@ public abstract class GenericAppService<D extends BaseDto<E>, E extends BaseEnti
     protected abstract String getSchemaName();
 
     private FilteredRequestParams parseFilterParams(Map<String, String> allParams) throws JsonProcessingException {
+        ASSERT_USER(allParams != null && allParams.containsKey(CrudConstants.FILTER_PARAM_PAGE), CrudConstants.PAGE_REQUIRED,
+                new HashMap<>() {{
+                    put("code", "APP_SRV_00002_PAGE_REQUIRED");
+                    put("long_description", CrudConstants.PAGE_REQUIRED);
+                }});
+
+        ASSERT_USER(allParams.containsKey(CrudConstants.FILTER_PARAM_SIZE), CrudConstants.PAGE_SIZE_REQUIRED,
+                new HashMap<>() {{
+                    put("code", "APP_SRV_00003_PAGE_SIZE_REQUIRED");
+                    put("long_description", CrudConstants.PAGE_SIZE_REQUIRED);
+                }});
+
+        ASSERT_USER(allParams.containsKey(CrudConstants.FILTER_PARAM_FILTERS), CrudConstants.FILTER_PARAMS_REQUIRED,
+                new HashMap<>() {{
+                    put("code", "APP_SRV_00004_FILTER_PARAMS_REQUIRED");
+                    put("long_description", CrudConstants.FILTER_PARAMS_REQUIRED);
+                }});
+
+        ASSERT_USER(allParams.containsKey(CrudConstants.FILTER_PARAM_ORDERS), CrudConstants.ORDER_PARAMS_REQUIRED,
+                new HashMap<>() {{
+                    put("code", "APP_SRV_00005_ORDER_PARAMS_REQUIRED");
+                    put("long_description", CrudConstants.ORDER_PARAMS_REQUIRED);
+                }});
         FilteredRequestParams params = new FilteredRequestParams();
-        var pageNumber = Integer.parseInt(allParams.getOrDefault("pageNumber", "1"));
-        var pageSize = Integer.parseInt(allParams.getOrDefault("pageSize", "10"));
-        params.setPage(Integer.parseInt(allParams.getOrDefault("pageNumber", "1")));
-        params.setPageSize(Integer.parseInt(allParams.getOrDefault("pageSize", "10")));
-        params.setFilterParams(objectMapper.readValue(allParams.get("filterParams"), new TypeReference<Map<String, Object>>(){}));
-        params.setOrderParams(objectMapper.readValue(allParams.get("orderParams"), new com.fasterxml.jackson.core.type.TypeReference<List<List<String>>>() {}));
+        params.setPage(Integer.parseInt(allParams.getOrDefault(CrudConstants.FILTER_PARAM_PAGE, CrudConstants.FILTER_PARAM_PAGE_DEFAULT)));
+        params.setPageSize(Integer.parseInt(allParams.getOrDefault(CrudConstants.FILTER_PARAM_SIZE, CrudConstants.FILTER_PARAM_SIZE_DEFAULT)));
+        params.setFilterParams(objectMapper.readValue(allParams.get(CrudConstants.FILTER_PARAM_FILTERS), new TypeReference<Map<String, Object>>(){}));
+        params.setOrderParams(objectMapper.readValue(allParams.get(CrudConstants.FILTER_PARAM_ORDERS), new com.fasterxml.jackson.core.type.TypeReference<List<List<String>>>() {}));
         return params;
     }
 }

@@ -1,6 +1,6 @@
 package com.webstore.backoffice.crud.dtos;
 
-import com.webstore.backoffice.models.IsoCountryCode;
+import com.webstore.backoffice.crud.models.IsoCountryCode;
 
 public class IsoCountryCodeDto extends BaseDto<IsoCountryCode> {
     private Long id;

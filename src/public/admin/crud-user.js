@@ -1,5 +1,7 @@
 import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
 
+const javaApiUrl = "http://localhost:8080";
+
 // Centralized state object
 const state = {
   currentPage: 1,
@@ -152,14 +154,15 @@ async function loadUsers(page) {
     });
     updateUrlParams(state);
     const response = await fetchWithErrorHandling(
-      `/crud/users/filtered?${queryParams.toString()}`
+      `${javaApiUrl}/crud/users/filtered?${queryParams.toString()}`
     );
     if(!response.ok) {
       showToastMessage(response.error, "error");
       return;
     }
     const { result, count } = await response.data;
-    renderUserList(result);
+    const flattenedResult = result.map(flattenUser);
+    renderUserList(flattenedResult);
     updatePagination(count, page);
   } catch (error) {
     console.error("Error loading users:", error);
@@ -271,7 +274,7 @@ async function handleCreateUser(event) {
     data.birth_date = null;
   }
   try {
-    const response = await fetchWithErrorHandling("/crud/users", {
+    const response = await fetchWithErrorHandling(`${javaApiUrl}/crud/users`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -299,7 +302,7 @@ async function handleUpdateUser(event) {
   }
   console.log(JSON.stringify(formData));
   try {
-    const response = await fetchWithErrorHandling(`/crud/users/${state.userToUpdateId}`, {
+    const response = await fetchWithErrorHandling(`${javaApiUrl}/crud/users/${state.userToUpdateId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -322,14 +325,15 @@ async function handleUpdateUser(event) {
 
 async function displayUpdateForm(userId) {
   try {
-    const userResponse = await fetchWithErrorHandling(`/crud/users/${userId}`);
+    const userResponse = await fetchWithErrorHandling(`${javaApiUrl}/crud/users/${userId}`);
     if (!userResponse.ok) {
       showToastMessage(userResponse.error, "error");
       return;
     }
     const user = await userResponse.data;
+    const flattened = flattenUser(user);
     showUpdateForm();
-    populateUpdateForm(user);
+    populateUpdateForm(flattened);
     state.userToUpdateId = userId;
   } catch (error) {
     console.error("Error loading user for update:", error);
@@ -357,7 +361,7 @@ function populateUpdateForm(user) {
 async function handleDeleteUser(userId) {
   if (!confirm("Are you sure you want to delete this user?")) return;
   try {
-    const response = await fetchWithErrorHandling(`/crud/users/${userId}`, {
+    const response = await fetchWithErrorHandling(`${javaApiUrl}/crud/users/${userId}`, {
       method: "DELETE",
     });
     if (response.ok) {
@@ -390,4 +394,17 @@ async function handleFilterUsers(event) {
   // Reload users with the new filters
   state.currentPage = 1;
   loadUsers(state.currentPage);
+}
+
+function flattenUser(user) {
+  return {
+      ...user,
+      phone_code: user.iso_country_code?.phone_code || null,
+      country_name: user.country?.country_name || null,
+      gender: user.gender?.name || null,
+      iso_country_code_id: user.iso_country_code?.id || null,
+      country_id: user.country?.id || null,
+      gender_id: user.gender?.id || null,
+      country: undefined,
+  };
 }

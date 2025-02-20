@@ -1,6 +1,6 @@
 package com.webstore.backoffice.crud.dtos;
 
-import com.webstore.backoffice.models.Gender;
+import com.webstore.backoffice.crud.models.Gender;
 
 public class GenderDto extends BaseDto<Gender>{
     private Long id;

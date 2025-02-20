@@ -1,12 +1,13 @@
 package com.webstore.backoffice.crud.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.webstore.backoffice.configurations.SchemaRegistry;
+import com.webstore.backoffice.crud.configurations.SchemaRegistry;
 import com.webstore.backoffice.crud.configurations.GenericSpecificationBuilder;
+import com.webstore.backoffice.crud.constants.CrudConstants;
 import com.webstore.backoffice.crud.dtos.UserDto;
 import com.webstore.backoffice.crud.mappers.UserMapper;
-import com.webstore.backoffice.models.User;
-import com.webstore.backoffice.repositories.UserRepository;
+import com.webstore.backoffice.crud.models.User;
+import com.webstore.backoffice.crud.repositories.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +38,7 @@ public class UserAppService extends GenericAppService<UserDto, User, Long> {
 
     @Override
     protected String getSchemaName() {
-        return "users";
+        return CrudConstants.USER_SCHEMA_NAME;
     }
 
     @Override

@@ -1,5 +1,9 @@
 package com.webstore.backoffice.asserts;
 
+import com.webstore.backoffice.asserts.configurations.ApplicationError;
+import com.webstore.backoffice.asserts.configurations.PeerError;
+import com.webstore.backoffice.asserts.configurations.UserError;
+
 import java.util.Map;
 
 public class AssertUtil {

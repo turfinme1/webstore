@@ -2,8 +2,8 @@ package com.webstore.backoffice.crud.configurations;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.webstore.backoffice.crud.dtos.QueryBuildWrapper;
-import com.webstore.backoffice.dtos.FilteredRequestParams;
-import com.webstore.backoffice.models.BaseEntity;
+import com.webstore.backoffice.crud.dtos.FilteredRequestParams;
+import com.webstore.backoffice.crud.models.BaseEntity;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;

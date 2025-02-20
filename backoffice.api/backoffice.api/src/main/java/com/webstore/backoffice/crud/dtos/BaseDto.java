@@ -1,7 +1,7 @@
 package com.webstore.backoffice.crud.dtos;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.webstore.backoffice.models.BaseEntity;
+import com.webstore.backoffice.crud.models.BaseEntity;
 
 public abstract class BaseDto<E extends BaseEntity<?>> {
 

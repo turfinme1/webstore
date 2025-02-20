@@ -1,11 +1,11 @@
 package com.webstore.backoffice.crud.mappers;
 
 import com.webstore.backoffice.crud.dtos.UserDto;
-import com.webstore.backoffice.models.Gender;
-import com.webstore.backoffice.models.IsoCountryCode;
-import com.webstore.backoffice.models.User;
-import com.webstore.backoffice.repositories.GenderRepository;
-import com.webstore.backoffice.repositories.IsoCountryCodeRepository;
+import com.webstore.backoffice.crud.models.Gender;
+import com.webstore.backoffice.crud.models.IsoCountryCode;
+import com.webstore.backoffice.crud.models.User;
+import com.webstore.backoffice.crud.repositories.GenderRepository;
+import com.webstore.backoffice.crud.repositories.IsoCountryCodeRepository;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

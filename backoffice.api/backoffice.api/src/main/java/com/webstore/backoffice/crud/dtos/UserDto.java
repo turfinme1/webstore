@@ -1,6 +1,7 @@
 package com.webstore.backoffice.crud.dtos;
 
-import com.webstore.backoffice.models.User;
+import com.webstore.backoffice.crud.constants.CrudConstants;
+import com.webstore.backoffice.crud.models.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,36 +11,35 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public class UserDto extends BaseDto<User>{
-    @NotBlank(message = "First name is required")
+    @NotBlank(message = CrudConstants.FIRST_NAME_REQUIRED)
     private String firstName;
 
-    @NotBlank(message = "Last name is required")
+    @NotBlank(message = CrudConstants.LAST_NAME_REQUIRED)
     private String lastName;
 
-    @Email(message = "Email must be valid")
-    @NotBlank(message = "Email is required")
+    @Email(message = CrudConstants.EMAIL_VALID)
+    @NotBlank(message = CrudConstants.EMAIL_REQUIRED)
     private String email;
 
-    @NotNull(message = "ISO Country Code ID is required")
+    @NotNull(message = CrudConstants.ISO_COUNTRY_CODE_REQUIRED)
     private Long isoCountryCodeId;
 
-    @NotBlank(message = "Phone is required")
+    @NotBlank(message = CrudConstants.PHONE_REQUIRED)
     private String phone;
 
-    @NotNull(message = "Country ID is required")
+    @NotNull(message = CrudConstants.COUNTRY_ID_REQUIRED)
     private Long countryId;
 
     private LocalDate birthDate;
 
-    @NotNull(message = "Gender ID is required")
+    @NotNull(message = CrudConstants.GENDER_ID_REQUIRED)
     private Long genderId;
 
     private String address;
 
-    @NotNull(message = "Email verification status is required")
+    @NotNull(message = CrudConstants.EMAIL_VERIFICATION_STATUS_REQUIRED)
     private Boolean isEmailVerified;
 
-    @NotBlank(message = "Password is required")
     private String passwordHash;
 
     private Long id;
