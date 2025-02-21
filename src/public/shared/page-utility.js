@@ -639,9 +639,23 @@ function createBackofficeNavigation(userStatus) {
       interface: "products",
     },
     {
+      id: "crud-product-link",
+      text: "CRUD Products - JAVA",
+      href: "/crud-product-java",
+      permission: "view",
+      interface: "products",
+    },
+    {
       id: "crud-user-link",
       text: "CRUD Users",
       href: "/crud-user",
+      permission: "view",
+      interface: "users",
+    },
+    {
+      id: "crud-user-link",
+      text: "CRUD Users - JAVA",
+      href: "/crud-user-java",
       permission: "view",
       interface: "users",
     },

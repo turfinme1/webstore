@@ -1,23 +1,25 @@
 package com.webstore.backoffice.crud.models;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "categories")
-public class Category {
+public class Category extends BaseEntity<Long> {
     @Id
-    @ColumnDefault("nextval('categories_id_seq')")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 
     @NotNull
     @Column(name = "name", nullable = false, length = Integer.MAX_VALUE)
     private String name;
+
+    @Override
+    public boolean isValid() {
+        return true;
+    }
 
     public Long getId() {
         return id;

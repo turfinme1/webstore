@@ -1,11 +1,17 @@
 package com.webstore.backoffice.crud.dtos;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.webstore.backoffice.crud.constants.CrudConstants;
+import com.webstore.backoffice.crud.models.Category;
+import com.webstore.backoffice.crud.models.Image;
 import com.webstore.backoffice.crud.models.Product;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ProductDto extends BaseDto<Product> {
 
@@ -18,13 +24,26 @@ public class ProductDto extends BaseDto<Product> {
     private BigDecimal price;
 
     @NotBlank(message = CrudConstants.SHORT_DESCRIPTION_REQUIRED)
+    @JsonProperty("short_description")
     private String shortDescription;
 
     @NotBlank(message = CrudConstants.LONG_DESCRIPTION_REQUIRED)
+    @JsonProperty("long_description")
     private String longDescription;
 
+    @NotBlank(message = CrudConstants.IMAGE_REQUIRED)
+    private MultipartFile[] images;
+
     @NotBlank(message = CrudConstants.CATEGORIES_REQUIRED)
-    private List<Long> categories;
+    private Set<CategoryDto> categories;
+
+    private List<String> imageUrls;
+
+    private List<String> imagesToDelete;
+
+    private String code;
+
+
 
     public ProductDto() {
     }
@@ -35,6 +54,18 @@ public class ProductDto extends BaseDto<Product> {
         this.price = product.getPrice();
         this.shortDescription = product.getShortDescription();
         this.longDescription = product.getLongDescription();
+        this.categories = product.getCategories()
+                .stream().map(category -> new CategoryDto() {
+                    {
+                        setId(category.getId());
+                        setName(category.getName());
+                    }
+                })
+                .collect(Collectors.toSet());
+        this.imageUrls = product.getImages()
+                .stream().map(Image::getUrl)
+                .collect(Collectors.toList());
+        this.code = product.getCode();
     }
 
     @Override
@@ -45,6 +76,14 @@ public class ProductDto extends BaseDto<Product> {
         product.setPrice(this.price);
         product.setShortDescription(this.shortDescription);
         product.setLongDescription(this.longDescription);
+        product.setCategories(this.categories
+                .stream().map(category -> new Category() {
+                    {
+                        setId(category.getId());
+                        setName(category.getName());
+                    }
+                })
+                .collect(Collectors.toSet()));
         return product;
     }
 
@@ -93,11 +132,43 @@ public class ProductDto extends BaseDto<Product> {
         this.longDescription = longDescription;
     }
 
-    public @NotBlank(message = CrudConstants.CATEGORIES_REQUIRED) List<Long> getCategories() {
+    public MultipartFile[] getImages() {
+        return images;
+    }
+
+    public void setImages(MultipartFile[] images) {
+        this.images = images;
+    }
+
+    public @NotBlank(message = CrudConstants.CATEGORIES_REQUIRED) Set<CategoryDto> getCategories() {
         return categories;
     }
 
-    public void setCategories(@NotBlank(message = CrudConstants.CATEGORIES_REQUIRED) List<Long> categories) {
+    public void setCategories(@NotBlank(message = CrudConstants.CATEGORIES_REQUIRED) Set<CategoryDto> categories) {
         this.categories = categories;
+    }
+
+    public List<String> getImagesToDelete() {
+        return imagesToDelete;
+    }
+
+    public void setImagesToDelete(List<String> imagesToDelete) {
+        this.imagesToDelete = imagesToDelete;
+    }
+
+    public List<String> getImageUrls() {
+        return imageUrls;
+    }
+
+    public void setImageUrls(List<String> imageUrls) {
+        this.imageUrls = imageUrls;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
     }
 }

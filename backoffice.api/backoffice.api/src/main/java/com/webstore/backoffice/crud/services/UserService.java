@@ -12,18 +12,18 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class UserAppService extends GenericAppService<UserDto, User, Long> {
+public class UserService extends GenericAppService<UserDto, User, Long> {
 
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final UserRepository userRepository;
     private final UserMapper userMapper;
 
-    public UserAppService(UserRepository repository,
-                          SchemaRegistry schemaRegistry,
-                          ObjectMapper objectMapper,
-                          GenericSpecificationBuilder<User> specificationBuilder,
-                          BCryptPasswordEncoder bCryptPasswordEncoder, UserRepository userRepository,
-                          UserMapper userMapper) {
+    public UserService(UserRepository repository,
+                       SchemaRegistry schemaRegistry,
+                       ObjectMapper objectMapper,
+                       GenericSpecificationBuilder<User> specificationBuilder,
+                       BCryptPasswordEncoder bCryptPasswordEncoder, UserRepository userRepository,
+                       UserMapper userMapper) {
         super(repository, schemaRegistry, objectMapper, specificationBuilder);
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.userRepository = userRepository;

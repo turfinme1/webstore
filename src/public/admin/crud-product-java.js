@@ -1,5 +1,7 @@
 import { createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage, hasPermission, getUrlParams, updateUrlParams } from "./page-utility.js";
 
+const javaApiUrl = "http://localhost:8080";
+
 document.addEventListener("DOMContentLoaded", async () => {
   const mainContainer = document.getElementById("main-container");
   const createProductButton = document.getElementById("create-product-btn");
@@ -35,7 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let categoryUpdateChoices;
   let currentPage = 1;
   let pageSize = 10;
-  let searchParams = {};
+  // let searchParams = {};
   let orderParams = [];
   let filterParams = {};
   let selectedCategories = [];
@@ -47,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   pageSize = urlParams.pageSize || 10;
   filterParams = urlParams.filterParams || {};
   orderParams = urlParams.orderParams || [];
-  searchParams = urlParams.searchParams || {};
+  // searchParams = urlParams.searchParams || {};
 
   productForm.reset();
   const userStatus = await getUserStatus();
@@ -73,7 +75,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   searchButton.addEventListener("click", async () => {
     const searchInput = document.getElementById("search-input");
-    searchParams.keyword = searchInput.value.trim();
+    // searchParams.keyword = searchInput.value.trim();
+    filterParams.name = searchInput.value.trim();
     currentPage = 1;
     formContainer.style.display = "none";
     formUpdateContainer.style.display = "none";
@@ -177,7 +180,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     formData.set("categories", JSON.stringify(categories)); // Add selected categories to the form data
     console.log(formData);
     try {
-      const response = await fetch("/api/products", {
+      const response = await fetch(`${javaApiUrl}/api/products`, {
         method: "POST",
         body: formData,
       });
@@ -214,9 +217,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
       const queryParams = new URLSearchParams();
-      if (Object.keys(searchParams).length > 0) {
-        queryParams.append("searchParams", JSON.stringify(searchParams));
-      }
+     
       if (Object.keys(filterParams).length > 0) {
         queryParams.append("filterParams", JSON.stringify(filterParams));
       }
@@ -228,15 +229,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       queryParams.append("pageSize", pageSize.toString());
       queryParams.append("page", currentPage.toString());
 
-      updateUrlParams({ currentPage, pageSize, searchParams, filterParams, orderParams });
-      const response = await fetchWithErrorHandling(`/api/products?${queryParams.toString()}`);
+      updateUrlParams({ currentPage, pageSize, filterParams, orderParams });
+      const response = await fetchWithErrorHandling(`${javaApiUrl}/api/products/filtered?${queryParams.toString()}`);
 
       if(!response.ok) {
         showToastMessage(response.error, "error");
         return;
       }
       const data = await response.data;
-      const products = data.result;
+      const products = data.result.map(flattenProduct);
       const totalProducts = parseInt(data.count);
 
       productListContainer.innerHTML = ""; // Clear the existing product list
@@ -452,35 +453,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         formData.set("categories", JSON.stringify(categories)); // Add selected categories to the form data
 
         try {
-          const response = await fetchWithErrorHandling(`/api/products/${productId}`, {
+          const response = await fetchWithErrorHandling(`${javaApiUrl}/api/products/${productId}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(jsonData),
+            body: formData,
           });
 
           if (response.ok) {
-            const imageUploadResponse = await fetchWithErrorHandling(
-              `/api/products/${productId}/images`,
-              {
-                method: "POST",
-                body: formData,
-              }
-            );
-
-            if (imageUploadResponse.ok) {
               showToastMessage("Product updated successfully!", "success");
               await new Promise((resolve) => setTimeout(resolve, 1000));
               productUpdateForm.reset();
               window.location.reload();
               // loadProducts(currentPage);
               formUpdateContainer.style.display = "none";
-            } else {
-              const error = await imageUploadResponse.json();
-              console.error("Error:", error);
-              alert(`Failed to update product: ${error.error}`);
-            }
           } else {
-            console.error("Error:", error);
             showToastMessage(`Failed to update product: ${response.error}`, "error");
           }
         } catch (error) {
@@ -595,4 +580,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderCategoryOptions(categories);
 });
 
-///
+function flattenProduct(product) {
+  return {
+    ...product,
+    images: Array.isArray(product.image_urls) ? product.image_urls : [],
+    categories: Array.isArray(product.categories)
+      ? product.categories.map((cat) => cat.name)
+      : [],
+  };
+}

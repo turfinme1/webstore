@@ -28,6 +28,7 @@ public final class CrudConstants {
     public static final String USER_SCHEMA_NAME = "users";
     public static final String PRODUCT_SCHEMA_NAME = "products";
     public static final String IMAGE_SCHEMA_NAME = "images";
+    public static final String CATEGORY_SCHEMA_NAME = "categories";
 
     public static final String NAME_REQUIRED = "Name is required";
     public static final String PRICE_REQUIRED = "Price is required";
@@ -36,6 +37,7 @@ public final class CrudConstants {
     public static final String URL_REQUIRED = "URL is required";
     public static final String PRODUCT_ID_REQUIRED = "Product ID is required";
     public static final String CATEGORIES_REQUIRED = "Categories is required";
+    public static final String IMAGE_REQUIRED = "Image is required";
 
     private CrudConstants() {
     }

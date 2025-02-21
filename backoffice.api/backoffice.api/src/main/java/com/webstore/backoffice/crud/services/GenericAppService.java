@@ -26,7 +26,7 @@ public abstract class GenericAppService<D extends BaseDto<E>, E extends BaseEnti
     private final JpaSpecificationExecutor<E> specExecutor;
     private final SchemaRegistry schemaRegistry;
     private final ObjectMapper objectMapper;
-    private final GenericSpecificationBuilder<?> specificationBuilder;
+    private final GenericSpecificationBuilder<E> specificationBuilder;
 
     public GenericAppService(JpaRepository<E, ID> repository,
                              SchemaRegistry schemaRegistry,
@@ -66,7 +66,7 @@ public abstract class GenericAppService<D extends BaseDto<E>, E extends BaseEnti
         JsonNode schema = schemaRegistry.getSchema(getSchemaName());
         var params = parseFilterParams(allParams);
         var queryWrapper = specificationBuilder.buildSpecification(schema, params);
-        var result = specExecutor.findAll((Specification<E>) queryWrapper.getSpecification(), queryWrapper.getPageRequest());
+        var result = specExecutor.findAll(queryWrapper.getSpecification(), queryWrapper.getPageRequest());
         List<D> resultElements = result.getContent().stream().map(this::convertToDto).toList();
         return new PaginatedResponse<>(resultElements, result.getTotalElements());
     }

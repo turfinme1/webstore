@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "products")
@@ -17,6 +19,9 @@ public class Product extends BaseEntity<Long> {
     @Column(name = "name", nullable = false, length = Integer.MAX_VALUE)
     private String name;
 
+    @Column(name = "code", nullable = false, length = Integer.MAX_VALUE)
+    private String code;
+
     @NotNull
     @Column(name = "price", nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
@@ -28,6 +33,17 @@ public class Product extends BaseEntity<Long> {
     @NotNull
     @Column(name = "long_description", nullable = false, length = Integer.MAX_VALUE)
     private String longDescription;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "products_categories",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private Set<Category> categories;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = false)
+    private Set<Image> images = new HashSet<>();
 
     @Override
     public boolean isValid() {
@@ -74,5 +90,29 @@ public class Product extends BaseEntity<Long> {
 
     public void setLongDescription(String longDescription) {
         this.longDescription = longDescription;
+    }
+
+    public Set<Category> getCategories() {
+        return categories;
+    }
+
+    public void setCategories(Set<Category> categories) {
+        this.categories = categories;
+    }
+
+    public Set<Image> getImages() {
+        return images;
+    }
+
+    public void setImages(Set<Image> images) {
+        this.images = images;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
     }
 }

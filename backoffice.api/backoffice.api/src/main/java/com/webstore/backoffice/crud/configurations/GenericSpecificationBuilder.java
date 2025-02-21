@@ -72,8 +72,6 @@ public class GenericSpecificationBuilder<T extends BaseEntity<?>>  {
                         break;
                     }
                 }
-            } else {
-                isIntegerField = "integer".equalsIgnoreCase(typeNode.asText()) || "number".equalsIgnoreCase(typeNode.asText());
             }
         }
 
