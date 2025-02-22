@@ -8,6 +8,7 @@ import com.webstore.backoffice.crud.dtos.ProductDto;
 import com.webstore.backoffice.crud.models.Image;
 import com.webstore.backoffice.crud.models.Product;
 import com.webstore.backoffice.crud.repositories.ImageRepository;
+import com.webstore.backoffice.security.repositories.AppSettingRepository;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -29,18 +31,25 @@ public class ProductService extends GenericAppService<ProductDto, Product, Long>
     @Value("${app.upload.dir}")
     private String uploadDir;
     private final ImageRepository imageRepository;
+    private final AppSettingRepository appSettingRepository;
+    private BigDecimal vatPercentage;
 
     public ProductService(JpaRepository<Product, Long> repository,
                           SchemaRegistry schemaRegistry,
                           ObjectMapper objectMapper,
                           GenericSpecificationBuilder<Product> specificationBuilder,
-                          ImageRepository imageRepository) {
+                          ImageRepository imageRepository,
+                          AppSettingRepository appSettingRepository) {
         super(repository, schemaRegistry, objectMapper, specificationBuilder);
         this.imageRepository = imageRepository;
+        this.appSettingRepository = appSettingRepository;
     }
 
     public ProductDto convertToDto(Product product) {
-        return new ProductDto(product);
+        var appSetting = appSettingRepository.findById(1L);
+        return appSetting
+                .map(setting -> new ProductDto(product, setting.getVatPercentage()))
+                .orElseGet(() -> new ProductDto(product, new BigDecimal("0.00")));
     }
 
     @Override

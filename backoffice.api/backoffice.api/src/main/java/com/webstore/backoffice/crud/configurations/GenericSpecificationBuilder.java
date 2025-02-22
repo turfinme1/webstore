@@ -94,11 +94,14 @@ public class GenericSpecificationBuilder<T extends BaseEntity<?>>  {
     }
 
     private Optional<Predicate> handleListValue(CriteriaBuilder cb, Path<?> path, List<?> values) {
-        List<Predicate> predicates = values.stream()
-                .map(value -> cb.equal(cb.lower(path.as(String.class)),
-                        value.toString().toLowerCase()))
-                .toList();
-        return Optional.of(cb.or(predicates.toArray(new Predicate[0])));
+//        List<Predicate> predicates = values.stream()
+//                .map(value -> cb.equal(cb.lower(path.as(String.class)),
+//                        value.toString().toLowerCase()))
+//                .toList();
+        // create predicate property in the list of values
+        Path<String> namePath = path.get("name");
+        return Optional.of(namePath.in(values));
+//        return Optional.of(cb.or(predicates.toArray(new Predicate[0])));
     }
 
     private Optional<Predicate> handleStringValue(CriteriaBuilder cb, Path<?> path, String value) {

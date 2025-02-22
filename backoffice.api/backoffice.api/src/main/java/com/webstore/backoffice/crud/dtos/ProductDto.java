@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -43,12 +44,9 @@ public class ProductDto extends BaseDto<Product> {
 
     private String code;
 
+    private BigDecimal priceWithVat;
 
-
-    public ProductDto() {
-    }
-
-    public ProductDto(Product product) {
+    public ProductDto(Product product, BigDecimal vatPercentage) {
         this.id = product.getId();
         this.name = product.getName();
         this.price = product.getPrice();
@@ -66,6 +64,11 @@ public class ProductDto extends BaseDto<Product> {
                 .stream().map(Image::getUrl)
                 .collect(Collectors.toList());
         this.code = product.getCode();
+        this.priceWithVat = product.getPrice().multiply(
+                BigDecimal.ONE.add(
+                        vatPercentage.divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP)
+                )
+        ).setScale(2, RoundingMode.HALF_UP);
     }
 
     @Override
@@ -170,5 +173,16 @@ public class ProductDto extends BaseDto<Product> {
 
     public void setCode(String code) {
         this.code = code;
+    }
+
+    public BigDecimal getPriceWithVat() {
+        return priceWithVat;
+    }
+
+    public void setPriceWithVat(BigDecimal priceWithVat) {
+        this.priceWithVat = priceWithVat;
+    }
+
+    public ProductDto() {
     }
 }

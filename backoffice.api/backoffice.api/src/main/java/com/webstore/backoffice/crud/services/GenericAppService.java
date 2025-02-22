@@ -87,11 +87,14 @@ public abstract class GenericAppService<D extends BaseDto<E>, E extends BaseEnti
                     put("long_description", CrudConstants.PAGE_SIZE_REQUIRED);
                 }});
 
-        ASSERT_USER(allParams.containsKey(CrudConstants.FILTER_PARAM_FILTERS), CrudConstants.FILTER_PARAMS_REQUIRED,
-                new HashMap<>() {{
-                    put("code", "APP_SRV_00004_FILTER_PARAMS_REQUIRED");
-                    put("long_description", CrudConstants.FILTER_PARAMS_REQUIRED);
-                }});
+//        ASSERT_USER(allParams.containsKey(CrudConstants.FILTER_PARAM_FILTERS), CrudConstants.FILTER_PARAMS_REQUIRED,
+//                new HashMap<>() {{
+//                    put("code", "APP_SRV_00004_FILTER_PARAMS_REQUIRED");
+//                    put("long_description", CrudConstants.FILTER_PARAMS_REQUIRED);
+//                }});
+        if (!allParams.containsKey(CrudConstants.FILTER_PARAM_FILTERS)) {
+            allParams.put(CrudConstants.FILTER_PARAM_FILTERS, "{}");
+        }
 
         ASSERT_USER(allParams.containsKey(CrudConstants.FILTER_PARAM_ORDERS), CrudConstants.ORDER_PARAMS_REQUIRED,
                 new HashMap<>() {{
