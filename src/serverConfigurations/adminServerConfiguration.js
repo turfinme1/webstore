@@ -57,8 +57,8 @@ const routeTable = {
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
     "/app-config/rate-limit-settings": appConfigController.getRateLimitSettings,
-    "/api/test-email/:type": emailController.sendTestEmail,
-    "/api/preview-email/:type": emailController.previewEmail,
+    "/api/test-email/:id": emailController.sendTestEmail,
+    "/api/preview-email/:id": emailController.previewEmail,
   },
   post: {
     "/crud/:entity": crudController.create,

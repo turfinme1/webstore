@@ -45,6 +45,13 @@ class EmailService {
             last_name: null,
         };
 
+        const emailResult = await data.dbConnection.query(
+            `SELECT * FROM email_templates WHERE id = $1`,
+            [data.params.id]
+        );
+        ASSERT_USER(emailResult.rows.length === 1, "Email template not found", { code: "SERVICE.EMAIL.00053.EMAIL_NOT_FOUND", long_description: "Email template not found" });
+        const emailTemplate = emailResult.rows[0];
+
         const userResult = await data.dbConnection.query(
             `SELECT * FROM admin_users WHERE id = $1`,
             [data.session.admin_user_id]
@@ -52,12 +59,11 @@ class EmailService {
         emailData.recipient_email = userResult.rows[0].email;
         emailData.first_name = userResult.rows[0].first_name;
         emailData.last_name = userResult.rows[0].last_name;
+        emailData.templateType = emailTemplate.name;
 
-        if (data.params.type === "email-verification") {
-            emailData.templateType = "Email verification";
-            emailData.address = `<a href="${ENV.DEVELOPMENT_URL}/auth/verify-mail?token=RANDOMLY_GENERATED_TOKEN">Verify Email</a>`;
-        } else if (data.params.type === "order-created" || data.params.type === "order-paid") {
-            emailData.templateType = data.params.type === "order-created" ? "Order created" : "Order paid";
+        if (emailTemplate.placeholders.includes("{address}")) {
+            emailData.address = `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=RANDOMLY_GENERATED_TOKEN">Reset Password</a>`;
+        } else if (emailTemplate.placeholders.includes("{order_table}")) {
             emailData.order_number = "ORDER-123456789";
             emailData.payment_number = "PAYMENT-123456789";
             emailData.order_table = {
@@ -72,13 +78,10 @@ class EmailService {
                 total_price_after_discount: 22.50,
                 vat_percentage: 20,
                 vat_amount: 4.50,
-                total_price_with_vat: 27.00
+                total_price_with_voucher: 27.00
             }; 
-        } else if (data.params.type === "forgot-password") {
-            emailData.templateType = "Forgot password";
-            emailData.address = `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=RANDOMLY_GENERATED_TOKEN">Reset Password</a>`;
         } else {
-            ASSERT_USER(false, "Invalid email type", { code: "SERVICE.EMAIL.00081.INVALID_QUERY_PARAMS", long_description: `Invalid email type: ${data.params.type}` });
+            emailData.address = `<a href="${ENV.DEVELOPMENT_URL}/auth/verify-mail?token=RANDOMLY_GENERATED_TOKEN">Verify Email</a>`;
         }
 
         const emailOptions = await this.processTemplate({ emailData, dbConnection: data.dbConnection });

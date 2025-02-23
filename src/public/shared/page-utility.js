@@ -789,8 +789,8 @@ function createBackofficeNavigation(userStatus) {
     },
     {
       id: "email-templates-link",
-      text: "Email Templates",
-      href: "/email-templates",
+      text: "CRUD Templates",
+      href: "/crud-templates",
       permission: "view",
       interface: "email-templates",
     },

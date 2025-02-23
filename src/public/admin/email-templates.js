@@ -124,7 +124,7 @@ async function handleTemplateFormSubmit(event) {
   const template = CKEDITOR.instances.template.getData();
   console.log({ name: name, subject, template });
   const data = Object.fromEntries(formData);
-  data.template = template;
+  data.template = template;    
   if(elements.templateNameSelect.value === "Email verification") {
     data.table_border_color = null;
     data.table_border_width = null;
