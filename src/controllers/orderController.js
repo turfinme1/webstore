@@ -14,7 +14,7 @@ class OrderController {
     }
   
     async createOrder(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "ORDER_UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "CONTROLLER.ORDER.00017.UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" });
       const data = {
         body: req.body,
         session: req.session,
@@ -26,7 +26,7 @@ class OrderController {
     }
 
     async createOrderByStaff(req, res) {
-      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "ORDER_UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.ORDER.00029.UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" });
       this.authService.requirePermission(req, "create", 'orders');
       const data = {
         body: req.body,
@@ -39,7 +39,7 @@ class OrderController {
     }
 
     async updateOrderByStaff(req, res) {
-      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "ORDER_UNAUTHORIZED_UPDATE", long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.ORDER.00042.UNAUTHORIZED_UPDATE", long_description: "You must be logged in to perform this action" });
       this.authService.requirePermission(req, "update", 'orders');
       const data = {
         body: req.body,
@@ -53,7 +53,7 @@ class OrderController {
     }
   
     async getOrder(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "ORDER_UNAUTHORIZED_READ", long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "CONTROLLER.ORDER.00056.UNAUTHORIZED_READ", long_description: "You must be logged in to perform this action" });
       const data = {
         params: req.params,
         session: req.session,
@@ -64,7 +64,7 @@ class OrderController {
     }
 
     async capturePaypalPayment(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "ORDER_UNAUTHORIZED_CAPTURE_PAYMENT", long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "CONTROLLER.ORDER.00067.UNAUTHORIZED_CAPTURE_PAYMENT", long_description: "You must be logged in to perform this action" });
       const data = {
         body: req.body,
         query: req.query,
@@ -77,7 +77,7 @@ class OrderController {
     }
 
     async cancelPaypalPayment(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "ORDER_UNAUTHORIZED_CANCEL_PAYMENT", long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "CONTROLLER.ORDER.00080.UNAUTHORIZED_CANCEL_PAYMENT", long_description: "You must be logged in to perform this action" });
       const data = {
         body: req.body,
         query: req.query,
@@ -90,7 +90,7 @@ class OrderController {
     }
 
     async deleteOrder(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "ORDER_UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "CONTROLLER.ORDER.00093.UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" });
       this.authService.requirePermission(req, "delete", 'orders');
       const data = {
         params: req.params,
@@ -100,7 +100,7 @@ class OrderController {
       const result = await this.orderService.deleteOrder(data);
       res.status(200).json(result);
 
-      await req.logger.info({ code: "DELETE_SUCCESS", short_description: `Order deleted successfully`, long_description: `Order for user ${req.session.user_id} deleted successfully` });
+      await req.logger.info({ code: "CONTROLLER.ORDER.00103.DELETE_SUCCESS", short_description: `Order deleted successfully`, long_description: `Order for user ${req.session.user_id} deleted successfully` });
     }
   }
   

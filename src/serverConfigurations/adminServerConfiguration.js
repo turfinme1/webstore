@@ -15,6 +15,7 @@ const ExportService = require("../services/exportService");
 const ExportController = require("../controllers/exportController");
 const { EmailService, transporter } = require("../services/emailService");
 const EmailController = require("../controllers/emailController");
+const { TemplateLoader } = require("./templateLoader");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const AppConfigService = require("../services/appConfigService");
 const AppConfigController = require("../controllers/appConfigController");
@@ -23,7 +24,8 @@ const ReportController = require("../controllers/reportController");
 const Logger = require("./logger");
 
 const entitySchemaCollection = loadEntitySchemas("admin");
-const emailService = new EmailService(transporter);
+const templateLoader = new TemplateLoader();
+const emailService = new EmailService(transporter, templateLoader);
 const emailController = new EmailController(emailService);
 const authService = new AuthService(emailService);
 const authController = new AuthController(authService);
@@ -55,8 +57,8 @@ const routeTable = {
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
     "/app-config/rate-limit-settings": appConfigController.getRateLimitSettings,
-    "/api/test-email/:type": emailController.sendTestEmail,
-    "/api/preview-email/:type": emailController.previewEmail,
+    "/api/test-email/:id": emailController.sendTestEmail,
+    "/api/preview-email/:id": emailController.previewEmail,
   },
   post: {
     "/crud/:entity": crudController.create,
@@ -123,7 +125,7 @@ function requestMiddleware(handler) {
       await Promise.race([timeout(), task()]);
       if(req.signal?.aborted) {
         await req.dbConnection.cancel();
-        ASSERT(false, "Request aborted due to timeout", { code: "SRV_CNF_REQUEST_TIMEOUT", long_description: "Request aborted due to timeout", temporary: true });
+        ASSERT(false, "Request aborted due to timeout", { code: "SERVER_CONFIG.ADM_SRV_CONF.00126.REQUEST_TIMEOUT", long_description: "Request aborted due to timeout", temporary: true });
       }
 
       await req.dbConnection.query("COMMIT");

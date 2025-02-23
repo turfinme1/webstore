@@ -17,7 +17,7 @@ function generateUsers(count) {
     first_name: faker.person.firstName(),
     last_name: faker.person.lastName(),
     email: `${randomCounter++}${faker.internet.email()}`,
-    phone: faker.phone.number({ style: 'national' }),
+    phone:  faker.phone.number({ style: 'national' }).replace("-", "").split(") ")[1],
     birth_date: faker.date.past({ years: 80 }),
     iso_country_code_id: faker.number.int({ min: 1, max: 104 }),
     country_id: faker.number.int({ min: 1, max: 104 }),
@@ -104,7 +104,7 @@ async function insertUserBatch(users, client, logger) {
         }
        
         await logger.info({
-            code: 'CRON_USER_IMPORT_SUCCESS',
+            code: 'TIMERS.DAILY_USER_IMPORT.00107.USER_IMPORT_SUCCESS',
             short_description: `Generated ${TOTAL_USERS_PER_DAY} users`,
             long_description: `Successfully inserted ${TOTAL_USERS_PER_DAY} users`
         });

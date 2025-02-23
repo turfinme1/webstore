@@ -44,7 +44,7 @@ describe("EmailController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action",
-        { code: "EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.EMAIL.00011.EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
       expect(emailService.sendTestEmail).toHaveBeenCalledWith({
         body: req.body,
@@ -76,7 +76,7 @@ describe("EmailController", () => {
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action",
-        { code: "EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
+        { code: "CONTROLLER.EMAIL.00024.EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
       expect(emailService.previewEmail).toHaveBeenCalledWith({
         body: req.body,

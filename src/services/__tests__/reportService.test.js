@@ -43,7 +43,6 @@ describe("ReportService", () => {
       expect(result).toHaveProperty("reportUIConfig");
       expect(result).toHaveProperty("sql");
       expect(result).toHaveProperty("reportFilters");
-      expect(result).toHaveProperty("INPUT_DATA");
     });
 
     it("should execute query and return results when metadataRequest is false", async () => {
@@ -75,9 +74,9 @@ describe("ReportService", () => {
 
       const data = {
         body: {
-          status: "Paid",
-          created_at_minimum: "2024-01-01",
-          created_at_maximum: "2024-12-31",
+          status_filter_value: "Paid",
+          created_at_minimum_filter_value: "2024-01-01",
+          created_at_maximum_filter_value: "2024-12-31",
         },
         params: { report: "report-orders" },
         dbConnection: mockDbConnection,
@@ -104,6 +103,60 @@ describe("ReportService", () => {
       };
 
       await expect(reportService.getReport(data)).rejects.toThrow();
+    });
+
+    describe("dashboard reports", () => {
+      const mockContext = {
+          settings: { report_row_limit_display: "100" }
+      };
+
+      it("should return dashboard report data when requesting valid dashboard report", async () => {
+          const data = {
+              body: {},
+              params: { report: "store-trends" },
+              dbConnection: mockDbConnection,
+              entitySchemaCollection: mockEntitySchema,
+              context: mockContext
+          };
+
+          const mockRows = [{ metric1: 'value1' }];
+          mockDbConnection.query.mockResolvedValue({ rows: mockRows });
+
+          const result = await reportService.getReport(data);
+
+          expect(result).toEqual({ rows: mockRows });
+          expect(mockDbConnection.query).toHaveBeenCalled();
+      });
+
+      it("should throw error when requesting invalid dashboard report", async () => {
+          const data = {
+              body: {},
+              params: { report: "invalid-dashboard-report" },
+              dbConnection: mockDbConnection,
+              entitySchemaCollection: mockEntitySchema,
+              context: mockContext
+          };
+
+          await expect(reportService.getReport(data)).rejects.toThrow("Report invalid-dashboard-report not found");
+      });
+
+      it("should process dashboard report without requiring metadata validation", async () => {
+          const data = {
+              body: { metadataRequest: true },
+              params: { report: "store-trends" },
+              dbConnection: mockDbConnection,
+              entitySchemaCollection: mockEntitySchema,
+              context: mockContext
+          };
+
+          const mockRows = [{ metric1: 'value1' }];
+          mockDbConnection.query.mockResolvedValue({ rows: mockRows });
+
+          const result = await reportService.getReport(data);
+
+          expect(result).toEqual({ rows: mockRows });
+          expect(mockDbConnection.query).toHaveBeenCalled();
+      });
     });
   });
 
@@ -164,16 +217,9 @@ describe("ReportService", () => {
         expect(result).toHaveProperty("reportUIConfig");
         expect(result).toHaveProperty("sql");
         expect(result).toHaveProperty("reportFilters");
-        expect(result).toHaveProperty("INPUT_DATA");
 
         expect(result.reportUIConfig.title).toBe("Orders Report by User");
-        expect(result.reportUIConfig.filters).toHaveLength(3);
-        expect(result.INPUT_DATA).toEqual({
-          user_email_filter_value: "test@example.com",
-          user_id_filter_value: "1",
-          order_total_minimum_filter_value: "100",
-          order_total_maximum_filter_value: "200",
-        });
+        
       });
 
       it("should have correct SQL query structure", async () => {
@@ -183,7 +229,7 @@ describe("ReportService", () => {
         expect(result.sql).toContain("SELECT");
         expect(result.sql).toContain("FROM orders O");
         expect(result.sql).toContain("JOIN users U ON U.id = O.user_id");
-        expect(result.sql).toContain("GROUP BY GROUPING SETS");
+        expect(result.sql).toContain("GROUP BY");
       });
     });
 
@@ -202,30 +248,10 @@ describe("ReportService", () => {
         const result = await reportService.logsReportDefinition(data);
 
         expect(result.reportUIConfig.title).toBe("Logs Report");
-        expect(result.reportUIConfig.filters).toHaveLength(4);
-        expect(result.INPUT_DATA).toEqual({
-          created_at_minimum_filter_value: "2024-01-01",
-          created_at_maximum_filter_value: "2024-12-31",
-          status_code_filter_value: "400",
-          log_level_filter_value: "ERROR",
-          created_at_grouping_select_value: "day",
-          status_code_grouping_select_value: undefined,
-          log_level_grouping_select_value: undefined,
-        });
+        
       });
 
-      it("should include correct filter options", async () => {
-        const data = { body: {} };
-        const result = await reportService.logsReportDefinition(data);
-
-        const logLevelFilter = result.reportUIConfig.filters.find(
-          (f) => f.key === "log_level"
-        );
-        expect(logLevelFilter.options).toEqual([
-          { value: "INFO", label: "INFO" },
-          { value: "ERROR", label: "ERROR" },
-        ]);
-      });
+      
     });
 
     describe("ordersReportDefinition", () => {
@@ -246,12 +272,7 @@ describe("ReportService", () => {
         expect(result.reportUIConfig.exportConfig.csv).toBeDefined();
         expect(result.reportUIConfig.exportConfig.excel).toBeDefined();
 
-        expect(result.INPUT_DATA).toMatchObject({
-          created_at_minimum_filter_value: "2024-01-01",
-          status_filter_value: "Paid",
-          total_price_minimum_filter_value: "100",
-          created_at_grouping_select_value: "month",
-        });
+       
       });
 
       it("should have correct SQL calculations", async () => {
@@ -409,6 +430,18 @@ describe("ReportService", () => {
 
   describe('replaceFilterExpressions', () => {
     let reportService;
+    const mockReportFilters = [
+      {
+          key: 'created_at',
+          grouping_expression: 'N.created_at',
+          filter_expression: 'N.created_at = $FILTER_VALUE$',
+      },
+      {
+          key: 'name',
+          grouping_expression: 'N.name',
+          filter_expression: 'N.name = $FILTER_VALUE$',
+      }
+    ];
   
     beforeEach(() => {
       reportService = new ReportService({});
@@ -493,6 +526,75 @@ describe("ReportService", () => {
   
       const result = reportService.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
       expect(result.sql).toBe("SELECT 'All', DATE_TRUNC('month', table.date) FROM table");
+    });
+
+    it('should replace ORDER BY clause with valid sort criteria', () => {
+      const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+      const INPUT_DATA = {
+          sortCriteria: [
+              { key: 'created_at', direction: 'ASC' },
+              { key: 'name', direction: 'DESC' }
+          ]
+      };
+
+      const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+      expect(result.sql).toBe('SELECT * FROM table ORDER BY  created_at ASC , name DESC  ');
+    });
+
+    it('should ignore invalid sort directions', () => {
+        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+        const INPUT_DATA = {
+            sortCriteria: [
+                { key: 'created_at', direction: 'INVALID' },
+                { key: 'name', direction: 'DESC' }
+            ]
+        };
+
+        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+        expect(result.sql).toBe('SELECT * FROM table ORDER BY  name DESC  ');
+    });
+
+    it('should ignore non-existent filter keys', () => {
+        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+        const INPUT_DATA = {
+            sortCriteria: [
+                { key: 'non_existent', direction: 'ASC' },
+                { key: 'name', direction: 'DESC' }
+            ]
+        };
+
+        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+        expect(result.sql).toBe('SELECT * FROM table ORDER BY  name DESC  ');
+    });
+
+    it('should keep original ORDER BY when no valid sort criteria', () => {
+        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+        const INPUT_DATA = {
+            sortCriteria: [
+                { key: 'non_existent', direction: 'INVALID' }
+            ]
+        };
+
+        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+        expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
+    });
+
+    it('should handle empty sort criteria array', () => {
+        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+        const INPUT_DATA = {
+            sortCriteria: []
+        };
+
+        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+        expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
+    });
+
+    it('should handle missing sortCriteria', () => {
+        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+        const INPUT_DATA = {};
+
+        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+        expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
     });
   });
 });

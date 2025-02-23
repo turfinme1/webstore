@@ -38,6 +38,11 @@ const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
             `);
 
             console.log("Campaign status update completed");
+            await logger.info({ 
+                code: `TIMERS.UPD_CAMPAIGN_STATUS.00042.CRON_UPDATE_SUCCESS`,
+                short_description: "Campaign status update completed by cron",
+                long_description: "Campaign status update completed by cron"
+            });
         } catch (error) {
             if (logger) await logger.error(error);
             console.error("Error during campaign update:", error);

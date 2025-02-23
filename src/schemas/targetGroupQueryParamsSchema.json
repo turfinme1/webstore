@@ -30,6 +30,30 @@
                         "format": "date-time"
                     }
                 }
+            },
+            "updated_at": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "max": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "user_count": {
+                "type": "object",
+                "properties": {
+                    "min": {
+                        "type": "integer"
+                    },
+                    "max": {
+                        "type": "integer"
+                    }
+                }
             }
         }
     },

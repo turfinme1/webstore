@@ -19,7 +19,7 @@ async function clearOldFileUploads(pool) {
     }
     
     await logger.info({ 
-      code: "CRON_SUCCESS", 
+      code: "SERVER_CONFIG.CRON_JOBS.00022.CRON_SUCCESS", 
       short_description: "Cron job for clearing files succeeded", 
       long_description: "Cleared stale file uploads older than 1 day" 
     });
@@ -64,7 +64,7 @@ async function checkPendingPayments(pool, paypalClient, orderService) {
         );
 
         await logger.info({
-          code: "CRON_SUCCESS",
+          code: "SERVER_CONFIG.CRON_JOBS.00067.CRON_SUCCESS",
           short_description: `Payment captured for Order ID: ${pendingPayment.id}`,
           long_description: `Updated payment status to COMPLETED for Order ID: ${pendingPayment.id}`,
         });

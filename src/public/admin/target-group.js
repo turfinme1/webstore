@@ -12,6 +12,7 @@ const state = {
   userToUpdateId: null,
   userStatus: null,
   userIds: [],
+  targetGroupFilterParams: {},
 };
 
 // DOM elements
@@ -43,6 +44,13 @@ const elements = {
   targetGroupResultCountDisplay: document.getElementById("result-count-groups"),
   showTargetGroupListButton: document.getElementById("show-groups"),
 
+  targetGroupFilterContainer: document.getElementById("target-group-filter-container"),
+  targetGroupFilterForm: document.getElementById("target-group-filter-form"),
+  cancelTargetGroupFilterButton: document.getElementById("cancel-target-group-filter-btn"),
+  createdAtMin: document.getElementById("created_at_min"),
+  createdAtMax: document.getElementById("created_at_max"),
+  updatedAtMin: document.getElementById("updated_at_min"),
+  updatedAtMax: document.getElementById("updated_at_max"),
 };
 
 // Initialize page and attach event listeners
@@ -59,8 +67,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     elements.showFormButton.style.display = "none";
   }
   attachEventListeners();
-//   loadUsers(state.currentPage);
-  // loadCountryCodes();
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  elements.createdAtMin.value = yesterday.toISOString().slice(0, 19);
+  elements.createdAtMax.value = new Date().toISOString().slice(0, 19);
+  elements.updatedAtMin.value = yesterday.toISOString().slice(0, 19);
+  elements.updatedAtMax.value = new Date().toISOString().slice(0, 19);
 });
 
 // Attach event listeners
@@ -79,8 +92,13 @@ function attachEventListeners() {
     loadTargetGroups(state.currentTargetGroupPage);
   });
   elements.showTargetGroupListButton.addEventListener("click", () => {
+    showTargetGroupFilterForm();
     loadTargetGroups(state.currentTargetGroupPage);
   });
+
+  // elements.showTargetGroupFilterButton.addEventListener("click", showTargetGroupFilterForm);
+  elements.cancelTargetGroupFilterButton.addEventListener("click", hideTargetGroupFilterForm);
+  elements.targetGroupFilterForm.addEventListener("submit", handleFilterTargetGroups);
 }
 
 // Show and hide functions
@@ -105,6 +123,8 @@ function showUpdateForm() {
 }
 
 function showFilterForm() {
+  hideTargetGroupFilterForm();
+
   elements.filterContainer.style.display = "block";
   elements.formContainer.style.display = "none";
   elements.formUpdateContainer.style.display = "none";
@@ -112,6 +132,17 @@ function showFilterForm() {
 
 function hideFilterForm() {
   elements.filterContainer.style.display = "none";
+}
+
+function showTargetGroupFilterForm() {
+  elements.targetGroupFilterContainer.style.display = "block";
+  elements.formContainer.style.display = "none";
+  elements.formUpdateContainer.style.display = "none";
+  elements.filterContainer.style.display = "none";
+}
+
+function hideTargetGroupFilterForm() {
+  elements.targetGroupFilterContainer.style.display = "none";
 }
 
 // Fetch and render users
@@ -167,7 +198,7 @@ function renderUserList(users) {
     userRow.appendChild(createTableCell(user.email));
     userRow.appendChild(createTableCell(user.birth_date ? new Date(user.birth_date).toLocaleDateString() : ""));
     userRow.appendChild(createTableCell(user.gender));
-    userRow.appendChild(createTableCell(new Date(user.created_at).toLocaleString()));
+    userRow.appendChild(createTableCell(formatDateTime(user.created_at)));
     userRow.appendChild(createTableCell(user.days_since_registration, "right"));
     userRow.appendChild(createTableCell(user.days_since_order, "right"));
 
@@ -474,12 +505,12 @@ async function handleFilterUsers(event) {
     return;
   }
 
-  if (daysSinceOrderMin || daysSinceOrderMax) {
+  if (daysSinceOrderMin >= 0 || daysSinceOrderMax >= 0) {
     filterParams["days_since_order"] = {};
-    if(daysSinceOrderMin) {
+    if(daysSinceOrderMin >= 0) {
       filterParams["days_since_order"].min = daysSinceOrderMin;
     }
-    if(daysSinceOrderMax) {
+    if(daysSinceOrderMax >= 0) {
       filterParams["days_since_order"].max = daysSinceOrderMax;
     }
   }
@@ -493,12 +524,12 @@ async function handleFilterUsers(event) {
     return;
   }
 
-  if (daysSinceRegistrationMin || daysSinceRegistrationMax) {
+  if (daysSinceRegistrationMin >= 0|| daysSinceRegistrationMax >= 0) {
     filterParams["days_since_registration"] = {};
-    if(daysSinceRegistrationMin) {
+    if(daysSinceRegistrationMin >= 0) {
       filterParams["days_since_registration"].min = daysSinceRegistrationMin;
     }
-    if(daysSinceRegistrationMax) {
+    if(daysSinceRegistrationMax >= 0) {
       filterParams["days_since_registration"].max = daysSinceRegistrationMax;
     }
   }
@@ -520,6 +551,72 @@ async function handleFilterUsers(event) {
 
 
 // target group list
+async function handleFilterTargetGroups(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.targetGroupFilterForm);
+  const filterParams = {};
+
+  if (formData.get("name")?.trim()) {
+      filterParams.name = formData.get("name").trim();
+  }
+
+  const userCountMin = parseInt(formData.get("user_count_min"));
+  const userCountMax = parseInt(formData.get("user_count_max"));
+  if (userCountMin || userCountMax) {
+      filterParams.user_count = {};
+      if (userCountMin) filterParams.user_count.min = userCountMin;
+      if (userCountMax) filterParams.user_count.max = userCountMax;
+  }
+  if(userCountMax < userCountMin){
+    showToastMessage("User Count Min should be less than User Count Max", 'error');
+    return;
+  }
+
+  const createdAtMin = formData.get("created_at_min");
+  const createdAtMax = formData.get("created_at_max");
+  if (createdAtMin || createdAtMax) {
+      filterParams.created_at = {};
+      if (createdAtMin) filterParams.created_at.min = createdAtMin;
+      if (createdAtMax) filterParams.created_at.max = createdAtMax;
+  }
+  if(createdAtMin && createdAtMax && (new Date(createdAtMax) < new Date(createdAtMin))){
+    showToastMessage("Created At Min should be less than Created At Max", 'error');
+    return;
+  }
+  if(createdAtMax && new Date(createdAtMax) > new Date()){
+    showToastMessage("Created At Max should be in the past", 'error');
+    return;
+  }
+  if(createdAtMin && new Date(createdAtMin) > new Date()){
+    showToastMessage("Created At Min should be in the past", 'error');
+    return;
+  }
+
+  const updatedAtMin = formData.get("updated_at_min");
+  const updatedAtMax = formData.get("updated_at_max");
+  if (updatedAtMin || updatedAtMax) {
+      filterParams.updated_at = {};
+      if (updatedAtMin) filterParams.updated_at.min = updatedAtMin;
+      if (updatedAtMax) filterParams.updated_at.max = updatedAtMax;
+  }
+  if(updatedAtMax && updatedAtMax && (new Date(updatedAtMax) < new Date(updatedAtMin))){
+    showToastMessage("Updated At Min should be less than Updated At Max", 'error');
+    return;
+  }
+  if(updatedAtMax && new Date(updatedAtMax) > new Date()){
+    showToastMessage("Updated At Max should be in the past", 'error');
+    return;
+  }
+  if(updatedAtMin && new Date(updatedAtMin) > new Date()){
+    showToastMessage("Updated At Min should be in the past", 'error');
+    return;
+  }
+
+  state.targetGroupFilterParams = filterParams;
+  state.currentTargetGroupPage = 1;
+  await loadTargetGroups(state.currentTargetGroupPage);
+}
+
 async function loadTargetGroups(page) {
   try {
     if(elements.orderBySelect.value){
@@ -529,8 +626,8 @@ async function loadTargetGroups(page) {
     }
 
     const queryParams = new URLSearchParams({
-      orderParams: JSON.stringify(state.orderParams),
-      pageSize: "100",
+      filterParams: JSON.stringify(state.targetGroupFilterParams),
+      pageSize: "10",
       page: page.toString(),
     });
 
@@ -559,7 +656,9 @@ function renderTargetGroupList(targetGroups) {
     targetGroupRow.appendChild(createTableCell(targetGroup.id));
     targetGroupRow.appendChild(createTableCell(targetGroup.name));
     targetGroupRow.appendChild(createTableCell(targetGroup.user_count));
-    targetGroupRow.appendChild(createTableCell(new Date(targetGroup.created_at).toLocaleDateString()));
+    targetGroupRow.appendChild(createTableCell(formatFiltersObject(targetGroup.filters)));
+    targetGroupRow.appendChild(createTableCell(formatDateTime(targetGroup.created_at)));
+    targetGroupRow.appendChild(createTableCell(formatDateTime(targetGroup.updated_at)));
 
     // Actions (Update/Delete)
     const actionCell = createTableCell("");
@@ -641,3 +740,63 @@ async function handleExportCsv(targetGroupId) {
     // toggleExportLoadingState();
   }
 }
+
+function formatDateTime(dateString) {
+  if (!dateString) return "-";
+  
+  return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+  })
+}
+
+function formatFiltersObject(filters) {
+  if (!filters?.query?.filterParams) return "";
+  
+  function formatValue(value) {
+      if (value === null || value === undefined) return '';
+      
+      if (typeof value === 'object') {
+          if (Array.isArray(value)) {
+              return value.join(', ');
+          }
+          
+          // Handle min/max objects
+          if ('min' in value || 'max' in value) {
+              const parts = [];
+              if ('min' in value) parts.push(`min: ${value.min}`);
+              if ('max' in value) parts.push(`max: ${value.max}`);
+              return parts.join(', ');
+          }
+          
+          // Handle nested objects
+          return Object.entries(value)
+              .map(([k, v]) => `${k}: ${formatValue(v)}`)
+              .join(', ');
+      }
+      
+      return value.toString();
+  }
+
+  return Object.entries(filters.query.filterParams)
+      .map(([key, value]) => {
+        if(key === "gender_id") {
+          key = "gender";
+          if (value == 1) {
+            value = "Male";
+          } else if (value == 2) {
+            value = "Female";
+          } 
+          else {
+            value = "All"
+          }
+        }
+        return `${key.replaceAll("_", " ")}: ${formatValue(value)}`
+      })
+      .join(", ");
+}
+  

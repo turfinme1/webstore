@@ -15,15 +15,21 @@ const CartService = require("../services/cartService");
 const OrderService = require("../services/orderService");
 const OrderController = require("../controllers/orderController");
 const { EmailService, transporter } = require("../services/emailService");
+const { TemplateLoader } = require("./templateLoader");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
+const NotificationService = require("../services/notificationService");
+const NotificationController = require("../controllers/notificationController");
 const Logger = require("./logger");
 const paypalClientWrapper = require("./paypalClient");
 
 const paypalClient = new paypalClientWrapper.core.PayPalHttpClient(ENV.PAYPAL_CLIENT_ID, ENV.PAYPAL_CLIENT_SECRET);
 const entitySchemaCollection = loadEntitySchemas("user");
-const emailService = new EmailService(transporter);
+const templateLoader = new TemplateLoader();
+const emailService = new EmailService(transporter, templateLoader);
 const authService = new AuthService(emailService);
 const authController = new AuthController(authService);
+const notificationService = new NotificationService();
+const notificationController = new NotificationController(notificationService);
 const service = new CrudService();
 const controller = new CrudController(service);
 const productService = new ProductService();
@@ -49,6 +55,7 @@ const routeTable = {
     "/api/orders/:orderId": orderController.getOrder,
     "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
     "/api/paypal/cancel/:orderId": orderController.cancelPaypalPayment,
+    "/api/notifications": notificationController.getNotificationByUserId,
   },
   post: {
     "/auth/register": authController.register,
@@ -64,6 +71,7 @@ const routeTable = {
   },
   put: {
     "/auth/profile": authController.updateProfile,
+    "/api/notifications/:id": notificationController.markAsRead,
   },
   delete: {
     "/api/cart/:itemId": cartController.deleteItem,

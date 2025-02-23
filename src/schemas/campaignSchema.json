@@ -118,6 +118,10 @@
         "target_group_id",
         "voucher_id"
     ],
+    "crud": {
+        "update": false,
+        "delete": false
+    },
     "additionalProperties": false,
     "errorMessage": {
         "required": {

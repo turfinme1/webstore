@@ -32,6 +32,9 @@ class ProductService {
       );
       const keywordConditions = searchableFields.map((property) => {
           searchValues.push(data.query.searchParams.keyword);
+          if(property === 'name') {
+            property = 'products.name';
+          }
           return `STRPOS(LOWER(CAST(${property} AS text)), LOWER($${searchValues.length})) > 0`;
       }).join(' OR ');
 
@@ -44,7 +47,7 @@ class ProductService {
         .join(", ");
       searchValues.push(...data.query.filterParams.categories);
       conditions.push(
-        `ARRAY(SELECT unnest(categories)) && ARRAY[${categoryPlaceholders}]::text[]`
+        `c.name IN (${categoryPlaceholders})`
       );
     }
 
@@ -67,17 +70,64 @@ class ProductService {
         ? data.query.orderParams
             .map(([column, direction]) => `${column} ${direction.toUpperCase()}`)
             .join(", ")
-        : "id ASC";
-
-    const query = `
-      SELECT * FROM ${schema.views} 
-      ${combinedConditions} 
-      ORDER BY ${orderByClause} 
-      LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}`;
-
-    const totalCount = await data.dbConnection.query(`SELECT COUNT(*) FROM ${schema.views} ${combinedConditions}`, searchValues); 
-    const result = await data.dbConnection.query(query, [...searchValues, data.query.pageSize , offset]);
-
+        : "";
+    
+    const dataQuery = `
+      WITH top_products AS (
+          SELECT products.id, code, products.name, price, short_description, long_description
+          FROM products
+          JOIN products_categories pc ON pc.product_id = products.id
+          JOIN categories c ON pc.category_id = c.id
+          ${combinedConditions}
+          ${orderByClause !== "" ? `ORDER BY ${orderByClause}` : ""} 
+          LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}
+      ),
+      vat AS (
+          SELECT vat_percentage FROM app_settings LIMIT 1
+      )
+      SELECT 
+          p.id,
+          p.code,
+          p.name,
+          p.price,
+          p.short_description,
+          p.long_description,
+          COALESCE(i.urls, ARRAY[]::text[]) AS images,
+          COALESCE(c.category_names, ARRAY[]::text[]) AS categories,
+          COALESCE(r.avg_rating, 0) AS average_rating,
+          COALESCE(r.rating_count, 0) AS rating_count,
+          ROUND(p.price * (1 + vat.vat_percentage / 100), 2) AS price_with_vat
+      FROM top_products p
+      CROSS JOIN vat
+      LEFT JOIN (
+          SELECT product_id, array_agg(DISTINCT url) AS urls
+          FROM images
+          WHERE product_id IN (SELECT id FROM top_products)
+          GROUP BY product_id
+      ) i ON p.id = i.product_id
+      LEFT JOIN (
+          SELECT pc.product_id, array_agg(DISTINCT c.name) AS category_names
+          FROM products_categories pc
+          JOIN categories c ON pc.category_id = c.id
+          WHERE pc.product_id IN (SELECT id FROM top_products)
+          GROUP BY pc.product_id
+      ) c ON p.id = c.product_id
+      LEFT JOIN (
+          SELECT product_id, AVG(rating) AS avg_rating, COUNT(rating) AS rating_count
+          FROM ratings
+          WHERE product_id IN (SELECT id FROM top_products)
+          GROUP BY product_id
+      ) r ON p.id = r.product_id;
+      `;
+    
+    const countQuery = `
+          SELECT COUNT(*) as count FROM products
+          JOIN products_categories pc ON pc.product_id = products.id
+          JOIN categories c ON pc.category_id = c.id
+          ${combinedConditions}`;
+    
+    const totalCount = await data.dbConnection.query(countQuery, searchValues); 
+    const result = await data.dbConnection.query(dataQuery, [...searchValues, data.query.pageSize , offset]);
     return { result: result.rows, count: totalCount.rows[0].count };
   }
 
@@ -235,7 +285,6 @@ class ProductService {
         const response = await fetch(line[2]);
         if (!response.ok) {
           invalidLinesLog.noImage++;
-          console.log(`Failed to fetch image: ${line[2]}`);
           await req.dbConnection.query(`ROLLBACK`);
           continue;
         }
@@ -286,7 +335,6 @@ class ProductService {
 
           if(preparedLine[2].includes('No Image')){
             invalidLinesLog.noImage++;
-            console.log(`No image for product: ${preparedLine[1]}`);
             continue;
           }
 
@@ -298,7 +346,6 @@ class ProductService {
 
   async uploadImages(req) {
     const filePaths = await this.handleFileUploads(req);
-    console.log(filePaths);
     const imagesToDelete = JSON.parse(req.body.imagesToDelete);
 
     if (filePaths.length > 0) {
@@ -338,7 +385,6 @@ class ProductService {
 
       bb.on('file', async (fieldname, file, filename, encoding, mimetype) => {
         try {
-          console.log(filename);
           if(! filename.filename) {
             file.resume();
             return;

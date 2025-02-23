@@ -1,0 +1,44 @@
+<table style="border-collapse: collapse; width: 100%; border: {{table_border_width}}px solid {{table_border_color}};">
+    <thead>
+        <tr style="background-color: #f29191;">
+            <th style="padding: 8px; text-align: left; border: {{table_border_width}}px solid {{table_border_color}};">Product</th>
+            <th style="padding: 8px; text-align: left; border: {{table_border_width}}px solid {{table_border_color}};">Quantity</th>
+            <th style="padding: 8px; text-align: left; border: {{table_border_width}}px solid {{table_border_color}};">Price</th>
+            <th style="padding: 8px; text-align: left; border: {{table_border_width}}px solid {{table_border_color}};">Total Price</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each order_items}}
+        <tr>
+            <td style="padding: 8px; border: {{../table_border_width}}px solid {{../table_border_color}};">{{name}}</td>
+            <td style="padding: 8px; text-align: right; border: {{../table_border_width}}px solid {{../table_border_color}};">{{quantity}}</td>
+            <td style="padding: 8px; text-align: right; border: {{../table_border_width}}px solid {{../table_border_color}};">{{unit_price}}</td>
+            <td style="padding: 8px; text-align: right; border: {{../table_border_width}}px solid {{../table_border_color}};">{{total_price}}</td>
+        </tr>
+        {{/each}}
+        <tr>
+            <td colspan="3" style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">Subtotal:</td>
+            <td style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">{{total_price}}</td>
+        </tr>
+        <tr>
+            <td colspan="3" style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">Discount ({{discount_percentage}}%):</td>
+            <td style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">{{discount_amount}}</td>
+        </tr>
+        <tr>
+            <td colspan="3" style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">Price after discount:</td>
+            <td style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">{{total_price_after_discount}}</td>
+        </tr>
+        <tr>
+            <td colspan="3" style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">VAT ({{vat_percentage}}%):</td>
+            <td style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">{{vat_amount}}</td>
+        </tr>
+        <tr>
+            <td colspan="3" style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">Voucher ({{voucher_code}}):</td>
+            <td style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">-{{voucher_discount_amount}}</td>
+        </tr>
+        <tr>
+            <td colspan="3" style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">Total:</td>
+            <td style="padding: 8px; text-align: right; border: {{table_border_width}}px solid {{table_border_color}}; font-weight: bold;">{{total_price_with_voucher}}</td>
+        </tr>
+    </tbody>
+</table>

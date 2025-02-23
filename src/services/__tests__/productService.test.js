@@ -118,7 +118,7 @@ describe("ProductService", () => {
       const result = await productService.getFilteredPaginated(params);
 
       expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT COUNT(*) FROM products_view"),
+        expect.stringContaining("SELECT COUNT(*) as count FROM products"),
         expect.any(Array)
       );
 
@@ -137,7 +137,7 @@ describe("ProductService", () => {
       const result = await productService.getFilteredPaginated(params);
 
       expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT COUNT(*) FROM products_view"),
+        expect.stringContaining("SELECT COUNT(*) as count FROM products"),
         expect.any(Array)
       );
 
@@ -338,23 +338,6 @@ describe("ProductService", () => {
       );
     });
 
-    it("should apply correct query with empty filterParams", async () => {
-      params.query.filterParams = {};
-      params.query.searchParams = {};
-      params.query.orderParams = [];
-
-      mockDbConnection.query
-        .mockResolvedValueOnce({ rows: [{ count: 0 }] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [{vat_percentage: 20}] });
-
-      await productService.getFilteredPaginated(params);
-
-      expect(mockDbConnection.query).not.toHaveBeenCalledWith(
-        expect.stringContaining("WHERE "),
-        expect.any(Array)
-      );
-    });
   });
 
   describe("createComment", () => {

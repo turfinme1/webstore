@@ -61,7 +61,7 @@ describe("AuthController", () => {
       expect(mockRes.cookie).toHaveBeenCalledWith("session_id", registrationResult.session_hash, expect.any(Object));
       expect(mockRes.json).toHaveBeenCalledWith({ message: "Registration successful" });
       expect(req.logger.info).toHaveBeenCalledWith({
-        code: "AUTH_REGISTRATION_SUCCESS",
+        code: "CONTROLLER.AUTH.00033.REGISTRATION_SUCCESS", 
         short_description: "Registration successful",
         long_description: `User ${req.body.email} registered successfully`,
       });
@@ -97,7 +97,7 @@ describe("AuthController", () => {
       expect(mockRes.cookie).toHaveBeenCalledWith("session_id", loginResult.session_hash, expect.any(Object));
       expect(mockRes.json).toHaveBeenCalledWith({ message: "Login successful" });
       expect(req.logger.info).toHaveBeenCalledWith({ 
-        code: "AUTH_LOGIN_SUCCESS",
+        code: "CONTROLLER.AUTH.00051.LOGIN_SUCCESS",
         short_description: "Login successful",
         long_description: `User ${req.body.email} logged in successfully`
       });
@@ -228,7 +228,7 @@ describe("AuthController", () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(updateProfileResult);
       expect(req.logger.info).toHaveBeenCalledWith({ 
-          code: "AUTH_PROFILE_UPDATE_SUCCESS", 
+          code: "CONTROLLER.AUTH.00113.UPDATE_SUCCESS",
           short_description: "User profile update successful",
           long_description: `User ${req.session.session_hash} updated their profile successfully`
         });
@@ -290,7 +290,7 @@ describe("AuthController", () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(resetPasswordResult);
       expect(req.logger.info).toHaveBeenCalledWith({ 
-        code: "AUTH_PASSWORD_RESET_SUCCESS", 
+        code: "CONTROLLER.AUTH.00142.PASSWORD_RESET_SUCCESS",
         short_description: "User password reset successful", 
         long_description: `User ${req.session.session_hash} reset their password successfully`
       });

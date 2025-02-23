@@ -3,10 +3,12 @@ import { showToastMessage } from "./page-utility.js";
 class ReportBuilder {
     constructor(config) {
         this.config = config;
+        this.config.filters = this.config.filters.filter(filter => filter.displayInUI);
         this.elements = {};
         this.state = {
             filters: {},
-            tableData: null
+            tableData: null,
+            sortCriteria: [],
         };
     }
 
@@ -14,10 +16,10 @@ class ReportBuilder {
         text: {
             template: (filter) => `
                 <div class="mb-3">
-                    <label for="${filter.key}" class="form-label">${filter.label}</label>
+                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
                     <input type="text" 
-                           id="${filter.key}" 
-                           name="${filter.key}" 
+                           id="${filter.key}_filter_value" 
+                           name="${filter.key}_filter_value" 
                            class="form-control" 
                            placeholder="${filter.placeholder || ''}"
                            ${filter.required ? 'required' : ''}>
@@ -28,10 +30,10 @@ class ReportBuilder {
             template: (filter) => `
                 <div class="row g-3">
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_minimum" class="form-label">${filter.label} Min</label>
+                        <label for="${filter.key}_minimum_filter_value" class="form-label">${filter.label} Min</label>
                         <input type="number" 
-                               id="${filter.key}_minimum" 
-                               name="${filter.key}_minimum" 
+                               id="${filter.key}_minimum_filter_value" 
+                               name="${filter.key}_minimum_filter_value" 
                                class="form-control" 
                                step="${filter.step || '1'}"
                                min="${filter.min || '0'}"
@@ -39,10 +41,10 @@ class ReportBuilder {
                                placeholder="Min">
                     </div>
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_maximum" class="form-label">${filter.label} Max</label>
+                        <label for="${filter.key}_maximum_filter_value" class="form-label">${filter.label} Max</label>
                         <input type="number" 
-                               id="${filter.key}_maximum"   
-                               name="${filter.key}_maximum" 
+                               id="${filter.key}_maximum_filter_value"   
+                               name="${filter.key}_maximum_filter_value" 
                                class="form-control" 
                                step="${filter.step || '1'}"
                                min="${filter.min || '0'}"
@@ -55,10 +57,10 @@ class ReportBuilder {
         number_single: {
             template: (filter) => `
                 <div class="mb-3">
-                    <label for="${filter.key}" class="form-label">${filter.label}</label>
+                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
                     <input type="number"
-                            id="${filter.key}"
-                            name="${filter.key}"
+                            id="${filter.key}_filter_value"
+                            name="${filter.key}_filter_value"
                             class="form-control"
                             step="${filter.step || '1'}"
                             min="${filter.min || '0'}"
@@ -72,19 +74,19 @@ class ReportBuilder {
             template: (filter) => `
                 <div class="row g-3">
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_minimum" class="form-label">${filter.label} Start</label>
+                        <label for="${filter.key}_minimum_filter_value" class="form-label">${filter.label} Start (Time is in UTC)</label>
                         <input type="datetime-local" step="1" 
-                               id="${filter.key}_minimum"
+                               id="${filter.key}_minimum_filter_value"
                                value="${new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0, 16)}"
-                               name="${filter.key}_minimum" 
+                               name="${filter.key}_minimum_filter_value" 
                                class="form-control">
                     </div>
                     <div class="mb-3 col-auto">
-                        <label for="${filter.key}_maximum" class="form-label">${filter.label} End</label>
+                        <label for="${filter.key}_maximum_filter_value" class="form-label">${filter.label} End (Time is in UTC)</label>
                         <input type="datetime-local" step="1" 
-                               id="${filter.key}_maximum"
+                               id="${filter.key}_maximum_filter_value"
                                value="${new Date().toISOString().slice(0, 16)}" 
-                               name="${filter.key}_maximum" 
+                               name="${filter.key}_maximum_filter_value" 
                                class="form-control">
                     </div>
                 </div>
@@ -93,9 +95,9 @@ class ReportBuilder {
         select: {
             template: (filter) => `
                 <div class="mb-3">
-                    <label for="${filter.key}" class="form-label">${filter.label}</label>
-                    <select id="${filter.key}"
-                            name="${filter.key}"
+                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
+                    <select id="${filter.key}_filter_value"
+                            name="${filter.key}_filter_value"
                             class="form-select"
                             ${filter.required ? 'required' : ''}>
                         <option value="">Select ${filter.label}</option>
@@ -163,36 +165,15 @@ class ReportBuilder {
 
     static tableTemplates = {
         default: {
-            header: (columns) => `
-                <thead class="table-dark">
-                    <tr>
-                        ${columns.map(col => `<th>${col.label}</th>`).join('')}
-                    </tr>
-                </thead>
-            `,
-            row: (rowData, columns) => `
-                <tr>
-                    ${columns.map(col => `
-                        <td style="text-align: ${col.align || 'left'};">
-                             ${index === 0 && !rowData[col.key] 
-                                ? "Total:"
-                                : col.format 
-                                    ? this.formatters[col.format](rowData[col.key])
-                                    : rowData[col.key] || "---"
-                            }
-                        </td>
-                    `).join('')}
-                </tr>
-            `
-        },
-        groupedHeaders: {
             header: (headerGroups) => `
                 <thead class="table-dark">
                     ${headerGroups.map(group => `
                         <tr>
                             ${group.map(header => `
                                 <th colspan="${header.colspan || 1}" 
-                                    rowspan="${header.rowspan || 1}">
+                                    rowspan="${header.rowspan || 1}"
+                                    ${header.sortable !== false ? `data-sort-key="${header.key}"` : ''}
+                                    class="${header.sortable !== false ? 'sortable' : ''}">
                                     ${header.label}
                                 </th>
                             `).join('')}
@@ -200,20 +181,23 @@ class ReportBuilder {
                     `).join('')}
                 </thead>
             `,
-            row: (rowData, columns) => `
-                <tr>
-                    ${columns.map((col, index) => `
-                        <td style="text-align: ${col.align || 'left'};">
-                            ${index === 0 && !rowData[col.key] 
-                                ? "Total:"
-                                : col.format 
-                                    ? this.formatters[col.format](rowData[col.key])
-                                    : rowData[col.key] || "---"
-                            }
-                        </td>
-                    `).join('')}
-                </tr>
-            `
+            row: (rowData, columns) => {
+                columns = columns.filter(col => rowData.hasOwnProperty(col.key));
+                return `
+                    <tr>
+                        ${columns.map((col, index) => `
+                            <td style="text-align: ${col.align || 'left'};">
+                                ${index === 0 && !rowData[col.key] 
+                                    ? "Total:"
+                                    : col.format 
+                                        ? this.formatters[col.format](rowData[col.key])
+                                        : rowData[col.key] || "---"
+                                }
+                            </td>
+                        `).join('')}
+                    </tr>
+                `;
+            }
         }
     };
 
@@ -247,7 +231,6 @@ class ReportBuilder {
                 return '---';
             }
             return new Date(value).toLocaleString('en-US', {
-                timeZone: 'UTC',
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
@@ -270,7 +253,16 @@ class ReportBuilder {
                 return '---';
             }
             return `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(value)).replace(',', '.').replace(".00", "")}%`;
-        }
+        },
+        boolean: (value) => {
+            if(value === true) {
+                return 'Yes';
+            }
+            if(value === false) {
+                return 'No';
+            }
+            return '---';
+        },
     };
 
     async buildFilterForm() {
@@ -330,7 +322,7 @@ class ReportBuilder {
         
         const table = document.createElement('table');
         table.className = 'table table-bordered table-striped table-hover';
-        const template = ReportBuilder.tableTemplates[this.config.tableTemplate || 'default'];
+        const template = ReportBuilder.tableTemplates['default'];
         table.innerHTML = `
             ${template.header(this.config.headerGroups)}
             <tbody id="report-table-body"></tbody>
@@ -366,23 +358,70 @@ class ReportBuilder {
         const form = document.getElementById('report-form');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData(form);
-            const filters = Object.fromEntries(formData);
-            await this.fetchData(filters);
+
+            if(await this.validateForm()) {
+                const formData = new FormData(form);
+                const filters = Object.fromEntries(formData);
+                await this.fetchData(filters);
+                this.state.sortCriteria = [];
+                this.updateSortIndicators();
+            }
+        });
+        document.querySelectorAll('th.sortable').forEach(header => {
+            header.addEventListener('click', async (e) => {
+                await this.handleSortChange(e);
+            });
         });
     }
 
-    async fetchData(filters) {
+    async handleSortChange(e) {
+        const key = e.currentTarget.dataset.sortKey;
+        const currentCriteria = [...this.state.sortCriteria];
+        const existingIndex = currentCriteria.findIndex(c => c.key === key);
+    
+        let newDirection;
+        if (existingIndex === -1) {
+            newDirection = 'ASC';
+        } else {
+            const currentDirection = currentCriteria[existingIndex].direction;
+            newDirection = currentDirection === 'ASC' ? 'DESC' : 'none';
+        }
+    
+        if (existingIndex !== -1) currentCriteria.splice(existingIndex, 1);
+        if (newDirection !== 'none') currentCriteria.unshift({ key, direction: newDirection });
+    
+        this.state.sortCriteria = currentCriteria;
+
+        if(await this.validateForm()) {
+            const formData = new FormData(document.getElementById('report-form'));
+            const filters = Object.fromEntries(formData);
+            await this.fetchData(filters, this.state.sortCriteria);
+        }
+    }
+
+    updateSortIndicators() {
+        document.querySelectorAll('th[data-sort-key]').forEach(header => {
+            const key = header.dataset.sortKey;
+            const sortEntry = this.state.sortCriteria.find(c => c.key === key);
+            const sortEntryPosition = this.state.sortCriteria.findIndex(c => c.key === key);
+            header.innerHTML = header.innerHTML.replace(/\d+/s, '');
+            header.innerHTML = header.innerHTML.replace(/ ↑| ↓/g, '');
+            if (sortEntry) header.innerHTML += sortEntry.direction === 'ASC' ? ` ${sortEntryPosition+1}↑` : `${sortEntryPosition+1}↓`;
+        });
+    }
+
+    async fetchData(filters, sortCriteria) {
         const spinner = document.getElementById('spinner');
         const button = document.querySelector('button[type="submit"]');
         button.disabled = true;
         spinner.style.display = 'block';
+        document.querySelectorAll('th.sortable').forEach(header => header.style.pointerEvents = 'none');
 
         try {
             const response = await fetch(this.config.dataEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(filters)
+                body: JSON.stringify({ ...filters, sortCriteria })
             });
             
             const data = await response.json();
@@ -400,6 +439,7 @@ class ReportBuilder {
         } finally {
             button.disabled = false;
             spinner.style.display = 'none';
+            document.querySelectorAll('th.sortable').forEach(header => header.style.pointerEvents = 'auto');
         }
     }
 
@@ -418,7 +458,7 @@ class ReportBuilder {
         if (data?.rows?.length <= 1) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="${this.config.columns.length}" class="text-center">
+                    <td colspan="${this.config.headerGroups.flat().length}" class="text-center">
                         No data available
                     </td>
                 </tr>
@@ -426,9 +466,11 @@ class ReportBuilder {
             return;
         }
         tbody.innerHTML = data.rows.map(row => 
-            ReportBuilder.tableTemplates[this.config.tableTemplate || 'default']
-                .row(row, this.config.columns)
+            ReportBuilder.tableTemplates['default']
+                .row(row, this.config.headerGroups.flat())
         ).join('');
+
+        this.updateSortIndicators();
     }
 
     buildExportSection(exportConfig) {
@@ -493,6 +535,203 @@ class ReportBuilder {
             spinner.style.display = 'none';
         }
     }
+
+    async validateForm() {
+        let isValid = true;
+        const errors = [];
+
+        this.clearValidationErrors();
+
+        for (const filter of this.config.filters) {
+            if (filter.type === 'number' || filter.type === 'timestamp') {
+                const minInput = document.getElementById(`${filter.key}_minimum`);
+                const maxInput = document.getElementById(`${filter.key}_maximum`);
+                
+                if (minInput && maxInput) {
+                    const validationResults = ValidationService.validateField(
+                        filter, 
+                        minInput.value, 
+                        maxInput.value
+                    );
+
+                    if (validationResults.length > 0) {
+                        isValid = false;
+                        validationResults.forEach(result => {
+                            this.showValidationError(filter.key, result.message, result.field);
+                            errors.push(result.message);
+                        });
+                    }
+                }
+            } else if (filter.type === 'select' && filter.required) {
+                const input = document.getElementById(filter.key);
+                if (input) {
+                    const validationResults = ValidationService.validateField(
+                        filter,
+                        input.value,
+                        filter.options
+                    );
+
+                    if (validationResults.length > 0) {
+                        isValid = false;
+                        validationResults.forEach(result => {
+                            this.showValidationError(filter.key, result.message, result.field);
+                            errors.push(result.message);
+                        });
+                    }
+                }
+            } else if (filter.type === 'text') {
+                const input = document.getElementById(filter.key);
+                if (input) {
+                    const validationResults = ValidationService.validateField(
+                        filter,
+                        input.value
+                    );
+
+                    if (validationResults.length > 0) {
+                        isValid = false;
+                        validationResults.forEach(result => {
+                            this.showValidationError(filter.key, result.message, result.field || 'input');
+                            errors.push(result.message);
+                        });
+                    }
+                }
+            }
+        }
+
+        if (!isValid) {
+            showToastMessage('Please correct the validation errors', 'error');
+        }
+
+        return isValid;
+    }
+
+    showValidationError(filterKey, message, field = 'input') {
+        let errorContainer = document.getElementById(`${filterKey}-error-${field}`);
+
+        if (!errorContainer) {
+            errorContainer = document.createElement('div');
+            errorContainer.className = 'invalid-feedback d-block';
+            errorContainer.id = `${filterKey}-error-${field}`;
+            let inputElement;
+
+            if (field === 'min') {
+                inputElement = document.getElementById(`${filterKey}_minimum`);
+            } else if (field === 'max') {
+                inputElement = document.getElementById(`${filterKey}_maximum`);
+            } else {
+                inputElement = document.getElementById(filterKey);
+            }
+
+            if (inputElement) {
+                inputElement.classList.add('is-invalid');
+                inputElement.parentElement.appendChild(errorContainer);
+            }
+        }
+
+        if (!errorContainer.textContent.includes(message)) {
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            errorContainer.appendChild(messageElement);
+        }
+    }
+
+    clearValidationErrors() {
+        document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    }
 }
 
 export { ReportBuilder };
+
+class ValidationService {
+    static rules = {
+        timestamp: [
+            {
+                validate: (min, max) => {
+                    if (!min || !max) {
+                        return { isValid: true };
+                    }
+                    return {
+                        isValid: new Date(min) <= new Date(max),
+                        field: 'min',
+                        message: 'Start date must be before end date',
+                    };
+                },
+            },
+            {
+                validate: (min, max) => {
+                    const errors = [];
+                    const now = new Date();
+                    now.setHours(now.getHours() - 2);
+                    if (min && new Date(min) > now) {
+                        errors.push({
+                            isValid: false,
+                            field: 'min',
+                            message: 'Start date must be in the past',
+                        });
+                    }
+                    if (max && new Date(max) > now) {
+                        errors.push({
+                            isValid: false,
+                            field: 'max',
+                            message: 'End date must be in the past',
+                        });
+                    }
+                    if (errors.length > 0) {
+                        return errors;
+                    }
+                    return { isValid: true };
+                },
+            },
+        ],
+        number: [
+            {
+                validate: (min, max) => {
+                    if (!min || !max) {
+                        return { isValid: true };
+                    }
+                    return {
+                        isValid: parseFloat(min) <= parseFloat(max),
+                        field: 'min',
+                        message: 'Minimum value must be less than maximum value',
+                    };
+                },
+            },
+        ],
+        text: [    
+            {
+                validate: (value) => {
+                    if (!value) {
+                        return { isValid: true };
+                    }
+                    const isValid = value.length <= 255;
+                    return {
+                        isValid,
+                        field: 'input',
+                        message: 'Text must not exceed 255 characters',
+                    };
+                },
+            },
+        ]
+    }
+
+    static validateField(filter, value, maxValue) {
+        const rules = this.rules[filter.type] || [];
+        let errors = [];
+
+        for (const rule of rules) {
+            const result = rule.validate(value, maxValue);
+            if (Array.isArray(result) && result.length > 0) {
+                errors = errors.concat(result);
+            } else if (!result.isValid) {
+                errors.push(result);
+            }
+        }
+
+        if (errors.length > 0) {
+            return errors;
+        }
+
+        return [];
+    }
+}

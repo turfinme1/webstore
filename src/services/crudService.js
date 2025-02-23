@@ -1,5 +1,5 @@
 const bcrypt = require("bcrypt");
-const { ASSERT_USER } = require("../serverConfigurations/assert");
+const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
 
 class CrudService {
   constructor() {
@@ -31,10 +31,10 @@ class CrudService {
     await this.handleMappingInsertions(data, schema, insertedEntity.id);
 
     if (this.hooks().create[data.params.entity]?.after) {
-      await this.hooks().create[data.params.entity].after(data, insertedEntity.id);
+      await this.hooks().create[data.params.entity].after(data, insertedEntity);
     }
 
-    return insertedEntity; // Return the created main entity
+    return insertedEntity;
   }
 
   async insertMainEntity(data, schema) {
@@ -54,7 +54,7 @@ class CrudService {
       .join(",")}) RETURNING *`;
 
     const result = await data.dbConnection.query(insertQuery, mainEntityValues);
-    return result.rows[0]; // The newly created main entity
+    return result.rows[0];
   }
 
   async handleMappingInsertions(data, schema, mainEntityId) {
@@ -68,22 +68,6 @@ class CrudService {
         const mappingTable = insertConfig.table;
         const foreignKey = insertConfig.foreignKey;
         const mappingKey = insertConfig.mappingKey;
-
-        // // Prepare the data to insert into the mapping table
-        // const mappingValues = data.body[key].map((value) => ({
-        //   [foreignKey]: mainEntityId,
-        //   [mappingKey]: value,
-        // }));
-
-        // // Insert each entry into the mapping table
-        // for (const mapping of mappingValues) {
-        //   const columns = Object.keys(mapping).join(", ");
-        //   const values = Object.values(mapping);
-        //   const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
-
-        //   const mappingQuery = `INSERT INTO ${mappingTable} (${columns}) VALUES (${placeholders})`;
-        //   await data.dbConnection.query(mappingQuery, values);
-        // }
 
         // Create arrays for each column
         const foreignKeys = Array(data.body[key].length).fill(mainEntityId);
@@ -197,11 +181,11 @@ class CrudService {
             `STRPOS(LOWER(CAST(${filterField} AS text)), LOWER($${searchValues.length})) > 0`
           ); 
         } else if (typeof filterValue === "object") {
-          if (filterValue.min) {
+          if (filterValue.min || filterValue.min == 0) {
             searchValues.push(filterValue.min);
             conditions.push(`${filterField} >= $${searchValues.length}`);
           }
-          if (filterValue.max) {
+          if (filterValue.max || filterValue.max == 0) {
             searchValues.push(filterValue.max);
             conditions.push(`${filterField} <= $${searchValues.length}`);
           }
@@ -425,6 +409,9 @@ class CrudService {
         "target-groups": {
           after: this.targetGroupCreateHook.bind(this),
         },
+        notifications: {
+          after: this.notificationCreateHook.bind(this),
+        }
       },
       update: {
         roles: {
@@ -433,6 +420,9 @@ class CrudService {
         "admin-users": {
           before: this.adminUsersUpdateHook,
         },
+        "email-templates": {
+          before: this.emailTemplateUpdateHook,
+        }
       },
     }
   };
@@ -441,8 +431,8 @@ class CrudService {
     const currentDate = new Date();
     const start_date = new Date(data.body.start_date);
     const end_date = new Date(data.body.end_date);
-    ASSERT_USER(start_date < end_date, "Start date must be before end date", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_DATE_RANGE", long_description: "Start date must be before end date" });
-    ASSERT_USER(end_date > currentDate, "End date must be in the future", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_END_DATE", long_description: "End date must be in the future" });
+    ASSERT_USER(start_date < end_date, "Start date must be before end date", { code: "SERVICE.CRUD.00444.INVALID_INPUT_CREATE_CAMPAIGN_DATE_RANGE", long_description: "Start date must be before end date" });
+    ASSERT_USER(end_date > currentDate, "End date must be in the future", { code: "SERVICE.CRUD.00445.INVALID_INPUT_CREATE_CAMPAIGN_END_DATE", long_description: "End date must be in the future" });
     /// check if the voucher is active 
     const voucherResult = await data.dbConnection.query(`
       SELECT * FROM vouchers
@@ -450,7 +440,7 @@ class CrudService {
       [data.body.voucher_id]
     );
     const voucher = voucherResult.rows[0];
-    ASSERT_USER(voucher, "Voucher is not active", { code: "CRUD_INVALID_INPUT_CREATE_CAMPAIGN_VOUCHER_INVALID", long_description: "Voucher is not active" });
+    ASSERT_USER(voucher, "Voucher is not active", { code: "SERVICE.CRUD.00453.INVALID_INPUT_CREATE_CAMPAIGN_VOUCHER_INVALID", long_description: "Voucher is not active" });
     let status = "Inactive";
     if(currentDate > voucher.end_date) {
       status = "Expired voucher";
@@ -489,7 +479,6 @@ class CrudService {
         RETURNING *`,
         [data.params.id, roleId]
       );
-      console.log(result.rows);
     }
 
     const addedRolesResult = await data.dbConnection.query(`
@@ -504,7 +493,7 @@ class CrudService {
     insertObject.keys = insertObject.keys.filter((key) => key !== "role_id");
     
     await data.logger.info({
-      code: "CRUD_ROLE_CHANGE_SUCCESS",
+      code: "SERVICE.CRUD.00507.ROLE_CHANGE_SUCCESS",
       short_description: `User roles updated for user with ID: ${data.params.id}`,
       long_description: `Added roles: ${addedRoleNames.join(', ')}; Removed roles: ${removedRoleNames.join(', ')}`
     });
@@ -597,7 +586,7 @@ class CrudService {
     }
         
     await data.logger.info({
-      code: "CRUD_PERMISSION_CHANGE_SUCCESS",
+      code: "SERVICE.CRUD.00583.PERMISSION_CHANGE_SUCCESS",
       short_description: `Permissions updated for role with ID: ${data.params.id}`,
       long_description: `Added permissions: ${addedPermissionNames.join(', ')}; Removed permissions: ${removedPermissionNames.join(', ')}`
     });
@@ -607,7 +596,7 @@ class CrudService {
     );
   }
 
-  async targetGroupCreateHook(data, mainEntityId) {
+  async targetGroupCreateHook(data, mainEntity) {
     data.params.entity = "users";
     data.query = data.body.users.query;
 
@@ -620,9 +609,58 @@ class CrudService {
       RETURNING *
     `;
   
-    const queryValues = [...innerInsertQuery.searchValues, mainEntityId];
+    const queryValues = [...innerInsertQuery.searchValues, mainEntity.id];
   
     const result = await data.dbConnection.query(insertQuery, queryValues);
+  }
+
+  async emailTemplateUpdateHook(data, insertObject) {
+    const currentEmailTemplateResult = await data.dbConnection.query(`
+      SELECT * FROM email_templates
+      WHERE id = $1`,
+      [data.params.id]
+    );
+    ASSERT_USER(currentEmailTemplateResult.rows.length > 0, "Email template not found", { code: "SERVICE.CRUD.00620.INVALID_INPUT_UPDATE_EMAIL_TEMPLATE_NOT_FOUND", long_description: "Email template not found" });
+    const currentEmailTemplate = currentEmailTemplateResult.rows[0];
+    data.body.placeholders = JSON.stringify(currentEmailTemplate.placeholders);
+  }
+
+  async notificationCreateHook(data, mainEntity) {
+    const templateResult = await data.dbConnection.query(
+        `SELECT * FROM email_templates WHERE id = $1`,
+        [mainEntity.template_id]
+    );
+    ASSERT_USER(templateResult.rows.length > 0, "Template not found", {
+        code: "SERVICE.CRUD.00630.TEMPLATE_NOT_FOUND",
+        long_description: "Notification template not found"
+    });
+    
+    const template = templateResult.rows[0];
+    
+    // Get users data
+    const userIds = mainEntity.user_ids.split(',').map(id => parseInt(id.trim()));
+    const usersResult = await data.dbConnection.query(
+      `SELECT id, email, first_name, last_name, phone 
+      FROM users 
+      WHERE id = ANY($1)`,
+      [userIds]
+    );
+    
+    // Create emails for each user
+    for (const user of usersResult.rows) {
+        let text_content = template.template;
+        for (const placeholder of template.placeholders) {
+          let placeholderKey = placeholder.replace(/[{}]/g, "");
+          ASSERT(user[placeholderKey] !== null, "Missing email template placeholder", { code: "SERVICE.EMAIL.00115.INVALID_INPUT_TEMPLATE", long_description: `"Missing email template placeholder: ${placeholderKey}` });
+          text_content = text_content.replaceAll(`${placeholder}`, user[placeholderKey]);
+        }
+        
+        await data.dbConnection.query(
+          `INSERT INTO emails (recipient_id, recipient_email, subject, text_content, notification_id, type) 
+          VALUES ($1, $2, $3, $4, $5, 'Notification')`,
+          [user.id, user.email, template.subject, text_content, mainEntity.id]
+        );
+    }
   }
 }
 

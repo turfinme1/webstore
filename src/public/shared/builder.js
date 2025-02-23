@@ -696,14 +696,14 @@ class CrudPageBuilder {
       });
 
       const actionTd = document.createElement("td");
-      if (hasPermission(this.userStatus, "update", this.schema.name)) {
+      if (hasPermission(this.userStatus, "update", this.schema.name) && this.schema?.crud?.update !== false) {
         actionTd.appendChild(
           this.createActionButton("Edit", async () =>
             this.populateUpdateForm(record)
           )
         );
       }
-      if (hasPermission(this.userStatus, "delete", this.schema.name)) {
+      if (hasPermission(this.userStatus, "delete", this.schema.name) && this.schema?.crud?.delete !== false) {
         actionTd.appendChild(
           this.createActionButton("Delete", () => this.deleteRecord(record.id))
         );
