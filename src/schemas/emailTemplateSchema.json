@@ -3,6 +3,7 @@
     "name": "email-templates",
     "table": "email_templates",
     "views": "email_templates_view",
+    "queryValidationSchema": "emailTemplateQueryParamsSchema",
     "properties": {
         "name": {
             "type": "string",
