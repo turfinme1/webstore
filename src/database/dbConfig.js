@@ -5,7 +5,7 @@ const pool = new Pool({
   database: "webstore",
   password: "postgres",
   port: "5432",
-  max: 20,
+  max: 10,
   idleTimeoutMillis: 6000,
 });
 
