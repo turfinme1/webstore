@@ -1,32 +1,42 @@
 importScripts(
     'https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js'
   );
-
-workbox.routing.registerRoute(
-    ({ request }) => request.destination === 'style',
-        new workbox.strategies.StaleWhileRevalidate({
-            cacheName: 'css-cache',
-    })
-);
-
-
-workbox.routing.registerRoute(
-    ({ request }) => request.destination === 'script',
-    new workbox.strategies.StaleWhileRevalidate({
-      cacheName: 'js-cache',
-    })
-);
-
-workbox.routing.registerRoute(
-    ({ request }) => request.destination === 'document',
-    new workbox.strategies.StaleWhileRevalidate({
-      cacheName: 'html-cache',
-    })
-);
-
-  // Optionally, you can use precaching to cache your app shell files during service worker installation.
+  
 workbox.precaching.precacheAndRoute([
     { url: '/index.html', revision: '1' },
     { url: '/styles.css', revision: '1' },
     { url: '/script.js', revision: '1' },
 ]);
+
+workbox.routing.registerRoute(
+  ({ url, request }) => 
+    ['style', 'script', 'document', 'image', 'font'].includes(request.destination) || url.pathname.endsWith('.json'),
+  new workbox.strategies.CacheFirst({
+    cacheName: 'static-assets',
+    plugins: [
+      new workbox.expiration.ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 5 * 60, 
+      }),
+    ],
+  })
+);
+
+workbox.routing.registerRoute(
+  ({ url, request }) => 
+    !['document', 'script', 'style', 'image'].includes(request.destination) ||
+    (url.pathname.endsWith('.json') || url.pathname === '/auth/status'),
+  new workbox.strategies.NetworkFirst({
+    cacheName: 'api-cache',
+    plugins: [
+      new workbox.cacheableResponse.CacheableResponsePlugin({
+        statuses: [200],
+      }),
+      new workbox.expiration.ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 5 * 60, 
+      }),
+    ],
+    networkTimeoutSeconds: 3,
+  })
+);

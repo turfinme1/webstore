@@ -1,7 +1,6 @@
 // schemaService.js
 async function fetchUserSchema(url) {
   const response = await fetch(url);
-  if (!response.ok) throw new Error("Failed to fetch schema");
   return await response.json();
 }
 
