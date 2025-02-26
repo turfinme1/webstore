@@ -388,6 +388,8 @@ async function handleFilterTemplates(event) {
 
 async function handleSendTestEmail(templateId) {
     try {
+        // confirmation before sending test email
+        if (!confirm("Are you sure you want to send a test email?")) return;
         const response = await fetchWithErrorHandling(`/api/test-email/${templateId}`);
         if (response.ok) {
             showToastMessage("Test email sent successfully!", "success");
