@@ -832,7 +832,7 @@ async function fetchWithErrorHandling(url, options) {
     if (!navigator.onLine) {
       return {
         ok: false,
-        error: "No internet connection",
+        error: "No internet connection. Please reconnect and try again.",
       };
     } else {
       console.error("Error fetching data:", error);
