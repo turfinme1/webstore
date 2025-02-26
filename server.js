@@ -2,11 +2,13 @@ const path = require("path");
 const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const compression = require('compression')
 
 const serverConfig = require("./src/serverConfigurations/serverConfiguration");
 
 const port = 3000;
 const app = express();
+app.use(compression());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "..")));
 app.use(express.static(path.join(__dirname, "src", "public", "shared"), { index:false, extensions:['html'] }));
