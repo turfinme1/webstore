@@ -143,8 +143,45 @@ async function loadTemplates(page) {
 // UI Functions
 function renderTemplateList(templates) {
     elements.templateList.innerHTML = "";
-    templates.forEach((template) => {
+    templates.forEach(async (template) => {
         const row = document.createElement("tr");
+
+        const previewCell = document.createElement("td");
+        
+        previewCell.align = "center";
+        const iframe = document.createElement("iframe");
+        
+        iframe.style.width = "100px";  
+         iframe.style.height = "120px";
+        iframe.style.border = "1px solid #dee2e6";
+        iframe.scrolling = "no";
+        iframe.style.overflow = "hidden";
+    
+        const response = await fetchWithErrorHandling(`/api/preview-email/${template.id}`);
+        const email = await response.data;
+    
+        const scaledEmail = `
+          <html>
+            <head>
+              <style>
+                body { margin: 0; padding: 0; }
+                .scale-wrapper {
+                  transform: scale(0.2);
+                  transform-origin: top left;
+                  width: 500%; /* 1 / 0.4 = 500% so that the full content is visible */
+                }
+              </style>
+            </head>
+            <body>
+              <div class="scale-wrapper">
+                ${email}
+              </div>
+            </body>
+          </html>
+        `;
+        iframe.srcdoc = scaledEmail;
+        previewCell.appendChild(iframe);
+        row.appendChild(previewCell);
         
         // Create cells
         row.appendChild(createTableCell(template.name));
@@ -168,13 +205,13 @@ function renderTemplateList(templates) {
             // );
         // }
 
+        actionsCell.appendChild(
+            createActionButton("Preview", "btn-warning", () =>
+                handlePreviewEmail(template.id)
+            )
+        );
+        
         if (template.type !== "Notification") {
-            actionsCell.appendChild(
-                createActionButton("Preview email", "btn-warning", () =>
-                    handlePreviewEmail(template.id)
-                )
-            );
-
             actionsCell.appendChild(
                 createActionButton("Send test email", "btn-warning", () =>
                     handleSendTestEmail(template.id)
