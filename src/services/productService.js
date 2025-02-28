@@ -79,6 +79,7 @@ class ProductService {
           JOIN products_categories pc ON pc.product_id = products.id
           JOIN categories c ON pc.category_id = c.id
           ${combinedConditions}
+          GROUP BY products.id
           ${orderByClause !== "" ? `ORDER BY ${orderByClause}` : ""} 
           LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}
       ),
@@ -125,7 +126,7 @@ class ProductService {
           JOIN products_categories pc ON pc.product_id = products.id
           JOIN categories c ON pc.category_id = c.id
           ${combinedConditions}`;
-    
+
     const totalCount = await data.dbConnection.query(countQuery, searchValues); 
     const result = await data.dbConnection.query(dataQuery, [...searchValues, data.query.pageSize , offset]);
     return { result: result.rows, count: totalCount.rows[0].count };
