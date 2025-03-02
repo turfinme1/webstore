@@ -137,11 +137,12 @@ describe("AuthService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [mockUser] }) // User found
-        .mockResolvedValueOnce({ rows: [mockSession] }); // Session updated
+        .mockResolvedValueOnce({ rows: [mockSession] }) // Session updated
+        .mockResolvedValueOnce({ rows: [] }); // Insert into user_logins 
 
       const result = await authService.login(data);
 
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(2);
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
       expect(bcrypt.compare).toHaveBeenCalledWith(
         "password123",
         "hashedPassword"
