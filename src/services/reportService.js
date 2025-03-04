@@ -1,4 +1,3 @@
-const { options } = require("yargs");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateObject } = require("../serverConfigurations/validation");
 
@@ -1301,11 +1300,11 @@ class ReportService {
             FROM (
                 SELECT 
                     u.id AS user_id, 
-                    ul.id AS login_id, 
-                    ul.created_at AS login_created_at,
+                    l.id AS login_id, 
+                    l.created_at AS login_created_at,
                     u.created_at AS user_created_at
                 FROM users u
-                LEFT JOIN user_logins ul ON u.id = ul.user_id
+                LEFT JOIN logs l ON u.id = l.user_id
             ) user_logins_data
             GROUP BY user_id
         )

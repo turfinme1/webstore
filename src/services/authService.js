@@ -88,12 +88,6 @@ class AuthService {
     const requestData = { entitySchemaCollection: data.entitySchemaCollection, dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Authenticated", userId: user.id };
     const session = await this.changeSessionType(requestData);
 
-    if(session.user_id) {
-      await data.dbConnection.query(`
-        INSERT INTO user_logins (user_id) VALUES ($1)`,
-        [session.user_id]
-      );
-    }
     return session;
   }
 

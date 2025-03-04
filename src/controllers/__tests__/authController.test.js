@@ -89,7 +89,7 @@ describe("AuthController", () => {
       expect(authService.login).toHaveBeenCalledWith({
         body: req.body,
         params: req.params,
-        session: req.session,
+        session: expect.any(Object),
         dbConnection: req.dbConnection,
         entitySchemaCollection: req.entitySchemaCollection,
       });

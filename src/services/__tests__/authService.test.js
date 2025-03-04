@@ -142,7 +142,7 @@ describe("AuthService", () => {
 
       const result = await authService.login(data);
 
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(2);
       expect(bcrypt.compare).toHaveBeenCalledWith(
         "password123",
         "hashedPassword"
