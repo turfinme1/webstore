@@ -137,7 +137,8 @@ describe("AuthService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [mockUser] }) // User found
-        .mockResolvedValueOnce({ rows: [mockSession] }); // Session updated
+        .mockResolvedValueOnce({ rows: [mockSession] }) // Session updated
+        .mockResolvedValueOnce({ rows: [] }); // Insert into user_logins 
 
       const result = await authService.login(data);
 

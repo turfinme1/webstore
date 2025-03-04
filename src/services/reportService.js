@@ -1,4 +1,3 @@
-const { options } = require("yargs");
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 const { validateObject } = require("../serverConfigurations/validation");
 
@@ -901,6 +900,7 @@ class ReportService {
         headerGroups: [
             [
                 { key: 'created_at', label: 'Created At', rowspan: 2, format: 'date_time' },
+                { key: 'id', label: 'ID', rowspan: 2, align: 'right', format: 'text' },
                 { key: 'first_name', label: 'First Name', rowspan: 2, format: 'text' },
                 { key: 'last_name', label: 'Last Name', rowspan: 2, format: 'text' },
                 { key: 'email', label: 'Email', rowspan: 2, format: 'text' },
@@ -911,6 +911,17 @@ class ReportService {
                 { key: 'birth_date', label: 'Birth Date', rowspan: 2, format: 'date' },
                 { key: 'is_email_verified', label: 'Is Email Verified', rowspan: 2, format: 'boolean' },
                 { key: 'days_since_creation', label: 'Days Since Creation', rowspan: 2, align: 'right', format: 'number' },
+                { key: 'has_paid_order', label: 'Has Paid Order', rowspan: 2, format: 'boolean' },
+                { key: 'order_total_paid_amount', label: 'Order Total Paid Amount', rowspan: 2, align: 'right', format: 'currency' },
+                { key: 'order_count', label: 'Order Count', rowspan: 2, align: 'right', format: 'number' },
+                { key: 'average_paid_amount', label: 'Average Paid Amount', rowspan: 2, align: 'right', format: 'currency' },
+                { key: 'first_order_created_at', label: 'First Order Created At', rowspan: 2, format: 'date_time' },
+                { key: 'days_since_first_order', label: 'Days Since First Order', rowspan: 2, align: 'right', format: 'number' },
+                { key: 'first_order_total_paid_amount', label: 'First Order Total Paid Amount', rowspan: 2, align: 'right', format: 'currency' },
+                { key: 'days_since_last_order', label: 'Days Since Last Order', rowspan: 2, align: 'right', format: 'number' },
+                { key: 'days_since_last_login', label: 'Days Since Last Login', rowspan: 2, align: 'right', format: 'number' },
+                { key: 'login_count', label: 'Login Count', rowspan: 2, align: 'right', format: 'number' },
+                { key: 'average_weekly_login_count', label: 'Average Weekly Login Count', rowspan: 2, align: 'right', format: 'number' },
                 { key: 'count', label: 'Count', rowspan: 2, align: 'right', format: 'number' }
             ]
         ],
@@ -964,12 +975,121 @@ class ReportService {
             displayInUI: true,
         },
         {
+            key: "has_paid_order",
+            grouping_expression: "CASE WHEN order_stats.order_count > 0 THEN TRUE ELSE FALSE END",
+            filter_expression: "CASE WHEN $FILTER_VALUE$ = 'true' THEN order_stats.order_count > 0 ELSE order_stats.order_count = 0 END",
+            type: "select",
+            label: "Has Paid Order",
+            groupable: true,
+            options: [
+                { value: 'true', label: 'Yes' },
+                { value: 'false', label: 'No' }
+            ],
+            displayInUI: true,
+        },
+        {
             key: "days_since_creation",
             grouping_expression: "DATE_PART('day', CURRENT_DATE - U.created_at)", 
             filter_expression: "",
             type: "number",
             label: "Days Since Creation",
             step: '1',
+            min: 0,
+            max: 100000000,
+            displayInUI: true,
+        },
+        {
+            key: 'first_order_created_at',
+            grouping_expression: 'order_stats.first_order_created_at',
+            filter_expression: '',
+            type: 'timestamp',
+            label: 'First Order Created At',
+            displayInUI: true,
+        },
+        {
+            key: 'first_order_total_paid_amount',
+            grouping_expression: 'first_order_info.first_order_amount',
+            filter_expression: '',
+            type: 'number',
+            label: 'First Order Total Paid Amount',
+            step: '0.01',
+            min: 0,
+            max: 1000000000000,
+            displayInUI: true,
+        },
+        {
+            key: "days_since_last_order",
+            grouping_expression: "CASE WHEN order_stats.last_order_date IS NOT NULL THEN DATE_PART('day', CURRENT_DATE - order_stats.last_order_date) ELSE NULL END",
+            filter_expression: "",
+            type: "number",
+            label: "Days Since Last Order",
+            step: '1',
+            min: 0,
+            max: 100000000,
+            displayInUI: true,
+        },
+        {
+            key: "order_total_paid_amount",
+            grouping_expression: "order_stats.total_paid_amount",
+            filter_expression: "",
+            type: "number",
+            label: "Order Total Paid Amount",
+            step: '0.01',
+            min: 0,
+            max: 1000000000000,
+            displayInUI: true,
+        },
+        {
+            key: "order_count",
+            grouping_expression: "order_stats.order_count",
+            filter_expression: "",
+            type: "number",
+            label: "Order Count",
+            step: '1',
+            min: 0,
+            max: 100000000,
+            displayInUI: true,
+        },
+        {
+            key: "days_since_last_login",
+            grouping_expression: "login_stats.days_since_last_login",
+            filter_expression: "",
+            type: "number",
+            label: "Days Since Last Login",
+            step: '1',
+            min: 0,
+            max: 100000000,
+            displayInUI: true,
+        },
+        {
+            key: "login_count",
+            grouping_expression: "login_stats.login_count",
+            filter_expression: "",
+            type: "number",
+            label: "Login Count",
+            step: '1',
+            min: 0,
+            max: 100000000,
+            displayInUI: true,
+        },
+        {
+            key: "average_weekly_login_count",
+            grouping_expression: "login_stats.average_weekly_login_count",
+            filter_expression: "",
+            type: "number",
+            label: "Average Weekly Login Count",
+            step: '0.01',
+            min: 0,
+            max: 100000000,
+            displayInUI: true,
+        },
+        {
+            key: "id",
+            grouping_expression: "U.id",
+            filter_expression: "U.id = $FILTER_VALUE$",
+            type: "number_single",
+            label: "User ID",
+            step: "1",
             min: 0,
             max: 100000000,
             displayInUI: true,
@@ -999,6 +1119,16 @@ class ReportService {
             displayInUI: true,
         },
         {
+            key: "average_paid_amount",
+            grouping_expression: "order_stats.average_paid_amount",
+            type: "number",         
+        },
+        {
+            key: "days_since_first_order",
+            grouping_expression: " CASE WHEN order_stats.first_order_created_at IS NOT NULL THEN DATE_PART('day', CURRENT_DATE - order_stats.first_order_created_at) ELSE NULL END",
+            type: "number",
+        },
+        {
             key: "phone",
             grouping_expression: "U.phone",
             filter_expression: "",
@@ -1018,26 +1148,103 @@ class ReportService {
         },
         {
             key: "created_at_minimum",
-            grouping_expression: "",
             filter_expression: "U.created_at >= $FILTER_VALUE$",
             type: "timestamp",
         },
         {
             key: "created_at_maximum",
-            grouping_expression: "",
             filter_expression: "U.created_at <= $FILTER_VALUE$",
             type: "timestamp",
         },
         {
             key: "days_since_creation_minimum",
-            grouping_expression: "",
             filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) >= $FILTER_VALUE$",
             type: "number",
         },
         {
             key: "days_since_creation_maximum",
-            grouping_expression: "",
             filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "days_since_last_order_minimum",
+            filter_expression: "CASE WHEN order_stats.last_order_date IS NOT NULL THEN DATE_PART('day', CURRENT_DATE - order_stats.last_order_date) ELSE NULL END >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "days_since_last_order_maximum",
+            filter_expression: "CASE WHEN order_stats.last_order_date IS NOT NULL THEN DATE_PART('day', CURRENT_DATE - order_stats.last_order_date) ELSE NULL END <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "order_total_paid_amount_minimum",
+            filter_expression: "order_stats.total_paid_amount >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "order_total_paid_amount_maximum",
+            filter_expression: "order_stats.total_paid_amount <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "order_count_minimum",
+            filter_expression: "order_stats.order_count >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "order_count_maximum",
+            grouping_expression: "",
+            filter_expression: "order_stats.order_count <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "days_since_last_login_minimum",
+            filter_expression: "login_stats.days_since_last_login >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "days_since_last_login_maximum",
+            filter_expression: "login_stats.days_since_last_login <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "first_order_created_at_minimum",
+            filter_expression: "order_stats.first_order_created_at >= $FILTER_VALUE$",
+            type: "timestamp",
+        },
+        {
+            key: "first_order_total_paid_amount_minimum",
+            filter_expression: "first_order_info.first_order_amount >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "first_order_total_paid_amount_maximum",
+            filter_expression: "first_order_info.first_order_amount <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "first_order_created_at_maximum",
+            filter_expression: "order_stats.first_order_created_at <= $FILTER_VALUE$",
+            type: "timestamp",
+        },
+        {
+            key: "login_count_minimum",
+            filter_expression: "login_stats.login_count >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "login_count_maximum",
+            filter_expression: "login_stats.login_count <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "average_weekly_login_count_minimum",
+            filter_expression: "login_stats.average_weekly_login_count >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "average_weekly_login_count_maximum",
+            filter_expression: "login_stats.average_weekly_login_count <= $FILTER_VALUE$",
             type: "number",
         },
         {
@@ -1047,7 +1254,62 @@ class ReportService {
     ];
 
     let sql = `
+        WITH order_stats AS (
+            SELECT 
+                user_id,
+                SUM(CASE WHEN status = 'Paid' THEN 1 ELSE 0 END) AS order_count,
+                SUM(CASE WHEN status = 'Paid' THEN paid_amount ELSE 0 END) AS total_paid_amount,
+                CASE 
+                    WHEN SUM(CASE WHEN status = 'Paid' THEN 1 ELSE 0 END) > 0 
+                    THEN SUM(CASE WHEN status = 'Paid' THEN paid_amount ELSE 0 END) / SUM(CASE WHEN status = 'Paid' THEN 1 ELSE 0 END)
+                    ELSE 0
+                END AS average_paid_amount,
+                MIN(CASE WHEN status = 'Paid' THEN created_at ELSE NULL END) AS first_order_created_at,
+                MAX(CASE WHEN status = 'Paid' THEN created_at ELSE NULL END) AS last_order_date
+            FROM (
+                -- This subquery ensures we get a row for every user, even if they have no orders
+                SELECT u.id AS user_id, o.status, o.paid_amount, o.created_at
+                FROM users u
+                LEFT JOIN orders o ON u.id = o.user_id
+                WHERE u.is_active = TRUE
+            ) user_orders
+            GROUP BY user_id
+        ),
+        first_order_info AS (
+            SELECT 
+                o.user_id,
+                o.paid_amount AS first_order_amount
+            FROM orders o
+            JOIN order_stats os ON o.user_id = os.user_id AND o.created_at = os.first_order_created_at
+            WHERE o.status = 'Paid'
+        ),
+        login_stats AS (
+            SELECT 
+                user_id,
+                COUNT(login_id) AS login_count,
+                CASE 
+                    WHEN MAX(login_created_at) IS NOT NULL 
+                    THEN DATE_PART('day', CURRENT_DATE - MAX(login_created_at)) 
+                    ELSE NULL 
+                END AS days_since_last_login,
+                CASE 
+                    WHEN MIN(user_created_at) IS NOT NULL
+                    THEN COUNT(login_id) / GREATEST(CEIL(DATE_PART('day', CURRENT_DATE - MIN(user_created_at)) / 7), 1)
+                    ELSE 0
+                END AS average_weekly_login_count
+            FROM (
+                SELECT 
+                    u.id AS user_id, 
+                    l.id AS login_id, 
+                    l.created_at AS login_created_at,
+                    u.created_at AS user_created_at
+                FROM users u
+                LEFT JOIN logs l ON u.id = l.user_id
+            ) user_logins_data
+            GROUP BY user_id
+        )
         SELECT
+            NULL AS "id",
             NULL AS "created_at",
             NULL AS "first_name",
             NULL AS "last_name",
@@ -1059,13 +1321,28 @@ class ReportService {
             NULL AS "birth_date",
             NULL AS "is_email_verified",
             NULL AS "days_since_creation",
+            NULL AS "has_paid_order",
+            NULL AS "average_paid_amount",
+            NULL AS "first_order_created_at",
+            NULL AS "days_since_first_order",
+            NULL AS "first_order_total_paid_amount",
+            NULL AS "days_since_last_order",
+            NULL AS "days_since_last_login",
+            NULL AS "average_weekly_login_count",
+            SUM(order_stats.total_paid_amount) AS "order_total_paid_amount",
+            SUM(order_stats.order_count) AS "order_count",
+            SUM(login_stats.login_count) AS "login_count",
             COUNT(*) AS "count",
             0 AS "sort_order" 
         FROM users U
         LEFT JOIN iso_country_codes icc ON U.iso_country_code_id = icc.id
         LEFT JOIN iso_country_codes cc ON U.country_id = cc.id
         LEFT JOIN genders ON U.gender_id = genders.id
+        LEFT JOIN order_stats ON U.id = order_stats.user_id
+        LEFT JOIN first_order_info ON U.id = first_order_info.user_id
+        LEFT JOIN login_stats ON U.id = login_stats.user_id
         WHERE U.is_active = TRUE
+            AND $id_filter_expression$
             AND $first_name_filter_expression$
             AND $last_name_filter_expression$
             AND $email_filter_expression$
@@ -1076,10 +1353,28 @@ class ReportService {
             AND $days_since_creation_minimum_filter_expression$
             AND $days_since_creation_maximum_filter_expression$
             AND $is_email_verified_filter_expression$
+            AND $has_paid_order_filter_expression$
+            AND $order_total_paid_amount_minimum_filter_expression$
+            AND $order_total_paid_amount_maximum_filter_expression$
+            AND $order_count_minimum_filter_expression$
+            AND $order_count_maximum_filter_expression$
+            AND $first_order_created_at_minimum_filter_expression$
+            AND $first_order_created_at_maximum_filter_expression$
+            AND $first_order_total_paid_amount_minimum_filter_expression$
+            AND $first_order_total_paid_amount_maximum_filter_expression$
+            AND $days_since_last_order_minimum_filter_expression$
+            AND $days_since_last_order_maximum_filter_expression$
+            AND $days_since_last_login_minimum_filter_expression$
+            AND $days_since_last_login_maximum_filter_expression$
+            AND $login_count_minimum_filter_expression$
+            AND $login_count_maximum_filter_expression$
+            AND $average_weekly_login_count_minimum_filter_expression$
+            AND $average_weekly_login_count_maximum_filter_expression$
 
         UNION ALL
 
         SELECT
+            $id_grouping_expression$ AS "id",
             $created_at_grouping_expression$ AS "created_at",
             $first_name_grouping_expression$ AS "first_name",
             $last_name_grouping_expression$  AS "last_name",
@@ -1091,13 +1386,29 @@ class ReportService {
             $birth_date_grouping_expression$ AS "birth_date",
             $is_email_verified_grouping_expression$ AS "is_email_verified",
             $days_since_creation_grouping_expression$ AS "days_since_creation",
+            $has_paid_order_grouping_expression$ AS "has_paid_order",
+
+            $average_paid_amount_grouping_expression$ AS "average_paid_amount",
+            $first_order_created_at_grouping_expression$ AS "first_order_created_at",
+            $days_since_first_order_grouping_expression$ AS "days_since_first_order",
+            $first_order_total_paid_amount_grouping_expression$ AS "first_order_total_paid_amount",
+            $days_since_last_order_grouping_expression$ AS "days_since_last_order",
+            $days_since_last_login_grouping_expression$ AS "days_since_last_login",
+            $average_weekly_login_count_grouping_expression$ AS "average_weekly_login_count",
+            SUM(order_stats.total_paid_amount) AS "order_total_paid_amount",
+            SUM(order_stats.order_count) AS "order_count",
+            SUM(login_stats.login_count) AS "login_count",
             COUNT(*) AS "count",
             1 AS "sort_order" 
         FROM users U
         LEFT JOIN iso_country_codes icc ON U.iso_country_code_id = icc.id
         LEFT JOIN iso_country_codes cc ON U.country_id = cc.id
         LEFT JOIN genders ON U.gender_id = genders.id
+        LEFT JOIN order_stats ON U.id = order_stats.user_id
+        LEFT JOIN first_order_info ON U.id = first_order_info.user_id
+        LEFT JOIN login_stats ON U.id = login_stats.user_id
         WHERE U.is_active = TRUE
+            AND $id_filter_expression$
             AND $first_name_filter_expression$
             AND $last_name_filter_expression$
             AND $email_filter_expression$
@@ -1108,7 +1419,24 @@ class ReportService {
             AND $days_since_creation_minimum_filter_expression$
             AND $days_since_creation_maximum_filter_expression$
             AND $is_email_verified_filter_expression$
-        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+            AND $has_paid_order_filter_expression$
+            AND $order_total_paid_amount_minimum_filter_expression$
+            AND $order_total_paid_amount_maximum_filter_expression$
+            AND $order_count_minimum_filter_expression$
+            AND $order_count_maximum_filter_expression$
+            AND $first_order_created_at_minimum_filter_expression$
+            AND $first_order_created_at_maximum_filter_expression$
+            AND $first_order_total_paid_amount_minimum_filter_expression$
+            AND $first_order_total_paid_amount_maximum_filter_expression$
+            AND $days_since_last_order_minimum_filter_expression$
+            AND $days_since_last_order_maximum_filter_expression$
+            AND $days_since_last_login_minimum_filter_expression$
+            AND $days_since_last_login_maximum_filter_expression$
+            AND $login_count_minimum_filter_expression$
+            AND $login_count_maximum_filter_expression$
+            AND $average_weekly_login_count_minimum_filter_expression$
+            AND $average_weekly_login_count_maximum_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
         ORDER BY sort_order ASC, 1 DESC`;
     
     return { reportUIConfig, sql, reportFilters };

@@ -44,6 +44,7 @@ class AuthController {
       entitySchemaCollection: req.entitySchemaCollection,
     }; 
     const result = await this.authService.login(data);
+    req.session = result;
     res.status(200)
       .cookie("session_id", result.session_hash, { expires: result.expires_at, secure: false, httpOnly: false})
       .json({message: "Login successful"});

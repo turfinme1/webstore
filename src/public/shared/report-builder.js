@@ -544,8 +544,8 @@ class ReportBuilder {
 
         for (const filter of this.config.filters) {
             if (filter.type === 'number' || filter.type === 'timestamp') {
-                const minInput = document.getElementById(`${filter.key}_minimum`);
-                const maxInput = document.getElementById(`${filter.key}_maximum`);
+                const minInput = document.getElementById(`${filter.key}_minimum_filter_value`);
+                const maxInput = document.getElementById(`${filter.key}_maximum_filter_value`);
                 
                 if (minInput && maxInput) {
                     const validationResults = ValidationService.validateField(
@@ -615,9 +615,9 @@ class ReportBuilder {
             let inputElement;
 
             if (field === 'min') {
-                inputElement = document.getElementById(`${filterKey}_minimum`);
+                inputElement = document.getElementById(`${filterKey}_minimum_filter_value`);
             } else if (field === 'max') {
-                inputElement = document.getElementById(`${filterKey}_maximum`);
+                inputElement = document.getElementById(`${filterKey}_maximum_filter_value`);
             } else {
                 inputElement = document.getElementById(filterKey);
             }
