@@ -415,13 +415,14 @@ class ReportBuilder {
         const button = document.querySelector('button[type="submit"]');
         button.disabled = true;
         spinner.style.display = 'block';
+        const trimmedFilters = Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, value.trim()]));
         document.querySelectorAll('th.sortable').forEach(header => header.style.pointerEvents = 'none');
 
         try {
             const response = await fetch(this.config.dataEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...filters, sortCriteria })
+                body: JSON.stringify({ ...trimmedFilters, sortCriteria })
             });
             
             const data = await response.json();
