@@ -774,6 +774,13 @@ function createBackofficeNavigation(userStatus) {
       interface: "report-orders",
     },
     {
+      id: "report-link",
+      text: "Report Campaigns",
+      href: "/report?report=report-campaigns",
+      permission: "view",
+      interface: "report-orders",
+    },
+    {
       id: "upload-products-link",
       text: "Upload Products from CSV",
       href: "/upload-products",
