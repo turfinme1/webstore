@@ -133,7 +133,7 @@ async function loadTemplates(page) {
         }
         const { result, count } = await response.data;
         
-        renderTemplateList(result);
+        await renderTemplateList(result);
         updatePagination(count, page);
     } catch (error) {
         console.error("Error loading users:", error);
@@ -141,9 +141,9 @@ async function loadTemplates(page) {
 }
 
 // UI Functions
-function renderTemplateList(templates) {
+async function renderTemplateList(templates) {
     elements.templateList.innerHTML = "";
-    templates.forEach(async (template) => {
+    for (const template of templates) {
         const row = document.createElement("tr");
 
         const previewCell = document.createElement("td");
@@ -222,7 +222,7 @@ function renderTemplateList(templates) {
         row.appendChild(actionsCell);
 
         elements.templateList.appendChild(row);
-    });
+    };
 }
 
 function createTableCell(text) {
