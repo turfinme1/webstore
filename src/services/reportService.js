@@ -1935,6 +1935,7 @@ class ReportService {
                 { key: 'target_group_name', label: 'Target Group', rowspan: 2, format: 'text' },
                 { key: 'users_count', label: 'Users in Target Group', rowspan: 2, align: 'right', format: 'number' },
                 { key: 'orders_count', label: 'Orders Count', rowspan: 2, align: 'right', format: 'number' },
+                { key: 'users_with_orders_count', label: 'Users with Orders Count', rowspan: 2, align: 'right', format: 'number' },
                 { key: 'orders_total_paid_amount', label: 'Order Total Paid Amount', rowspan: 2, align: 'right', format: 'currency' },
                 { key: 'average_order_amount', label: 'Average Order Amount', rowspan: 2, align: 'right', format: 'currency' },
                 { key: 'conversion_rate', label: 'Conversion Rate', rowspan: 2, align: 'right', format: 'percentage' },
@@ -1944,6 +1945,14 @@ class ReportService {
     };
 
     const reportFilters = [
+        {
+            key: "activity_date",
+            grouping_expression: "",
+            filter_expression: "",
+            type: "timestamp",
+            label: "Activity Date",
+            displayInUI: true,
+        },
         {
             key: "id",
             grouping_expression: "id",
@@ -1968,16 +1977,12 @@ class ReportService {
             grouping_expression: "start_date",
             filter_expression: "",
             type: "timestamp",
-            label: "Active From",
-            displayInUI: true,
         },
         {
             key: "end_date",
             grouping_expression: "end_date",
             filter_expression: "",
             type: "timestamp",
-            label: "Active Until",
-            displayInUI: true,
         },
         {
             key: "status",
@@ -1996,9 +2001,12 @@ class ReportService {
         {
             key: "target_group_name",
             grouping_expression: "target_group_name",
-            filter_expression: "STRPOS(LOWER(CAST(TG.name AS text)), LOWER($FILTER_VALUE$)) > 0",
-            type: "text",
+            filter_expression: "TGU.target_group_id = $FILTER_VALUE$",
+            type: "select",
             label: "Target Group",
+            fetchFrom: "/crud/target-groups",
+            displayKey: 'name',
+            valueKey: 'id',
             displayInUI: true,
         },
         {
@@ -2014,12 +2022,33 @@ class ReportService {
         },
         {
             key: "users_count_minimum",
-            filter_expression: "CASE WHEN C.final_user_count IS NOT NULL THEN C.final_user_count ELSE COUNT(DISTINCT UTG.user_id) END >= $FILTER_VALUE$",
+            filter_expression: "CASE WHEN C.final_user_count IS NOT NULL THEN C.final_user_count ELSE TGU.user_count END >= $FILTER_VALUE$",
             type: "number",
         },
         {
             key: "users_count_maximum",
-            filter_expression: "CASE WHEN C.final_user_count IS NOT NULL THEN C.final_user_count ELSE COUNT(DISTINCT UTG.user_id) END <= $FILTER_VALUE$",
+            filter_expression: "CASE WHEN C.final_user_count IS NOT NULL THEN C.final_user_count ELSE TGU.user_count END <= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "users_with_orders_count",
+            grouping_expression: "users_with_orders_count",
+            filter_expression: "",
+            type: "number",
+            label: "Users with Orders Count",
+            step: "1",
+            min: 0,
+            max: 100000000,
+            displayInUI: true,
+        },
+        {
+            key: "users_with_orders_count_minimum",
+            filter_expression: "COALESCE(CO.users_with_orders_count, 0) >= $FILTER_VALUE$",
+            type: "number",
+        },
+        {
+            key: "users_with_orders_count_maximum",
+            filter_expression: "COALESCE(CO.users_with_orders_count, 0) <= $FILTER_VALUE$",
             type: "number",
         },
         {
@@ -2035,12 +2064,12 @@ class ReportService {
         },
         {
             key: "orders_count_minimum",
-            filter_expression: "COUNT(DISTINCT O.id) >= $FILTER_VALUE$",
+            filter_expression: "COALESCE(CO.orders_count, 0) >= $FILTER_VALUE$",
             type: "number",
         },
         {
             key: "orders_count_maximum",
-            filter_expression: "COUNT(DISTINCT O.id) <= $FILTER_VALUE$",
+            filter_expression: "COALESCE(CO.orders_count, 0) <= $FILTER_VALUE$",
             type: "number",
         },
         {
@@ -2056,12 +2085,12 @@ class ReportService {
         },
         {
             key: "orders_total_paid_amount_minimum",
-            filter_expression: "COALESCE(SUM(O.paid_amount), 0) >= $FILTER_VALUE$",
+            filter_expression: "COALESCE(CO.orders_total_paid_amount, 0) >= $FILTER_VALUE$",
             type: "number",
         },
         {
             key: "orders_total_paid_amount_maximum",
-            filter_expression: "COALESCE(SUM(O.paid_amount), 0) <= $FILTER_VALUE$",
+            filter_expression: "COALESCE(CO.orders_total_paid_amount, 0) <= $FILTER_VALUE$",
             type: "number",
         },
         {
@@ -2077,12 +2106,12 @@ class ReportService {
         },
         {
             key: "average_order_amount_minimum",
-            filter_expression: `CASE WHEN COUNT(DISTINCT O.id) > 0 THEN COALESCE(SUM(O.paid_amount) / COUNT(DISTINCT O.id), 0) ELSE 0 END >= $FILTER_VALUE$`,
+            filter_expression: `CASE WHEN COALESCE(CO.orders_count, 0) > 0 THEN COALESCE(CO.orders_total_paid_amount / CO.orders_count, 0) ELSE 0 END >= $FILTER_VALUE$`,
             type: "number",
         },
         {
             key: "average_order_amount_maximum",
-            filter_expression: `CASE WHEN COUNT(DISTINCT O.id) > 0 THEN COALESCE(SUM(O.paid_amount) / COUNT(DISTINCT O.id), 0) ELSE 0 END <= $FILTER_VALUE$`,
+            filter_expression: `CASE WHEN COALESCE(CO.orders_count, 0) > 0 THEN COALESCE(CO.orders_total_paid_amount / CO.orders_count, 0) ELSE 0 END <= $FILTER_VALUE$`,
             type: "number",
         },
         {
@@ -2098,32 +2127,22 @@ class ReportService {
         },
         {
             key: "conversion_rate_minimum",
-            filter_expression: "CASE WHEN final_user_count IS NOT NULL AND final_user_count > 0 THEN ROUND((COUNT(DISTINCT O.id)::float / final_user_count * 100)::numeric, 2) WHEN COUNT(DISTINCT UTG.user_id) > 0 THEN ROUND((COUNT(DISTINCT O.id)::float / COUNT(DISTINCT UTG.user_id) * 100)::numeric, 2) ELSE 0 END >= $FILTER_VALUE$",
+            filter_expression: "CASE WHEN C.final_user_count IS NOT NULL AND C.final_user_count > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / C.final_user_count * 100)::numeric, 2) WHEN COALESCE(TGU.user_count, 0) > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / TGU.user_count * 100)::numeric, 2) ELSE 0 END >= $FILTER_VALUE$",
             type: "number",
         },
         {
             key: "conversion_rate_maximum",
-            filter_expression: "CASE WHEN final_user_count IS NOT NULL AND final_user_count > 0 THEN ROUND((COUNT(DISTINCT O.id)::float / final_user_count * 100)::numeric, 2) WHEN COUNT(DISTINCT UTG.user_id) > 0 THEN ROUND((COUNT(DISTINCT O.id)::float / COUNT(DISTINCT UTG.user_id) * 100)::numeric, 2) ELSE 0 END <= $FILTER_VALUE$",
+            filter_expression: "CASE WHEN C.final_user_count IS NOT NULL AND C.final_user_count > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / C.final_user_count * 100)::numeric, 2) WHEN COALESCE(TGU.user_count, 0) > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / TGU.user_count * 100)::numeric, 2) ELSE 0 END <= $FILTER_VALUE$",
             type: "number",
         },
         {
-            key: "start_date_minimum",
-            filter_expression: "C.start_date >= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
-            key: "start_date_maximum",
-            filter_expression: "C.start_date <= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
-            key: "end_date_minimum",
+            key: "activity_date_minimum",
             filter_expression: "C.end_date >= $FILTER_VALUE$",
             type: "timestamp",
         },
         {
-            key: "end_date_maximum",
-            filter_expression: "C.end_date <= $FILTER_VALUE$",
+            key: "activity_date_maximum",
+            filter_expression: "C.start_date <= $FILTER_VALUE$",
             type: "timestamp",
         },
         {
@@ -2133,7 +2152,26 @@ class ReportService {
     ];
 
     let sql = `
-        WITH campaign_statistics AS (
+        WITH target_group_users AS (
+            SELECT 
+                tg.id AS target_group_id, 
+                COUNT(DISTINCT utg.user_id) AS user_count
+            FROM target_groups tg
+            LEFT JOIN user_target_groups utg ON tg.id = utg.target_group_id
+            GROUP BY tg.id
+        ),
+        campaign_orders AS (
+            SELECT 
+                c.id AS campaign_id,
+                COUNT(DISTINCT o.id) AS orders_count,
+                COUNT(DISTINCT o.user_id) AS users_with_orders_count,
+                COALESCE(SUM(o.paid_amount), 0) AS orders_total_paid_amount
+            FROM campaigns c
+            LEFT JOIN vouchers v ON c.voucher_id = v.id
+            LEFT JOIN orders o ON o.voucher_code = v.code AND o.status = 'Paid'
+            GROUP BY c.id
+        ),
+        campaign_statistics AS (
             SELECT
                 C.id,
                 C.name,
@@ -2141,58 +2179,45 @@ class ReportService {
                 C.end_date,
                 C.status,
                 TG.name AS target_group_name,
-
-                --COUNT(DISTINCT UTG.user_id) AS users_count,
-                CASE WHEN C.final_user_count IS NOT NULL
-                    THEN C.final_user_count
-                    ELSE COUNT(DISTINCT UTG.user_id)
+                CASE WHEN C.final_user_count IS NOT NULL 
+                    THEN C.final_user_count 
+                    ELSE COALESCE(TGU.user_count, 0) 
                 END AS users_count,
-
-
-
-                COUNT(DISTINCT O.id) AS orders_count,
-                COALESCE(SUM(O.paid_amount), 0) AS orders_total_paid_amount,
+                COALESCE(CO.orders_count, 0) AS orders_count,
+                COALESCE(CO.users_with_orders_count, 0) AS users_with_orders_count,
+                COALESCE(CO.orders_total_paid_amount, 0) AS orders_total_paid_amount,
                 CASE 
-                    WHEN COUNT(DISTINCT O.id) > 0 
-                    THEN COALESCE(SUM(O.paid_amount) / COUNT(DISTINCT O.id), 0)
+                    WHEN COALESCE(CO.orders_count, 0) > 0 
+                    THEN COALESCE(CO.orders_total_paid_amount / CO.orders_count, 0)
                     ELSE 0
                 END AS average_order_amount,
-                
-                --CASE 
-                --    WHEN COUNT(DISTINCT UTG.user_id) > 0 
-                --    THEN ROUND((COUNT(DISTINCT O.id)::float / COUNT(DISTINCT UTG.user_id) * 100)::numeric, 2)
-                --    ELSE 0
-                --END AS conversion_rate
-                
                 CASE
-                    WHEN final_user_count IS NOT NULL AND final_user_count > 0
-                        THEN ROUND((COUNT(DISTINCT O.id)::float / final_user_count * 100)::numeric, 2)
-                    WHEN COUNT(DISTINCT UTG.user_id) > 0
-                        THEN ROUND((COUNT(DISTINCT O.id)::float / COUNT(DISTINCT UTG.user_id) * 100)::numeric, 2)
+                    WHEN C.final_user_count IS NOT NULL AND C.final_user_count > 0
+                        THEN ROUND((COALESCE(CO.orders_count, 0)::float / C.final_user_count * 100)::numeric, 2)
+                    WHEN COALESCE(TGU.user_count, 0) > 0
+                        THEN ROUND((COALESCE(CO.orders_count, 0)::float / TGU.user_count * 100)::numeric, 2)
                     ELSE 0
                 END AS conversion_rate
-
-
             FROM campaigns C
             LEFT JOIN target_groups TG ON C.target_group_id = TG.id
-            LEFT JOIN user_target_groups UTG ON TG.id = UTG.target_group_id
-            LEFT JOIN vouchers V ON C.voucher_id = V.id
-            LEFT JOIN orders O ON O.voucher_code = V.code AND O.status = 'Paid'
+            LEFT JOIN target_group_users TGU ON TG.id = TGU.target_group_id
+            LEFT JOIN campaign_orders CO ON C.id = CO.campaign_id
             WHERE C.is_active = TRUE
                 AND $id_filter_expression$
                 AND $name_filter_expression$
-                AND $start_date_minimum_filter_expression$
-                AND $start_date_maximum_filter_expression$
-                AND $end_date_minimum_filter_expression$
-                AND $end_date_maximum_filter_expression$
+                AND $activity_date_minimum_filter_expression$
+                AND $activity_date_maximum_filter_expression$
                 AND $status_filter_expression$
                 AND $target_group_name_filter_expression$
-            GROUP BY C.id, C.name, C.start_date, C.end_date, C.status, TG.name
+            GROUP BY C.id, C.name, C.start_date, C.end_date, C.status, TG.name, C.final_user_count, TGU.user_count, 
+                CO.orders_count, CO.users_with_orders_count, CO.orders_total_paid_amount
             HAVING TRUE 
                 AND $users_count_minimum_filter_expression$
                 AND $users_count_maximum_filter_expression$
                 AND $orders_count_minimum_filter_expression$
                 AND $orders_count_maximum_filter_expression$
+                AND $users_with_orders_count_minimum_filter_expression$
+                AND $users_with_orders_count_maximum_filter_expression$
                 AND $orders_total_paid_amount_minimum_filter_expression$
                 AND $orders_total_paid_amount_maximum_filter_expression$
                 AND $average_order_amount_minimum_filter_expression$
@@ -2212,6 +2237,7 @@ class ReportService {
             NULL AS "conversion_rate",
             SUM(users_count) AS "users_count",
             SUM(orders_count) AS "orders_count",
+            SUM(users_with_orders_count) AS "users_with_orders_count",
             SUM(orders_total_paid_amount) AS "orders_total_paid_amount",
             COUNT(*) AS "count",
             0 AS "sort_order"
@@ -2231,12 +2257,13 @@ class ReportService {
             $conversion_rate_grouping_expression$ AS "conversion_rate",
             users_count AS "users_count",
             orders_count AS "orders_count",
+            users_with_orders_count AS "users_with_orders_count",
             orders_total_paid_amount AS "orders_total_paid_amount",
             1 AS "count",
             1 AS "sort_order"
         FROM campaign_statistics
         WHERE TRUE
-        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
         ORDER BY sort_order ASC, 1 DESC`;
 
     return { reportUIConfig, sql, reportFilters };

@@ -227,17 +227,17 @@ class ReportBuilder {
             return new Date(value).toLocaleTimeString('en-US');
         },
         date_time: (value) => {
-            if(!value || value ==="All") {
-                return '---';
+            if (!value || value === "All") {
+              return '---';
             }
-            return new Date(value).toLocaleString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-            })
+            const date = new Date(value);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
         },
         number: (value) => {
             if(value == 0) {
@@ -265,7 +265,7 @@ class ReportBuilder {
         },
     };
 
-    async buildFilterForm() {
+    async buildFilterForm(parentContainer) {
         const formContainer = document.createElement('div');
         formContainer.className = 'bg-white p-4 rounded shadow-sm mb-5';
         
@@ -307,6 +307,62 @@ class ReportBuilder {
         `;
 
         formContainer.appendChild(form);
+        parentContainer.appendChild(formContainer);
+
+        flatpickr('.form-control[type="datetime-local"]', {
+            enableTime: true,
+            enableSeconds: true,
+            altInput: true,
+            altFormat: "d-m-Y H:i:S",
+            dateFormat: "Y-m-d\\TH:i:S",
+            time_24hr: true,
+            onReady: function(selectedDates, dateStr, instance) {
+                var customContainer = document.createElement("div");
+                customContainer.className = "custom-buttons-container";
+                customContainer.style.marginTop = "10px";
+                
+                function addButton(label, callback) {
+                    var btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.textContent = label;
+                    btn.style.marginRight = "5px";
+                    btn.style.padding = "5px 10px";
+                    btn.addEventListener("click", callback);
+                    customContainer.appendChild(btn);
+                }
+                
+                addButton("Clear", function() {
+                    instance.clear();
+                });
+
+                addButton("Last Day", function() {
+                    var now = new Date();
+                    now.setDate(now.getDate() - 1);
+                    instance.setDate(now);
+                });
+                
+                addButton("Last Week", function() {
+                    var now = new Date();
+                    now.setDate(now.getDate() - 7);
+                    instance.setDate(now);
+                });
+
+                addButton("Last Month", function() {
+                    var now = new Date();
+                    now.setMonth(now.getMonth() - 1);
+                    instance.setDate(now);
+                });
+
+                addButton("Last Year", function() {
+                    var now = new Date();
+                    now.setFullYear(now.getFullYear() - 1);
+                    instance.setDate(now);
+                });
+                
+                instance.calendarContainer.appendChild(customContainer);
+            }
+        });
+
         return formContainer;
     }
 
@@ -346,7 +402,7 @@ class ReportBuilder {
         container.appendChild(this.buildExportSection(this.config.exportConfig));
 
         // Add filter form
-        container.appendChild(await this.buildFilterForm());
+        await this.buildFilterForm(container);
 
         // Add table
         container.appendChild(this.buildTable());
