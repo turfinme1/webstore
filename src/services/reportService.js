@@ -49,6 +49,10 @@ class ReportService {
     }
   }
 
+  async getAllReports(data) {
+    return Object.keys(this.reports);
+  }
+
   async exportReport(data) {
     ASSERT_USER(this.reports[data.params.report], `Report ${data.params.report} not found`, { 
         code: "SERVICE.REPORT.00051.INVALID_QUERY_PARAMS", 
@@ -104,6 +108,31 @@ class ReportService {
       } else {
         sql = sql.replaceAll(`$${reportFilter.key}_filter_expression$`, 'TRUE');
       }
+
+      if(INPUT_DATA[`${reportFilter.key}_minimum_filter_value`]) {
+        let filterExpr = reportFilter.minimum_filter_expression;
+        let filterValue = INPUT_DATA[`${reportFilter.key}_minimum_filter_value`];
+        let filterExprReplaced;
+
+        insertValues.push(filterValue);
+        filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
+        sql = sql.replaceAll(`$${reportFilter.key}_minimum_filter_expression$`, filterExprReplaced);
+      } else {
+        sql = sql.replaceAll(`$${reportFilter.key}_minimum_filter_expression$`, 'TRUE');
+      }
+
+      if(INPUT_DATA[`${reportFilter.key}_maximum_filter_value`]) {
+        let filterExpr = reportFilter.maximum_filter_expression;
+        let filterValue = INPUT_DATA[`${reportFilter.key}_maximum_filter_value`];
+        let filterExprReplaced;
+
+        insertValues.push(filterValue);
+        filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
+        sql = sql.replaceAll(`$${reportFilter.key}_maximum_filter_expression$`, filterExprReplaced);
+      }
+      else {
+        sql = sql.replaceAll(`$${reportFilter.key}_maximum_filter_expression$`, 'TRUE');
+      }
     }
 
     if (INPUT_DATA.sortCriteria && Array.isArray(INPUT_DATA.sortCriteria)) {
@@ -121,7 +150,6 @@ class ReportService {
 
         if (orderClauses.length > 0) {
             const orderByClause = ` ${orderClauses.join(', ')}`;
-            // sql = sql.replace(/ORDER BY.*?(LIMIT|$)/i, `${orderByClause} `);
             sql = sql.replace('1 DESC', `${orderByClause} `);
         }
     }
@@ -143,14 +171,14 @@ class ReportService {
                 { key: 'orders_last_year_col', label: 'Last Year', colspan: 2 }
             ],
             [
-                { key: 'orders_last_day', label: 'Count', align: 'right', format: 'number' },
-                { key: 'total_last_day', label: 'Total Order Amount', align: 'right', format: 'currency' },
-                { key: 'orders_last_week', label: 'Count', align: 'right', format: 'number' },
-                { key: 'total_last_week', label: 'Total Order Amount', align: 'right', format: 'currency' },
-                { key: 'orders_last_month', label: 'Count', align: 'right', format: 'number' },
-                { key: 'total_last_month', label: 'Total Order Amount', align: 'right', format: 'currency' },
-                { key: 'orders_last_year', label: 'Count', align: 'right', format: 'number' },
-                { key: 'total_last_year', label: 'Total Order Amount', align: 'right', format: 'currency' }
+                { key: 'orders_last_day', label: 'Count', format: 'number' },
+                { key: 'total_last_day', label: 'Total Order Amount', format: 'currency' },
+                { key: 'orders_last_week', label: 'Count', format: 'number' },
+                { key: 'total_last_week', label: 'Total Order Amount', format: 'currency' },
+                { key: 'orders_last_month', label: 'Count', format: 'number' },
+                { key: 'total_last_month', label: 'Total Order Amount', format: 'currency' },
+                { key: 'orders_last_year', label: 'Count', format: 'number' },
+                { key: 'total_last_year', label: 'Total Order Amount', format: 'currency' }
             ]
         ],
     };
@@ -176,57 +204,15 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "order_total_minimum",
-            grouping_expression: "",
-            filter_expression: "O.paid_amount >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "order_total_maximum",
-            grouping_expression: "",
-            filter_expression: "O.paid_amount <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: 'order_total',
             label: 'Order Amount',
+            minimum_filter_expression: "O.paid_amount >= $FILTER_VALUE$",
+            maximum_filter_expression: "O.paid_amount <= $FILTER_VALUE$",
             type: 'number',
             step: '0.01',
             min: 0,
             max: 100000000,
             displayInUI: true,
-        },
-        {
-            key: "orders_last_day",
-            type: "number",
-        },
-        {
-            key: "total_last_day",
-            type: "number",
-        },
-        {
-            key: "orders_last_week",
-            type: "number",
-        },
-        {
-            key: "total_last_week",
-            type: "number",
-        },
-        {
-            key: "orders_last_month",
-            type: "number",
-        },
-        {
-            key: "total_last_month",
-            type: "number",
-        },
-        {
-            key: "orders_last_year",
-            type: "number",
-        },
-        {
-            key: "total_last_year",
-            type: "number",
         },
     ];
 
@@ -284,17 +270,17 @@ class ReportService {
         dataEndpoint: '/api/reports/report-logs',
         headerGroups: [
             [
-                { key: 'created_at', label: 'Created At', rowspan: 2, format: 'date_time' },
-                { key: 'id', label: 'ID', rowspan: 2, align: 'right', format: 'text' },
-                { key: 'status_code', label: 'Status Code', rowspan: 2, format: 'text' },
-                { key: 'log_level', label: 'Log Level', rowspan: 2, format: 'text' },
-                { key: 'audit_type', label: 'Audit Type', rowspan: 2, format: 'text' },
-                { key: 'short_description', label: 'Short Description', rowspan: 2, format: 'text' },
-                { key: 'long_description', label: 'Long Description', rowspan: 2, format: 'text' },
-                { key: 'debug_info', label: 'Debug Info', rowspan: 2, format: 'text' },
-                { key: 'user_id', label: 'User ID', align: 'right', rowspan: 2, format: 'text' },
-                { key: 'admin_user_id', label: 'Admin User ID', rowspan: 2, align: 'right', format: 'text' },
-                { key: 'count', label: 'Count', align: 'right', rowspan: 2, format: 'number' }
+                { key: 'created_at', label: 'Created At', format: 'date_time' },
+                { key: 'id', label: 'ID', align: 'right', format: 'text' },
+                { key: 'status_code', label: 'Status Code', format: 'text' },
+                { key: 'log_level', label: 'Log Level', format: 'text' },
+                { key: 'audit_type', label: 'Audit Type', format: 'text' },
+                { key: 'short_description', label: 'Short Description', format: 'text' },
+                { key: 'long_description', label: 'Long Description', format: 'text' },
+                { key: 'debug_info', label: 'Debug Info', format: 'text' },
+                { key: 'user_id', label: 'User ID', align: 'right', format: 'text' },
+                { key: 'admin_user_id', label: 'Admin User ID', align: 'right', format: 'text' },
+                { key: 'count', label: 'Count', format: 'number' }
             ]
         ]
     };
@@ -303,13 +289,15 @@ class ReportService {
         {
             key: "id",
             grouping_expression: "L.id",
-            filter_expression: "",
             type: "number",
+            hideInUI: true,
         },
         {
             key: "created_at",
             grouping_expression: "L.created_at",
             filter_expression: "L.created_at = $FILTER_VALUE$",
+            minimum_filter_expression: "L.created_at >= $FILTER_VALUE$",
+            maximum_filter_expression: "L.created_at <= $FILTER_VALUE$",
             type: "timestamp",
             label: "Period",
             groupable: true,
@@ -326,24 +314,28 @@ class ReportService {
             grouping_expression: "L.user_id",
             filter_expression: "L.user_id = $FILTER_VALUE$",
             type: "number",
+            hideInUI: true,
         },
         {
             key: "short_description",
             grouping_expression: "L.short_description",
             filter_expression: "STRPOS(LOWER(CAST( L.short_description AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            hideInUI: true,
         },
         {
             key: "long_description",
             grouping_expression: "L.long_description",
             filter_expression: "STRPOS(LOWER(CAST( L.long_description AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            hideInUI: true,
         },
         {
             key: "debug_info",
             grouping_expression: "L.debug_info",
             filter_expression: "STRPOS(LOWER(CAST( L.debug_info AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
+            hideInUI: true,
         },
         {
             key: "status_code",
@@ -384,22 +376,9 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "created_at_minimum",
-            grouping_expression: "",
-            filter_expression: "L.created_at >= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
-            key: "created_at_maximum",
-            grouping_expression: "",
-            filter_expression: "L.created_at <= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
             key: "count",
-            grouping_expression: "",
-            filter_expression: "",
             type: "number",
+            hideInUI: true,
         }
     ];
 
@@ -469,26 +448,26 @@ class ReportService {
         },
         headerGroups: [
             [
-                { key: 'created_at', label: 'Created At', format: 'date_time', rowspan: 2 },
-                { key: 'order_id', label: 'Order ID', align: 'right', format: 'text', rowspan: 2 },
-                { key: 'days_since_order', label: 'Days Since Order', align: 'right', format: 'number', rowspan: 2 },
-                { key: 'user_email', label: 'User Email', format: 'text', rowspan: 2 },
-                { key: 'status', label: 'Status', format: 'text', rowspan: 2 },
-                { key: 'total_price', label: 'Total Price', align: 'right', format: 'currency', rowspan: 2 },
-                { key: 'discount_percentage', label: 'Discount %', align: 'right', format: 'percentage', rowspan: 2 },
-                { key: 'discount_amount', label: 'Discount', align: 'right', format: 'currency', rowspan: 2 },
-                { key: 'vat_percentage', label: 'VAT %', align: 'right', format: 'percentage', rowspan: 2 },
-                { key: 'vat_amount', label: 'VAT', align: 'right', format: 'currency', rowspan: 2 },
-                { key: 'total_price_with_vat', label: 'Total With VAT', align: 'right', format: 'currency', rowspan: 2 },
-                { key: 'campaign_name', label: 'Campaign Name', format: 'text', rowspan: 2 },
-                { key: 'voucher_code', label: 'Voucher Code', format: 'text', rowspan: 2 },
-                { key: 'voucher_discount_amount', label: 'Voucher Discount', align: 'right', format: 'currency', rowspan: 2 },
-                { key: 'total_price_with_voucher', label: 'Total Price with voucher', align: 'right', format: 'currency', rowspan: 2 },
-                { key: 'total_price_with_voucher_without_vat', label: 'Final Price without VAT', align: 'right', format: 'currency', rowspan: 2 },
-                { key: 'total_price_with_voucher_vat_amount', label: 'Final Price VAT amount', align: 'right', format: 'currency', rowspan: 2 },
-                { key: 'paid_amount', label: 'Paid Amount', align: 'right', format: 'currency', rowspan: 2 },
-                { key: 'total_stock_price', label: 'Total Stock Price', align: 'right', format: 'currency', rowspan: 2 },
-                { key: 'count', label: 'Count', align: 'right', format: 'number', rowspan: 2 }
+                { key: 'created_at', label: 'Created At', format: 'date_time', },
+                { key: 'order_id', label: 'Order ID', align: 'right', format: 'text', },
+                { key: 'days_since_order', label: 'Days Since Order', align: 'right', format: 'number', },
+                { key: 'user_email', label: 'User Email', format: 'text', },
+                { key: 'status', label: 'Status', format: 'text', },
+                { key: 'total_price', label: 'Total Price', format: 'currency', },
+                { key: 'discount_percentage', label: 'Discount %', format: 'percentage', },
+                { key: 'discount_amount', label: 'Discount', format: 'currency', },
+                { key: 'vat_percentage', label: 'VAT %', format: 'percentage', },
+                { key: 'vat_amount', label: 'VAT', format: 'currency', },
+                { key: 'total_price_with_vat', label: 'Total With VAT', format: 'currency', },
+                { key: 'campaign_name', label: 'Campaign Name', format: 'text', },
+                { key: 'voucher_code', label: 'Voucher Code', format: 'text', },
+                { key: 'voucher_discount_amount', label: 'Voucher Discount', format: 'currency', },
+                { key: 'total_price_with_voucher', label: 'Total Price with voucher', format: 'currency', },
+                { key: 'total_price_with_voucher_without_vat', label: 'Final Price without VAT', format: 'currency', },
+                { key: 'total_price_with_voucher_vat_amount', label: 'Final Price VAT amount', format: 'currency', },
+                { key: 'paid_amount', label: 'Paid Amount', format: 'currency', },
+                { key: 'total_stock_price', label: 'Total Stock Price', format: 'currency', },
+                { key: 'count', label: 'Count', format: 'number', }
             ]
         ],
     };
@@ -498,6 +477,8 @@ class ReportService {
             key: "created_at",
             grouping_expression: "O.created_at",
             filter_expression: "O.created_at = $FILTER_VALUE$",
+            minimum_filter_expression: "O.created_at >= $FILTER_VALUE$",
+            maximum_filter_expression: "O.created_at <= $FILTER_VALUE$",
             type: "timestamp",
             label: "Period",
             groupable: true,
@@ -538,7 +519,8 @@ class ReportService {
         {
             key: "total_price",
             grouping_expression: "O.total_price",
-            filter_expression: "",
+            minimum_filter_expression: "O.total_price >= $FILTER_VALUE$",
+            maximum_filter_expression: "O.total_price <= $FILTER_VALUE$",
             type: "number",
             label: "Total Price",
             step: '0.01',
@@ -549,7 +531,8 @@ class ReportService {
         {
             key: "days_since_order",
             grouping_expression: "EXTRACT(DAY FROM (NOW() - O.created_at))",
-            filter_expression: "",
+            minimum_filter_expression: "EXTRACT(DAY FROM (NOW() - O.created_at)) >= $FILTER_VALUE$",
+            maximum_filter_expression: "EXTRACT(DAY FROM (NOW() - O.created_at)) <= $FILTER_VALUE$",
             type: "number",
             label: 'Days Since Order',
             type: 'number',
@@ -558,11 +541,12 @@ class ReportService {
             max: 1000000000000,
             displayInUI: true,
         },
-        
         {
             key: "discount_percentage",
             grouping_expression: "O.discount_percentage",
             filter_expression: "",
+            minimum_filter_expression: "O.discount_percentage >= $FILTER_VALUE$",
+            maximum_filter_expression: "O.discount_percentage <= $FILTER_VALUE$",
             type: "number",
             label: "Discount %",
             type: "number",
@@ -572,42 +556,23 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "discount_percentage_minimum",
-            grouping_expression: "",
-            filter_expression: "O.discount_percentage >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "discount_percentage_maximum",
-            grouping_expression: "",
-            filter_expression: "O.discount_percentage <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "discount_amount",
             label: "Discount Amount",
+            minimum_filter_expression: "ROUND(O.total_price * O.discount_percentage / 100, 2) >= $FILTER_VALUE$",
+            maximum_filter_expression: "ROUND(O.total_price * O.discount_percentage / 100, 2) <= $FILTER_VALUE$",
             type: "number",
             step: '0.01',
             min: 0,
             max: 1000000000000,
             displayInUI: true,
         },
-        {
-            key: "discount_amount_minimum",
-            grouping_expression: "",
-            filter_expression: "ROUND(O.total_price * O.discount_percentage / 100, 2) >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "discount_amount_maximum",
-            grouping_expression: "",
-            filter_expression: "ROUND(O.total_price * O.discount_percentage / 100, 2) <= $FILTER_VALUE$",
-            type: "number",
-        },
+        
         {
             key: "vat_percentage",
             grouping_expression: "O.vat_percentage",
             filter_expression: "",
+            minimum_filter_expression: "O.vat_percentage >= $FILTER_VALUE$",
+            maximum_filter_expression: "O.vat_percentage <= $FILTER_VALUE$",
             type: "number",
             label: "VAT %",
             step: '0.01',
@@ -616,21 +581,10 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "vat_percentage_minimum",
-            grouping_expression: "",
-            filter_expression: "O.vat_percentage >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "vat_percentage_maximum",
-            grouping_expression: "",
-            filter_expression: "O.vat_percentage <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "vat_amount",
             grouping_expression: "",
-            filter_expression: "",
+            minimum_filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2) >= $FILTER_VALUE$",
+            maximum_filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2) <= $FILTER_VALUE$",
             label: "VAT",
             type: "number",
             step: '0.01',
@@ -639,39 +593,16 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "vat_amount_minimum",
-            grouping_expression: "",
-            filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2) >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "vat_amount_maximum",
-            grouping_expression: "",
-            filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2) <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "total_price_with_vat",
             grouping_expression: "",
-            filter_expression: "",
+            minimum_filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2) >= $FILTER_VALUE$",
+            maximum_filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2) <= $FILTER_VALUE$",
             label: "Total Price with VAT",
             type: "number",
             step: '0.01',
             min: 0,
             max: 1000000000000,
             displayInUI: true,
-        },
-        {
-            key: "total_price_with_vat_minimum",
-            grouping_expression: "",
-            filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2) >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "total_price_with_vat_maximum",
-            grouping_expression: "",
-            filter_expression: "ROUND(O.total_price * (1 - O.discount_percentage / 100) * (1 + O.vat_percentage / 100), 2) <= $FILTER_VALUE$",
-            type: "number",
         },
         {
             key: "campaign_name",
@@ -692,7 +623,8 @@ class ReportService {
         {
             key: "voucher_discount_amount",
             grouping_expression: "O.voucher_discount_amount",
-            filter_expression: "",
+            minimum_filter_expression: "O.voucher_discount_amount >= $FILTER_VALUE$",
+            maximum_filter_expression: "O.voucher_discount_amount <= $FILTER_VALUE$",
             type: "number",
             label: "Voucher Discount",
             step: '0.01',
@@ -701,21 +633,10 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "voucher_discount_amount_minimum",
-            grouping_expression: "",
-            filter_expression: "O.voucher_discount_amount >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "voucher_discount_amount_maximum",
-            grouping_expression: "",
-            filter_expression: "O.voucher_discount_amount <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "paid_amount",
             grouping_expression: "",
-            filter_expression: "",
+            minimum_filter_expression: "O.paid_amount >= $FILTER_VALUE$",
+            maximum_filter_expression: "O.paid_amount <= $FILTER_VALUE$",
             label: "Paid Amount",
             type: "number",
             step: '0.01',
@@ -724,74 +645,15 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "paid_amount_minimum",
-            grouping_expression: "",
-            filter_expression: "O.paid_amount >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "paid_amount_maximum",
-            grouping_expression: "",
-            filter_expression: "O.paid_amount <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "created_at_minimum",
-            grouping_expression: "",
-            filter_expression: "O.created_at >= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
-            key: "created_at_maximum",
-            grouping_expression: "",
-            filter_expression: "O.created_at <= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-       
-        {
-            key:"total_price_minimum",
-            grouping_expression: "",
-            filter_expression: "O.total_price >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key:"total_price_maximum",
-            grouping_expression: "",
-            filter_expression: "O.total_price <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "days_since_order_minimum",
-            grouping_expression: "",
-            filter_expression: "EXTRACT(DAY FROM (NOW() - O.created_at)) >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "days_since_order_maximum",
-            grouping_expression: "",
-            filter_expression: "EXTRACT(DAY FROM (NOW() - O.created_at)) <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "total_stock_price",
             grouping_expression: "O.total_stock_price",
-            filter_expression: "O.total_stock_price >= $FILTER_VALUE$",
             type: "number",
-        },
-        {
-            key: "total_price_with_voucher",
-            type: "number",
-        },
-        {
-            key: "total_price_with_voucher_without_vat",
-            type: "number",
-        },
-        {
-            key: "total_price_with_voucher_vat_amount",
+            hideInUI: true,
         },
         {
             key: "count",
             type: "number",
+            hideInUI: true,
         }, 
     ];
 
@@ -917,30 +779,30 @@ class ReportService {
         dataEndpoint: '/api/reports/report-users',
         headerGroups: [
             [
-                { key: 'created_at', label: 'Created At', rowspan: 2, format: 'date_time' },
-                { key: 'id', label: 'ID', rowspan: 2, align: 'right', format: 'text' },
-                { key: 'first_name', label: 'First Name', rowspan: 2, format: 'text' },
-                { key: 'last_name', label: 'Last Name', rowspan: 2, format: 'text' },
-                { key: 'email', label: 'Email', rowspan: 2, format: 'text' },
-                { key: 'phone_code', label: 'Phone Code', rowspan: 2, format: 'text' },
-                { key: 'phone', label: 'Phone', rowspan: 2, format: 'text' },
-                { key: 'country_name', label: 'Country', rowspan: 2, format: 'text' },
-                { key: 'gender', label: 'Gender', rowspan: 2, format: 'text' },
-                { key: 'birth_date', label: 'Birth Date', rowspan: 2, format: 'date' },
-                { key: 'is_email_verified', label: 'Is Email Verified', rowspan: 2, format: 'boolean' },
-                { key: 'days_since_creation', label: 'Days Since Creation', rowspan: 2, align: 'right', format: 'number' },
-                { key: 'has_paid_order', label: 'Has Paid Order', rowspan: 2, format: 'boolean' },
-                { key: 'order_total_paid_amount', label: 'Order Total Paid Amount', rowspan: 2, align: 'right', format: 'currency' },
-                { key: 'order_count', label: 'Order Count', rowspan: 2, align: 'right', format: 'number' },
-                { key: 'average_paid_amount', label: 'Average Paid Amount', rowspan: 2, align: 'right', format: 'currency' },
-                { key: 'first_order_created_at', label: 'First Order Created At', rowspan: 2, format: 'date_time' },
-                { key: 'days_since_first_order', label: 'Days Since First Order', rowspan: 2, align: 'right', format: 'number' },
-                { key: 'first_order_total_paid_amount', label: 'First Order Total Paid Amount', rowspan: 2, align: 'right', format: 'currency' },
-                { key: 'days_since_last_order', label: 'Days Since Last Order', rowspan: 2, align: 'right', format: 'number' },
-                { key: 'days_since_last_login', label: 'Days Since Last Login', rowspan: 2, align: 'right', format: 'number' },
-                { key: 'login_count', label: 'Login Count', rowspan: 2, align: 'right', format: 'number' },
-                { key: 'average_weekly_login_count', label: 'Average Weekly Login Count', rowspan: 2, align: 'right', format: 'number' },
-                { key: 'count', label: 'Count', rowspan: 2, align: 'right', format: 'number' }
+                { key: 'created_at', label: 'Created At', format: 'date_time' },
+                { key: 'id', label: 'ID', align: 'right', format: 'text' },
+                { key: 'first_name', label: 'First Name', format: 'text' },
+                { key: 'last_name', label: 'Last Name', format: 'text' },
+                { key: 'email', label: 'Email', format: 'text' },
+                { key: 'phone_code', label: 'Phone Code', format: 'text' },
+                { key: 'phone', label: 'Phone', format: 'text' },
+                { key: 'country_name', label: 'Country', format: 'text' },
+                { key: 'gender', label: 'Gender', format: 'text' },
+                { key: 'birth_date', label: 'Birth Date', format: 'date' },
+                { key: 'is_email_verified', label: 'Is Email Verified', format: 'boolean' },
+                { key: 'days_since_creation', label: 'Days Since Creation', format: 'number' },
+                { key: 'has_paid_order', label: 'Has Paid Order', format: 'boolean' },
+                { key: 'order_total_paid_amount', label: 'Order Total Paid Amount', format: 'currency' },
+                { key: 'order_count', label: 'Order Count', format: 'number' },
+                { key: 'average_paid_amount', label: 'Average Paid Amount', format: 'currency' },
+                { key: 'first_order_created_at', label: 'First Order Created At', format: 'date_time' },
+                { key: 'days_since_first_order', label: 'Days Since First Order', format: 'number' },
+                { key: 'first_order_total_paid_amount', label: 'First Order Total Paid Amount', format: 'currency' },
+                { key: 'days_since_last_order', label: 'Days Since Last Order', format: 'number' },
+                { key: 'days_since_last_login', label: 'Days Since Last Login', format: 'number' },
+                { key: 'login_count', label: 'Login Count', format: 'number' },
+                { key: 'average_weekly_login_count', label: 'Average Weekly Login Count', format: 'number' },
+                { key: 'count', label: 'Count', format: 'number' }
             ]
         ],
     };
@@ -950,6 +812,8 @@ class ReportService {
             key: "created_at",
             grouping_expression: "U.created_at",
             filter_expression: "U.created_at = $FILTER_VALUE$",
+            minimum_filter_expression: "U.created_at >= $FILTER_VALUE$",
+            maximum_filter_expression: "U.created_at <= $FILTER_VALUE$",
             type: "timestamp",
             label: "Period",
             groupable: true,
@@ -1008,7 +872,8 @@ class ReportService {
         {
             key: "days_since_creation",
             grouping_expression: "DATE_PART('day', CURRENT_DATE - U.created_at)", 
-            filter_expression: "",
+            minimum_filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) >= $FILTER_VALUE$",
+            maximum_filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) <= $FILTER_VALUE$",
             type: "number",
             label: "Days Since Creation",
             step: '1',
@@ -1019,7 +884,8 @@ class ReportService {
         {
             key: 'first_order_created_at',
             grouping_expression: 'order_stats.first_order_created_at',
-            filter_expression: '',
+            minimum_filter_expression: "order_stats.first_order_created_at >= $FILTER_VALUE$",
+            maximum_filter_expression: "order_stats.first_order_created_at <= $FILTER_VALUE$",
             type: 'timestamp',
             label: 'First Order Created At',
             displayInUI: true,
@@ -1027,7 +893,8 @@ class ReportService {
         {
             key: 'first_order_total_paid_amount',
             grouping_expression: 'first_order_info.first_order_amount',
-            filter_expression: '',
+            minimum_filter_expression: "first_order_info.first_order_amount >= $FILTER_VALUE$",
+            maximum_filter_expression: "first_order_info.first_order_amount <= $FILTER_VALUE$",
             type: 'number',
             label: 'First Order Total Paid Amount',
             step: '0.01',
@@ -1038,7 +905,8 @@ class ReportService {
         {
             key: "days_since_last_order",
             grouping_expression: "CASE WHEN order_stats.last_order_date IS NOT NULL THEN DATE_PART('day', CURRENT_DATE - order_stats.last_order_date) ELSE NULL END",
-            filter_expression: "",
+            minimum_filter_expression: "CASE WHEN order_stats.last_order_date IS NOT NULL THEN DATE_PART('day', CURRENT_DATE - order_stats.last_order_date) ELSE NULL END >= $FILTER_VALUE$",
+            maximum_filter_expression: "CASE WHEN order_stats.last_order_date IS NOT NULL THEN DATE_PART('day', CURRENT_DATE - order_stats.last_order_date) ELSE NULL END <= $FILTER_VALUE$",
             type: "number",
             label: "Days Since Last Order",
             step: '1',
@@ -1049,7 +917,8 @@ class ReportService {
         {
             key: "order_total_paid_amount",
             grouping_expression: "order_stats.total_paid_amount",
-            filter_expression: "",
+            minimum_filter_expression: "order_stats.total_paid_amount >= $FILTER_VALUE$",
+            maximum_filter_expression: "order_stats.total_paid_amount <= $FILTER_VALUE$",
             type: "number",
             label: "Order Total Paid Amount",
             step: '0.01',
@@ -1061,6 +930,8 @@ class ReportService {
             key: "order_count",
             grouping_expression: "order_stats.order_count",
             filter_expression: "",
+            minimum_filter_expression: "order_stats.order_count >= $FILTER_VALUE$",
+            maximum_filter_expression: "order_stats.order_count <= $FILTER_VALUE$",
             type: "number",
             label: "Order Count",
             step: '1',
@@ -1071,7 +942,8 @@ class ReportService {
         {
             key: "days_since_last_login",
             grouping_expression: "login_stats.days_since_last_login",
-            filter_expression: "",
+            minimum_filter_expression: "login_stats.days_since_last_login >= $FILTER_VALUE$",
+            maximum_filter_expression: "login_stats.days_since_last_login <= $FILTER_VALUE$",
             type: "number",
             label: "Days Since Last Login",
             step: '1',
@@ -1083,6 +955,8 @@ class ReportService {
             key: "login_count",
             grouping_expression: "login_stats.login_count",
             filter_expression: "",
+            minimum_filter_expression: "login_stats.login_count >= $FILTER_VALUE$",
+            maximum_filter_expression: "login_stats.login_count <= $FILTER_VALUE$",
             type: "number",
             label: "Login Count",
             step: '1',
@@ -1093,7 +967,8 @@ class ReportService {
         {
             key: "average_weekly_login_count",
             grouping_expression: "login_stats.average_weekly_login_count",
-            filter_expression: "",
+            minimum_filter_expression: "login_stats.average_weekly_login_count >= $FILTER_VALUE$",
+            maximum_filter_expression: "login_stats.average_weekly_login_count <= $FILTER_VALUE$",
             type: "number",
             label: "Average Weekly Login Count",
             step: '0.01',
@@ -1165,109 +1040,9 @@ class ReportService {
             type: "timestamp",
         },
         {
-            key: "created_at_minimum",
-            filter_expression: "U.created_at >= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
-            key: "created_at_maximum",
-            filter_expression: "U.created_at <= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
-            key: "days_since_creation_minimum",
-            filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "days_since_creation_maximum",
-            filter_expression: "DATE_PART('day', CURRENT_DATE - U.created_at) <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "days_since_last_order_minimum",
-            filter_expression: "CASE WHEN order_stats.last_order_date IS NOT NULL THEN DATE_PART('day', CURRENT_DATE - order_stats.last_order_date) ELSE NULL END >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "days_since_last_order_maximum",
-            filter_expression: "CASE WHEN order_stats.last_order_date IS NOT NULL THEN DATE_PART('day', CURRENT_DATE - order_stats.last_order_date) ELSE NULL END <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "order_total_paid_amount_minimum",
-            filter_expression: "order_stats.total_paid_amount >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "order_total_paid_amount_maximum",
-            filter_expression: "order_stats.total_paid_amount <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "order_count_minimum",
-            filter_expression: "order_stats.order_count >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "order_count_maximum",
-            grouping_expression: "",
-            filter_expression: "order_stats.order_count <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "days_since_last_login_minimum",
-            filter_expression: "login_stats.days_since_last_login >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "days_since_last_login_maximum",
-            filter_expression: "login_stats.days_since_last_login <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "first_order_created_at_minimum",
-            filter_expression: "order_stats.first_order_created_at >= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
-            key: "first_order_total_paid_amount_minimum",
-            filter_expression: "first_order_info.first_order_amount >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "first_order_total_paid_amount_maximum",
-            filter_expression: "first_order_info.first_order_amount <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "first_order_created_at_maximum",
-            filter_expression: "order_stats.first_order_created_at <= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
-            key: "login_count_minimum",
-            filter_expression: "login_stats.login_count >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "login_count_maximum",
-            filter_expression: "login_stats.login_count <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "average_weekly_login_count_minimum",
-            filter_expression: "login_stats.average_weekly_login_count >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "average_weekly_login_count_maximum",
-            filter_expression: "login_stats.average_weekly_login_count <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "count",
             type: "number",
+            hideInUI: true,
         }
     ];
 
@@ -1714,13 +1489,13 @@ class ReportService {
         dataEndpoint: '/api/reports/report-notifications',
         headerGroups: [
             [
-                { key: 'created_at', label: 'Created At', rowspan: 2, format: 'date_time' },
-                { key: 'type', label: 'Notification Type', rowspan: 2, format: 'text' },
-                { key: 'user_email', label: 'User Email', rowspan: 2, format: 'text' },
-                { key: 'status', label: 'Status', rowspan: 2, format: 'text' },
-                { key: 'subject' , label: 'Subject', rowspan: 2, format: 'text' },
-                { key: 'text_content', label: 'Text Content', rowspan: 2, format: 'text' },
-                { key: 'count', label: 'Count', rowspan: 2, align: 'right', format: 'number' }
+                { key: 'created_at', label: 'Created At', format: 'date_time' },
+                { key: 'type', label: 'Notification Type', format: 'text' },
+                { key: 'user_email', label: 'User Email', format: 'text' },
+                { key: 'status', label: 'Status', format: 'text' },
+                { key: 'subject' , label: 'Subject', format: 'text' },
+                { key: 'text_content', label: 'Text Content', format: 'text' },
+                { key: 'count', label: 'Count', format: 'number' }
             ]
         ],
     };
@@ -1791,6 +1566,7 @@ class ReportService {
         {
             key: "count",
             type: "number",
+            hideInUI: true
         },
     ];
 
@@ -1844,13 +1620,13 @@ class ReportService {
         dataEndpoint: '/api/reports/report-notifications-status',
         headerGroups: [
             [   
-                { key: 'created_at', label: 'Created At', rowspan: 2, format: 'date_time' },
+                { key: 'created_at', label: 'Created At', format: 'date_time' },
                 { key: 'name', label: 'Notification Campaign Name', format: 'text' },
                 { key: 'subject', label: 'Subject', format: 'text' },
-                { key: 'users_count', label: 'Users Count', align: 'right', format: 'number' },
-                { key: 'status_pending', label: 'Pending', align: 'right', format: 'number' },
-                { key: 'status_sent', label: 'Sent', align: 'right', format: 'number' },
-                { key: 'status_seen', label: 'Seen', align: 'right', format: 'number' }
+                { key: 'users_count', label: 'Users Count', format: 'number' },
+                { key: 'status_pending', label: 'Pending', format: 'number' },
+                { key: 'status_sent', label: 'Sent', format: 'number' },
+                { key: 'status_seen', label: 'Seen', format: 'number' }
             ]
         ]
     };
@@ -1927,19 +1703,19 @@ class ReportService {
         dataEndpoint: '/api/reports/report-campaigns',
         headerGroups: [
             [
-                { key: 'id', label: 'ID', rowspan: 2, align: 'right', format: 'text' },
-                { key: 'name', label: 'Campaign Name', rowspan: 2, format: 'text' },
-                { key: 'start_date', label: 'Active From', rowspan: 2, format: 'date_time' },
-                { key: 'end_date', label: 'Active Until', rowspan: 2, format: 'date_time' },
-                { key: 'status', label: 'Status', rowspan: 2, format: 'text' },
-                { key: 'target_group_name', label: 'Target Group', rowspan: 2, format: 'text' },
-                { key: 'users_count', label: 'Users in Target Group', rowspan: 2, align: 'right', format: 'number' },
-                { key: 'orders_count', label: 'Orders Count', rowspan: 2, align: 'right', format: 'number' },
-                { key: 'users_with_orders_count', label: 'Users with Orders Count', rowspan: 2, align: 'right', format: 'number' },
-                { key: 'orders_total_paid_amount', label: 'Order Total Paid Amount', rowspan: 2, align: 'right', format: 'currency' },
-                { key: 'average_order_amount', label: 'Average Order Amount', rowspan: 2, align: 'right', format: 'currency' },
-                { key: 'conversion_rate', label: 'Conversion Rate', rowspan: 2, align: 'right', format: 'percentage' },
-                { key: 'count', label: 'Count', rowspan: 2, align: 'right', format: 'number' }
+                { key: 'id', label: 'ID', align: 'right', format: 'text' },
+                { key: 'name', label: 'Campaign Name', format: 'text' },
+                { key: 'start_date', label: 'Active From', format: 'date_time' },
+                { key: 'end_date', label: 'Active Until', format: 'date_time' },
+                { key: 'status', label: 'Status', format: 'text' },
+                { key: 'target_group_name', label: 'Target Group', format: 'text' },
+                { key: 'users_count', label: 'Users in Target Group', format: 'number' },
+                { key: 'orders_count', label: 'Orders Count', format: 'number' },
+                { key: 'users_with_orders_count', label: 'Users with Orders Count', format: 'number' },
+                { key: 'orders_total_paid_amount', label: 'Order Total Paid Amount', format: 'currency' },
+                { key: 'average_order_amount', label: 'Average Order Amount', format: 'currency' },
+                { key: 'conversion_rate', label: 'Conversion Rate', format: 'percentage' },
+                { key: 'count', label: 'Count', format: 'number' }
             ]
         ],
     };
@@ -1947,8 +1723,9 @@ class ReportService {
     const reportFilters = [
         {
             key: "activity_date",
-            grouping_expression: "",
-            filter_expression: "",
+            grouping_expression: `start_date AS "start_date", end_date AS "end_date"`,
+            minimum_filter_expression: "C.start_date >= $FILTER_VALUE$",
+            maximum_filter_expression: "C.end_date <= $FILTER_VALUE$",
             type: "timestamp",
             label: "Activity Date",
             displayInUI: true,
@@ -1971,19 +1748,7 @@ class ReportService {
             type: "text",
             label: "Campaign Name",
             displayInUI: true,
-        },
-        {
-            key: "start_date",
-            grouping_expression: "start_date",
-            filter_expression: "",
-            type: "timestamp",
-        },
-        {
-            key: "end_date",
-            grouping_expression: "end_date",
-            filter_expression: "",
-            type: "timestamp",
-        },
+        },  
         {
             key: "status",
             grouping_expression: "status",
@@ -2012,7 +1777,8 @@ class ReportService {
         {
             key: "users_count",
             grouping_expression: "users_count",
-            filter_expression: "",
+            minimum_filter_expression: "CASE WHEN C.final_user_count IS NOT NULL THEN C.final_user_count ELSE TGU.user_count END >= $FILTER_VALUE$",
+            maximum_filter_expression: "CASE WHEN C.final_user_count IS NOT NULL THEN C.final_user_count ELSE TGU.user_count END <= $FILTER_VALUE$",
             type: "number",
             label: "Users in Target Group",
             step: "1",
@@ -2021,19 +1787,10 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "users_count_minimum",
-            filter_expression: "CASE WHEN C.final_user_count IS NOT NULL THEN C.final_user_count ELSE TGU.user_count END >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "users_count_maximum",
-            filter_expression: "CASE WHEN C.final_user_count IS NOT NULL THEN C.final_user_count ELSE TGU.user_count END <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "users_with_orders_count",
             grouping_expression: "users_with_orders_count",
-            filter_expression: "",
+            minimum_filter_expression: "COALESCE(CO.users_with_orders_count, 0) >= $FILTER_VALUE$",
+            maximum_filter_expression: "COALESCE(CO.users_with_orders_count, 0) <= $FILTER_VALUE$",
             type: "number",
             label: "Users with Orders Count",
             step: "1",
@@ -2042,19 +1799,10 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "users_with_orders_count_minimum",
-            filter_expression: "COALESCE(CO.users_with_orders_count, 0) >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "users_with_orders_count_maximum",
-            filter_expression: "COALESCE(CO.users_with_orders_count, 0) <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "orders_count",
             grouping_expression: "orders_count",
-            filter_expression: "",
+            minimum_filter_expression: "COALESCE(CO.orders_count, 0) >= $FILTER_VALUE$",
+            maximum_filter_expression: "COALESCE(CO.orders_count, 0) <= $FILTER_VALUE$",
             type: "number",
             label: "Orders Count",
             step: "1",
@@ -2063,19 +1811,10 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "orders_count_minimum",
-            filter_expression: "COALESCE(CO.orders_count, 0) >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "orders_count_maximum",
-            filter_expression: "COALESCE(CO.orders_count, 0) <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "orders_total_paid_amount",
             grouping_expression: "orders_total_paid_amount",
-            filter_expression: "",
+            minimum_filter_expression: "COALESCE(CO.orders_total_paid_amount, 0) >= $FILTER_VALUE$",
+            maximum_filter_expression: "COALESCE(CO.orders_total_paid_amount, 0) <= $FILTER_VALUE$",
             type: "number",
             label: "Total Order Amount",
             step: "0.01",
@@ -2084,19 +1823,10 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "orders_total_paid_amount_minimum",
-            filter_expression: "COALESCE(CO.orders_total_paid_amount, 0) >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "orders_total_paid_amount_maximum",
-            filter_expression: "COALESCE(CO.orders_total_paid_amount, 0) <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
             key: "average_order_amount",
             grouping_expression: "average_order_amount",
-            filter_expression: "",
+            minimum_filter_expression: `CASE WHEN COALESCE(CO.orders_count, 0) > 0 THEN COALESCE(CO.orders_total_paid_amount / CO.orders_count, 0) ELSE 0 END >= $FILTER_VALUE$`,
+            maximum_filter_expression: `CASE WHEN COALESCE(CO.orders_count, 0) > 0 THEN COALESCE(CO.orders_total_paid_amount / CO.orders_count, 0) ELSE 0 END <= $FILTER_VALUE$`,
             type: "number",
             label: "Average Order Amount",
             step: "0.01",
@@ -2105,19 +1835,10 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "average_order_amount_minimum",
-            filter_expression: `CASE WHEN COALESCE(CO.orders_count, 0) > 0 THEN COALESCE(CO.orders_total_paid_amount / CO.orders_count, 0) ELSE 0 END >= $FILTER_VALUE$`,
-            type: "number",
-        },
-        {
-            key: "average_order_amount_maximum",
-            filter_expression: `CASE WHEN COALESCE(CO.orders_count, 0) > 0 THEN COALESCE(CO.orders_total_paid_amount / CO.orders_count, 0) ELSE 0 END <= $FILTER_VALUE$`,
-            type: "number",
-        },
-        {
             key: "conversion_rate",
             grouping_expression: "conversion_rate",
-            filter_expression: "",
+            minimum_filter_expression: "CASE WHEN C.final_user_count IS NOT NULL AND C.final_user_count > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / C.final_user_count * 100)::numeric, 2) WHEN COALESCE(TGU.user_count, 0) > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / TGU.user_count * 100)::numeric, 2) ELSE 0 END >= $FILTER_VALUE$",
+            maximum_filter_expression: "CASE WHEN C.final_user_count IS NOT NULL AND C.final_user_count > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / C.final_user_count * 100)::numeric, 2) WHEN COALESCE(TGU.user_count, 0) > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / TGU.user_count * 100)::numeric, 2) ELSE 0 END <= $FILTER_VALUE$",
             type: "number",
             label: "Conversion Rate",
             step: "0.01",
@@ -2126,28 +1847,9 @@ class ReportService {
             displayInUI: true,
         },
         {
-            key: "conversion_rate_minimum",
-            filter_expression: "CASE WHEN C.final_user_count IS NOT NULL AND C.final_user_count > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / C.final_user_count * 100)::numeric, 2) WHEN COALESCE(TGU.user_count, 0) > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / TGU.user_count * 100)::numeric, 2) ELSE 0 END >= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "conversion_rate_maximum",
-            filter_expression: "CASE WHEN C.final_user_count IS NOT NULL AND C.final_user_count > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / C.final_user_count * 100)::numeric, 2) WHEN COALESCE(TGU.user_count, 0) > 0 THEN ROUND((COALESCE(CO.orders_count, 0)::float / TGU.user_count * 100)::numeric, 2) ELSE 0 END <= $FILTER_VALUE$",
-            type: "number",
-        },
-        {
-            key: "activity_date_minimum",
-            filter_expression: "C.end_date >= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
-            key: "activity_date_maximum",
-            filter_expression: "C.start_date <= $FILTER_VALUE$",
-            type: "timestamp",
-        },
-        {
             key: "count",
             type: "number",
+            hideInUI: true,
         }
     ];
 
@@ -2249,8 +1951,7 @@ class ReportService {
         SELECT
             $id_grouping_expression$ AS "id",
             $name_grouping_expression$ AS "name",
-            $start_date_grouping_expression$ AS "start_date",
-            $end_date_grouping_expression$ AS "end_date",
+            $activity_date_grouping_expression$,
             $status_grouping_expression$ AS "status",
             $target_group_name_grouping_expression$ AS "target_group_name",
             $average_order_amount_grouping_expression$ AS "average_order_amount",
@@ -2321,7 +2022,7 @@ class ReportService {
     return { filters, groupings };
   }
 
-  replacePlaceholders(sql, values) {
+  #testReplacePlaceholders(sql, values) {
     return sql.replace(/\$\d+/g, match => {
         const index = parseInt(match.slice(1)) - 1;
         return values[index];

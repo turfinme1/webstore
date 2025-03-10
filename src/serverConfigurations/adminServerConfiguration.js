@@ -59,6 +59,7 @@ const routeTable = {
     "/app-config/rate-limit-settings": appConfigController.getRateLimitSettings,
     "/api/test-email/:id": emailController.sendTestEmail,
     "/api/preview-email/:id": emailController.previewEmail,
+    "/api/reports": reportController.getAllReports,
   },
   post: {
     "/crud/:entity": crudController.create,
