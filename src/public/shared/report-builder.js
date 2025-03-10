@@ -186,7 +186,7 @@ class ReportBuilder {
                 return `
                     <tr>
                         ${columns.map((col, index) => `
-                            <td style="text-align: ${col.align || 'left'};">
+                            <td style="text-align: ${col.align || ['currency', 'number', 'percentage'].includes(col.format) ? 'right' : 'left'};">
                                 ${index === 0 && !rowData[col.key] 
                                     ? "Total:"
                                     : col.format 

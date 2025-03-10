@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, hasPermission, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
 import { ReportBuilder } from "./report-builder.js";
 
 const state = {
@@ -17,10 +17,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const URLParams = new URLSearchParams(window.location.search);
     const reportName = URLParams.get('report');
 
-    // if (!hasPermission(state.userStatus, "read", reportName)) {
-    //     elements.mainContainer.innerHTML = "<h1>You don't have permission to view this report</h1>";
-    //     return;
-    // }
+    if (!hasPermission(state.userStatus, "read", reportName)) {
+        elements.mainContainer.innerHTML = "<h1>You don't have permission to view this report</h1>";
+        return;
+    }
 
     const reportConfigResponse = await fetch(`/api/reports/${reportName}`,
         {

@@ -619,10 +619,23 @@ async function markNotificationAsRead(notificationId) {
 }
 
 
-function createBackofficeNavigation(userStatus) {
+async function createBackofficeNavigation(userStatus) {
   const navContainer = document.getElementById("dynamic-nav");
   navContainer.innerHTML = ""; // Clear previous content
 
+  const reportResults = await fetchWithErrorHandling("/api/reports");
+  if (!reportResults.ok) {
+    showToastMessage(reportResults.error, "error");
+  }
+
+  const reportLinks = reportResults.data.map((report) => {
+    return {
+      text: report.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "),
+      href: `/report?report=${report}`,
+      permission: "view",
+      interface: report,
+    };
+  });
   const navItems = [
     {
       id: "settings-link",
@@ -708,55 +721,7 @@ function createBackofficeNavigation(userStatus) {
       permission: "view",
       interface: "notifications",
     },
-    {
-      id: "report-link",
-      text: "Report Logs",
-      href: "/report?report=report-logs",
-      permission: "view",
-      interface: "report-logs",
-    },
-    {
-      id: "report-link",
-      text: "Report Orders",
-      href: "/report?report=report-orders",
-      permission: "view",
-      interface: "report-orders",
-    },
-    {
-      id: "report-link",
-      text: "Report Order By User",
-      href: "/report?report=report-orders-by-user",
-      permission: "view",
-      interface: "report-orders-by-user",
-    },
-    {
-      id: "report-link",
-      text: "Report Users",
-      href: "/report?report=report-users",
-      permission: "view",
-      interface: "report-users",
-    },
-    {
-      id: "report-link",
-      text: "Report Notifications",
-      href: "/report?report=report-notifications",
-      permission: "view",
-      interface: "report-notifications",
-    },
-    {
-      id: "report-link",
-      text: "Report Notification Status",
-      href: "/report?report=report-notifications-status",
-      permission: "view",
-      interface: "report-notifications-status",
-    },
-    {
-      id: "report-link",
-      text: "Report Campaigns",
-      href: "/report?report=report-campaigns",
-      permission: "view",
-      interface: "report-campaigns",
-    },
+    ...reportLinks,
     {
       id: "upload-products-link",
       text: "Upload Products from CSV",

@@ -3,6 +3,7 @@ class ReportController {
     this.reportService = reportService;
     this.getReport = this.getReport.bind(this);
     this.exportReport = this.exportReport.bind(this);
+    this.getAllReports = this.getAllReports.bind(this);
   }
 
   async getReport(req, res, next) {
@@ -28,6 +29,11 @@ class ReportController {
       dbConnection: req.dbConnection,
     };
     const result = await this.reportService.exportReport(data);
+    res.status(200).json(result);
+  }
+
+  async getAllReports(req, res, next) {
+    const result = await this.reportService.getAllReports();
     res.status(200).json(result);
   }
 }
