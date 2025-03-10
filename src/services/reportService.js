@@ -190,7 +190,6 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
             label: 'User Email',
-            displayInUI: true,
         },
         {
             key: "user_id",
@@ -201,7 +200,6 @@ class ReportService {
             step: "1",
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: 'order_total',
@@ -212,7 +210,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
     ];
 
@@ -301,13 +298,13 @@ class ReportService {
             type: "timestamp",
             label: "Period",
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "admin_user_id",
             grouping_expression: "L.admin_user_id",
             filter_expression: "L.admin_user_id = $FILTER_VALUE$",
             type: "number",
+            hideInUI: true,
         },
         {
             key: "user_id",
@@ -344,7 +341,6 @@ class ReportService {
             type: "text",
             label: 'Status Code',
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "log_level",
@@ -357,7 +353,6 @@ class ReportService {
                 { value: 'ERROR', label: 'ERROR' },
             ],
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "audit_type",
@@ -373,7 +368,6 @@ class ReportService {
                 { value: 'INFO', label: 'INFO' }
             ],
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "count",
@@ -482,7 +476,6 @@ class ReportService {
             type: "timestamp",
             label: "Period",
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "status",
@@ -497,7 +490,6 @@ class ReportService {
                 { value: 'Cancelled', label: 'Cancelled' }
             ],
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "user_email",
@@ -506,7 +498,6 @@ class ReportService {
             type: "text",
             label: "User Email",
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "order_id",
@@ -514,7 +505,6 @@ class ReportService {
             filter_expression: "O.id = $FILTER_VALUE$",
             type: "text",
             label: "Order ID",
-            displayInUI: true,
         },
         {
             key: "total_price",
@@ -526,7 +516,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         {
             key: "days_since_order",
@@ -539,7 +528,6 @@ class ReportService {
             step: '1',
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         {
             key: "discount_percentage",
@@ -553,7 +541,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 100,
-            displayInUI: true,
         },
         {
             key: "discount_amount",
@@ -564,7 +551,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         
         {
@@ -578,7 +564,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 100,
-            displayInUI: true,
         },
         {
             key: "vat_amount",
@@ -590,7 +575,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         {
             key: "total_price_with_vat",
@@ -602,7 +586,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         {
             key: "campaign_name",
@@ -610,7 +593,6 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST( C.name AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
             label: "Campaign Name",
-            displayInUI: true,
         },
         {
             key: "voucher_code",
@@ -618,7 +600,6 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST( O.voucher_code AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
             label: "Voucher Code",
-            displayInUI: true,
         },
         {
             key: "voucher_discount_amount",
@@ -630,7 +611,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         {
             key: "paid_amount",
@@ -642,7 +622,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         {
             key: "total_stock_price",
@@ -817,7 +796,6 @@ class ReportService {
             type: "timestamp",
             label: "Period",
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "country_name",
@@ -829,7 +807,6 @@ class ReportService {
             fetchFrom: "/crud/iso-country-codes",
             displayKey: 'country_name',
             valueKey: 'id',
-            displayInUI: true,
         },
         {
             key: "phone_code",
@@ -841,7 +818,6 @@ class ReportService {
             fetchFrom: "/crud/iso-country-codes",
             displayKey: 'phone_code',
             valueKey: 'id',
-            displayInUI: true,
         },
         {
             key: "is_email_verified",
@@ -854,7 +830,6 @@ class ReportService {
                 { value: 'true', label: 'Yes' },
                 { value: 'false', label: 'No' }
             ],
-            displayInUI: true,
         },
         {
             key: "has_paid_order",
@@ -867,7 +842,6 @@ class ReportService {
                 { value: 'true', label: 'Yes' },
                 { value: 'false', label: 'No' }
             ],
-            displayInUI: true,
         },
         {
             key: "days_since_creation",
@@ -879,7 +853,6 @@ class ReportService {
             step: '1',
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: 'first_order_created_at',
@@ -888,7 +861,6 @@ class ReportService {
             maximum_filter_expression: "order_stats.first_order_created_at <= $FILTER_VALUE$",
             type: 'timestamp',
             label: 'First Order Created At',
-            displayInUI: true,
         },
         {
             key: 'first_order_total_paid_amount',
@@ -900,7 +872,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         {
             key: "days_since_last_order",
@@ -912,7 +883,6 @@ class ReportService {
             step: '1',
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: "order_total_paid_amount",
@@ -924,7 +894,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         {
             key: "order_count",
@@ -937,7 +906,6 @@ class ReportService {
             step: '1',
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: "days_since_last_login",
@@ -949,7 +917,6 @@ class ReportService {
             step: '1',
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: "login_count",
@@ -962,7 +929,6 @@ class ReportService {
             step: '1',
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: "average_weekly_login_count",
@@ -974,7 +940,6 @@ class ReportService {
             step: '0.01',
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: "id",
@@ -985,7 +950,6 @@ class ReportService {
             step: "1",
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: "first_name",
@@ -993,7 +957,6 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST( U.first_name AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
             label: "First Name",
-            displayInUI: true,
         },
         {
             key: "last_name",
@@ -1001,7 +964,6 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST( U.last_name AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
             label: "Last Name",
-            displayInUI: true,
         },
         {
             key: "email",
@@ -1009,35 +971,39 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
             label: "Email",
-            displayInUI: true,
         },
         {
             key: "average_paid_amount",
             grouping_expression: "order_stats.average_paid_amount",
-            type: "number",         
+            type: "number",
+            hideInUI: true,
         },
         {
             key: "days_since_first_order",
             grouping_expression: " CASE WHEN order_stats.first_order_created_at IS NOT NULL THEN DATE_PART('day', CURRENT_DATE - order_stats.first_order_created_at) ELSE NULL END",
             type: "number",
+            hideInUI: true,
         },
         {
             key: "phone",
             grouping_expression: "U.phone",
             filter_expression: "",
             type: "text",
+            hideInUI: true,
         },
         {
             key: "gender",
             grouping_expression: "genders.type",
             filter_expression: "",
             type: "text",
+            hideInUI: true,
         },
         {
             key: "birth_date",
             grouping_expression: "U.birth_date",
             filter_expression: "",
             type: "timestamp",
+            hideInUI: true,
         },
         {
             key: "count",
@@ -1245,7 +1211,6 @@ class ReportService {
             filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date)",
             type: "timestamp",
             label: "Start Date",
-            displayInUI: true,
           },
           {
             key: "end_date", 
@@ -1253,7 +1218,6 @@ class ReportService {
             filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date + INTERVAL '1 day')",
             type: "timestamp",
             label: "End Date",
-            displayInUI: true,
         },
     ];
 
@@ -1397,7 +1361,6 @@ class ReportService {
         filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date)",
         type: "timestamp",
         label: "Start Date",
-        displayInUI: true,
       },
       {
         key: "end_date", 
@@ -1405,7 +1368,6 @@ class ReportService {
         filter_expression: "DATE_TRUNC('day', $FILTER_VALUE$::date + INTERVAL '1 day')",
         type: "timestamp",
         label: "End Date",
-        displayInUI: true,
       },
     ];
   
@@ -1505,10 +1467,11 @@ class ReportService {
             key: "created_at",
             grouping_expression: "N.created_at",
             filter_expression: "N.created_at = $FILTER_VALUE$",
+            minimum_filter_expression: "N.created_at >= $FILTER_VALUE$",
+            maximum_filter_expression: "N.created_at <= $FILTER_VALUE$",
             type: "timestamp",
             label: "Period",
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "type",
@@ -1521,7 +1484,6 @@ class ReportService {
                 { value: 'Notification', label: 'Notification' },
             ],
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "user_email",
@@ -1530,7 +1492,6 @@ class ReportService {
             type: "text",
             label: "User Email",
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "status",
@@ -1545,7 +1506,6 @@ class ReportService {
                 { value: 'seen', label: 'Seen' }
             ],
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "subject",
@@ -1553,7 +1513,6 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST( N.subject AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
             label: "Subject",
-            displayInUI: true,
         },
         {
             key: "text_content",
@@ -1561,7 +1520,6 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST( N.text_content AS text )), LOWER( $FILTER_VALUE$ )) > 0",
             type: "text",
             label: "Text Content",
-            displayInUI: true,
         },
         {
             key: "count",
@@ -1582,7 +1540,8 @@ class ReportService {
             0 AS "sort_order"
         FROM emails N
         WHERE TRUE
-            AND $created_at_filter_expression$
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
             AND $type_filter_expression$
             AND $user_email_filter_expression$
             AND $status_filter_expression$
@@ -1602,7 +1561,8 @@ class ReportService {
             1 AS "sort_order"
         FROM emails N
         WHERE TRUE
-            AND $created_at_filter_expression$
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
             AND $type_filter_expression$
             AND $user_email_filter_expression$
             AND $status_filter_expression$
@@ -1635,11 +1595,11 @@ class ReportService {
         {
             key: "created_at",
             grouping_expression: "N.created_at",
-            filter_expression: "N.created_at = $FILTER_VALUE$",
+            minimum_filter_expression: "N.created_at >= $FILTER_VALUE$",
+            maximum_filter_expression: "N.created_at <= $FILTER_VALUE$",
             type: "timestamp",
             label: "Period",
             groupable: true,
-            displayInUI: true,
         },
         {
             key: "name",
@@ -1647,7 +1607,6 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST(N.name AS text)), LOWER($FILTER_VALUE$)) > 0",
             type: "text",
             label: "Notification Campaign Name",
-            displayInUI: true
         },
         {
             key: "subject",
@@ -1655,7 +1614,6 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST(E.subject AS text)), LOWER($FILTER_VALUE$)) > 0",
             type: "text",
             label: "Subject",
-            displayInUI: true
         }
     ];
 
@@ -1672,6 +1630,8 @@ class ReportService {
         FROM notifications N	
         JOIN emails E ON N.id = E.notification_id
         WHERE TRUE
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
             AND $name_filter_expression$
             AND $subject_filter_expression$
 
@@ -1689,6 +1649,8 @@ class ReportService {
         FROM notifications N	
         JOIN emails E ON N.id = E.notification_id
         WHERE TRUE
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
             AND $name_filter_expression$
             AND $subject_filter_expression$
         GROUP BY 1, 2, 3
@@ -1728,7 +1690,6 @@ class ReportService {
             maximum_filter_expression: "C.end_date <= $FILTER_VALUE$",
             type: "timestamp",
             label: "Activity Date",
-            displayInUI: true,
         },
         {
             key: "id",
@@ -1739,7 +1700,6 @@ class ReportService {
             step: "1",
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: "name",
@@ -1747,7 +1707,6 @@ class ReportService {
             filter_expression: "STRPOS(LOWER(CAST(C.name AS text)), LOWER($FILTER_VALUE$)) > 0",
             type: "text",
             label: "Campaign Name",
-            displayInUI: true,
         },  
         {
             key: "status",
@@ -1761,7 +1720,6 @@ class ReportService {
                 { value: 'Inactive', label: 'Inactive' },
                 { value: 'Expired voucher', label: 'Expired voucher' }
             ],
-            displayInUI: true,
         },
         {
             key: "target_group_name",
@@ -1772,7 +1730,6 @@ class ReportService {
             fetchFrom: "/crud/target-groups",
             displayKey: 'name',
             valueKey: 'id',
-            displayInUI: true,
         },
         {
             key: "users_count",
@@ -1784,7 +1741,6 @@ class ReportService {
             step: "1",
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: "users_with_orders_count",
@@ -1796,7 +1752,6 @@ class ReportService {
             step: "1",
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: "orders_count",
@@ -1808,7 +1763,6 @@ class ReportService {
             step: "1",
             min: 0,
             max: 100000000,
-            displayInUI: true,
         },
         {
             key: "orders_total_paid_amount",
@@ -1820,7 +1774,6 @@ class ReportService {
             step: "0.01",
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         {
             key: "average_order_amount",
@@ -1832,7 +1785,6 @@ class ReportService {
             step: "0.01",
             min: 0,
             max: 1000000000000,
-            displayInUI: true,
         },
         {
             key: "conversion_rate",
@@ -1844,7 +1796,6 @@ class ReportService {
             step: "0.01",
             min: 0,
             max: 100,
-            displayInUI: true,
         },
         {
             key: "count",

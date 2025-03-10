@@ -3,7 +3,7 @@ import { showToastMessage } from "./page-utility.js";
 class ReportBuilder {
     constructor(config) {
         this.config = config;
-        this.config.filters = this.config.filters.filter(filter => filter.displayInUI);
+        this.config.filters = this.config.filters.filter(filter => filter.hideInUI !== true);
         this.elements = {};
         this.state = {
             filters: {},
@@ -15,94 +15,163 @@ class ReportBuilder {
     static filterTypes = {
         text: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
-                    <input type="text" 
-                           id="${filter.key}_filter_value" 
-                           name="${filter.key}_filter_value" 
-                           class="form-control" 
-                           placeholder="${filter.placeholder || ''}"
-                           ${filter.required ? 'required' : ''}>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_filter_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                     <div class="row g-2">
+                            <div class="col-4">
+                                <input type="text" 
+                                    id="${filter.key}_filter_value" 
+                                    name="${filter.key}_filter_value" 
+                                    class="form-control" 
+                                    placeholder="${filter.placeholder || ''}"
+                                    ${filter.required ? 'required' : ''}>
+                            </div>
+                            ${filter?.groupable ? `
+                                 <div class="col-4">
+                                    <select 
+                                            id="${filter.key}_grouping_select_value"
+                                            name="${filter.key}_grouping_select_value"
+                                            class="form-select"
+                                            ${filter.required ? 'required' : ''}>
+                                        <option value="">No grouping</option>
+                                        <option value="group">Group by ${filter.label}</option>
+                                    </select>
+                                </div>
+                            ` 
+                            : ''}
+                        </div>
+                    </div>
                 </div>
             `
         },
         number: {
             template: (filter) => `
-                <div class="row g-3">
-                    <div class="mb-3 col-auto">
-                        <label for="${filter.key}_minimum_filter_value" class="form-label">${filter.label} Min</label>
-                        <input type="number" 
-                               id="${filter.key}_minimum_filter_value" 
-                               name="${filter.key}_minimum_filter_value" 
-                               class="form-control" 
-                               step="${filter.step || '1'}"
-                               min="${filter.min || '0'}"
-                               max="${filter.max || ''}"
-                               placeholder="Min">
-                    </div>
-                    <div class="mb-3 col-auto">
-                        <label for="${filter.key}_maximum_filter_value" class="form-label">${filter.label} Max</label>
-                        <input type="number" 
-                               id="${filter.key}_maximum_filter_value"   
-                               name="${filter.key}_maximum_filter_value" 
-                               class="form-control" 
-                               step="${filter.step || '1'}"
-                               min="${filter.min || '0'}"
-                               max="${filter.max || ''}"
-                               placeholder="Max">
+                <div class="mb-3 row align-items-center">
+                    <label class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <input type="number" 
+                                      id="${filter.key}_minimum_filter_value" 
+                                      name="${filter.key}_minimum_filter_value" 
+                                      class="form-control" 
+                                      step="${filter.step || '1'}"
+                                      min="${filter.min || '0'}"
+                                      max="${filter.max || ''}"
+                                      placeholder="Min">
+                            </div>
+                            <div class="col-4">
+                                <input type="number" 
+                                      id="${filter.key}_maximum_filter_value"   
+                                      name="${filter.key}_maximum_filter_value" 
+                                      class="form-control" 
+                                      step="${filter.step || '1'}"
+                                      min="${filter.min || '0'}"
+                                      max="${filter.max || ''}"
+                                      placeholder="Max">
+                            </div>
+                        </div>
                     </div>
                 </div>
             `
         },
         number_single: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
-                    <input type="number"
-                            id="${filter.key}_filter_value"
-                            name="${filter.key}_filter_value"
-                            class="form-control"
-                            step="${filter.step || '1'}"
-                            min="${filter.min || '0'}"
-                            max="${filter.max || ''}"
-                            placeholder="${filter.placeholder || ''}"
-                            ${filter.required ? 'required' : ''}>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_filter_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <input type="number"
+                                        id="${filter.key}_filter_value"
+                                        name="${filter.key}_filter_value"
+                                        class="form-control"
+                                        step="${filter.step || '1'}"
+                                        min="${filter.min || '0'}"
+                                        max="${filter.max || ''}"
+                                        placeholder="${filter.placeholder || ''}"
+                                        ${filter.required ? 'required' : ''}>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `
         },
         timestamp: {
             template: (filter) => `
-                <div class="row g-3">
-                    <div class="mb-3 col-auto">
-                        <label for="${filter.key}_minimum_filter_value" class="form-label">${filter.label} Start (Time is in UTC)</label>
-                        <input type="datetime-local" step="1" 
-                               id="${filter.key}_minimum_filter_value"
-                               value="${new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0, 16)}"
-                               name="${filter.key}_minimum_filter_value" 
-                               class="form-control">
-                    </div>
-                    <div class="mb-3 col-auto">
-                        <label for="${filter.key}_maximum_filter_value" class="form-label">${filter.label} End (Time is in UTC)</label>
-                        <input type="datetime-local" step="1" 
-                               id="${filter.key}_maximum_filter_value"
-                               value="${new Date().toISOString().slice(0, 16)}" 
-                               name="${filter.key}_maximum_filter_value" 
-                               class="form-control">
+                <div class="mb-3 row align-items-center">
+                    <label class="col-md-3 col-form-label text-md-start">${filter.label} (Time in UTC)</label>
+                    <div class="col-md-9">
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <input type="datetime-local" step="1" 
+                                      id="${filter.key}_minimum_filter_value"
+                                      value="${new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0, 16)}"
+                                      name="${filter.key}_minimum_filter_value" 
+                                      class="form-control"
+                                      aria-label="Start (UTC)">
+                            </div>
+                            <div class="col-4">
+                                <input type="datetime-local" step="1" 
+                                      id="${filter.key}_maximum_filter_value"
+                                      value="${new Date().toISOString().slice(0, 16)}" 
+                                      name="${filter.key}_maximum_filter_value" 
+                                      class="form-control"
+                                      aria-label="End (UTC)">
+                            </div>
+                            ${filter?.groupable ? `
+                                <div class="col-4">
+                                    <select 
+                                            id="${filter.key}_grouping_select_value"
+                                            name="${filter.key}_grouping_select_value"
+                                            class="form-select"
+                                            ${filter.required ? 'required' : ''}>
+                                        <option value="">No grouping</option>
+                                        <option value="hour">Group by Hour</option>
+                                        <option value="day">Group by Day</option>
+                                        <option value="week">Group by Week</option>
+                                        <option value="month">Group by Month</option>
+                                        <option value="year">Group by Year</option>
+                                    </select>
+                                </div>
+                           ` 
+                           : ''}
+                        </div>
                     </div>
                 </div>
             `
         },
         select: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
-                    <select id="${filter.key}_filter_value"
-                            name="${filter.key}_filter_value"
-                            class="form-select"
-                            ${filter.required ? 'required' : ''}>
-                        <option value="">Select ${filter.label}</option>
-                        ${filter.options.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
-                    </select>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_filter_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <select id="${filter.key}_filter_value"
+                                        name="${filter.key}_filter_value"
+                                        class="form-select"
+                                        ${filter.required ? 'required' : ''}>
+                                    <option value="">Select ${filter.label}</option>
+                                    ${filter.options.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+                                </select>
+                            </div>
+                            ${filter?.groupable ? `
+                                <div class="col-4">
+                                    <select 
+                                            id="${filter.key}_grouping_select_value"
+                                            name="${filter.key}_grouping_select_value"
+                                            class="form-select"
+                                            ${filter.required ? 'required' : ''}>
+                                        <option value="">No grouping</option>
+                                        <option value="group">Group by ${filter.label}</option>
+                                    </select>
+                                </div>
+                                `
+                                : ''}
+                        </div>
+                    </div>
                 </div>
             `
         },
@@ -111,53 +180,56 @@ class ReportBuilder {
     static groupTypes = {
         select: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_grouping_select_value" class="form-label">${filter.label}</label>
-                    <select 
-                            id="${filter.key}_grouping_select_value"
-                            name="${filter.key}_grouping_select_value"
-                            class="form-select"
-                            ${filter.required ? 'required' : ''}
-                    >
-                        <option value="">No grouping</option>
-                        <option value="group">Group by ${filter.label}</option>
-                    </select>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_grouping_select_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <select 
+                                id="${filter.key}_grouping_select_value"
+                                name="${filter.key}_grouping_select_value"
+                                class="form-select"
+                                ${filter.required ? 'required' : ''}>
+                            <option value="">No grouping</option>
+                            <option value="group">Group by ${filter.label}</option>
+                        </select>
+                    </div>
                 </div>
             `
         },
         timestamp: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_grouping_select_value" class="form-label">${filter.label}</label>
-                    <select 
-                            id="${filter.key}_grouping_select_value"
-                            name="${filter.key}_grouping_select_value"
-                            class="form-select"
-                            ${filter.required ? 'required' : ''}
-                    >
-                        <option value="">No grouping</option>
-                        <option value="hour">Group by Hour</option>
-                        <option value="day">Group by Day</option>
-                        <option value="week">Group by Week</option>
-                        <option value="month">Group by Month</option>
-                        <option value="year">Group by Year</option>
-                    </select>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_grouping_select_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <select 
+                                id="${filter.key}_grouping_select_value"
+                                name="${filter.key}_grouping_select_value"
+                                class="form-select"
+                                ${filter.required ? 'required' : ''}>
+                            <option value="">No grouping</option>
+                            <option value="hour">Group by Hour</option>
+                            <option value="day">Group by Day</option>
+                            <option value="week">Group by Week</option>
+                            <option value="month">Group by Month</option>
+                            <option value="year">Group by Year</option>
+                        </select>
+                    </div>
                 </div>
             `
         },
         text: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_grouping_select_value" class="form-label">${filter.label}</label>
-                    <select 
-                            id="${filter.key}_grouping_select_value"
-                            name="${filter.key}_grouping_select_value"
-                            class="form-select"
-                            ${filter.required ? 'required' : ''}
-                    >
-                        <option value="">No grouping</option>
-                        <option value="group">Group by ${filter.label}</option>
-                    </select>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_grouping_select_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <select 
+                                id="${filter.key}_grouping_select_value"
+                                name="${filter.key}_grouping_select_value"
+                                class="form-select"
+                                ${filter.required ? 'required' : ''}>
+                            <option value="">No grouping</option>
+                            <option value="group">Group by ${filter.label}</option>
+                        </select>
+                    </div>
                 </div>
             `
         },
@@ -284,19 +356,12 @@ class ReportBuilder {
             return filterType.template(filter);
         }).join('');
 
-        const groupHTML = this.config.filters.filter(filter=> filter?.groupable).map(filter => {
-            const filterType = ReportBuilder.groupTypes[filter.type];
-            return filterType.template(filter);
-        }).join('');
-
         form.innerHTML = `
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     ${filterHTML}
                 </div>
-                <div class="col-md-6">
-                    ${groupHTML}
-                </div>
+                
             </div>
             <div class="d-flex justify-content-start align-items-center mb-3">
                 <button type="submit" class="btn btn-primary">Apply Filters</button>
