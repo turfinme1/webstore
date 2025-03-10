@@ -15,6 +15,7 @@ class CrudPageBuilder {
       pageSize: 10,
       filterParams: {},
       orderParams: [],
+      sortCriteria: [],
       updateEntityId: null,
       collectValuesCallbacks: {
         create: [],
@@ -35,7 +36,6 @@ class CrudPageBuilder {
       currentPageDisplay: null,
       showFilterButton: null,
       showCreateFormButton: null,
-      orderSelect: null,
     };
   }
 
@@ -45,8 +45,8 @@ class CrudPageBuilder {
     await this.renderForm("create");
     // this.renderForm("update"); // Render Update form
     await this.renderFilterForm();
-    this.loadRecords(); // Load initial records with pagination
-    this.attachEventListeners(); // Attach necessary event listeners
+    await this.loadRecords(); // Load initial records with pagination
+    await this.attachEventListeners(); // Attach necessary event listeners
   }
 
   createContainers() {
@@ -76,33 +76,12 @@ class CrudPageBuilder {
     if (hasPermission(this.userStatus, "read", this.schema.name)) {
       filterDiv.appendChild(showFilterButton);
     }
-
-    const orderSelect = document.createElement("select");
-    orderSelect.id = "order-select";
-    orderSelect.classList.add("btn", "btn-primary", "ms-2");
-    const emptyOption = document.createElement("option");
-    emptyOption.value = "";
-    emptyOption.text = `Order ${this.schema.name}`;
-    orderSelect.appendChild(emptyOption);
-    for (const [key, value] of Object.entries(this.querySchema.orderParams.properties)) {
-      const option = document.createElement("option");
-      option.value = `${key} asc`;
-      option.text = `${value.label} (ASC)`;
-      orderSelect.appendChild(option);
-
-      const optionDesc = document.createElement("option");
-      optionDesc.value = `${key} desc`;
-      optionDesc.text = `${value.label} (DESC)`;
-      orderSelect.appendChild(optionDesc);
-    }
-    this.elements.orderSelect = orderSelect;
     
     // orderSelect.addEventListener("change", (event) => {
     //   this.state.filterParams.orderBy = event.target.value;
     //   this.loadRecords();
     // });
 
-    filterDiv.appendChild(orderSelect);
     buttonContainer.appendChild(filterDiv);
 
     const showCreateFormButton = document.createElement("button");
@@ -620,10 +599,10 @@ class CrudPageBuilder {
     ) {
       return;
     }
-
+    const orderDirection = this.state.sortCriteria.map(item => [item.key, item.direction]);
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(this.state.filterParams),
-      orderParams: JSON.stringify(this.state.orderParams),
+      orderParams: JSON.stringify(orderDirection),
       page: this.state.currentPage,
       pageSize: this.state.pageSize,
     });
@@ -636,6 +615,7 @@ class CrudPageBuilder {
     const { result, count } = await response.data;
 
     this.renderTable(result);
+    this.updateSortIndicators();
     this.renderPagination(count, this.state.currentPage);
   }
 
@@ -650,6 +630,9 @@ class CrudPageBuilder {
     const headerRow = document.createElement("tr");
     this.schema.table_display_columns.forEach((column) => {
       const th = document.createElement("th");
+      th.classList.add("sortable");
+      th.style.cursor = "pointer";
+      th.dataset.sortKey = column;
       th.textContent = column
         .split("_")
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -679,7 +662,18 @@ class CrudPageBuilder {
         if (property?.renderConfig?.type === "date") {
           td.textContent = new Date(record[key]).toLocaleDateString();
           td.textContent = new Date(record[key]).toLocaleString();
-          // td.textContent = new Date(record[key]).toLocaleString();
+
+          if (!record[key] || record[key] === "All") {
+            return '---';
+          }
+          const date = new Date(record[key]);
+          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+          const year = date.getFullYear();
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          const seconds = String(date.getSeconds()).padStart(2, '0');
+          td.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
         } else if (Array.isArray(record[key])) {
           td.textContent = record[key].map((item) => item.name).join(", ");
         } else if (property?.renderConfig?.currency) {
@@ -715,7 +709,45 @@ class CrudPageBuilder {
     table.appendChild(tbody);
 
     this.elements.tableContainer.appendChild(table);
+
+    document.querySelectorAll('th.sortable').forEach(header => {
+      header.addEventListener('click', async (e) => {
+          await this.handleSortChange(e);
+      });
+    });
   }
+
+  updateSortIndicators() {
+    document.querySelectorAll('th[data-sort-key]').forEach(header => {
+        const key = header.dataset.sortKey;
+        const sortEntry = this.state.sortCriteria.find(c => c.key === key);
+        const sortEntryPosition = this.state.sortCriteria.findIndex(c => c.key === key);
+        header.innerHTML = header.innerHTML.replace(/\d+/s, '');
+        header.innerHTML = header.innerHTML.replace(/ ↑| ↓/g, '');
+        if (sortEntry) header.innerHTML += sortEntry.direction === 'ASC' ? ` ${sortEntryPosition+1}↑` : `${sortEntryPosition+1}↓`;
+    });
+  }
+
+  async handleSortChange(e) {
+    const key = e.currentTarget.dataset.sortKey;
+    const currentCriteria = [...this.state.sortCriteria];
+    const existingIndex = currentCriteria.findIndex(c => c.key === key);
+
+    let newDirection;
+    if (existingIndex === -1) {
+        newDirection = 'ASC';
+    } else {
+        const currentDirection = currentCriteria[existingIndex].direction;
+        newDirection = currentDirection === 'ASC' ? 'DESC' : 'none';
+    }
+
+    if (existingIndex !== -1) currentCriteria.splice(existingIndex, 1);
+    if (newDirection !== 'none') currentCriteria.unshift({ key, direction: newDirection });
+
+    this.state.sortCriteria = currentCriteria;
+
+    await this.loadRecords();
+}
 
   createActionButton(text, onClick) {
     const button = document.createElement("button");
@@ -836,6 +868,60 @@ class CrudPageBuilder {
     cancelButton.addEventListener("click", () => {
       this.elements.filterContainer.style.display = "none";
     });
+
+    flatpickr('.form-control[type="datetime-local"]', {
+      enableTime: true,
+      enableSeconds: true,
+      altInput: true,
+      altFormat: "d-m-Y H:i:S",
+      dateFormat: "Y-m-d\\TH:i:S",
+      time_24hr: true,
+      onReady: function(selectedDates, dateStr, instance) {
+          var customContainer = document.createElement("div");
+          customContainer.className = "custom-buttons-container";
+          customContainer.style.marginTop = "10px";
+          
+          function addButton(label, callback) {
+              var btn = document.createElement("button");
+              btn.type = "button";
+              btn.textContent = label;
+              btn.style.marginRight = "5px";
+              btn.style.padding = "5px 10px";
+              btn.addEventListener("click", callback);
+              customContainer.appendChild(btn);
+          }
+          
+          addButton("Clear", function() {
+              instance.clear();
+          });
+
+          addButton("Last Day", function() {
+              var now = new Date();
+              now.setDate(now.getDate() - 1);
+              instance.setDate(now);
+          });
+          
+          addButton("Last Week", function() {
+              var now = new Date();
+              now.setDate(now.getDate() - 7);
+              instance.setDate(now);
+          });
+
+          addButton("Last Month", function() {
+              var now = new Date();
+              now.setMonth(now.getMonth() - 1);
+              instance.setDate(now);
+          });
+
+          addButton("Last Year", function() {
+              var now = new Date();
+              now.setFullYear(now.getFullYear() - 1);
+              instance.setDate(now);
+          });
+          
+          instance.calendarContainer.appendChild(customContainer);
+      }
+  });
   }
 
   attachEventListeners() {
@@ -856,17 +942,6 @@ class CrudPageBuilder {
         this.loadRecords();
       });
     }
-
-    this.elements.orderSelect.addEventListener("change", async (event) => {
-      if(event.target.value) {
-          this.state.currentPage = 1;
-          this.state.orderParams = [ event.target.value.split(" ") ];
-      } else {
-        this.state.orderParams = [];
-      }
-
-      await this.loadRecords();
-    });
 
     this.elements.showCreateFormButton.addEventListener("click", () => {
       this.elements.filterContainer.style.display = "none";
