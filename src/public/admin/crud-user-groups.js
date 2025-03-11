@@ -281,7 +281,7 @@ async function handleCreateUser(event) {
   const name = data.name_filter_value;
   const filters = {...data};
   const payload = { name, filters };
-
+  elements.createForm.querySelector('button[type="submit"]').disabled = true;
   try {
     const response = await fetchWithErrorHandling("/crud/user-groups", {
       method: "POST",
@@ -299,6 +299,8 @@ async function handleCreateUser(event) {
     }
   } catch (error) {
     console.error("Error creating user:", error);
+  } finally {
+    elements.createForm.querySelector('button[type="submit"]').disabled = false
   }
 }
 
