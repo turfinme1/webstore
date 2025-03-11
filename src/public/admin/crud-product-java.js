@@ -1,6 +1,6 @@
 import { createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage, hasPermission, getUrlParams, updateUrlParams } from "./page-utility.js";
 
-const javaApiUrl = "http://10.20.3.224:8080";
+const javaApiUrl = "http://10.20.3.21:8080";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const mainContainer = document.getElementById("main-container");

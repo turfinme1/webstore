@@ -1,6 +1,6 @@
 import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
 
-const javaApiUrl = "http://10.20.3.224:8080";
+const javaApiUrl = "http://10.20.3.21:8080";
 
 // Centralized state object
 const state = {
