@@ -721,6 +721,13 @@ async function createBackofficeNavigation(userStatus) {
       permission: "view",
       interface: "notifications",
     },
+    {
+      id: "crud-user-group-link",
+      text: "CRUD User Groups",
+      href: "/crud-user-groups",
+      permission: "view",
+      interface: "user-groups",
+    },
     ...reportLinks,
     {
       id: "upload-products-link",

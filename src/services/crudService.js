@@ -2,7 +2,8 @@ const bcrypt = require("bcrypt");
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
 
 class CrudService {
-  constructor() {
+  constructor(reportService) {
+    this.reportService = reportService;
     this.getAll = this.getAll.bind(this);
     this.getById = this.getById.bind(this);
     this.update = this.update.bind(this);
@@ -409,6 +410,9 @@ class CrudService {
         "target-groups": {
           after: this.targetGroupCreateHook.bind(this),
         },
+        "user-groups": {
+          after: this.userGroupCreateHook.bind(this),
+        },
         notifications: {
           after: this.notificationCreateHook.bind(this),
         }
@@ -611,6 +615,22 @@ class CrudService {
   
     const queryValues = [...innerInsertQuery.searchValues, mainEntity.id];
   
+    const result = await data.dbConnection.query(insertQuery, queryValues);
+  }
+
+  async userGroupCreateHook(data, mainEntity) {
+    data.body.metadataRequest = true;
+    data.params.report = 'report-users'
+    const reportDefinition = await this.reportService.getReport(data)
+    const replacedQueryData = this.reportService.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body.filters);
+    
+    const insertQuery = `
+      INSERT INTO user_user_groups (user_id, user_group_id)
+      SELECT users_view.id, $${replacedQueryData.insertValues.length + 1}
+      FROM (${replacedQueryData.sql}) AS users_view
+      WHERE users_view.id IS NOT NULL`;
+
+    const queryValues = [...replacedQueryData.insertValues, mainEntity.id];
     const result = await data.dbConnection.query(insertQuery, queryValues);
   }
 
