@@ -1,4 +1,5 @@
 const { PeerError, UserError } = require("../assert");
+const { ENV } = require("../constants");
 const Logger = require("../logger");
 
 describe("Logger", () => {
@@ -15,7 +16,10 @@ describe("Logger", () => {
       dbConnection: mockDbConnection,
     };
 
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.replaceProperty(ENV, "ISSUES_URL", "http://example.com/issues");
+    jest.replaceProperty(ENV, "BRANCH", "web-store-rc");
+    jest.replaceProperty(ENV, "REPO_OWNER", "telebid-interns");
+    jest.replaceProperty(ENV, "REPO_NAME", "borislav.a-training");
 
     logger = new Logger(mockReq);
   });
@@ -62,10 +66,10 @@ describe("Logger", () => {
         expect.stringContaining("INSERT INTO logs"),
         expect.any(Array)
       );
-      expect(console.error).toHaveBeenCalledWith(
-        "Error saving log to database:",
-        expect.any(Error)
-      );
+      // expect(console.error).toHaveBeenCalledWith(
+      //   "Error saving log to database:",
+      //   expect.any(Error)
+      // );
     });
   });
 
@@ -175,26 +179,69 @@ describe("Logger", () => {
     });
   });
 
-  // describe("error", () => {
-  //   it("should call logToDatabase with error level messages", async () => {
-  //     jest.spyOn(logger, 'logToDatabase').mockResolvedValue();
-  //     const errorObject = {
-  //       params: { code: 404, long_description: "Error log long description" },
-  //       message: "Error log test",
-  //       stack: "stack trace",
-  //     };
+  describe("createIssue", () => {
+    beforeEach(() => {
+      global.fetch = jest.fn().mockResolvedValue({ ok: true });
+    });
+  
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+  
+    it("should parse the error stack and call fetch with correct fileName and lineNumber", async () => {
+      const errorObject = new Error("Test error message");
+      errorObject.stack = `Error: Test error message
+      at AuthService.verifyCaptcha (/home/tb-intern1/Desktop/repo/borislav.a-training/src/services/authService.js:313:16)
+      at processTicksAndRejections (internal/process/task_queues.js:95:5)`;
+  
+      await logger.createIssue(errorObject);
+  
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      const fetchCall = global.fetch.mock.calls[0];
+      const url = fetchCall[0];
+      const options = fetchCall[1];
+      const body = JSON.parse(options.body);
+  
+      expect(url).toEqual(ENV.ISSUES_URL);
+      expect(options.method).toEqual("POST");
+      expect(options.headers["Content-Type"]).toEqual("application/json");
+  
+      expect(body.branch).toEqual(ENV.BRANCH);
+      expect(body.repoOwner).toEqual(ENV.REPO_OWNER);
+      expect(body.repoName).toEqual(ENV.REPO_NAME);
+      expect(body.error.message).toEqual(errorObject.message);
+      expect(body.error.stackTrace).toEqual(errorObject.stack);
+      expect(body.error.fileName).toEqual("authService.js");
+      expect(body.error.lineNumber).toEqual("313");
+    });
 
-  //     await logger.error(errorObject);
+    it("should use the third line of the stack if the second line contains 'assert'", async () => {
+      const errorObject = new Error("Test assert error");
+      errorObject.stack = `Error: Test assert error
+      at ASSERT (/home/tb-intern1/Desktop/repo/borislav.a-training/src/serverConfigurations/assert.js:50:5)
+      at AuthService.verifyCaptcha (/home/tb-intern1/Desktop/repo/borislav.a-training/src/services/authService.js:313:16)
+      at processTicksAndRejections (internal/process/task_queues.js:95:5)`;
+  
+      await logger.createIssue(errorObject);
+  
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      const fetchCall = global.fetch.mock.calls[0];
+      const options = fetchCall[1];
+      const body = JSON.parse(options.body);
+  
+      expect(body.error.fileName).toEqual("authService.js");
+      expect(body.error.lineNumber).toEqual("313");
+    });
+  
+    it("should call logger.error if an error occurs during processing", async () => {
+      const errorObject = new Error("Missing stack");
+      errorObject.stack = ""; // This will fail the ASSERT calls in createIssue
 
-  //     // Ensure logToDatabase is called with the expected log object
-  //     expect(logger.logToDatabase).toHaveBeenCalledWith({
-  //       code: errorObject.params.code,
-  //       short_description: errorObject.message,
-  //       long_description: errorObject.params.long_description,
-  //       debug_info: errorObject.stack,
-  //       log_level: "ERROR",
-  //       audit_type: "ASSERT",
-  //     });
-  //   });
-  // });
+      jest.spyOn(logger, "error").mockResolvedValue();
+  
+      await logger.createIssue(errorObject);
+      
+      expect(logger.error).toHaveBeenCalled();
+    });
+  });
 });

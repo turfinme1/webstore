@@ -1,4 +1,5 @@
-const { UserError, PeerError } = require("./assert");
+const { UserError, PeerError, ASSERT } = require("./assert");
+const { ENV } = require("./constants");
 
 class Logger {
   constructor(req) {
@@ -6,6 +7,7 @@ class Logger {
     this.logToDatabase = this.logToDatabase.bind(this);
     this.info = this.info.bind(this);
     this.error = this.error.bind(this);
+    this.createIssue = this.createIssue.bind(this);
   }
 
   async logToDatabase(logObject) {
@@ -63,6 +65,55 @@ class Logger {
       audit_type
     };
     await this.logToDatabase(logObject);
+  }
+
+  async createIssue(errorObject) {
+    try {
+      ASSERT(errorObject, "Error object is required", { code: "LOGGER.CRT_ISS.001", long_description: "Error object is required" });
+      ASSERT(errorObject.stack, "Error object must have a stack trace", { code: "LOGGER.CRT_ISS.002", long_description: "Error object must have a stack trace" });
+      
+      let fileName = '';
+      let lineNumber = '';
+      let errorLine = '';
+
+      const stackLines = errorObject.stack.split('\n');
+      if (stackLines.length >= 2) {
+        if (stackLines[1] && stackLines[1].toLowerCase().includes('assert') && stackLines.length >= 3) {
+          errorLine = stackLines[2];
+        } else {
+          errorLine = stackLines[1];
+        }
+      }
+
+      const openParen = errorLine.indexOf('(');
+      const closeParen = errorLine.indexOf(')');
+      if (openParen !== -1 && closeParen !== -1) {
+        const fileInfo = errorLine.substring(openParen + 1, closeParen);
+        const parts = fileInfo.split(':');
+        if (parts.length >= 3) {
+          lineNumber = parts[1];
+          fileName = parts[0].split('/').pop();
+        }
+      }
+      
+      await fetch(ENV.ISSUES_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branch: ENV.BRANCH,
+          repoOwner: ENV.REPO_OWNER,
+          repoName: ENV.REPO_NAME,
+          error: {
+            message: errorObject.message,
+            stackTrace: errorObject.stack,
+            lineNumber: lineNumber,
+            fileName: fileName,
+          }
+        })
+      });
+    } catch (error) {
+      await this.error(error);
+    }
   }
 }
 
