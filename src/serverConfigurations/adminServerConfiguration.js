@@ -135,6 +135,7 @@ function requestMiddleware(handler) {
   
       await req.dbConnection?.query("ROLLBACK");
       await req.logger.error(error);
+      await req.logger.createIssue(error);
 
       if(req.signal?.aborted) {
         if(res.headersSent) {

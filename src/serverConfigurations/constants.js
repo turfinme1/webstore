@@ -80,6 +80,11 @@ const ENV = {
   PRODUCTION_URL: 'http://localhost:3002',
   PAYPAL_CLIENT_ID:"Aa3N2FW_E6sIybxEbJ5ioVPY8Z9x8do7NEy1CjJ6TW08FR4dSVi7fj7wsP-V5D23wTu5yVh1P4L3-Nzr",
   PAYPAL_CLIENT_SECRET:"EAe1aPRgNqf7dFVM3440ZeUghaF2SIfEafX3NB-6jS-cw0QVp9hmML14_iJNKUWrspXsiXMtzc4FqQD1",
+  
+  ISSUES_URL: 'http://10.20.3.22:4545/createIssue',
+  REPO_OWNER: "telebid-interns",
+  REPO_NAME: "borislav.a-training",
+  BRANCH: "web-store-rc",
 
   DEVELOPMENT : {
     DB_CONFIG: {
