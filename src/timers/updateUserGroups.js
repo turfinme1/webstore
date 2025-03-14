@@ -20,7 +20,7 @@ const { tr } = require("@faker-js/faker");
             `);
             
             const { interval, initial_time } = settingsResult.rows[0];
-            const milliseconds = interval.minutes * 60 * 1000;
+            const milliseconds = interval.minutes * 60 * 1000 * 5; // 5 times the interval
             const now = new Date();
             const initialTimeToday = new Date(now);
             initialTimeToday.setHours(initial_time.split(":")[0]);
@@ -31,7 +31,7 @@ const { tr } = require("@faker-js/faker");
                 continue;
             }
             
-            // await new Promise(resolve => setTimeout(resolve, milliseconds));
+            await new Promise(resolve => setTimeout(resolve, milliseconds));
 
             const entitySchemaCollection = loadEntitySchemas("admin");
             const reportService = new ReportService();

@@ -1,4 +1,5 @@
 const { ASSERT_USER } = require("../serverConfigurations/assert");
+const { ENV } = require("../serverConfigurations/constants");
 const { validateBody } = require("../serverConfigurations/validation");
 
 class AppConfigController {
@@ -7,6 +8,7 @@ class AppConfigController {
     this.authService = authService;
     this.updateRateLimitSettings = this.updateRateLimitSettings.bind(this);
     this.getRateLimitSettings = this.getRateLimitSettings.bind(this);
+    this.getJavaAPIUrl = this.getJavaAPIUrl.bind(this);
   }
 
   async updateRateLimitSettings(req, res, next) {
@@ -30,6 +32,10 @@ class AppConfigController {
     };
     const result = await this.appConfigService.getRateLimitSettings(data);
     res.status(200).json(result);
+  }
+
+  async getJavaAPIUrl(req, res, next) {
+    res.status(200).json({ url: ENV.JAVA_API_URL });
   }
 }
 

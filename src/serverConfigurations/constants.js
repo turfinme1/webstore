@@ -76,51 +76,25 @@ const STATUS_CODES = {
 };
 
 const ENV = {
-  DEVELOPMENT_URL: 'http://localhost:3000',
-  PRODUCTION_URL: 'http://localhost:3002',
-  PAYPAL_CLIENT_ID:"Aa3N2FW_E6sIybxEbJ5ioVPY8Z9x8do7NEy1CjJ6TW08FR4dSVi7fj7wsP-V5D23wTu5yVh1P4L3-Nzr",
-  PAYPAL_CLIENT_SECRET:"EAe1aPRgNqf7dFVM3440ZeUghaF2SIfEafX3NB-6jS-cw0QVp9hmML14_iJNKUWrspXsiXMtzc4FqQD1",
+  URL: 'http://localhost',
+  BACKOFFICE_PORT: 4000,
+  FRONTOFFICE_PORT: 3000,
+  PAYPAL_CLIENT_ID:"",
+  PAYPAL_CLIENT_SECRET:"",
   
-  ISSUES_URL: 'http://10.20.3.22:4545/createIssue',
+  ISSUES_URL: 'http://localhost/createIssue',
   REPO_OWNER: "telebid-interns",
   REPO_NAME: "borislav.a-training",
   BRANCH: "web-store-rc",
 
-  DEVELOPMENT : {
-    DB_CONFIG: {
-      user: "postgres",
-      host: "localhost",
-      database: "webstore",
-      password: "postgres",
-      port: "5432",
-      max: 20,
-      idleTimeoutMillis: 6000,
-    }
-  },
+  DB_USER: '',
+  DB_HOST: '',
+  DB_DATABASE: '',
+  DB_PASSWORD: '',
+  DB_PORT: '',
+  DB_MAX: 10,
 
-  RC:{
-    DB_CONFIG: {
-      user: "postgres",
-      host: "localhost",
-      database: "webstore_rc",
-      password: "postgres",
-      port: "5432",
-      max: 20,
-      idleTimeoutMillis: 6000,
-    }
-  },
-
-  QA:{
-    DB_CONFIG: {
-      user: "postgres",
-      host: "localhost",
-      database: "webstore_qa",
-      password: "postgres",
-      port: "5432",
-      max: 20,
-      idleTimeoutMillis: 6000,
-    }
-  },
+  JAVA_API_URL: "http://localhost:8080",
 }
 
 module.exports = {STATUS_CODES, ENV};

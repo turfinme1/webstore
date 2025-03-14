@@ -133,8 +133,8 @@ class OrderService {
           },
         ],
         application_context: {
-          return_url: `${ENV.DEVELOPMENT_URL}/api/paypal/capture/${order.id}`,
-          cancel_url: `${ENV.DEVELOPMENT_URL}/api/paypal/cancel/${order.id}`,
+          return_url: `${ENV.URL}:${ENV.FRONTOFFICE_PORT}/api/paypal/capture/${order.id}`,
+          cancel_url: `${ENV.URL}:${ENV.FRONTOFFICE_PORT}/api/paypal/cancel/${order.id}`,
           shipping_preference: 'NO_SHIPPING',
           user_action: 'PAY_NOW'
         }

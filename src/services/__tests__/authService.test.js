@@ -82,10 +82,10 @@ describe("AuthService", () => {
       expect(mockMailService.queueEmail).toHaveBeenCalledWith({
         dbConnection: mockDbConnection,
         emailData: {
-          address: `<a href="${ENV.DEVELOPMENT_URL}/auth/verify-mail?token=token123">Verify Email</a>`,
+          address: `<a href="${ENV.URL}:${ENV.FRONTOFFICE_PORT}/auth/verify-mail?token=token123">Verify Email</a>`,
           first_name: undefined,
           last_name: undefined,
-          recipient: "test@example.com",
+          recipient_email: "test@example.com",
           templateType: "Email verification",
         },
       });
@@ -852,8 +852,8 @@ describe("AuthService", () => {
       expect(mockMailService.queueEmail).toHaveBeenCalledWith({
         dbConnection: mockDbConnection,
         emailData: {
-          address: `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=resetToken123">Reset Password</a>`,
-          recipient: "test@example.com",
+          address: `<a href="${ENV.URL}:${ENV.FRONTOFFICE_PORT}/reset-password?token=resetToken123">Reset Password</a>`,
+          recipient_email: "test@example.com",
           templateType: "Forgot password",
         },
       });

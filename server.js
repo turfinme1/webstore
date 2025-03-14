@@ -3,10 +3,11 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const compression = require('compression')
+const { ENV } = require("./src/serverConfigurations/constants");
 
 const serverConfig = require("./src/serverConfigurations/serverConfiguration");
 
-const port = 3000;
+const port = ENV.FRONTOFFICE_PORT;
 const app = express();
 app.use(compression());
 app.use(cookieParser());

@@ -2,10 +2,11 @@ const path = require("path");
 const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const { ENV } = require("./src/serverConfigurations/constants");
 
 const serverConfig = require("./src/serverConfigurations/adminServerConfiguration");
 
-const port = 4000;
+const port = ENV.BACKOFFICE_PORT;
 const app = express();
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "..")));

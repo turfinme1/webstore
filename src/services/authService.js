@@ -60,10 +60,10 @@ class AuthService {
       dbConnection: data.dbConnection,
       emailData: {
         templateType: "Email verification",
-        recipient: user.email,
+        recipient_email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
-        address: `<a href="${ENV.DEVELOPMENT_URL}/auth/verify-mail?token=${verifyToken}">Verify Email</a>`
+        address: `<a href="${ENV.URL}:${ENV.FRONTOFFICE_PORT}/auth/verify-mail?token=${verifyToken}">Verify Email</a>`
       }
     }
     await this.emailService.queueEmail(emailObject);
@@ -412,8 +412,8 @@ class AuthService {
       dbConnection: data.dbConnection,
       emailData: {
         templateType: "Forgot password",
-        recipient: user.email,
-        address: `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=${createResetTokenResult.rows[0].token_hash}">Reset Password</a>`
+        recipient_email: user.email,
+        address: `<a href="${ENV.URL}:${ENV.FRONTOFFICE_PORT}/reset-password?token=${createResetTokenResult.rows[0].token_hash}">Reset Password</a>`
       }
     }
     await this.emailService.queueEmail(emailObject);
