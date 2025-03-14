@@ -1,6 +1,6 @@
 import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
 
-const javaApiUrl = "http://10.20.3.21:8080";
+let javaApiUrl;
 
 // Centralized state object
 const state = {
@@ -54,6 +54,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   state.pageSize = urlParams.pageSize || 10;
   state.filterParams = urlParams.filterParams || {};
   state.orderParams = urlParams.orderParams || [];
+
+  const javaApiUrlResult = await fetch("/api/java-url");
+  const json = await javaApiUrlResult.json();
+  javaApiUrl = json.url;
 
   if (!hasPermission(userStatus, "read", "users")) {
     elements.mainContainer.innerHTML = "<h1>User Management</h1>";

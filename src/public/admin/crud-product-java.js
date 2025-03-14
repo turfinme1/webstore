@@ -1,7 +1,5 @@
 import { createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage, hasPermission, getUrlParams, updateUrlParams } from "./page-utility.js";
 
-const javaApiUrl = "http://10.20.3.21:8080";
-
 document.addEventListener("DOMContentLoaded", async () => {
   const mainContainer = document.getElementById("main-container");
   const createProductButton = document.getElementById("create-product-btn");
@@ -55,6 +53,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
   createBackofficeNavigation(userStatus);
+
+  const javaApiUrlResult = await fetch("/api/java-url");
+  const json = await javaApiUrlResult.json();
+  const javaApiUrl = json.url;
 
   if (!hasPermission(userStatus, "read", "products")) {
     mainContainer.innerHTML = "<h1>Product Management</h1>";

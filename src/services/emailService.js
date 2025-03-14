@@ -62,7 +62,7 @@ class EmailService {
         emailData.templateType = emailTemplate.name;
 
         if (emailTemplate.placeholders.includes("{address}")) {
-            emailData.address = `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=RANDOMLY_GENERATED_TOKEN">Reset Password</a>`;
+            emailData.address = `<a href="${ENV.URL}:${ENV.FRONTOFFICE_PORT}/reset-password?token=RANDOMLY_GENERATED_TOKEN">Reset Password</a>`;
         } else if (emailTemplate.placeholders.includes("{order_table}")) {
             emailData.order_number = "ORDER-123456789";
             emailData.payment_number = "PAYMENT-123456789";
@@ -81,7 +81,7 @@ class EmailService {
                 total_price_with_voucher: 27.00
             }; 
         } else {
-            emailData.address = `<a href="${ENV.DEVELOPMENT_URL}/auth/verify-mail?token=RANDOMLY_GENERATED_TOKEN">Verify Email</a>`;
+            emailData.address = `<a href="${ENV.URL}:${ENV.FRONTOFFICE_PORT}/auth/verify-mail?token=RANDOMLY_GENERATED_TOKEN">Verify Email</a>`;
         }
 
         const emailOptions = await this.processTemplate({ emailData, dbConnection: data.dbConnection });

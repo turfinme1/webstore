@@ -107,7 +107,10 @@ function requestMiddleware(handler) {
       }
 
       await req.logger.error(error);
-      await req.logger.createIssue(error);
+
+      if(!(error instanceof UserError)) {
+        await req.logger.createIssue(error);
+      }
       
       if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });

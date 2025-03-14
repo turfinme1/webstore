@@ -60,6 +60,7 @@ const routeTable = {
     "/api/test-email/:id": emailController.sendTestEmail,
     "/api/preview-email/:id": emailController.previewEmail,
     "/api/reports": reportController.getAllReports,
+    "/api/java-url": appConfigController.getJavaAPIUrl,
   },
   post: {
     "/crud/:entity": crudController.create,
@@ -135,7 +136,10 @@ function requestMiddleware(handler) {
   
       await req.dbConnection?.query("ROLLBACK");
       await req.logger.error(error);
-      await req.logger.createIssue(error);
+
+      if(!(error instanceof UserError)) {
+        await req.logger.createIssue(error);
+      }
 
       if(req.signal?.aborted) {
         if(res.headersSent) {
