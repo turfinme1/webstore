@@ -92,7 +92,8 @@ public class GlobalExceptionHandler {
             }
 
             Log log = buildLogFromException(ex, params, auditType.getValue(), LOG_LEVEL_ERROR);
-            loggerService.logError(log);
+//            loggerService.logError(log);
+            System.out.println(ex.getMessage());
 
             CustomErrorResponse errorResponse = new CustomErrorResponse(errorMessage);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);

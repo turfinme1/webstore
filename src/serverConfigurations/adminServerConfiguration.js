@@ -135,11 +135,11 @@ function requestMiddleware(handler) {
       console.error(error);
   
       await req.dbConnection?.query("ROLLBACK");
-      await req.logger.error(error);
+      // await req.logger.error(error);
 
-      if(!(error instanceof UserError)) {
-        await req.logger.createIssue(error);
-      }
+      // if(!(error instanceof UserError)) {
+      //   await req.logger.createIssue(error);
+      // }
 
       if(req.signal?.aborted) {
         if(res.headersSent) {
@@ -163,43 +163,43 @@ async function sessionMiddleware(req, res) {
   const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let sessionId = req.cookies[cookieName];
 
-  const settings = await req.dbConnection.query("SELECT * FROM app_settings WHERE id = 1 LIMIT 1");
-  req.context = { settings: settings.rows[0] };
+  // const settings = await req.dbConnection.query("SELECT * FROM app_settings WHERE id = 1 LIMIT 1");
+  // req.context = { settings: settings.rows[0] };
 
-  if (sessionId && UUID_REGEX.test(sessionId)) {
-    const data = { entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, sessionHash : sessionId };
-    const session = await authService.getSession(data);
+  // if (sessionId && UUID_REGEX.test(sessionId)) {
+  //   const data = { entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, sessionHash : sessionId };
+  //   const session = await authService.getSession(data);
 
-    if (session && new Date(session.expires_at) > new Date()) {
-      const refreshedSession = await authService.refreshSessionExpiry(data);
-      res.cookie(cookieName, refreshedSession.session_hash, {
-        expires: refreshedSession.expires_at,
-        secure: false, httpOnly: false
-      });
+  //   if (session && new Date(session.expires_at) > new Date()) {
+  //     const refreshedSession = await authService.refreshSessionExpiry(data);
+  //     res.cookie(cookieName, refreshedSession.session_hash, {
+  //       expires: refreshedSession.expires_at,
+  //       secure: false, httpOnly: false
+  //     });
 
-      const rolesPermissions = await req.dbConnection.query(`
-        SELECT roles.name as role, permissions.name as permission, interfaces.name as interface
-        FROM role_permissions
-        JOIN permissions ON role_permissions.permission_id = permissions.id
-        JOIN interfaces ON permissions.interface_id = interfaces.id
-        JOIN roles ON role_permissions.role_id = roles.id
-        WHERE roles.id IN (SELECT role_id FROM admin_user_roles WHERE admin_user_id = $1) AND roles.is_active = true`,
-        [session.admin_user_id]
-      );
-      session.role_permissions = rolesPermissions.rows;
-      req.session = session;
-      return;
-    }
-  }
+  //     const rolesPermissions = await req.dbConnection.query(`
+  //       SELECT roles.name as role, permissions.name as permission, interfaces.name as interface
+  //       FROM role_permissions
+  //       JOIN permissions ON role_permissions.permission_id = permissions.id
+  //       JOIN interfaces ON permissions.interface_id = interfaces.id
+  //       JOIN roles ON role_permissions.role_id = roles.id
+  //       WHERE roles.id IN (SELECT role_id FROM admin_user_roles WHERE admin_user_id = $1) AND roles.is_active = true`,
+  //       [session.admin_user_id]
+  //     );
+  //     session.role_permissions = rolesPermissions.rows;
+  //     req.session = session;
+  //     return;
+  //   }
+  // }
 
-  const data = {entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, userId: null, ipAddress: req.ip, sessionType: 'Anonymous' };
-  const anonymousSession = await authService.createSession(data);
-  res.cookie(cookieName, anonymousSession.session_hash, {
-    expires: anonymousSession.expires_at,
-    secure: false, httpOnly: false
-  });   
+  // const data = {entitySchemaCollection: req.entitySchemaCollection, dbConnection: req.dbConnection, userId: null, ipAddress: req.ip, sessionType: 'Anonymous' };
+  // const anonymousSession = await authService.createSession(data);
+  // res.cookie(cookieName, anonymousSession.session_hash, {
+  //   expires: anonymousSession.expires_at,
+  //   secure: false, httpOnly: false
+  // });   
 
-  req.session = anonymousSession;
+  // req.session = anonymousSession;
 }
 
 process.on('uncaughtException', async (error) => {

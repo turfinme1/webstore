@@ -2,6 +2,7 @@ package com.webstore.backoffice.crud.models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import org.hibernate.annotations.BatchSize;
 
 import java.math.BigDecimal;
 import java.util.HashSet;
@@ -42,7 +43,8 @@ public class Product extends BaseEntity<Long> {
     )
     private Set<Category> categories;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = false)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = false, fetch = FetchType.LAZY)
+    @BatchSize(size = 10)
     private Set<Image> images = new HashSet<>();
 
     @Override

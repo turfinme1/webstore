@@ -32,26 +32,26 @@ public class CustomSessionAuthenticationFilter extends OncePerRequestFilter {
         UUID sessionHash = extractSessionHashFromCookie(request.getCookies());
         if (sessionHash != null) {
             // Validate the session and load the session record (which contains user details)
-            Optional<AdminSession> sessionOpt = authService.getValidSession(sessionHash);
-            if (sessionOpt.isPresent()) {
-                AdminSession session = sessionOpt.get();
-                // Create a CustomUserDetails instance that implements UserDetails.
-                CustomUserDetails userDetails = new CustomUserDetails(session);
-                // Create an Authentication object (set credentials to null because we're not using password auth here)
-                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                // Set the authentication in the context
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            }
+//            Optional<AdminSession> sessionOpt = authService.getValidSession(sessionHash);
+//            if (sessionOpt.isPresent()) {
+//                AdminSession session = sessionOpt.get();
+//                // Create a CustomUserDetails instance that implements UserDetails.
+//                CustomUserDetails userDetails = new CustomUserDetails(session);
+//                // Create an Authentication object (set credentials to null because we're not using password auth here)
+//                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+//                        userDetails, null, userDetails.getAuthorities());
+//                // Set the authentication in the context
+//                SecurityContextHolder.getContext().setAuthentication(auth);
+//            }
         } else {
-            Optional<AdminSession> newSessionOptional = authService.createSession();
-            AdminSession newSession = newSessionOptional.get();
-            UUID newSessionHash = newSession.getSessionHash();
-
-            Cookie sessionCookie = new Cookie(sessionCookieName, newSessionHash.toString());
-            sessionCookie.setHttpOnly(true);
-            sessionCookie.setPath("/");
-            response.addCookie(sessionCookie);
+//            Optional<AdminSession> newSessionOptional = authService.createSession();
+//            AdminSession newSession = newSessionOptional.get();
+//            UUID newSessionHash = newSession.getSessionHash();
+//
+//            Cookie sessionCookie = new Cookie(sessionCookieName, newSessionHash.toString());
+//            sessionCookie.setHttpOnly(true);
+//            sessionCookie.setPath("/");
+//            response.addCookie(sessionCookie);
         }
         // Continue filter chain
         filterChain.doFilter(request, response);

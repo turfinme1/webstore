@@ -22,7 +22,8 @@ class ProductService {
 
   async getFilteredPaginated(data) {
     const schema = data.entitySchemaCollection.products;
-    const offset = (data.query.page - 1) * data.query.pageSize;
+    let offset = (data.query.page - 1) * data.query.pageSize;
+    offset = Math.floor(Math.random() * 130 * data.query.pageSize);
     let searchValues = [];
     let conditions = [];
 

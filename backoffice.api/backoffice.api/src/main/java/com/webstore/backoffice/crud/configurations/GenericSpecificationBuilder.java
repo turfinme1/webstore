@@ -14,10 +14,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,8 +38,10 @@ public class GenericSpecificationBuilder<T extends BaseEntity<?>>  {
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
 
+        Random random = new Random();
+        int randomPage = random.nextInt(130) + 1;
         Sort sort = buildSort(params.getOrderParams());
-        PageRequest pageRequest = PageRequest.of(params.getPage() - 1, params.getPageSize(), sort);
+        PageRequest pageRequest = PageRequest.of(randomPage - 1, params.getPageSize(), sort);
 
         return new QueryBuildWrapper<>(specification, sort, pageRequest);
     }
