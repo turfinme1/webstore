@@ -276,13 +276,41 @@ function createPaginationButton(text, enabled, onClick) {
 // Handle user creation
 async function handleCreateUser(event) {
   event.preventDefault();
-  const formData = new FormData(elements.createForm);
-  const data = Object.fromEntries(formData);
-  const name = data.name_filter_value;
-  const filters = {...data};
-  const payload = { name, filters };
-  elements.createForm.querySelector('button[type="submit"]').disabled = true;
   try {
+    const formData = new FormData(elements.createForm);
+    const data = Object.fromEntries(formData);
+    const name = data.name_filter_value;
+    const filters = {...data};
+    const payload = { name, filters };
+    elements.createForm.querySelector('button[type="submit"]').disabled = true;
+
+    if(!name && name.trim() === "") {
+      showToastMessage("Group Name is required", "error");
+      elements.createForm.querySelector('button[type="submit"]').disabled = false;
+      return;
+    }
+
+    const filterKeys = Object.keys(filters);
+    for (const key of filterKeys) {
+      if(key.includes("min") && filters[key] && filters[key.replace("min", "max")]) {
+        let min;
+        let max;
+        if(key.includes("created") && filters[key]) {
+          min = new Date(filters[key]);
+          max = new Date(filters[key.replace("min", "max")]);
+        } else {
+          min = parseInt(filters[key]);
+          max = parseInt(filters[key.replace("min", "max")]);
+        }
+        
+        if(min > max) {
+          showToastMessage(`Min should be less than Max for ${key.replace("minimum_filter_value", "").split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}`, "error");
+          elements.createForm.querySelector('button[type="submit"]').disabled = false;
+          return;
+        }
+      }
+    }
+
     const response = await fetchWithErrorHandling("/crud/user-groups", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -462,6 +490,11 @@ async function renderCreateAndUpdateForms() {
     elements.userUpdateFormWrapper.innerHTML = "";
     await reportUI.buildFilterForm(elements.createFormWrapper);
     await reportUI.buildFilterForm(elements.userUpdateFormWrapper);
+
+    const elementsToHide = document.querySelectorAll('[id*="grouping_select_value"]');
+    elementsToHide.forEach(element => {
+        element.style.display = "none";
+    });
 
     const forms = document.querySelectorAll('#report-form');
     elements.createForm = forms[0];

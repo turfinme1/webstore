@@ -590,9 +590,12 @@ class ReportService {
         {
             key: "campaign_name",
             grouping_expression: "C.name",
-            filter_expression: "STRPOS(LOWER(CAST( C.name AS text )), LOWER( $FILTER_VALUE$ )) > 0",
-            type: "text",
+            filter_expression: "C.id = $FILTER_VALUE$",
+            type: "select",
             label: "Campaign Name",
+            fetchFrom: "/crud/campaigns",
+            displayKey: 'name',
+            valueKey: 'id',
         },
         {
             key: "voucher_code",
@@ -794,7 +797,7 @@ class ReportService {
             minimum_filter_expression: "U.created_at >= $FILTER_VALUE$",
             maximum_filter_expression: "U.created_at <= $FILTER_VALUE$",
             type: "timestamp",
-            label: "Period",
+            label: "Create Period",
             groupable: true,
         },
         {
