@@ -94,6 +94,13 @@ class Logger {
           lineNumber = parts[1];
           fileName = parts[0].split('/').pop();
         }
+      } else {
+        let parts = errorLine.trim().split(' ');
+        if (parts.length >= 2) {
+          parts = parts[1].split(':');
+          lineNumber = parts[1];
+          fileName = parts[0].split('/').pop();
+        }
       }
       
       await fetch(ENV.ISSUES_URL, {
