@@ -2,6 +2,8 @@ const path = require("path");
 const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const https = require("https");
+const fs = require('fs');
 const { ENV } = require("./src/serverConfigurations/constants");
 
 const serverConfig = require("./src/serverConfigurations/adminServerConfiguration");
@@ -18,6 +20,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 serverConfig.registerRoutes(serverConfig.routeTable, app);
 
-app.listen(port, () => {
+const server = https.createServer({
+  key: fs.readFileSync(path.join(__dirname, 'cert-key.pem'), 'utf8'),
+  cert: fs.readFileSync(path.join(__dirname, 'cert.pem'), 'utf8')
+}, app);
+
+server.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
