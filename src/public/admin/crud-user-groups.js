@@ -196,7 +196,7 @@ function renderUserList(users) {
     userRow.appendChild(createTableCell(formatDate(user.created_at)));
     userRow.appendChild(createTableCell(formatDate(user.updated_at)));
     userRow.appendChild(createTableCell(formatFilters(user.filters)));
-    userRow.appendChild(createTableCell(user.users_count));
+    userRow.appendChild(createTableCell(user.users_count, "right"));
 
     // Actions (Update/Delete)
     const actionCell = createTableCell("");
@@ -222,8 +222,9 @@ function renderUserList(users) {
 }
 
 // Create table cell
-function createTableCell(text) {
+function createTableCell(text, align = "left") {
   const cell = document.createElement("td");
+  cell.style.textAlign = align;
   cell.textContent = text;
   return cell;
 }
@@ -283,6 +284,7 @@ async function handleCreateUser(event) {
     const filters = {...data};
     const payload = { name, filters };
     elements.createForm.querySelector('button[type="submit"]').disabled = true;
+    elements.createForm.querySelector('#spinner').style.display = "inline-block";
 
     if(!name && name.trim() === "") {
       showToastMessage("Group Name is required", "error");
@@ -328,7 +330,8 @@ async function handleCreateUser(event) {
   } catch (error) {
     console.error("Error creating user:", error);
   } finally {
-    elements.createForm.querySelector('button[type="submit"]').disabled = false
+    elements.createForm.querySelector('button[type="submit"]').disabled = false;
+    elements.createForm.querySelector('#spinner').style.display = "none";
   }
 }
 
@@ -342,6 +345,9 @@ async function handleUpdateUser(event) {
   console.log(JSON.stringify(formData));
 
   try {
+    elements.userUpdateForm.querySelector('button[type="submit"]').disabled = true;
+    elements.userUpdateForm.querySelector('#spinner').style.display = "inline-block";
+
     const response = await fetchWithErrorHandling(`/crud/user-groups/${state.userToUpdateId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -360,6 +366,9 @@ async function handleUpdateUser(event) {
     }
   } catch (error) {
     console.error("Error updating user:", error);
+  } finally {
+    elements.userUpdateForm.querySelector('button[type="submit"]').disabled = false;
+    elements.userUpdateForm.querySelector('#spinner').style.display = "none";
   }
 }
 
@@ -448,9 +457,9 @@ async function handleFilterUsers(event) {
     if(usersCountMax) {
       filterParams["users_count"].max = usersCountMax;
     }
-    delete filterParams["users_count_min"];
-    delete filterParams["users_count_max"];
   }
+  delete filterParams["users_count_min"];
+  delete filterParams["users_count_max"];
   state.filterParams = filterParams;
 
   state.orderParams = [];
@@ -503,6 +512,12 @@ async function renderCreateAndUpdateForms() {
     elements.createForm.querySelector('button[type="submit"]').textContent = "Create";
     elements.userUpdateForm.querySelector('button[type="submit"]').textContent = "Update";
 
+    elements.createForm.querySelector('button[type="submit"]').parentNode.innerHTML += `<div id="spinner" class="spinner-border text-primary" role="status" style="display: none;">
+      <span class="visually-hidden">Loading...</span>
+    </div>`;
+    elements.userUpdateForm.querySelector('button[type="submit"]').parentNode.innerHTML += `<div id="spinner" class="spinner-border text-primary" role="status" style="display: none;">
+      <span class="visually-hidden">Loading...</span>
+    </div>`;
 
     document.querySelectorAll('.flatpickr-input').forEach(input => {
         if (input._flatpickr) {
