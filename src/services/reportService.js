@@ -303,15 +303,15 @@ class ReportService {
             key: "admin_user_id",
             grouping_expression: "L.admin_user_id",
             filter_expression: "L.admin_user_id = $FILTER_VALUE$",
-            type: "number",
-            hideInUI: true,
+            label: 'Admin User ID',
+            type: "number_single",
         },
         {
             key: "user_id",
             grouping_expression: "L.user_id",
             filter_expression: "L.user_id = $FILTER_VALUE$",
-            type: "number",
-            hideInUI: true,
+            label: 'User ID',
+            type: "number_single",
         },
         {
             key: "short_description",
@@ -392,6 +392,8 @@ class ReportService {
             0 AS "sort_order" 
         FROM logs L
         WHERE TRUE
+            AND $user_id_filter_expression$
+            AND $admin_user_id_filter_expression$
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$
             AND $status_code_filter_expression$
@@ -415,6 +417,8 @@ class ReportService {
             1 AS "sort_order" 
         FROM logs L
         WHERE TRUE
+            AND $user_id_filter_expression$
+            AND $admin_user_id_filter_expression$
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$
             AND $status_code_filter_expression$
