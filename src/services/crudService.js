@@ -426,7 +426,10 @@ class CrudService {
         },
         "email-templates": {
           before: this.emailTemplateUpdateHook,
-        }
+        },
+        "user-groups": {
+          before: this.userGroupUpdateHook.bind(this),
+        },
       },
     }
   };
@@ -632,6 +635,40 @@ class CrudService {
 
     const queryValues = [...replacedQueryData.insertValues, mainEntity.id];
     const result = await data.dbConnection.query(insertQuery, queryValues);
+  }
+
+  async userGroupUpdateHook(data, insertObject) {
+    data.body.metadataRequest = true;
+    data.params.report = 'report-users'
+    const reportDefinition = await this.reportService.getReport(data)
+    const replacedQueryData = this.reportService.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body.filters);
+
+    await data.dbConnection.query(`
+      DELETE FROM user_user_groups
+      WHERE user_group_id = $${replacedQueryData.insertValues.length + 1}
+      AND user_id NOT IN (
+        SELECT users_view.id 
+        FROM (${replacedQueryData.sql}) AS users_view
+        WHERE users_view.id IS NOT NULL
+      )`,
+      [...replacedQueryData.insertValues, data.params.id]
+    );
+
+    await data.dbConnection.query(`
+      INSERT INTO user_user_groups (user_id, user_group_id)
+      SELECT users_view.id, $${replacedQueryData.insertValues.length + 1}
+      FROM (${replacedQueryData.sql}) AS users_view
+      WHERE users_view.id IS NOT NULL
+      ON CONFLICT (user_id, user_group_id) DO NOTHING`,
+      [...replacedQueryData.insertValues, data.params.id]
+    );
+
+    await data.dbConnection.query(`
+      UPDATE user_groups
+      SET updated_at = NOW()
+      WHERE id = $1`,
+      [data.params.id]
+    );
   }
 
   async emailTemplateUpdateHook(data, insertObject) {
