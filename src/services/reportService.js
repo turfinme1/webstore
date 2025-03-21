@@ -102,9 +102,23 @@ class ReportService {
         let filterValue = INPUT_DATA[`${reportFilter.key}_filter_value`];
         let filterExprReplaced;
 
-        insertValues.push(filterValue);
-        filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
-        sql = sql.replaceAll(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
+        if(Array.isArray(filterValue)) {
+            if (filterValue.length === 0) {
+                sql = sql.replaceAll(`$${reportFilter.key}_filter_expression$`, 'TRUE');
+            } else {
+                const values = [...filterValue];
+                const paramPlaceholders = values.map((value) => {
+                    insertValues.push(value);
+                    return `$${insertValues.length}`;
+                }).join(',');
+                filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `(${paramPlaceholders})`);
+                sql = sql.replaceAll(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
+            }
+        } else {
+            insertValues.push(filterValue);
+            filterExprReplaced = filterExpr.replace('$FILTER_VALUE$', `$${insertValues.length}`);
+            sql = sql.replaceAll(`$${reportFilter.key}_filter_expression$`, filterExprReplaced);
+        }
       } else {
         sql = sql.replaceAll(`$${reportFilter.key}_filter_expression$`, 'TRUE');
       }
@@ -807,8 +821,8 @@ class ReportService {
         {
             key: "country_name",
             grouping_expression: "cc.country_name",
-            filter_expression: "cc.id = $FILTER_VALUE$",
-            type: "select",
+            filter_expression: "cc.id IN $FILTER_VALUE$",
+            type: "select_multiple",
             label: "Country",
             groupable: true,
             fetchFrom: "/crud/iso-country-codes",

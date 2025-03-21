@@ -80,6 +80,20 @@ function attachEventListeners() {
         await handleSortChange(e);
     });
   });
+
+  $(document).ready(function() {
+    $('select[multiple]').multiselect({
+      enableClickableOptGroups: true,
+      enableCollapsibleOptGroups: true,
+      buttonWidth: '100%',
+      maxHeight: 400,
+      buttonClass: 'form-select text-start',
+      nonSelectedText: 'Select options',
+      templates: {
+        button: '<button type="button" class="multiselect dropdown-toggle form-select" data-bs-toggle="dropdown"><span class="multiselect-selected-text"></span></button>'
+      }
+    });
+  });
 }
 
 // Show and hide functions
@@ -281,8 +295,18 @@ async function handleCreateUser(event) {
     const formData = new FormData(elements.createForm);
     const data = Object.fromEntries(formData);
     const name = data.name_filter_value;
-    const filters = {...data};
+    const filters = {};
     const payload = { name, filters };
+
+    for (const [key, value] of formData.entries()) {
+      if (key.endsWith('_filter_value') && document.getElementById(key)?.multiple) {
+          if (!filters[key]) {
+              filters[key] = formData.getAll(key);
+          }
+      } else {
+          filters[key] = typeof value === 'string' ? value.trim() : value;
+      }    
+    }
     elements.createForm.querySelector('button[type="submit"]').disabled = true;
     elements.createForm.querySelector('#spinner').style.display = "inline-block";
 
@@ -340,9 +364,18 @@ async function handleUpdateUser(event) {
   const formData = new FormData(elements.userUpdateForm);
   const data = Object.fromEntries(formData);
   const name = data.name_filter_value;
-  const filters = {...data};
+  const filters = {};
   const payload = { name, filters };
-  console.log(JSON.stringify(formData));
+  
+  for (const [key, value] of formData.entries()) {
+    if (key.endsWith('_filter_value') && document.getElementById(key)?.multiple) {
+        if (!filters[key]) {
+            filters[key] = formData.getAll(key);
+        }
+    } else {
+        filters[key] = typeof value === 'string' ? value.trim() : value;
+    }    
+  }
 
   try {
     elements.userUpdateForm.querySelector('button[type="submit"]').disabled = true;
@@ -395,10 +428,20 @@ function populateUpdateForm(user) {
       const element = elements.userUpdateForm[key];
       if (element) {
           if (element._flatpickr) {
-              element._flatpickr.setDate(filters[key]);
-          } else {
-              element.value = filters[key];
-          }
+            element._flatpickr.setDate(filters[key]);
+          } else if (element.multiple) {
+            const values = Array.isArray(filters[key]) ? filters[key] : [filters[key]];
+            
+            $(element).find('option:selected').prop('selected', false);
+            
+            values.forEach(val => {
+                $(element).find(`option[value="${val}"]`).prop('selected', true);
+            });
+            
+            $(element).multiselect('refresh');
+        } else {
+          element.value = filters[key];
+        }
       }
     }
   // elements.userUpdateForm["first_name"].value = user.first_name;
