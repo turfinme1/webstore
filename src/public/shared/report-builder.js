@@ -175,6 +175,39 @@ class ReportBuilder {
                 </div>
             `
         },
+        select_multiple: {
+            template: (filter) => `
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_filter_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <select id="${filter.key}_filter_value"
+                                        name="${filter.key}_filter_value"
+                                        class="form-select"
+                                        multiple
+                                        ${filter.required ? 'required' : ''}>
+                                    ${filter.options.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+                                </select>
+                            </div>
+                            ${filter?.groupable ? `
+                                <div class="col-4">
+                                    <select 
+                                            id="${filter.key}_grouping_select_value"
+                                            name="${filter.key}_grouping_select_value"
+                                            class="form-select"
+                                            ${filter.required ? 'required' : ''}>
+                                        <option value="">No grouping</option>
+                                        <option value="group">Group by ${filter.label}</option>
+                                    </select>
+                                </div>
+                                `
+                                : ''}
+                        </div>
+                    </div>
+                </div>
+            `
+        },
     };
 
     static groupTypes = {
@@ -346,7 +379,7 @@ class ReportBuilder {
         form.className = 'mb-3';
 
         for (const filter of this.config.filters) {
-            if (filter.type === 'select' && !filter.options) {
+            if ((filter.type === 'select' || filter.type === 'select_multiple') && !filter.options) {
                 filter.options = await this.fetchOptions(filter);
             }
         }
@@ -428,6 +461,20 @@ class ReportBuilder {
             }
         });
 
+        $(document).ready(function() {
+          $('select[multiple]').multiselect({
+            enableClickableOptGroups: true,
+            enableCollapsibleOptGroups: true,
+            buttonWidth: '100%',
+            maxHeight: 400,
+            buttonClass: 'form-select text-start',
+            nonSelectedText: 'Select options',
+            templates: {
+              button: '<button type="button" class="multiselect dropdown-toggle form-select" data-bs-toggle="dropdown"><span class="multiselect-selected-text"></span></button>'
+            }
+          });
+        });
+
         return formContainer;
     }
 
@@ -482,8 +529,7 @@ class ReportBuilder {
 
             if(await this.validateForm()) {
                 const formData = new FormData(form);
-                const filters = Object.fromEntries(formData);
-                await this.fetchData(filters);
+                await this.fetchData(formData);
                 this.state.sortCriteria = [];
                 this.updateSortIndicators();
             }
@@ -515,8 +561,7 @@ class ReportBuilder {
 
         if(await this.validateForm()) {
             const formData = new FormData(document.getElementById('report-form'));
-            const filters = Object.fromEntries(formData);
-            await this.fetchData(filters, this.state.sortCriteria);
+            await this.fetchData(formData, this.state.sortCriteria);
         }
     }
 
@@ -531,19 +576,28 @@ class ReportBuilder {
         });
     }
 
-    async fetchData(filters, sortCriteria) {
+    async fetchData(formData, sortCriteria) {
+        const filters = {};
         const spinner = document.getElementById('spinner');
         const button = document.querySelector('button[type="submit"]');
         button.disabled = true;
         spinner.style.display = 'block';
-        const trimmedFilters = Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, value.trim()]));
+        for (const [key, value] of formData.entries()) {
+            if (key.endsWith('_filter_value') && document.getElementById(key)?.multiple) {
+                if (!filters[key]) {
+                    filters[key] = formData.getAll(key);
+                }
+            } else {
+                filters[key] = typeof value === 'string' ? value.trim() : value;
+            }    
+        }
         document.querySelectorAll('th.sortable').forEach(header => header.style.pointerEvents = 'none');
 
         try {
             const response = await fetch(this.config.dataEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...trimmedFilters, sortCriteria })
+                body: JSON.stringify({ ...filters, sortCriteria })
             });
             
             const data = await response.json();
