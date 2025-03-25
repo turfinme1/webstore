@@ -45,6 +45,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       <h2 class="mb-4">Overview</h2>
 
       <div class="row mb-4">
+        <div class="col-6">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">User groups chart</h5>
+              <canvas id="userGroupChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mb-4">
         <div class="col-12">
           <div class="card">
             <div class="card-body">
@@ -112,6 +123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await Promise.any([
     renderOrderChartLastSixMonths(),
     renderOrderChartLastTwoDays(),
+    renderUserGroupsChart(),
   ]);
 });
 
@@ -482,6 +494,72 @@ async function renderCampaignDashboard(startDate, endDate) {
   }
 }
 
+async function renderUserGroupsChart() {
+  try {
+    const appSettings = await fetchWithErrorHandling("/app-config/rate-limit-settings");
+
+    if (!appSettings.ok) {
+      showToastMessage(appSettings.error, "error");
+      return;
+    }
+
+    const userGroups = await fetchWithErrorHandling(`/crud/user-groups/filtered?filterParams={}&pageSize=${appSettings.data.user_group_chart_count}&page=1`);
+    if (!userGroups.ok) {
+      showToastMessage(userGroups.error, "error");
+      return;
+    }
+
+    const data = await userGroups.data;
+    const labels = data.result.map(g => g.name);
+    const counts = data.result.map(g => Number(g.users_count));
+
+    const colors = labels.map(_ => `hsl(${Math.random() * 360}, 65%, 60%)`);
+
+    const ctx = document.getElementById('userGroupChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{
+        label: 'User Count',
+        data: counts,
+        backgroundColor: colors,
+        borderColor: colors.map(c => c.replace('60%', '40%')),
+        borderWidth: 1
+      }]},
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            type: 'logarithmic',
+            title: { display: true, text: 'Users' },
+            ticks: {
+              callback: value => {
+                const n = Math.round(value);
+                return formatNumber(n, false);
+              },
+              maxTicksLimit: 10
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const n = Math.round(ctx.raw);
+                return `${ctx.dataset.label}: ${formatNumber(n, false)}`;
+              }
+            }
+          }
+        }
+      }
+    });
+  } catch(err) {
+    console.error('Failed to load user groups chart', err);
+  }
+}
+
 function formatMetricValue(metricName, value) {
   if (metricName.includes('Revenue')) {
     return formatCurrency(value);
@@ -507,7 +585,7 @@ function formatCurrency(value) {
   return `$${value.toFixed(2)}`;
 }
 
-function formatNumber(value) {
+function formatNumber(value, formatAsCurrency = true) {
   if (typeof value !== 'number') return '0';
   
   if (value >= 1000000) {
@@ -516,7 +594,12 @@ function formatNumber(value) {
   if (value >= 1000) {
     return `${(value / 1000).toFixed(1)}K`;
   }
-  return `${value.toFixed(2)}`;
+
+  if (formatAsCurrency) {
+    return `${value.toFixed(2)}`;
+  }
+
+  return `${value}`;
 }
 
 function getMetricColor(metricName) {
