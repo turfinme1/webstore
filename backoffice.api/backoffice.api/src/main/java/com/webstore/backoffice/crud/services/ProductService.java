@@ -33,6 +33,7 @@ public class ProductService extends GenericAppService<ProductDto, Product, Long>
     private final ImageRepository imageRepository;
     private final AppSettingRepository appSettingRepository;
     private BigDecimal vatPercentage;
+    private final JpaRepository<Product, Long> repository;
 
     public ProductService(JpaRepository<Product, Long> repository,
                           SchemaRegistry schemaRegistry,
@@ -43,6 +44,7 @@ public class ProductService extends GenericAppService<ProductDto, Product, Long>
         super(repository, schemaRegistry, objectMapper, specificationBuilder);
         this.imageRepository = imageRepository;
         this.appSettingRepository = appSettingRepository;
+        this.repository = repository;
     }
 
     public ProductDto convertToDto(Product product) {
@@ -76,6 +78,12 @@ public class ProductService extends GenericAppService<ProductDto, Product, Long>
 
     @Override
     public ProductDto update(Long id, ProductDto dto) {
+        var product = repository.findById(id);
+        ASSERT_USER(product.isPresent(), "Product not found",
+                new HashMap<>() {{
+                    put("code", "APP_SRV_00007_PRODUCT_NOT_FOUND");
+                }});
+        dto.setCode(product.get().getCode());
         var updatedProduct = super.update(id, dto);
         var updatedProductDomainEntity = updatedProduct.toDomainEntity();
 

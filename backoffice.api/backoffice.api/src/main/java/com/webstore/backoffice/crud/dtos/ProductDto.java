@@ -77,6 +77,7 @@ public class ProductDto extends BaseDto<Product> {
         product.setId(this.id);
         product.setName(this.name);
         product.setPrice(this.price);
+        product.setCode(this.code);
         product.setShortDescription(this.shortDescription);
         product.setLongDescription(this.longDescription);
         product.setCategories(this.categories

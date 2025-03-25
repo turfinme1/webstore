@@ -50,6 +50,7 @@ public class ProductController extends GenericController<ProductDto, Product, Lo
             categoryDtos.add(category);
         }
         dto.setCategories(categoryDtos);
+        dto.setCode("P" + System.currentTimeMillis());
         dto.setImages(Arrays.stream(new MultipartFile[] {image1, image2, image3})
                 .filter(image -> image.getSize() > 0)
                 .toArray(MultipartFile[]::new));
