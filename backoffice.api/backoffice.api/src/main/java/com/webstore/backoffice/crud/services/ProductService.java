@@ -6,6 +6,7 @@ import com.webstore.backoffice.crud.configurations.SchemaRegistry;
 import com.webstore.backoffice.crud.constants.CrudConstants;
 import com.webstore.backoffice.crud.dtos.ProductDto;
 import com.webstore.backoffice.crud.models.Image;
+import com.webstore.backoffice.crud.models.Inventory;
 import com.webstore.backoffice.crud.models.Product;
 import com.webstore.backoffice.crud.repositories.ImageRepository;
 import com.webstore.backoffice.security.repositories.AppSettingRepository;
@@ -34,17 +35,20 @@ public class ProductService extends GenericAppService<ProductDto, Product, Long>
     private final AppSettingRepository appSettingRepository;
     private BigDecimal vatPercentage;
     private final JpaRepository<Product, Long> repository;
+    private final JpaRepository<Inventory, Long> inventoryRepository;
 
     public ProductService(JpaRepository<Product, Long> repository,
                           SchemaRegistry schemaRegistry,
                           ObjectMapper objectMapper,
                           GenericSpecificationBuilder<Product> specificationBuilder,
                           ImageRepository imageRepository,
-                          AppSettingRepository appSettingRepository) {
+                          AppSettingRepository appSettingRepository,
+                          JpaRepository<Inventory, Long> inventoryRepository) {
         super(repository, schemaRegistry, objectMapper, specificationBuilder);
         this.imageRepository = imageRepository;
         this.appSettingRepository = appSettingRepository;
         this.repository = repository;
+        this.inventoryRepository = inventoryRepository;
     }
 
     public ProductDto convertToDto(Product product) {
@@ -72,6 +76,11 @@ public class ProductService extends GenericAppService<ProductDto, Product, Long>
             productImage.setProduct(createdProductDomainEntity);
             imageRepository.save(productImage);
         }
+
+        var inventory = new Inventory();
+        inventory.setProduct(createdProductDomainEntity);
+        inventory.setQuantity(dto.getQuantity());
+        inventoryRepository.save(inventory);
 
         return createdProduct;
     }
@@ -101,6 +110,19 @@ public class ProductService extends GenericAppService<ProductDto, Product, Long>
                 deleteImage(imageToDelete);
                 imageRepository.deleteByUrl(imageToDelete);
             }
+        }
+
+        var inventory = inventoryRepository.findAll().stream()
+                .filter(inv -> inv.getProduct().getId().equals(id))
+                .findFirst();
+        if (inventory.isPresent()) {
+            inventory.get().setQuantity(dto.getQuantity());
+            inventoryRepository.save(inventory.get());
+        } else {
+            var newInventory = new Inventory();
+            newInventory.setProduct(updatedProductDomainEntity);
+            newInventory.setQuantity(dto.getQuantity());
+            inventoryRepository.save(newInventory);
         }
 
         return updatedProduct;

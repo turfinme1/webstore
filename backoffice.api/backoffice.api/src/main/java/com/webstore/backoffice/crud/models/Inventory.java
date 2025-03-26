@@ -8,11 +8,11 @@ import org.hibernate.annotations.ColumnDefault;
 @Table(name = "inventories")
 public class Inventory {
     @Id
-    @ColumnDefault("nextval('inventories_id_seq')")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;
 

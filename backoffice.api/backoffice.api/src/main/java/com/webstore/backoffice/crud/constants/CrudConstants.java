@@ -38,6 +38,7 @@ public final class CrudConstants {
     public static final String PRODUCT_ID_REQUIRED = "Product ID is required";
     public static final String CATEGORIES_REQUIRED = "Categories is required";
     public static final String IMAGE_REQUIRED = "Image is required";
+    public static final String QUANTITY_REQUIRED = "Quantity is required";
 
     private CrudConstants() {
     }

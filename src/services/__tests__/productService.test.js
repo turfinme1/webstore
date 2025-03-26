@@ -505,13 +505,18 @@ describe("ProductService", () => {
       req.body = {
         name: "Updated Product",
         price: 150.0,
+        quantity: 5,
         short_description: "Updated short description",
         long_description: "Updated long description",
         categories: [1, 2],
         imagesToDelete: JSON.stringify([]),
       };
 
-      mockDbConnection.query.mockResolvedValueOnce({ rows: [expectedResponse] });
+      mockDbConnection.query
+        .mockResolvedValueOnce({ rows: [expectedResponse] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{id: 1}] }); // inventory result
 
       const result = await productService.update(req);
 
