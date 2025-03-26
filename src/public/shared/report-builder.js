@@ -107,7 +107,7 @@ class ReportBuilder {
                             <div class="col-4">
                                 <input type="datetime-local" step="1" 
                                       id="${filter.key}_minimum_filter_value"
-                                      value="${new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0, 16)}"
+                                      value="${this.toLocalDate(new Date(new Date().setDate(new Date().getDate() - 1))).toISOString().slice(0, 16)}"
                                       name="${filter.key}_minimum_filter_value" 
                                       class="form-control"
                                       aria-label="Start (UTC)">
@@ -115,7 +115,7 @@ class ReportBuilder {
                             <div class="col-4">
                                 <input type="datetime-local" step="1" 
                                       id="${filter.key}_maximum_filter_value"
-                                      value="${new Date().toISOString().slice(0, 16)}" 
+                                      value="${this.toLocalDate(new Date()).toISOString().slice(0, 16)}" 
                                       name="${filter.key}_maximum_filter_value" 
                                       class="form-control"
                                       aria-label="End (UTC)">
@@ -815,6 +815,11 @@ class ReportBuilder {
         document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
         document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
     }
+
+    static toLocalDate(date) {
+        const tzOffsetMs = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - tzOffsetMs);
+    }
 }
 
 export { ReportBuilder };
@@ -838,7 +843,6 @@ class ValidationService {
                 validate: (min, max) => {
                     const errors = [];
                     const now = new Date();
-                    now.setHours(now.getHours() - 2);
                     if (min && new Date(min) > now) {
                         errors.push({
                             isValid: false,
