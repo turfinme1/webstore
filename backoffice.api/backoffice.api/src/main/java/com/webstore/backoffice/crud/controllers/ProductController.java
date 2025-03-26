@@ -28,6 +28,7 @@ public class ProductController extends GenericController<ProductDto, Product, Lo
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ProductDto> create(@RequestParam("name") String name,
                                              @RequestParam("price") BigDecimal price,
+                                             @RequestParam("quantity") Long quantity,
                                              @RequestParam("short_description") String shortDescription,
                                              @RequestParam("long_description") String longDescription,
                                              @RequestParam("categories") String categories,
@@ -37,6 +38,7 @@ public class ProductController extends GenericController<ProductDto, Product, Lo
         var dto = new ProductDto();
         dto.setName(name);
         dto.setPrice(price);
+        dto.setQuantity(quantity);
         dto.setShortDescription(shortDescription);
         dto.setLongDescription(longDescription);
         Set<CategoryDto> categoryDtos = new HashSet<>();
@@ -62,6 +64,7 @@ public class ProductController extends GenericController<ProductDto, Product, Lo
     public ResponseEntity<ProductDto> update(@PathVariable Long id,
                                              @RequestParam("name") String name,
                                              @RequestParam("price") BigDecimal price,
+                                             @RequestParam("quantity") Long quantity,
                                              @RequestParam("short_description") String shortDescription,
                                              @RequestParam("long_description") String longDescription,
                                              @RequestParam("categories") String categories,
@@ -73,6 +76,7 @@ public class ProductController extends GenericController<ProductDto, Product, Lo
         dto.setId(id);
         dto.setName(name);
         dto.setPrice(price);
+        dto.setQuantity(quantity);
         dto.setShortDescription(shortDescription);
         dto.setLongDescription(longDescription);
         Set<CategoryDto> categoryDtos = new HashSet<>();

@@ -10,6 +10,7 @@ import com.webstore.backoffice.crud.models.Category;
 import com.webstore.backoffice.crud.models.Image;
 import com.webstore.backoffice.crud.models.Product;
 import com.webstore.backoffice.crud.repositories.ImageRepository;
+import com.webstore.backoffice.crud.repositories.InventoryRepository;
 import com.webstore.backoffice.crud.repositories.ProductRepository;
 
 import com.webstore.backoffice.security.repositories.AppSettingRepository;
@@ -60,6 +61,9 @@ public class ProductServiceTest {
     @Mock
     private AppSettingRepository appSettingRepository;
 
+    @Mock
+    private InventoryRepository inventoryRepository;
+
     private String tempDir;
 
     @BeforeEach
@@ -70,7 +74,8 @@ public class ProductServiceTest {
                 objectMapper,
                 specificationBuilder,
                 imageRepository,
-                appSettingRepository
+                appSettingRepository,
+                inventoryRepository
         );
 
         // Create a temporary directory for testing file operations

@@ -263,6 +263,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         priceCell.textContent = `$${product.price}`;
         priceCell.style.textAlign = "right";
         productRow.appendChild(priceCell);
+
+        // Quantity Column
+        const quantityCell = document.createElement("td");
+        quantityCell.textContent = product.quantity || 0;
+        quantityCell.style.textAlign = "right";
+        productRow.appendChild(quantityCell);
         
         // Price with VAT Column
         const priceWithVatCell = document.createElement("td");
@@ -384,6 +390,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Populate form fields with product data
       productUpdateForm["name"].value = product.name;
       productUpdateForm["price"].value = product.price;
+      productUpdateForm["quantity"].value = product.quantity || 0;
       productUpdateForm["short_description"].value = product.short_description;
       productUpdateForm["long_description"].value = product.long_description;
 

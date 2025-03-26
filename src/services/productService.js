@@ -91,6 +91,7 @@ class ProductService {
           p.code,
           p.name,
           p.price,
+          inv.quantity,
           p.short_description,
           p.long_description,
           COALESCE(i.urls, ARRAY[]::text[]) AS images,
@@ -118,7 +119,8 @@ class ProductService {
           FROM ratings
           WHERE product_id IN (SELECT id FROM top_products)
           GROUP BY product_id
-      ) r ON p.id = r.product_id;
+      ) r ON p.id = r.product_id
+      LEFT JOIN inventories inv ON p.id = inv.product_id;
       `;
     
     const countQuery = `
@@ -198,6 +200,11 @@ class ProductService {
       await data.dbConnection.query(categoryQuery, [productResult.rows[0].id, ...categories]);
     }
 
+    await data.dbConnection.query(
+      `INSERT INTO inventories(product_id, quantity) VALUES($1, $2)`,
+      [productResult.rows[0].id, data.body.quantity]
+    );
+
     for (const filePath of filePaths) {
       await data.dbConnection.query(
         `INSERT INTO images(product_id, url) VALUES($1, $2)`,
@@ -231,6 +238,23 @@ class ProductService {
       await data.dbConnection.query(`
         INSERT INTO products_categories(product_id, category_id) VALUES ${categoryValues}`,
         [productResult.rows[0].id, ...data.body.categories]
+      );
+    }
+
+    const inventoryResult = await data.dbConnection.query(`
+      SELECT * FROM inventories WHERE product_id = $1`,
+      [productResult.rows[0].id]
+    );
+
+    if (inventoryResult.rows.length === 0) {
+      await data.dbConnection.query(`
+        INSERT INTO inventories(product_id, quantity) VALUES($1, $2)`,
+        [productResult.rows[0].id, data.body.quantity]
+      );
+    } else {
+      await data.dbConnection.query(`
+        UPDATE inventories SET quantity = $1 WHERE product_id = $2`,
+        [data.body.quantity, productResult.rows[0].id]
       );
     }
 
