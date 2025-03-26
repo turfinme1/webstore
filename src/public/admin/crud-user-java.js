@@ -276,6 +276,12 @@ async function handleCreateUser(event) {
   const data = Object.fromEntries(formData);
   if(data.birth_date === ""){
     data.birth_date = null;
+  } else {
+    const birthDate = new Date(data.birth_date);
+    if(birthDate > new Date()){
+      showToastMessage("Birth date must be in the past", "error");
+      return;
+    }
   }
   try {
     const response = await fetchWithErrorHandling(`${javaApiUrl}/crud/users`, {
@@ -303,6 +309,12 @@ async function handleUpdateUser(event) {
   const data = Object.fromEntries(formData);
   if(data.birth_date === ""){
     data.birth_date = null;
+  } else {
+    const birthDate = new Date(data.birth_date);
+    if(birthDate > new Date()){
+      showToastMessage("Birth date must be in the past", "error");
+      return;
+    }
   }
   console.log(JSON.stringify(formData));
   try {
