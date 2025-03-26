@@ -1,6 +1,8 @@
 {
   "type": "object",
   "name": "products",
+  "table": "products",
+  "href": "/crud-product",
   "routeName": "products",
   "views": "products_view",
   "queryValidationSchema": "productQueryParamsSchema",

@@ -401,6 +401,12 @@ class CrudService {
     }
   }
 
+  async getAllEntities(data, context) {
+    return Object.keys(context.entitySchemaCollection)
+      .filter((property)=> context.entitySchemaCollection[property].table)
+      .map((property)=> context.entitySchemaCollection[property]);
+  }
+
   hooks() {
     return {
       create: {

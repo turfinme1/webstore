@@ -1,6 +1,8 @@
 {
     "type": "object",
     "name": "orders",
+    "table": "orders",
+    "href": "/crud-order",
     "routeName": "orders",
     "views": "orders_view",
     "export_view": "orders_export_view",

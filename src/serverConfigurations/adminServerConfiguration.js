@@ -60,6 +60,7 @@ const routeTable = {
     "/api/test-email/:id": emailController.sendTestEmail,
     "/api/preview-email/:id": emailController.previewEmail,
     "/api/reports": reportController.getAllReports,
+    "/api/crud": crudController.getAllEntities,
     "/api/java-url": appConfigController.getJavaAPIUrl,
   },
   post: {

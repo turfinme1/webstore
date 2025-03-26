@@ -3,6 +3,7 @@
     "name": "user-groups",
     "table": "user_groups",
     "views": "user_groups_view",
+    "href": "/crud-user-groups",
     "export_view": "user_groups_export_view",
     "queryValidationSchema": "userGroupQueryParamsSchema",
     "properties": {

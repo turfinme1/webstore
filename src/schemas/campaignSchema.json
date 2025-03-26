@@ -2,6 +2,7 @@
     "type": "object",
     "name": "campaigns",
     "table": "campaigns",
+    "href": "/crud-campaign",
     "views": "campaigns_view",
     "queryValidationSchema": "campaignQueryParamsSchema",
     "properties": {
