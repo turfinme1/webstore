@@ -2,6 +2,7 @@
     "type": "object",
     "name": "vouchers",
     "table": "vouchers",
+    "href": "/crud-voucher",
     "views": "vouchers_view",
     "queryValidationSchema": "voucherQueryParamsSchema",
     "properties": {

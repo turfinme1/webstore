@@ -11,6 +11,7 @@ class CrudController {
     this.update = this.update.bind(this);
     this.delete= this.delete.bind(this);
     this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
+    this.getAllEntities = this.getAllEntities.bind(this);
   }
 
   async create(req, res, next) {
@@ -93,7 +94,20 @@ class CrudController {
     res.status(200).json(result);
 
     await req.logger.info({ code: "CONTROLLER.CRUD.00095.DELETE_SUCCESS", short_description: `Deleted ${data.params.entity}`, long_description: `Deleted ${data.params.entity} with id ${data.params.id}` });
-  }  
+  }
+  
+  async getAllEntities(req, res, next) {
+    const data = {
+      body: req.body,
+      params: req.params,
+    };
+    const context = {
+      dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
+    }  
+    const result = await this.crudService.getAllEntities(data, context);
+    res.status(200).json(result);
+  }
 }
 
 module.exports = CrudController;

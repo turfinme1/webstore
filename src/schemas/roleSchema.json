@@ -2,6 +2,7 @@
   "type": "object",
   "name": "roles",
   "table": "roles",
+  "href": "/crud-role",
   "views": "roles_view",
   "queryValidationSchema": "roleQueryParamsSchema",
   "properties": {

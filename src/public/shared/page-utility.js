@@ -623,6 +623,30 @@ async function createBackofficeNavigation(userStatus) {
   const navContainer = document.getElementById("dynamic-nav");
   navContainer.innerHTML = ""; // Clear previous content
 
+
+  const crudResult = await fetchWithErrorHandling("/api/crud");
+  if (!crudResult.ok) {
+    showToastMessage(crudResult.error, "error");
+  }
+
+  const crudLinks = crudResult.data.map((entity) => {
+    if (entity.name.toLowerCase().includes("admin")) {
+      return {
+        text: `CRUD Staff Users`,
+        href: entity.href,
+        permission: "view",
+        interface: entity.name,
+      }
+    }
+
+    return {
+      text: `CRUD ${entity.name.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ")}`,
+      href: entity.href,
+      permission: "view",
+      interface: entity.name,
+    };
+  });
+
   const reportResults = await fetchWithErrorHandling("/api/reports");
   if (!reportResults.ok) {
     showToastMessage(reportResults.error, "error");
@@ -646,24 +670,10 @@ async function createBackofficeNavigation(userStatus) {
     },
     {
       id: "crud-product-link",
-      text: "CRUD Products",
-      href: "/crud-product",
-      permission: "view",
-      interface: "products",
-    },
-    {
-      id: "crud-product-link",
       text: "CRUD Products - JAVA",
       href: "/crud-product-java",
       permission: "view",
       interface: "products",
-    },
-    {
-      id: "crud-user-link",
-      text: "CRUD Users",
-      href: "/crud-user",
-      permission: "view",
-      interface: "users",
     },
     {
       id: "crud-user-link",
@@ -672,62 +682,7 @@ async function createBackofficeNavigation(userStatus) {
       permission: "view",
       interface: "users",
     },
-    {
-      id: "crud-staff-user-link",
-      text: "CRUD Staff Users",
-      href: "/crud-staff-user",
-      permission: "view",
-      interface: "admin-users",
-    },
-    {
-      id: "crud-order-link",
-      text: "CRUD Orders",
-      href: "/crud-order",
-      permission: "view",
-      interface: "orders",
-    },
-    {
-      id: "crud-role-link",
-      text: "CRUD Roles",
-      href: "/crud-role",
-      permission: "view",
-      interface: "roles",
-    },
-    {
-      id:"promotion-link",
-      text: "CRUD Promotions",
-      href: "/crud-promotion",
-      permission: "view",
-      interface: "promotions",
-    },
-    {
-      id: "crud-voucher-link",
-      text: "CRUD Vouchers",
-      href: "/crud-voucher",
-      permission: "view",
-      interface: "vouchers",
-    },
-    {
-      id: "crud-campaign-link",
-      text: "CRUD Campaigns",
-      href: "/crud-campaign",
-      permission: "view",
-      interface: "campaigns",
-    },
-    {
-      id: "crud-notification-link",
-      text: "CRUD Notifications",
-      href: "/crud-notification",
-      permission: "view",
-      interface: "notifications",
-    },
-    {
-      id: "crud-user-group-link",
-      text: "CRUD User Groups",
-      href: "/crud-user-groups",
-      permission: "view",
-      interface: "user-groups",
-    },
+    ...crudLinks,
     ...reportLinks,
     {
       id: "upload-products-link",
@@ -742,13 +697,6 @@ async function createBackofficeNavigation(userStatus) {
       href: "/target-group",
       permission: "create",
       interface: "target-groups",
-    },
-    {
-      id: "email-templates-link",
-      text: "CRUD Templates",
-      href: "/crud-templates",
-      permission: "view",
-      interface: "email-templates",
     },
   ];
 

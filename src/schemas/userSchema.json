@@ -2,6 +2,7 @@
   "type": "object",
   "name": "users",
   "table": "users",
+  "href": "/crud-user",
   "views": "users_view",
   "queryValidationSchema": "userQueryParamsSchema",
   "properties": {

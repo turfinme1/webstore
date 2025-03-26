@@ -2,6 +2,7 @@
     "type": "object",
     "name": "notifications",
     "table": "notifications",
+    "href": "/crud-notification",
     "views": "notifications_view",
     "queryValidationSchema": "notificationQueryParamsSchema",
     "properties": {
