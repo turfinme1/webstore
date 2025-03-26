@@ -226,7 +226,14 @@ public class ProductServiceTest {
         resultDto.setPrice(new BigDecimal("200.00"));
         resultDto.setCategories(new HashSet<>());
 
+        Product existing = new Product();
+        existing.setId(productId);
+        existing.setName("Existing Product");
+        existing.setPrice(new BigDecimal("100.00"));
+        existing.setCategories(new HashSet<>());
+        existing.setCode("original-code");
         // Skip actual super.update call
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existing));
         when(productRepository.save(any())).thenReturn(new Product() {
             {
                 setId(productId);
