@@ -59,6 +59,28 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
       </div>
 
+      <div class="row mb-4" style="display: none;" id="user-group-details">
+        <div class="col-6">
+          <div class="card shadow-sm border-0">
+            <div class="card-body">
+              <h5 class="card-title mb-4">User Group Details</h5>
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th scope="col" class="border-0">Group Name</th>
+                      <th scope="col" class="border-0 text-end">User Count</th>
+                    </tr>
+                  </thead>
+                  <tbody id="user-group-table" class="border-top">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="row mb-4">
         <div class="col-12">
           <div class="card">
@@ -655,6 +677,36 @@ async function renderUserGroupsChart() {
         }
       }
     });
+
+    const userGroupDetails = document.getElementById('user-group-details');
+    const userGroupTable = document.getElementById('user-group-table');
+    userGroupTable.innerHTML = data.result.map((group, index) => `
+      <tr class="align-middle table-row-hover">
+        <td>
+          <div class="d-flex align-items-center">
+            <span class="color-indicator me-3" style="display: inline-block; width: 14px; height: 14px; background-color: ${colors[index]}; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,0.8), 0 0 0 3px ${colors[index]}22;"></span>
+            <span class="fw-medium">${group.name}</span>
+          </div>
+        </td>
+        <td class="text-end">
+          <a href="/report?report=report-users&filters=${encodeURIComponent(JSON.stringify(group.filters))}" 
+            class="btn btn-sm btn-outline-primary rounded-pill px-3" 
+            target="_blank"
+            style="min-width: 120px;" 
+            rel="noopener noreferrer">
+            <i class="bi bi-bar-chart-line me-1"></i>
+            ${formatNumber(Number(group.users_count), false)}
+          </a>
+        </td>
+      </tr>
+    `).join('');
+
+  if(data.result.length > 0) {
+    userGroupDetails.style.display = 'block';
+  } else {
+    userGroupDetails.style.display = 'none';
+  }
+  
   } catch(err) {
     console.error('Failed to load user groups chart', err);
   } finally {
