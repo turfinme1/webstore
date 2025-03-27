@@ -520,6 +520,9 @@ class ReportBuilder {
         container.appendChild(this.buildTable());
 
         this.attachEventListeners();
+
+        /// Check if filters are present in the URL and populate the form fields
+        await this.handleUrlFilters();
     }
 
     attachEventListeners() {
@@ -814,6 +817,96 @@ class ReportBuilder {
     clearValidationErrors() {
         document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
         document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    }
+
+    async handleUrlFilters() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const filters = JSON.parse(decodeURIComponent(urlParams.get('filters')));
+        this.populateFormFieldsWithFilters(filters);
+
+        const form = document.getElementById('report-form');
+        if(filters) {
+            window.history.replaceState({}, document.title, window.location.pathname
+                + window.location.search.replace(/&?filters=[^&]*/g, ''));
+
+            setTimeout(() => {
+                const submitEvent = new Event('submit', { cancelable: true });
+                form.dispatchEvent(submitEvent);
+            }, 100);
+        }
+    }
+    populateFormFieldsWithFilters(filters) {
+        for (const [key, value] of Object.entries(filters)) {
+            if (key.includes('_minimum_filter_value') || key.includes('_maximum_filter_value')) {
+                const element = document.getElementById(key);
+                if (!element) continue;
+                
+                const flatpickrElement = document.querySelector(`[name="${key}"]`);
+                if (!flatpickrElement) continue;
+                
+                let instance = flatpickrElement._flatpickr;
+                if (!instance) {
+                    const wrapper = flatpickrElement.closest('.flatpickr-wrapper');
+                    if (wrapper) {
+                        const altInput = wrapper.querySelector('.flatpickr-input');
+                        if (altInput) instance = altInput._flatpickr;
+                    }
+                }
+                
+                if (instance) {
+                    try {
+                        if (!value || value === '') {
+                            instance.clear();
+                            console.log(`Cleared date for ${key}`);
+                        } else {
+                            const dateValue = new Date(value);
+                            if (!isNaN(dateValue.getTime())) {
+                                instance.setDate(dateValue, true);
+                                console.log(`Set date for ${key} to ${dateValue}`);
+                            } else {
+                                instance.clear();
+                                console.warn(`Invalid date format for ${key}: ${value}`);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`Error setting date for ${key}:`, e);
+                    }
+                }
+            }
+
+            if (!value) continue; // Skip empty values
+            
+            const element = document.getElementById(key);
+            if (!element) continue; // Skip if element doesn't exist
+            
+            if (element.tagName === 'SELECT') {
+                if (element.multiple) {
+                    // Handle multi-select
+                    if (Array.isArray(value)) {
+                        // For Bootstrap multiselect
+                        if ($(element).data('multiselect')) {
+                            $(element).multiselect('deselectAll', false);
+                            $(element).multiselect('select', value);
+                            $(element).multiselect('refresh');
+                        } else {
+                            // Standard multi-select
+                            Array.from(element.options).forEach(option => {
+                                option.selected = value.includes(option.value);
+                            });
+                        }
+                    }
+                } else {
+                    element.value = value;
+                }
+            } else if (element.type === 'checkbox') {
+                element.checked = value === 'true' || value === true;
+            } else {
+                element.value = value;
+            }
+            
+            // Trigger change event to ensure any dependent UI is updated
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+        }
     }
 
     static toLocalDate(date) {
