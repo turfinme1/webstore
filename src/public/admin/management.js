@@ -48,7 +48,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="col-6">
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">User groups chart</h5>
+              <h5 class="card-title">User groups chart
+                <div id="spinner-user-groups" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </h5>
               <canvas id="userGroupChart"></canvas>
             </div>
           </div>
@@ -124,6 +128,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderOrderChartLastSixMonths(),
     renderOrderChartLastTwoDays(),
     renderUserGroupsChart(),
+    renderDashboard(startDateElement.value, endDateElement.value),
+    renderCampaignDashboard(startDateElement.value, endDateElement.value),
   ]);
 });
 
@@ -495,7 +501,101 @@ async function renderCampaignDashboard(startDate, endDate) {
 }
 
 async function renderUserGroupsChart() {
+  const spinner = document.getElementById("spinner-user-groups");
+  const chartColorPalette = [
+    '#3498db', // Blue
+    '#e74c3c', // Red
+    '#2ecc71', // Green
+    '#9b59b6', // Purple
+    '#f39c12', // Orange
+    '#1abc9c', // Teal
+    '#fd79a8', // Pink
+    '#34495e', // Dark Gray
+    
+    '#2980b9', // Blue
+    '#c0392b', // Red
+    '#27ae60', // Green
+    '#8e44ad', // Purple
+    '#f1c40f', // Yellow
+    '#48c9b0', // Teal
+    '#e84393', // Pink
+    '#7f8c8d', // Gray
+    
+    '#5dade2', // Light Blue
+    '#f1948a', // Light Red
+    '#52be80', // Light Green
+    '#d2b4de', // Light Purple
+    '#f5b041', // Light Orange
+    '#76d7c4', // Light Teal
+    '#ff9ff3', // Light Pink
+    '#95a5a6', // Light Gray
+    
+    '#1f618d', // Dark Blue
+    '#a93226', // Dark Red
+    '#229954', // Dark Green
+    '#7d3c98', // Dark Purple
+    '#d35400', // Dark Orange
+    '#138d75', // Dark Teal
+    '#d63031', // Dark Pink
+    '#2c3e50', // Dark Gray
+    
+    '#154360', // Darker Blue
+    '#922b21', // Darker Red
+    '#1e8449', // Darker Green
+    '#6c3483', // Darker Purple
+    '#a04000', // Darker Orange
+    '#0e6655', // Darker Teal
+    '#ff6b6b', // Vibrant Red
+    '#bdc3c7', // Silver
+    
+    '#85c1e9', // Sky Blue 
+    '#cd6155', // Brick Red
+    '#16a085', // Sea Green
+    '#af7ac5', // Lavender
+    '#f8c471', // Pale Orange
+    '#48dbfb', // Bright Blue
+    '#ee5253', // Coral
+    '#7f8fa6', // Steel Blue
+    
+    '#4a86e8', // Royal Blue
+    '#d98880', // Salmon
+    '#0b5345', // Forest Green
+    '#9c27b0', // Bright Purple
+    '#e67e22', // Carrot Orange
+    '#0abde3', // Sky Blue
+    '#ff793f', // Tangerine
+    '#718093', // Slate Gray
+    
+    '#2874a6', // Cerulean
+    '#7b241c', // Mahogany
+    '#0fb9b1', // Turquoise
+    '#5b2c6f', // Indigo
+    '#eb984e', // Sandy Brown
+    '#00d2d3', // Cyan
+    '#b71540', // Ruby
+    '#dcdde1', // Gainsboro
+    
+    '#21618c', // Yale Blue
+    '#641e16', // Maroon
+    '#117a65', // Jungle Green
+    '#4a235a', // Dark Violet
+    '#e59866', // Peach
+    '#2bcbba', // Aquamarine
+    '#eb2f06', // Fire Engine Red
+    '#353b48', // Charcoal
+    
+    '#1b4f72', // Navy Blue
+    '#e6b0aa', // Light Coral
+    '#0b5345', // Deep Green
+    '#f368e0', // Hot Pink
+    '#e8f8f5', // Mint
+    '#273c75', // Dark Navy
+    '#f9e79f', // Cream
+    '#0a3d62'  // Marine Blue
+  ];
   try {
+    spinner.style.display = "inline-block";
+
     const appSettings = await fetchWithErrorHandling("/app-config/rate-limit-settings");
 
     if (!appSettings.ok) {
@@ -513,7 +613,7 @@ async function renderUserGroupsChart() {
     const labels = data.result.map(g => g.name);
     const counts = data.result.map(g => Number(g.users_count));
 
-    const colors = labels.map(_ => `hsl(${Math.random() * 360}, 65%, 60%)`);
+    const colors = labels.map((_, index) => chartColorPalette[index % chartColorPalette.length]);
 
     const ctx = document.getElementById('userGroupChart').getContext('2d');
     new Chart(ctx, {
@@ -557,6 +657,8 @@ async function renderUserGroupsChart() {
     });
   } catch(err) {
     console.error('Failed to load user groups chart', err);
+  } finally {
+    spinner.style.display = 'none';
   }
 }
 
