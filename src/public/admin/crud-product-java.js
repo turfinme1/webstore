@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     formData.set("categories", JSON.stringify(categories)); // Add selected categories to the form data
     console.log(formData);
     try {
-      const response = await fetch(`${javaApiUrl}/crud/products`, {
+      const response = await fetch(`${javaApiUrl}/api/products`, {
         method: "POST",
         body: formData,
       });
@@ -232,7 +232,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       queryParams.append("page", currentPage.toString());
 
       updateUrlParams({ currentPage, pageSize, filterParams, orderParams });
-      const response = await fetchWithErrorHandling(`${javaApiUrl}/crud/products/filtered?${queryParams.toString()}`);
+      const response = await fetchWithErrorHandling(`${javaApiUrl}/api/products/filtered?${queryParams.toString()}`);
 
       if(!response.ok) {
         showToastMessage(response.error, "error");
@@ -462,7 +462,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         formData.set("categories", JSON.stringify(categories)); // Add selected categories to the form data
 
         try {
-          const response = await fetchWithErrorHandling(`${javaApiUrl}/crud/products/${productId}`, {
+          const response = await fetchWithErrorHandling(`${javaApiUrl}/api/products/${productId}`, {
             method: "PUT",
             body: formData,
           });
