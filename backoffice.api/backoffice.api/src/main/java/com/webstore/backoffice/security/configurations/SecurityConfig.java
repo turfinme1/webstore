@@ -35,7 +35,7 @@ public class SecurityConfig {
                         // Secure your endpoints
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/crud/**").permitAll()
+                        .requestMatchers("/crud/**").authenticated()
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(new CustomSessionAuthenticationFilter(authService, sessionCookieName),
