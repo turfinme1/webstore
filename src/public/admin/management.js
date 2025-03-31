@@ -57,6 +57,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
           </div>
         </div>
+
+        <div class="col-6">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Target groups chart
+                <div id="spinner-target-groups" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+              </h5>
+              <canvas id="targetGroupChart"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="row mb-4" style="display: none;" id="user-group-details">
@@ -152,6 +165,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderUserGroupsChart(),
     renderDashboard(startDateElement.value, endDateElement.value),
     renderCampaignDashboard(startDateElement.value, endDateElement.value),
+    renderTargetGroupChart(),
   ]);
 });
 
@@ -709,6 +723,219 @@ async function renderUserGroupsChart() {
   
   } catch(err) {
     console.error('Failed to load user groups chart', err);
+  } finally {
+    spinner.style.display = 'none';
+  }
+}
+
+async function renderTargetGroupChart(){
+  const spinner = document.getElementById("spinner-target-groups");
+  const chartColorPalette = [
+    '#3498db', // Blue
+    '#e74c3c', // Red
+    '#2ecc71', // Green
+    '#9b59b6', // Purple
+    '#f39c12', // Orange
+    '#1abc9c', // Teal
+    '#fd79a8', // Pink
+    '#34495e', // Dark Gray
+    
+    '#2980b9', // Blue
+    '#c0392b', // Red
+    '#27ae60', // Green
+    '#8e44ad', // Purple
+    '#f1c40f', // Yellow
+    '#48c9b0', // Teal
+    '#e84393', // Pink
+    '#7f8c8d', // Gray
+    
+    '#5dade2', // Light Blue
+    '#f1948a', // Light Red
+    '#52be80', // Light Green
+    '#d2b4de', // Light Purple
+    '#f5b041', // Light Orange
+    '#76d7c4', // Light Teal
+    '#ff9ff3', // Light Pink
+    '#95a5a6', // Light Gray
+    
+    '#1f618d', // Dark Blue
+    '#a93226', // Dark Red
+    '#229954', // Dark Green
+    '#7d3c98', // Dark Purple
+    '#d35400', // Dark Orange
+    '#138d75', // Dark Teal
+    '#d63031', // Dark Pink
+    '#2c3e50', // Dark Gray
+    
+    '#154360', // Darker Blue
+    '#922b21', // Darker Red
+    '#1e8449', // Darker Green
+    '#6c3483', // Darker Purple
+    '#a04000', // Darker Orange
+    '#0e6655', // Darker Teal
+    '#ff6b6b', // Vibrant Red
+    '#bdc3c7', // Silver
+    
+    '#85c1e9', // Sky Blue 
+    '#cd6155', // Brick Red
+    '#16a085', // Sea Green
+    '#af7ac5', // Lavender
+    '#f8c471', // Pale Orange
+    '#48dbfb', // Bright Blue
+    '#ee5253', // Coral
+    '#7f8fa6', // Steel Blue
+    
+    '#4a86e8', // Royal Blue
+    '#d98880', // Salmon
+    '#0b5345', // Forest Green
+    '#9c27b0', // Bright Purple
+    '#e67e22', // Carrot Orange
+    '#0abde3', // Sky Blue
+    '#ff793f', // Tangerine
+    '#718093', // Slate Gray
+    
+    '#2874a6', // Cerulean
+    '#7b241c', // Mahogany
+    '#0fb9b1', // Turquoise
+    '#5b2c6f', // Indigo
+    '#eb984e', // Sandy Brown
+    '#00d2d3', // Cyan
+    '#b71540', // Ruby
+    '#dcdde1', // Gainsboro
+    
+    '#21618c', // Yale Blue
+    '#641e16', // Maroon
+    '#117a65', // Jungle Green
+    '#4a235a', // Dark Violet
+    '#e59866', // Peach
+    '#2bcbba', // Aquamarine
+    '#eb2f06', // Fire Engine Red
+    '#353b48', // Charcoal
+    
+    '#1b4f72', // Navy Blue
+    '#e6b0aa', // Light Coral
+    '#0b5345', // Deep Green
+    '#f368e0', // Hot Pink
+    '#e8f8f5', // Mint
+    '#273c75', // Dark Navy
+    '#f9e79f', // Cream
+    '#0a3d62'  // Marine Blue
+  ];
+
+  try {
+    spinner.style.display = "inline-block";
+    const response = await fetchWithErrorHandling('api/reports/target-group-trends', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    if(!response.ok) {
+      showToastMessage(response.error, "error");
+      return;
+    }
+
+    const data = await response.data;
+    const conversionRates = data.rows.map(g => Number(g.conversion_rate || 0));
+
+    const sortedIndices = conversionRates.map((rate, index) => ({rate, index}))
+      .sort((a, b) => parseFloat(b.rate) - parseFloat(a.rate))
+      .map(item => item.index);
+    
+    const labels = data.rows.map(g => g.name);
+    const counts = data.rows.map(g => Number(g.users_count));
+    const colors = labels.map((_, index) => chartColorPalette[index % chartColorPalette.length]);
+
+    const sortedLabels = sortedIndices.map(i => labels[i]);
+    const sortedCounts = sortedIndices.map(i => counts[i]);
+    const sortedRates = sortedIndices.map(i => conversionRates[i]);
+    const sortedColors = sortedIndices.map(i => colors[i]);
+    
+    // Create the chart
+    const ctx = document.getElementById('targetGroupChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: { 
+        labels: sortedLabels, 
+        datasets: [
+          {
+            label: 'User Count',
+            data: sortedCounts,
+            backgroundColor: sortedColors,
+            borderColor: sortedColors.map(c => c.replace('60%', '40%')),
+            borderWidth: 1,
+            order: 2,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Conversion Rate (%)',
+            data: sortedRates,
+            type: 'line',
+            borderColor: '#ff6384',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderWidth: 2,
+            pointRadius: 6,
+            pointBackgroundColor: '#ff6384',
+            pointStyle: 'rectRounded',
+            fill: false,
+            order: 1,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            type: 'logarithmic',
+            position: 'left',
+            title: { display: true, text: 'Users' },
+            ticks: {
+              callback: value => {
+                const n = Math.round(value);
+                return formatNumber(n, false);
+              },
+              maxTicksLimit: 10
+            }
+          },
+          y1: {
+            type: 'linear',
+            position: 'right',
+            title: { display: true, text: 'Conversion %' },
+            min: 0,
+            max: Math.max(...conversionRates) * 1.1 || 100,
+            ticks: {
+              callback: value => `${value.toFixed(1)}%`
+            },
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              filter: (legendItem) => legendItem.text === 'Conversion Rate (%)'
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                if (ctx.dataset.label === 'User Count') {
+                  const n = Math.round(ctx.raw);
+                  return `${ctx.dataset.label}: ${formatNumber(n, false)}`;
+                } else {
+                  return `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%`;
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+  } catch(err) {
+    console.error('Failed to load target groups chart', err);
   } finally {
     spinner.style.display = 'none';
   }

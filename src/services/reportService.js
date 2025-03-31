@@ -16,6 +16,7 @@ class ReportService {
     this.dashboardReports = {
         "store-trends": this.storeTrendsReportDefinition.bind(this),
         "campaign-trends": this.campaignTrendsReportDefinition.bind(this),
+        "target-group-trends": this.targetGroupTrendsReportDefinition.bind(this),
     }
   }
 
@@ -29,6 +30,7 @@ class ReportService {
 
         const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body);
         let displayRowLimit = parseInt(data.context.settings.report_row_limit_display);
+        console.log(this.#testReplacePlaceholders(replacedQueryData.sql, replacedQueryData.insertValues));
         const result = await data.dbConnection.query(`${replacedQueryData.sql} LIMIT ${displayRowLimit + 1}`, replacedQueryData.insertValues);
         const overRowDisplayLimit = result.rows.length === displayRowLimit + 1;
         if(result.rows.length > 0){
@@ -1938,6 +1940,39 @@ class ReportService {
         WHERE TRUE
         GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
         ORDER BY sort_order ASC, 1 DESC`;
+
+    return { reportUIConfig, sql, reportFilters };
+  }
+
+  async targetGroupTrendsReportDefinition(data) {
+    const reportUIConfig = {};
+
+    const reportFilters = [];
+
+    const sql = `
+    SELECT * FROM (
+        SELECT
+            tg.id,
+            tg.name,
+            COUNT(DISTINCT utg.user_id) AS users_count,
+            CASE
+                WHEN c.final_user_count IS NOT NULL AND c.final_user_count > 0
+                    THEN ROUND((COUNT(DISTINCT CASE WHEN o.user_id IS NOT NULL THEN o.user_id END)::float / c.final_user_count * 100)::numeric, 2)
+                WHEN COUNT(DISTINCT utg.user_id) > 0
+                    THEN ROUND((COUNT(DISTINCT CASE WHEN o.user_id IS NOT NULL THEN o.user_id END)::float / COUNT(DISTINCT utg.user_id) * 100)::numeric, 2)
+                ELSE 0
+            END AS conversion_rate,
+            ROUND((COUNT(DISTINCT CASE WHEN o.user_id IS NOT NULL THEN o.user_id END)::float / COUNT(DISTINCT utg.user_id) * 100)::numeric, 2) AS conversion_rate
+        FROM target_groups tg
+        LEFT JOIN user_target_groups utg ON tg.id = utg.target_group_id
+        LEFT JOIN orders o ON o.user_id = utg.user_id AND o.status = 'Paid'
+        LEFT JOIN campaigns c ON c.target_group_id = tg.id
+        WHERE TRUE
+        GROUP BY tg.id, tg.name, c.final_user_count
+        ORDER BY 1 DESC
+        LIMIT 10
+    ) query
+    `;
 
     return { reportUIConfig, sql, reportFilters };
   }
