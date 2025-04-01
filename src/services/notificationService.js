@@ -1,4 +1,6 @@
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
+const webpush = require("web-push");
+const { ENV } = require("../serverConfigurations/constants");
 
 class NotificationService {
     constructor(){
@@ -30,6 +32,34 @@ class NotificationService {
              SET status = 'seen' 
              WHERE id = $1 AND recipient_id = $2`,
             [data.params.id, data.session.user_id]
+        );
+    }
+
+    async createPushSubscription(data) {
+        await data.dbConnection.query(
+            `INSERT INTO push_subscriptions (data, user_id) VALUES ($1, $2)`,
+            [data.body, data.session.user_id]
+        );
+    }
+    
+    async sendPushNotification(data) {
+        const subscriptions = await data.dbConnection.query(
+            `SELECT * FROM push_subscriptions`,
+        );
+        webpush.setVapidDetails(
+            ENV.VAPID_MAILTO,
+            ENV.VAPID_PUBLIC_KEY,
+            ENV.VAPID_PRIVATE_KEY,
+        );
+        for (const subscription of subscriptions.rows) {
+            await webpush.sendNotification(subscription.data, JSON.stringify({ title: "New Notification", body: "You have a new notification" }));
+        }
+    }
+
+    async deletePushSubscription(data) {
+        await data.dbConnection.query(
+            `DELETE FROM push_subscriptions WHERE user_id = $1`,
+            [data.session.user_id]
         );
     }
 }
