@@ -423,6 +423,9 @@ function createNavigation(userStatus) {
                               : `Welcome ${userStatus.first_name}`
                           }</a>
                       </li>
+                       <li class="nav-item">
+                          <a class="nav-link subscribe-button">Subscribe</a>
+                      </li>
                       <li class="nav-item">
                           <a class="nav-link logout-btn" href="/logout">Logout</a>
                       </li>
@@ -491,6 +494,45 @@ function createNavigation(userStatus) {
     updateNotificationsList();
     setInterval(updateNotificationsList, 60000); // Update every 30 seconds
   }
+
+  initSubscriptionButton();
+}
+
+async function initSubscriptionButton() {
+  const subscribeButton = document.querySelector(".subscribe-button");
+  if (!subscribeButton) return;
+
+  const registration = await navigator.serviceWorker.ready;
+  let subscription = await registration.pushManager.getSubscription();
+
+  subscribeButton.textContent = subscription ? 'Unsubscribe' : 'Subscribe';
+
+  subscribeButton.addEventListener("click", async () => {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: 'BJ7UuFCX99N49hlHSrTP76J_88LdIDJQ0YWuMVvC2O7GHI12eLNZK5_MGuD1leViV28gGoG1YwpYv8l3Y1yWoaU',
+      });
+      await fetch("/api/push-subscription", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
+      });
+      subscribeButton.textContent = 'Unsubscribe';
+    } else {
+      await subscription.unsubscribe();
+      await fetch("/api/push-subscription", {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
+      });
+      subscribeButton.textContent = 'Subscribe';
+      subscription = null;
+    }
+  });
 }
 
 async function updateNotificationsList() {

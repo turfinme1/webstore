@@ -1,7 +1,19 @@
 importScripts(
     'https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js'
   );
-  
+
+self.addEventListener('push', async (event) => {
+  const payload = event.data.json() || {};
+  const title   = payload.title  || 'New Notification';
+  const options = {
+    body : payload.body || 'You have a new notification',
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
 workbox.precaching.precacheAndRoute([
     { url: '/index.html', revision: '1' },
     { url: '/styles.css', revision: '1' },
