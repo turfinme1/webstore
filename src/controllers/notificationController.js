@@ -36,7 +36,9 @@ class NotificationController {
         const data = {
             session: req.session,
             dbConnection: req.dbConnection,
-            body: req.body
+            body: req.body,
+            ip: req.ip,
+            userAgent: req.headers["user-agent"],
         };
         await this.notificationService.createPushSubscription(data);
         res.status(200).end();

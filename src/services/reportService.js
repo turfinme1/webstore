@@ -12,6 +12,7 @@ class ReportService {
         "report-notifications": this.notificationsReportDefinition.bind(this),
         "report-notifications-status": this.notificationsStatusReportDefinition.bind(this),
         "report-campaigns": this.campaignsReportDefinition.bind(this),
+        "report-push-subscriptions": this.pushSubscriptionsReportDefinition.bind(this),
     }
     this.dashboardReports = {
         "store-trends": this.storeTrendsReportDefinition.bind(this),
@@ -166,7 +167,7 @@ class ReportService {
 
         if (orderClauses.length > 0) {
             const orderByClause = ` ${orderClauses.join(', ')}`;
-            sql = sql.replace('1 DESC', `${orderByClause} `);
+            sql = sql.replaceAll'1 DESC', `${orderByClause} `);
         }
     }
 
@@ -1961,8 +1962,7 @@ class ReportService {
                 WHEN COUNT(DISTINCT utg.user_id) > 0
                     THEN ROUND((COUNT(DISTINCT CASE WHEN o.user_id IS NOT NULL THEN o.user_id END)::float / COUNT(DISTINCT utg.user_id) * 100)::numeric, 2)
                 ELSE 0
-            END AS conversion_rate,
-            ROUND((COUNT(DISTINCT CASE WHEN o.user_id IS NOT NULL THEN o.user_id END)::float / COUNT(DISTINCT utg.user_id) * 100)::numeric, 2) AS conversion_rate
+            END AS conversion_rate
         FROM target_groups tg
         LEFT JOIN user_target_groups utg ON tg.id = utg.target_group_id
         LEFT JOIN orders o ON o.user_id = utg.user_id AND o.status = 'Paid'
@@ -1973,7 +1973,116 @@ class ReportService {
         LIMIT 10
     ) query
     `;
-
+  
+    return { reportUIConfig, sql, reportFilters };
+  }
+  
+  async pushSubscriptionsReportDefinition(data) {
+    const reportUIConfig = {
+        title: 'Push Subscriptions Report',
+        dataEndpoint: '/api/reports/report-push-subscriptions',
+        headerGroups: [
+            [
+                { key: 'created_at', label: 'Created At', format: 'date_time' },
+                { key: 'id', label: 'ID', format: 'text' },
+                { key: 'user_id', label: 'User ID', format: 'text' },
+                { key: 'user_email', label: 'User Email', format: 'text' },
+                { key: 'ip', label: 'IP Address', format: 'text' },
+                { key: 'user_agent', label: 'User Agent', format: 'text' },
+            ]
+        ],
+    };
+  
+    const reportFilters = [
+        {
+            key: "id",
+            grouping_expression: "P.id",
+            filter_expression: "P.id = $FILTER_VALUE$",
+            type: "number_single",
+            label: "ID",
+        },
+        {
+            key: "created_at",
+            grouping_expression: "P.created_at",
+            minimum_filter_expression: "P.created_at >= $FILTER_VALUE$",
+            maximum_filter_expression: "P.created_at <= $FILTER_VALUE$",
+            type: "timestamp",
+            label: "Created At",
+            groupable: true,
+        },
+        {
+            key: "user_id",
+            grouping_expression: "user_id",
+            filter_expression: "STRPOS(LOWER(CAST( P.user_id AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "number_single",
+            label: "User ID",
+        },
+        {
+            key: "user_email",
+            grouping_expression: "U.email",
+            filter_expression: "STRPOS(LOWER(CAST( U.email AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "User Email",
+        },
+        {
+            key: "ip",
+            grouping_expression: "ip",
+            filter_expression: "STRPOS(LOWER(CAST( P.ip AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "IP Address",
+        },
+        {
+            key: "user_agent",
+            grouping_expression: "user_agent",
+            filter_expression: "STRPOS(LOWER(CAST( P.user_agent AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "User Agent",
+        },
+    ];
+  
+    const sql = `
+        SELECT
+            NULL AS "created_at",
+            NULL AS "id",
+            NULL AS "user_id",
+            NULL AS "user_email",
+            NULL AS "ip",
+            NULL AS "user_agent",
+            COUNT(*) AS "count",
+            0 AS "sort_order"
+        FROM push_subscriptions P
+        JOIN users U ON P.user_id = U.id
+        WHERE TRUE
+            AND $id_filter_expression$
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
+            AND $user_id_filter_expression$
+            AND $ip_filter_expression$
+            AND $user_agent_filter_expression$
+  
+        UNION ALL
+  
+        SELECT
+            $created_at_grouping_expression$ AS "created_at",
+            $id_grouping_expression$ AS "id",
+            $user_id_grouping_expression$ AS "user_id",
+            $user_email_grouping_expression$ AS "user_email",
+            $ip_grouping_expression$ AS "ip",
+            $user_agent_grouping_expression$ AS "user_agent",
+            COUNT(*) AS "count",
+            1 AS "sort_order"
+        FROM push_subscriptions P
+        JOIN users U ON P.user_id = U.id
+        WHERE TRUE
+            AND $id_filter_expression$
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
+            AND $user_id_filter_expression$
+            AND $ip_filter_expression$
+            AND $user_agent_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5
+        ORDER BY sort_order ASC, 1 DESC`;
+  
     return { reportUIConfig, sql, reportFilters };
   }
 

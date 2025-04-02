@@ -37,8 +37,8 @@ class NotificationService {
 
     async createPushSubscription(data) {
         await data.dbConnection.query(
-            `INSERT INTO push_subscriptions (data, user_id) VALUES ($1, $2)`,
-            [data.body, data.session.user_id]
+            `INSERT INTO push_subscriptions (data, user_id, ip, user_agent) VALUES ($1, $2, $3, $4)`,
+            [data.body, data.session.user_id, data.ip, data.userAgent]
         );
     }
     
@@ -52,7 +52,7 @@ class NotificationService {
             ENV.VAPID_PRIVATE_KEY,
         );
         for (const subscription of subscriptions.rows) {
-            await webpush.sendNotification(subscription.data, JSON.stringify({ title: "New Notification", body: "You have a new notification" }));
+            await webpush.sendNotification(subscription.data, JSON.stringify({ title: "New Notification", body: "<p>Hello, {first_name} {last_name}! You have a new notification. Your email is {email} and your phone number is {phone}</p>" }));
         }
     }
 
