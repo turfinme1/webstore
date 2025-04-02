@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "type": "node",
             "request": "launch",
@@ -41,6 +42,24 @@
                 "<node_internals>/**"
             ],
             "program": "${workspaceFolder}/src/serverConfigurations/adminServerConfiguration.js"
-        }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Migration Program",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/src/database/migrationScript.js",
+            // "args": [
+            //     "create",
+            //     "Ina"
+            // ]
+            "args": [
+                "apply",
+                "--env",
+                "qa"
+            ]
+        },
     ]
 }
