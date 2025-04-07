@@ -1,13 +1,16 @@
+const webpush = require("web-push");
 const pool = require("../database/dbConfig");
 const { EmailService, transporter } = require("../services/emailService");
 const { TemplateLoader } = require("../serverConfigurations/templateLoader");
 const Logger = require("../serverConfigurations/logger");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
+const { ENV } = require("../serverConfigurations/constants");
 
 const BATCH_SIZE = 50;
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MINUTES = 2;
 const MESSAGE_TYPE = 'Email';
+const PUSH_MESSAGE_TYPE = 'Push-Notification';
 
 const EMAIL_STATUS = {
     PENDING: 'pending',
@@ -29,6 +32,9 @@ const EMAIL_ERROR_TYPES = {
     AUTH: 'auth_error',
     RATE_LIMIT: 'rate_limit',
     INVALID_RECIPIENT: 'invalid_recipient',
+    INVALID_INPUT: 'invalid_input',
+    SUBSCRIPTION_NOT_FOUND: 'subscription_not_found',
+    EXTERNAL_SERVER_ERROR: 'external_server_error',
 };
 
 (async () => {
@@ -43,6 +49,11 @@ const EMAIL_ERROR_TYPES = {
         client = await pool.connect();
         loggerClient = await pool.connect();
         logger = new Logger({ dbConnection: new DbConnectionWrapper(loggerClient) });
+        webpush.setVapidDetails(
+            ENV.VAPID_MAILTO,
+            ENV.VAPID_PUBLIC_KEY,
+            ENV.VAPID_PRIVATE_KEY,
+        );
 
         await client.query('BEGIN');
 
@@ -50,49 +61,90 @@ const EMAIL_ERROR_TYPES = {
             WITH cte AS (
                 SELECT id
                 FROM emails
-                WHERE type = $1
-                  AND status = $2
+                WHERE type IN ($1, $2)
+                  AND status = $3
                   AND (email_last_attempt IS NULL OR email_last_attempt < NOW() - INTERVAL '${RETRY_DELAY_MINUTES} minutes')
-                  AND email_attempts < $3
+                  AND email_attempts < $4
                   AND (email_retry_after IS NULL OR email_retry_after < NOW())
                 ORDER BY email_priority DESC, created_at ASC
-                LIMIT $4
+                LIMIT $5
                 FOR UPDATE SKIP LOCKED
             )
             UPDATE emails
-            SET status = $5,
+            SET status = $6,
                 email_processing_started_at = NOW()
             FROM cte
             WHERE emails.id = cte.id
             RETURNING emails.*;
-        `, [MESSAGE_TYPE, EMAIL_STATUS.PENDING, MAX_ATTEMPTS, BATCH_SIZE, EMAIL_STATUS.SENDING]);
+        `, [MESSAGE_TYPE, PUSH_MESSAGE_TYPE, EMAIL_STATUS.PENDING, MAX_ATTEMPTS, BATCH_SIZE, EMAIL_STATUS.SENDING]);
 
         for (const email of pendingEmails.rows) {
             try {
                 await client.query('SAVEPOINT email_processing_savepoint');
 
-                const emailOptions = { 
-                    from: "no-reply@web-store4eto.com",
-                    to: email.recipient_email,
-                    subject: email.subject,
-                    html: email.text_content
-                };
-                await emailService.sendEmail(emailOptions);
+                if(email.type === 'Push-Notification') {
+                    const subscriptions = await client.query(`
+                        SELECT * FROM push_subscriptions
+                        WHERE user_id = $1`,
+                        [email.recipient_id]
+                    );
 
-                await client.query(`
-                    UPDATE emails 
-                    SET status = $1,
-                        sent_at = NOW()
-                    WHERE id = $2
-                `, [EMAIL_STATUS.SENT, email.id]);
+                    if(subscriptions.rows.length === 0) {
+                        await client.query(`
+                            UPDATE emails
+                            SET status = $1
+                            WHERE id = $2`,
+                            [EMAIL_STATUS.FAILED, email.id]
+                        );
+
+                        await logger.info({
+                            code: 'TIMERS.PROCESS_EMAIL_QUEUE.00005.NO_SUBSCRIPTIONS',
+                            short_description: 'Email queue process completed',
+                            long_description: 'Email queue process completed'
+                        });
+
+                        continue; 
+                    }
+
+                    for (const subscription of subscriptions.rows) {
+                        await webpush.sendNotification(subscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
+                    }
+                
+                    await client.query(`
+                        UPDATE emails 
+                        SET status = $1, sent_at = NOW()
+                        WHERE id = $2`, 
+                        [EMAIL_STATUS.SENT, email.id]
+                    );
+                } else {
+                    const emailOptions = { 
+                        from: "no-reply@web-store4eto.com",
+                        to: email.recipient_email,
+                        subject: email.subject,
+                        html: email.text_content
+                    };
+                    await emailService.sendEmail(emailOptions);
+
+                    await client.query(`
+                        UPDATE emails 
+                        SET status = $1, sent_at = NOW()
+                        WHERE id = $2`, 
+                        [EMAIL_STATUS.SENT, email.id]
+                    );
+                }
 
                 await client.query('RELEASE SAVEPOINT email_processing_savepoint');
             } catch (error) {
                 await client.query('ROLLBACK TO SAVEPOINT email_processing_savepoint');
-                const errorType = classifyEmailError(error);
+                const { shouldRetry, errorType } = classifyEmailError(error);
                 const retryDelay = calculateRetryDelay(email.email_attempts + 1);
+                error.params = { 
+                    code: 'TIMERS.PROCESS_EMAIL_QUEUE.00010.SENDING_FAILED', 
+                    long_description: errorType 
+                };
                 
-                const newStatus = (email.email_attempts + 1 >= MAX_ATTEMPTS) ? EMAIL_STATUS.FAILED : EMAIL_STATUS.PENDING;
+                const maxAttemptsReached = email.email_attempts + 1 >= MAX_ATTEMPTS;
+                const newStatus = (shouldRetry && !maxAttemptsReached) ? EMAIL_STATUS.PENDING : EMAIL_STATUS.FAILED;
                 
                 await client.query(`
                     UPDATE emails 
@@ -107,16 +159,16 @@ const EMAIL_ERROR_TYPES = {
                 await logger.error(error);
             }
         }
-        
-        await client.query('COMMIT');
 
         await client.query(`
             UPDATE emails
             SET status = $1,
                 email_retry_after = NOW() + (INTERVAL '1 minute' * $2)
-            WHERE email_processing_started_at < NOW() - INTERVAL '5 minutes'
+            WHERE email_processing_started_at < NOW() - INTERVAL '10 minutes'
             AND status = $3
         `, [EMAIL_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]);
+
+        await client.query('COMMIT');
 
         await logger.info({
             code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EMAIL_QUEUE_PROCESS_SUCCESS',
@@ -137,22 +189,39 @@ const EMAIL_ERROR_TYPES = {
 })();
 
 function classifyEmailError(error) {
+    let shouldRetry = false;
+    let errorType;
     if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT' || error.code === "ESOCKET") {
-        return EMAIL_ERROR_TYPES.NETWORK;
-    }
-    if (error.responseCode) {
+        errorType = EMAIL_ERROR_TYPES.NETWORK;
+    } else if (error.responseCode) {
         if ([421, 450, 451].includes(error.responseCode)) {
-            return EMAIL_ERROR_TYPES.RATE_LIMIT;
+            shouldRetry = true;
+            errorType = EMAIL_ERROR_TYPES.RATE_LIMIT;
+        } else if ([511, 535].includes(error.responseCode)) {
+            errorType = EMAIL_ERROR_TYPES.AUTH;
+        } else if ([550, 553].includes(error.responseCode)) {
+            errorType = EMAIL_ERROR_TYPES.INVALID_RECIPIENT;
+        } else {
+            shouldRetry = true;
+            errorType = EMAIL_ERROR_TYPES.SMTP;
         }
-        if ([511, 535].includes(error.responseCode)) {
-            return EMAIL_ERROR_TYPES.AUTH;
+    } else if (error.statusCode) {
+        if ([410].includes(error.statusCode)) {
+            errorType = EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND;
+        } else if ([400, 403, 404, 413].includes(error.responseCode)) {
+            errorType = EMAIL_ERROR_TYPES.INVALID_INPUT;
+        } else {
+            shouldRetry = true;
+            errorType = EMAIL_ERROR_TYPES.EXTERNAL_SERVER_ERROR;
         }
-        if ([550, 553].includes(error.responseCode)) {
-            return EMAIL_ERROR_TYPES.INVALID_RECIPIENT;
-        }
-        return EMAIL_ERROR_TYPES.SMTP;
+    } else {
+        errorType = EMAIL_ERROR_TYPES.EXTERNAL_SERVER_ERROR;
     }
-    return error.code;
+
+    return {
+        shouldRetry,
+        errorType
+    };
 }
 
 function calculateRetryDelay(attempts) {

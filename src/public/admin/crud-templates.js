@@ -211,7 +211,7 @@ async function renderTemplateList(templates) {
             )
         );
         
-        if (template.type !== "Notification") {
+        if (template.type === "Email") {
             actionsCell.appendChild(
                 createActionButton("Send test email", "btn-warning", () =>
                     handleSendTestEmail(template.id)
@@ -304,7 +304,7 @@ function populateUpdateForm(template) {
     "Available placeholders: " + template.placeholders.join(", ") ||
     "No placeholders";
 
-    if (template.type !== "notification") {
+    if (template.type === "Email") {
         elements.borderCustomizationElements.forEach((element) => {
             element.style.display = "block";
         });
@@ -351,7 +351,7 @@ async function handleUpdateTemplate(event) {
     const data = Object.fromEntries(formData);
     data.template = CKEDITOR.instances["template-update"].getData();
     data.type = elements.templateUpdateForm["type-update"].value;
-    if (data.type !== "notification") {
+    if (data.type === "email") {
         data.table_border_color = elements.templateUpdateForm["table-border-color-update"].value || null;
         data.table_border_width = elements.templateUpdateForm["table-border-width-update"].value || null;
     } else {
