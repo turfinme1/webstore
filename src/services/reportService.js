@@ -1506,6 +1506,7 @@ class ReportService {
             options: [
                 { value: 'Email', label: 'Email' },
                 { value: 'Notification', label: 'Notification' },
+                { value: 'Push-Notification', label: 'Push Notification' },
             ],
             groupable: true,
         },
