@@ -5,7 +5,7 @@ const { ENV } = require("../serverConfigurations/constants");
 class NotificationService {
     constructor(){
     }
-
+    
     async getNotificationByUserId(data){
         ASSERT_USER(data.session.user_id, "You must be logged in to perform this action", { code: "SERVICE.NOTIFICATION.00001.UNAUTHORIZED_GET_NOTIFICATION", long_description: "You must be logged in to perform this action" });
         const allUserNotifications = await data.dbConnection.query(
@@ -37,29 +37,16 @@ class NotificationService {
 
     async createPushSubscription(data) {
         await data.dbConnection.query(
-            `INSERT INTO push_subscriptions (data, user_id, ip, user_agent) VALUES ($1, $2, $3, $4)`,
-            [data.body, data.session.user_id, data.ip, data.userAgent]
+            `INSERT INTO push_subscriptions (endpoint, data, user_id, ip, user_agent) VALUES ($1, $2, $3, $4, $5) 
+            ON CONFLICT (endpoint) DO UPDATE SET data = $2, user_id = $3, ip = $4, user_agent = $5`,
+            [data.body.endpoint, data.body, data.session.user_id, data.ip, data.userAgent]
         );
-    }
-    
-    async sendPushNotification(data) {
-        const subscriptions = await data.dbConnection.query(
-            `SELECT * FROM push_subscriptions`,
-        );
-        webpush.setVapidDetails(
-            ENV.VAPID_MAILTO,
-            ENV.VAPID_PUBLIC_KEY,
-            ENV.VAPID_PRIVATE_KEY,
-        );
-        for (const subscription of subscriptions.rows) {
-            await webpush.sendNotification(subscription.data, JSON.stringify({ title: "New Notification", body: "<p>Hello, {first_name} {last_name}! You have a new notification. Your email is {email} and your phone number is {phone}</p>" }));
-        }
     }
 
     async deletePushSubscription(data) {
         await data.dbConnection.query(
-            `DELETE FROM push_subscriptions WHERE user_id = $1`,
-            [data.session.user_id]
+            `DELETE FROM push_subscriptions WHERE endpoint = $1`,
+            [data.body.endpoint]
         );
     }
 }

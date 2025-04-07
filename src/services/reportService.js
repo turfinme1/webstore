@@ -167,7 +167,7 @@ class ReportService {
 
         if (orderClauses.length > 0) {
             const orderByClause = ` ${orderClauses.join(', ')}`;
-            sql = sql.replaceAll'1 DESC', `${orderByClause} `);
+            sql = sql.replaceAll('1 DESC', `${orderByClause} `);
         }
     }
 
@@ -1995,13 +1995,6 @@ class ReportService {
   
     const reportFilters = [
         {
-            key: "id",
-            grouping_expression: "P.id",
-            filter_expression: "P.id = $FILTER_VALUE$",
-            type: "number_single",
-            label: "ID",
-        },
-        {
             key: "created_at",
             grouping_expression: "P.created_at",
             minimum_filter_expression: "P.created_at >= $FILTER_VALUE$",
@@ -2009,6 +2002,13 @@ class ReportService {
             type: "timestamp",
             label: "Created At",
             groupable: true,
+        },
+        {
+            key: "id",
+            grouping_expression: "P.id",
+            filter_expression: "P.id = $FILTER_VALUE$",
+            type: "number_single",
+            label: "ID",
         },
         {
             key: "user_id",

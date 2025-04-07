@@ -7,12 +7,50 @@ self.addEventListener('push', async (event) => {
   const title   = payload.title  || 'New Notification';
   const options = {
     body : payload.body || 'You have a new notification',
+    data: {
+      id: payload.id || null,
+    },
+    tag: payload.id,
   };
 
   event.waitUntil(
     self.registration.showNotification(title, options)
+      .then(() => {
+        if (payload.id) {
+          return markNotificationAsShown(payload.id);
+        }
+      })
   );
 });
+
+self.addEventListener('notificationshow', (event) => {
+  const notification = event.notification;
+  const notificationId = notification.data?.id;
+  
+  if (notificationId) {
+    event.waitUntil(
+      markNotificationAsShown(notificationId)
+    );
+  }
+});
+
+async function markNotificationAsShown(notificationId) {
+  if (!notificationId) return;
+  
+  try {
+    const response = await fetch(`/api/notifications/${notificationId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      // credentials: 'same-origin' 
+    });
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error marking notification as shown:', error);
+  }
+}
 
 workbox.precaching.precacheAndRoute([
     { url: '/index.html', revision: '1' },

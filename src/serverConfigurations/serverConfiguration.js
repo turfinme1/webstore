@@ -56,7 +56,6 @@ const routeTable = {
     "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
     "/api/paypal/cancel/:orderId": orderController.cancelPaypalPayment,
     "/api/notifications": notificationController.getNotificationByUserId,
-    "/api/push-subscription": notificationController.sendPushNotification,
   },
   post: {
     "/auth/register": authController.register,
@@ -69,7 +68,7 @@ const routeTable = {
     "/api/cart/apply-voucher": cartController.applyVoucher,
     "/api/cart/remove-voucher": cartController.removeVoucher,
     "/api/orders": orderController.createOrder,
-    "/api/push-subscription": notificationController.createPushSubscription,
+    "/api/subscriptions": notificationController.createPushSubscription,
   },
   put: {
     "/auth/profile": authController.updateProfile,
@@ -77,7 +76,7 @@ const routeTable = {
   },
   delete: {
     "/api/cart/:itemId": cartController.deleteItem,
-    "/api/push-subscription": notificationController.deletePushSubscription,
+    "/api/subscriptions": notificationController.deletePushSubscription,
   },
 };
 

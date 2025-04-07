@@ -413,6 +413,9 @@ function createNavigation(userStatus) {
                       <li class="nav-item">
                           <a class="nav-link" href="/cart">My Cart</a>
                       </li>
+                      <li class="nav-item">
+                          <a class="nav-link subscribe-button">Subscribe</a>
+                      </li>
                       ${
                         userStatus.session_type === "Authenticated"
                           ? `
@@ -423,9 +426,7 @@ function createNavigation(userStatus) {
                               : `Welcome ${userStatus.first_name}`
                           }</a>
                       </li>
-                       <li class="nav-item">
-                          <a class="nav-link subscribe-button">Subscribe</a>
-                      </li>
+                       
                       <li class="nav-item">
                           <a class="nav-link logout-btn" href="/logout">Logout</a>
                       </li>
@@ -482,8 +483,11 @@ function createNavigation(userStatus) {
 
   document.body.prepend(navBar);
 
+  initSubscriptionButton(userStatus);
+
   const logoutButton = document.querySelector(".logout-btn");
   if (!logoutButton) return;
+
   logoutButton.addEventListener("click", async (event) => {
     event.preventDefault();
     const response = await fetch("/auth/logout");
@@ -494,11 +498,9 @@ function createNavigation(userStatus) {
     updateNotificationsList();
     setInterval(updateNotificationsList, 60000); // Update every 30 seconds
   }
-
-  initSubscriptionButton();
 }
 
-async function initSubscriptionButton() {
+async function initSubscriptionButton(userStatus) {
   const subscribeButton = document.querySelector(".subscribe-button");
   if (!subscribeButton) return;
 
@@ -506,6 +508,18 @@ async function initSubscriptionButton() {
   let subscription = await registration.pushManager.getSubscription();
 
   subscribeButton.textContent = subscription ? 'Unsubscribe' : 'Subscribe';
+
+  if(subscription && userStatus.session_type === "Authenticated") {
+    try{
+      const response = await fetch("/api/subscriptions", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
+      });
+    } catch (error) {
+      console.error('Error saving subscription:', error);
+    }
+  }
 
   subscribeButton.addEventListener("click", async () => {
     const permission = await Notification.requestPermission();
@@ -516,7 +530,7 @@ async function initSubscriptionButton() {
         userVisibleOnly: true,
         applicationServerKey: 'BJ7UuFCX99N49hlHSrTP76J_88LdIDJQ0YWuMVvC2O7GHI12eLNZK5_MGuD1leViV28gGoG1YwpYv8l3Y1yWoaU',
       });
-      await fetch("/api/push-subscription", {
+      await fetch("/api/subscriptions", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription)
@@ -524,7 +538,7 @@ async function initSubscriptionButton() {
       subscribeButton.textContent = 'Unsubscribe';
     } else {
       await subscription.unsubscribe();
-      await fetch("/api/push-subscription", {
+      await fetch(`/api/subscriptions`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription)
