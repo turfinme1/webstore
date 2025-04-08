@@ -1136,7 +1136,7 @@ class ReportService {
                 AND $average_weekly_login_count_maximum_filter_expression$
             GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
             ORDER BY 1 DESC
-            LIMIT 500
+            
         )
         SELECT
             NULL AS "id",
