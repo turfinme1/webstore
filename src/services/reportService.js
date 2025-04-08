@@ -1954,8 +1954,8 @@ class ReportService {
     const sql = `
     SELECT * FROM (
         SELECT
-            tg.id,
-            tg.name,
+            c.id,
+            c.name,
             COUNT(DISTINCT utg.user_id) AS users_count,
             CASE
                 WHEN c.final_user_count IS NOT NULL AND c.final_user_count > 0
@@ -1964,14 +1964,13 @@ class ReportService {
                     THEN ROUND((COUNT(DISTINCT CASE WHEN o.user_id IS NOT NULL THEN o.user_id END)::float / COUNT(DISTINCT utg.user_id) * 100)::numeric, 2)
                 ELSE 0
             END AS conversion_rate
-        FROM target_groups tg
+        FROM campaigns c
+        LEFT JOIN target_groups tg ON c.target_group_id = tg.id
         LEFT JOIN user_target_groups utg ON tg.id = utg.target_group_id
         LEFT JOIN orders o ON o.user_id = utg.user_id AND o.status = 'Paid'
-        LEFT JOIN campaigns c ON c.target_group_id = tg.id
-        WHERE TRUE
-        GROUP BY tg.id, tg.name, c.final_user_count
+        GROUP BY c.id
         ORDER BY 1 DESC
-        LIMIT 10
+        LIMIT ${data.context.settings.campaign_chart_count}
     ) query
     `;
   
