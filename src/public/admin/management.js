@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="col-6">
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Target groups chart
+              <h5 class="card-title">Campaign chart
                 <div id="spinner-target-groups" class="spinner-border text-primary ms-3" role="status" style="display: none;">
                   <span class="visually-hidden">Loading...</span>
                 </div>
