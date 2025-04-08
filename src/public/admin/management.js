@@ -3,7 +3,7 @@ import { fetchUserSchema, createNavigation, createBackofficeNavigation, populate
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
   createNavigation(userStatus);
-  createBackofficeNavigation(userStatus);
+  await createBackofficeNavigation(userStatus);
 
   const contentArea = document.getElementById("content-area");
   contentArea.innerHTML = `
