@@ -416,6 +416,9 @@ function createNavigation(userStatus) {
                       <li class="nav-item">
                           <a class="nav-link subscribe-button">Subscribe</a>
                       </li>
+                       <li class="nav-item">
+                          <a class="nav-link" href="/chat">Chat</a>
+                      </li>
                       ${
                         userStatus.session_type === "Authenticated"
                           ? `
