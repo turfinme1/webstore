@@ -858,7 +858,7 @@ class ReportService {
         {
             key: "has_paid_order",
             grouping_expression: "has_paid_order",
-            filter_expression: "CASE WHEN $FILTER_VALUE$ = 'true' THEN COALESCE(lo.order_count , 0) >= 1 ELSE COALESCE(lo.order_count , 0) = 0 END",
+            filter_expression: "CASE WHEN $FILTER_VALUE$ = 'true' THEN COALESCE(o.order_count , 0) >= 1 ELSE COALESCE(o.order_count , 0) = 0 END",
             type: "select",
             label: "Has Paid Order",
             groupable: true,
@@ -1036,7 +1036,7 @@ class ReportService {
         }
     ];
   
-    let sql = `
+    let sql0 = `
         WITH orders AS (
             SELECT
                 o.user_id,
@@ -1196,6 +1196,136 @@ class ReportService {
             SUM(login_count) AS "login_count",
             COUNT(*) AS "count",
             1 AS "sort_order" 
+        FROM filtered_users
+        WHERE TRUE
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+        ORDER BY sort_order ASC, 1 DESC
+    `;
+
+    let sql = `
+        WITH filtered_users AS (
+        SELECT
+            U.id AS "id",
+            U.created_at AS "created_at",
+            U.first_name AS "first_name",
+            U.last_name  AS "last_name",
+            U.email AS "email",
+            U.phone AS "phone",
+            icc.phone_code AS "phone_code",
+            cc.country_name AS "country_name",
+            genders.type AS "gender",
+            U.birth_date AS "birth_date",
+            U.is_email_verified AS "is_email_verified",
+            DATE_PART('day', CURRENT_DATE - U.created_at) AS "days_since_creation",
+            
+            -- Order aggregates from the precomputed table
+            o.has_paid_order AS "has_paid_order",
+            o.average_paid_amount AS "average_paid_amount",
+            o.first_order_created_at AS "first_order_created_at",
+            o.days_since_first_order AS "days_since_first_order",
+            o.first_order_total_paid_amount AS "first_order_total_paid_amount",
+            o.days_since_last_order AS "days_since_last_order",
+            o.order_total_paid_amount AS "order_total_paid_amount",
+            o.order_count AS "order_count",
+            
+            -- Login aggregates from the precomputed table
+            l.days_since_last_login AS "days_since_last_login",
+            l.login_count AS "login_count",
+            l.average_weekly_login_count AS "average_weekly_login_count"
+        FROM users U
+        LEFT JOIN user_order_aggregates o ON U.id = o.user_id
+        LEFT JOIN user_login_aggregates l ON U.id = l.user_id
+        LEFT JOIN iso_country_codes icc ON U.iso_country_code_id = icc.id
+        LEFT JOIN iso_country_codes cc ON U.country_id = cc.id
+        LEFT JOIN genders ON U.gender_id = genders.id
+        WHERE U.is_active = TRUE
+            AND $id_filter_expression$
+            AND $first_name_filter_expression$
+            AND $last_name_filter_expression$
+            AND $email_filter_expression$
+            AND $country_name_filter_expression$
+            AND $phone_code_filter_expression$
+            AND $created_at_minimum_filter_expression$
+            AND $created_at_maximum_filter_expression$
+            AND $days_since_creation_minimum_filter_expression$
+            AND $days_since_creation_maximum_filter_expression$
+            AND $is_email_verified_filter_expression$
+            AND $has_paid_order_filter_expression$
+            AND $order_total_paid_amount_minimum_filter_expression$
+            AND $order_total_paid_amount_maximum_filter_expression$
+            AND $order_count_minimum_filter_expression$
+            AND $order_count_maximum_filter_expression$
+            AND $first_order_created_at_minimum_filter_expression$
+            AND $first_order_created_at_maximum_filter_expression$
+            AND $first_order_total_paid_amount_minimum_filter_expression$
+            AND $first_order_total_paid_amount_maximum_filter_expression$
+            AND $days_since_last_order_minimum_filter_expression$
+            AND $days_since_last_order_maximum_filter_expression$
+            AND $days_since_last_login_minimum_filter_expression$
+            AND $days_since_last_login_maximum_filter_expression$
+            AND $login_count_minimum_filter_expression$
+            AND $login_count_maximum_filter_expression$
+            AND $average_weekly_login_count_minimum_filter_expression$
+            AND $average_weekly_login_count_maximum_filter_expression$
+        )
+        -- First part: the overall totals row
+        SELECT
+            NULL AS "id",
+            NULL AS "created_at",
+            NULL AS "first_name",
+            NULL AS "last_name",
+            NULL AS "email",
+            NULL AS "phone",
+            NULL AS "phone_code",
+            NULL AS "country_name",
+            NULL AS "gender",
+            NULL AS "birth_date",
+            NULL AS "is_email_verified",
+            NULL AS "days_since_creation",
+            NULL AS "has_paid_order",
+            NULL AS "average_paid_amount",
+            NULL AS "first_order_created_at",
+            NULL AS "days_since_first_order",
+            NULL AS "first_order_total_paid_amount",
+            NULL AS "days_since_last_order",
+            NULL AS "days_since_last_login",
+            NULL AS "average_weekly_login_count",
+            SUM(order_total_paid_amount) AS "order_total_paid_amount",
+            SUM(order_count) AS "order_count",
+            SUM(login_count) AS "login_count",
+            COUNT(*) AS "count",
+            0 AS "sort_order"
+        FROM filtered_users
+        WHERE TRUE
+
+        UNION ALL
+
+        SELECT
+            $id_grouping_expression$ AS "id",
+            $created_at_grouping_expression$ AS "created_at",
+            $first_name_grouping_expression$ AS "first_name",
+            $last_name_grouping_expression$  AS "last_name",
+            $email_grouping_expression$  AS "email",
+            $phone_grouping_expression$  AS "phone",
+            $phone_code_grouping_expression$ AS "phone_code",
+            $country_name_grouping_expression$ AS "country_name",
+            $gender_grouping_expression$ AS "gender",
+            $birth_date_grouping_expression$ AS "birth_date",
+            $is_email_verified_grouping_expression$ AS "is_email_verified",
+            $days_since_creation_grouping_expression$ AS "days_since_creation",
+            $has_paid_order_grouping_expression$ AS "has_paid_order",
+            $average_paid_amount_grouping_expression$ AS "average_paid_amount",
+            $first_order_created_at_grouping_expression$ AS "first_order_created_at",
+            $days_since_first_order_grouping_expression$ AS "days_since_first_order",
+            $first_order_total_paid_amount_grouping_expression$ AS "first_order_total_paid_amount",
+            $days_since_last_order_grouping_expression$ AS "days_since_last_order",
+            $days_since_last_login_grouping_expression$ AS "days_since_last_login",
+            $average_weekly_login_count_grouping_expression$ AS "average_weekly_login_count",
+            SUM(order_total_paid_amount) AS "order_total_paid_amount",
+            SUM(order_count) AS "order_count",
+            SUM(login_count) AS "login_count",
+            COUNT(*) AS "count",
+            1 AS "sort_order"
         FROM filtered_users
         WHERE TRUE
         GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
