@@ -162,16 +162,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   await Promise.any([
     renderOrderChartLastSixMonths(),
     renderOrderChartLastTwoDays(),
+    renderTargetGroupChart(),
     renderUserGroupsChart(),
     renderDashboard(startDateElement.value, endDateElement.value),
     renderCampaignDashboard(startDateElement.value, endDateElement.value),
-    renderTargetGroupChart(),
   ]);
 });
 
 async function renderOrderChartLastSixMonths() {
+  const spinner = document.getElementById("spinner-6-months");
   try {
-    const spinner = document.getElementById("spinner-6-months");
 
     let date = new Date();
     date.setMonth(date.getMonth() - 6);
@@ -186,13 +186,23 @@ async function renderOrderChartLastSixMonths() {
     });
 
     spinner.style.display = "inline-block";
-    const response = await fetch(
-      `/crud/orders/filtered?${queryParams.toString()}`
-    );
-    const data = await response.json();
+
+    const response = await fetchWithErrorHandling('api/reports/monthly-orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        limit_filter_value: 6,
+      })
+    })
+    if(!response.ok) {
+      showToastMessage(response.error, "error");
+      return;
+    }
+
+    const data = await response.data.rows;
 
     // Parse data for chart
-    const labels = data.result
+    const labels = data
       .map((item) =>
         new Date(item.created_at).toLocaleDateString("en-US", {
           month: "short",
@@ -200,8 +210,8 @@ async function renderOrderChartLastSixMonths() {
         })
       )
       .reverse();
-    const orderCounts = data.result.map((item) => Number(item.count)).reverse();
-    const orderPrices = data.result
+    const orderCounts = data.map((item) => Number(item.count)).reverse();
+    const orderPrices = data
       .map((item) => parseFloat(item.paid_amount))
       .reverse();
 
@@ -252,16 +262,14 @@ async function renderOrderChartLastSixMonths() {
 
     spinner.style.display = "none";
   } catch (error) {
-    spinner.style.display = "none";
     console.error("Error fetching order data:", error);
-    contentArea.innerHTML =
-      "<p class='text-danger'>Failed to load order chart. Please try again later.</p>";
+    spinner.style.display = "none";
   }
 }
 
 async function renderOrderChartLastTwoDays() {
+  const spinner = document.getElementById("spinner-2-days");
   try {
-    const spinner = document.getElementById("spinner-2-days");
     
     let date = new Date();
     date.setDate(date.getDate() - 2);
@@ -276,13 +284,23 @@ async function renderOrderChartLastTwoDays() {
     });
 
     spinner.style.display = "inline-block";
-    const response = await fetch(
-      `/crud/orders/filtered?${queryParams.toString()}`
-    );
-    const data = await response.json();
+
+    const response = await fetchWithErrorHandling('api/reports/daily-orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        limit_filter_value: 2,
+      })
+    })
+    if(!response.ok) {
+      showToastMessage(response.error, "error");
+      return;
+    }
+
+    const data = await response.data.rows;
 
     // Parse data for 2-day chart
-    const labels = data.result
+    const labels = data
       .map((item) =>
         new Date(item.created_at).toLocaleDateString("en-US", {
           month: "2-digit",
@@ -291,8 +309,8 @@ async function renderOrderChartLastTwoDays() {
         })
       )
       .reverse();
-    const orderCounts = data.result.map((item) => Number(item.count)).reverse();
-    const orderPrices = data.result
+    const orderCounts = data.map((item) => Number(item.count)).reverse();
+    const orderPrices = data
       .map((item) => parseFloat(item.total_price))
       .reverse();
 

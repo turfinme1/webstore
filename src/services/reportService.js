@@ -18,6 +18,8 @@ class ReportService {
         "store-trends": this.storeTrendsReportDefinition.bind(this),
         "campaign-trends": this.campaignTrendsReportDefinition.bind(this),
         "target-group-trends": this.targetGroupTrendsReportDefinition.bind(this),
+        "monthly-orders": this.monthlyOrdersReportDefinition.bind(this),
+        "daily-orders": this.dailyOrdersReportDefinition.bind(this),
     }
   }
 
@@ -2194,6 +2196,52 @@ class ReportService {
             AND $user_agent_filter_expression$
         GROUP BY 1, 2, 3, 4, 5
         ORDER BY sort_order ASC, 1 DESC`;
+  
+    return { reportUIConfig, sql, reportFilters };
+  }
+
+  async monthlyOrdersReportDefinition(data) {
+    const reportUIConfig = {
+      title: 'Monthly Orders Summary',
+      dataEndpoint: '/api/reports/monthly-orders'
+    };
+  
+    const reportFilters = [
+      {
+        key: "limit",
+        filter_expression: "$FILTER_VALUE$",
+        type: "number_single",
+      }
+    ];
+  
+    let sql = `
+        SELECT * 
+        FROM monthly_order_summary 
+        ORDER BY created_at DESC
+        LIMIT $limit_filter_expression$`;
+  
+    return { reportUIConfig, sql, reportFilters };
+  }
+
+  async dailyOrdersReportDefinition(data) {
+    const reportUIConfig = {
+        title: 'Daily Orders Summary',
+        dataEndpoint: '/api/reports/daily-orders'
+    };
+    
+    const reportFilters = [
+      {
+        key: "limit",
+        filter_expression: "$FILTER_VALUE$",
+        type: "number_single",
+      }
+    ];
+  
+    let sql = `
+        SELECT * 
+        FROM daily_order_summary 
+        ORDER BY created_at DESC
+        LIMIT $limit_filter_expression$`;
   
     return { reportUIConfig, sql, reportFilters };
   }
