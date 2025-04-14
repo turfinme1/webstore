@@ -1,7 +1,6 @@
 const pool = require("../database/dbConfig");
 const Logger = require("../serverConfigurations/logger");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
-const e = require("express");
 
 (async () => {
     let client;
