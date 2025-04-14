@@ -31,9 +31,6 @@ function createNavigation(userStatus) {
                       `
                           : `
                       <li class="nav-item">
-                          <a class="nav-link" href="/register.html">Register</a>
-                      </li>
-                      <li class="nav-item">
                           <a class="nav-link" href="/login.html">Login</a>
                       </li>
                       `

@@ -68,9 +68,11 @@
         },
         "birth_date": {
             "type": "string",
+            "minLength": 3,
             "label": "Birth Date",
             "placeholder": "Enter Birth Date",
             "errorMessage": {
+                "minLength": "Birth date is required.",
                 "format": "Birth date must be a valid date."
             }
         },
@@ -136,6 +138,7 @@
         "email",
         "phone",
         "iso_country_code_id",
+        "birth_date",
         "captcha_answer"
     ],
     "additionalProperties": false,
