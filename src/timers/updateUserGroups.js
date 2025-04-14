@@ -20,7 +20,7 @@ const { tr } = require("@faker-js/faker");
             `);
             
             const { interval, initial_time } = settingsResult.rows[0];
-            const milliseconds = interval.minutes * 60 * 1000 * 5; // 5 times the interval
+            const milliseconds = interval.minutes * 60 * 1000 * 50; // 50 times the interval
             const now = new Date();
             const initialTimeToday = new Date(now);
             initialTimeToday.setHours(initial_time.split(":")[0]);
