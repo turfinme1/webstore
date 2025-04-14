@@ -164,8 +164,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderOrderChartLastTwoDays(),
     renderTargetGroupChart(),
     renderUserGroupsChart(),
-    renderDashboard(startDateElement.value, endDateElement.value),
-    renderCampaignDashboard(startDateElement.value, endDateElement.value),
   ]);
 });
 
