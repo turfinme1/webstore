@@ -21,6 +21,11 @@ class CrudPageBuilder {
         create: [],
         update: [],
       },
+      formHookCallbacks: {
+        create: [],
+        update: [],
+      },
+      fetchedSelectOptions: {},
     };
     this.elements = {
       filterContainer: null,
@@ -207,6 +212,11 @@ class CrudPageBuilder {
     submitButton.textContent = type === "create" ? "Submit" : "Update";
     form.appendChild(submitButton);
 
+    const formHookCallbacks = this.state.formHookCallbacks[type];
+    for (const callback of formHookCallbacks) {
+      await callback(form, type);
+    }
+
     form.addEventListener("submit", (event) =>
       this.handleFormSubmit(event, type, this.state.collectValuesCallbacks)
     );
@@ -237,6 +247,8 @@ class CrudPageBuilder {
         input.name = field;
         const response = await fetch(property.renderConfig.fetchFrom);
         const data = await response.json();
+        this.state.fetchedSelectOptions[field] = data;
+        console.log(this.state.fetchedSelectOptions);
 
         const emptyOption = new Option("Select an option", "");
         input.appendChild(emptyOption);
@@ -443,6 +455,14 @@ class CrudPageBuilder {
         input.required = true;
         label.innerHTML = `${label.textContent} <span style="color:red;">*</span>`;
       }
+    }
+
+    if(property?.renderConfig?.conditionalTemplateDisplay === true) {
+      input.addEventListener("change", (event) => this.handleTemplateChange(event));
+      this.state.formHookCallbacks.create.push((form, type) => {
+        const event = new Event("change");
+        input.dispatchEvent(event);
+      });
     }
 
     if (input) {
@@ -964,6 +984,34 @@ class CrudPageBuilder {
         }
       }
     });
+  }
+
+  handleTemplateChange(event) {
+    const templateType = event.target.value;
+    const userIdsInput = document.querySelector("#user_ids");
+    const templateIdInput = document.querySelector("#template_id");
+
+    const filteredTemplates = this.state.fetchedSelectOptions["template_id"].filter(
+      (template) => template.type === templateType
+    );
+    templateIdInput.innerHTML = "";
+    for (const template of filteredTemplates) {
+      const optionElement = new Option(
+        template.name,
+        template.id 
+      );
+      templateIdInput.appendChild(optionElement);
+    }
+    
+    if (templateType === "Push-Notification-Broadcast") {
+      userIdsInput.disabled = true;
+      userIdsInput.required = false;
+      userIdsInput.value = "";
+    } else {
+      userIdsInput.disabled = false;
+      userIdsInput.required = this.schema.properties.user_ids.required.create || 
+                            this.schema.properties.user_ids.required.update;
+    }
   }
 }
 

@@ -700,7 +700,15 @@ class CrudService {
     
     const template = templateResult.rows[0];
     
-    // Get users data
+    if (template.type === 'Push-Notification-Broadcast') {
+        await data.dbConnection.query(
+          `INSERT INTO emails (subject, text_content, notification_id, type) 
+          VALUES ($1, $2, $3, $4)`,
+          [template.subject, template.template, mainEntity.id, template.type]
+        );
+        return;
+    }
+
     const userIds = mainEntity.user_ids.split(',').map(id => parseInt(id.trim()));
     const usersResult = await data.dbConnection.query(
       `SELECT id, email, first_name, last_name, phone 

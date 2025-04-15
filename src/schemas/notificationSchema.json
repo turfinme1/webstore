@@ -21,6 +21,42 @@
                 "type": "Invalid value for Notification name."
             }
         },
+        "notification_type": {
+            "type": "string",
+            "label": "Notification Type",
+            "placeholder": "Select Notification Type",
+            "required": {
+                "create": true,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "select",
+                "conditionalTemplateDisplay": true,
+                "options": [
+                    {
+                        "value": "Email",
+                        "label": "Email"
+                    },
+                    {
+                        "value": "Notification",
+                        "label": "Notification"
+                    },
+                    {
+                        "value": "Push-Notification",
+                        "label": "Push Notification"
+                    },
+                    {
+                        "value": "Push-Notification-Broadcast",
+                        "label": "Push Notification Broadcast"
+                    }
+                ]
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for template type."
+            }
+        },
         "template_id": {
             "type": "integer",
             "label": "Template",

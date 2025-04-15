@@ -116,6 +116,38 @@ const EMAIL_ERROR_TYPES = {
                         WHERE id = $2`, 
                         [EMAIL_STATUS.SENT, email.id]
                     );
+                } else if (email.type === 'Push-Notification-Broadcast') {
+                    const subscriptions = await client.query(`
+                        SELECT * FROM push_subscriptions`,
+                    );
+
+                    if(subscriptions.rows.length === 0) {
+                        await client.query(`
+                            UPDATE emails
+                            SET status = $1
+                            WHERE id = $2`,
+                            [EMAIL_STATUS.FAILED, email.id]
+                        );
+
+                        await logger.info({
+                            code: 'TIMERS.PROCESS_EMAIL_QUEUE.00005.NO_SUBSCRIPTIONS',
+                            short_description: 'Email queue process completed',
+                            long_description: 'Email queue process completed'
+                        });
+
+                        continue; 
+                    }
+
+                    for (const subscription of subscriptions.rows) {
+                        await webpush.sendNotification(subscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
+                    }
+                 
+                    await client.query(`
+                        UPDATE emails 
+                        SET status = $1, sent_at = NOW()
+                        WHERE id = $2`, 
+                        [EMAIL_STATUS.SENT, email.id]
+                    );
                 } else {
                     const emailOptions = { 
                         from: "no-reply@web-store4eto.com",

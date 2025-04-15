@@ -27,6 +27,8 @@ const elements = {
     currentPageDisplay: document.getElementById("current-page-display"),
     resultCountDisplay: document.getElementById("result-count"),
     placeholderArea: document.getElementById("placeholders"),
+    typeSelectCreate: document.getElementById("type"),
+    placeholdersCreate: document.getElementById("placeholders-create"),
 
     showFilterButton: document.getElementById("show-filter-btn"),
     cancelFilterButton: document.getElementById("cancel-filter-btn"),
@@ -82,6 +84,8 @@ function attachEventListeners() {
     elements.cancelFilterButton.addEventListener("click", hideFilterForm);
     elements.filterForm.addEventListener("submit", handleFilterTemplates);
     elements.orderBySelect.addEventListener("change", handleFilterTemplates);
+
+    elements.typeSelectCreate.addEventListener("change", handleTypeChange);
 }
 
 // Show/Hide Forms
@@ -324,7 +328,12 @@ async function handleCreateTemplate(event) {
     data.template = CKEDITOR.instances.template.getData();
     data.table_border_color = null;
     data.table_border_width = null;
-    data.placeholders = JSON.stringify(["{first_name}","{last_name}","{email}","{phone}"]);
+
+    if(data.type === 'Push-Notification' || data.type === 'Notification'){
+        data.placeholders = JSON.stringify(["{first_name}","{last_name}","{email}","{phone}"]);
+    } else {
+        data.placeholders = JSON.stringify([]);
+    }
     try {
         const response = await fetchWithErrorHandling("/crud/email-templates", {
             method: "POST",
@@ -469,5 +478,16 @@ async function handlePreviewEmail(templateId) {
         document.body.appendChild(modal);
     } else {
         showToastMessage(response.error, "error");
+    }
+}
+
+async function handleTypeChange(params) {
+    const selectedType = params.target.value;
+    if (selectedType === "Push-Notification") {
+        elements.placeholdersCreate.innerHTML = "Available placeholders: {first_name}, {last_name}, {email}, {phone}";
+    } else if (selectedType === "Notification") { 
+        elements.placeholdersCreate.innerHTML = "Available placeholders: {first_name}, {last_name}, {email}, {phone}";
+    } else {
+        elements.placeholdersCreate.innerHTML = "No available placeholders";
     }
 }
