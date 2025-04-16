@@ -101,7 +101,7 @@ class ReportBuilder {
         timestamp: {
             template: (filter) => `
                 <div class="mb-3 row align-items-center">
-                    <label class="col-md-3 col-form-label text-md-start">${filter.label} (Time in UTC)</label>
+                    <label class="col-md-3 col-form-label text-md-start">${filter.label}</label>
                     <div class="col-md-9">
                         <div class="row g-2">
                             <div class="col-4">
@@ -412,8 +412,22 @@ class ReportBuilder {
             enableSeconds: true,
             altInput: true,
             altFormat: "d-m-Y H:i:S",
-            dateFormat: "Y-m-d\\TH:i:S",
+            dateFormat: "Z",
             time_24hr: true,
+            formatDate: (date, format) => {
+                if (format === "Z") {
+                    const tzOffset = date.getTimezoneOffset();
+                    const tzSign = tzOffset <= 0 ? '+' : '-';
+                    
+                    const tzHours = Math.abs(Math.floor(tzOffset / 60));
+                    const tzMinutes = Math.abs(tzOffset % 60);
+                    
+                    const tzString = `${tzSign}${String(tzHours).padStart(2, '0')}:${String(tzMinutes).padStart(2, '0')}`;
+                    
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}${tzString}`;
+                }
+                return flatpickr.formatDate(date, format);
+            },
             onReady: function(selectedDates, dateStr, instance) {
                 var customContainer = document.createElement("div");
                 customContainer.className = "custom-buttons-container";
