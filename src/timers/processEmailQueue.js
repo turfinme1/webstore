@@ -44,10 +44,13 @@ const EMAIL_ERROR_TYPES = {
     let loggerClient;
 
     try {
+        console.log('Starting processEmailQueue');
         const templateLoader = new TemplateLoader();
         const emailService = new EmailService(transporter, templateLoader);
         
+        console.log('[processEmailQueue] Aquire client from pool...');
         client = await pool.connect();
+        console.log('[processEmailQueue] Aquire logger client from pool');
         loggerClient = await pool.connect();
         logger = new Logger({ dbConnection: new DbConnectionWrapper(loggerClient) });
         webpush.setVapidDetails(
@@ -295,7 +298,7 @@ const EMAIL_ERROR_TYPES = {
         `, [EMAIL_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]);
 
         await client.query('COMMIT');
-
+        console.log('Email queue process completed');
         await logger.info({
             code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EMAIL_QUEUE_PROCESS_SUCCESS',
             short_description: 'Email queue process completed',
@@ -306,9 +309,11 @@ const EMAIL_ERROR_TYPES = {
         if (logger) await logger.error(error);
     } finally {
         if (client) {
+            console.log('[processEmailQueue] Released client to pool');
             client.release();
         }
         if (loggerClient) {
+            console.log('[processEmailQueue] Released logger client to pool');
             loggerClient.release();
         }
     }
