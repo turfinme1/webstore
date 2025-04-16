@@ -12,7 +12,7 @@
             "placeholder": "Enter First Name",
             "errorMessage": {
                 "minLength": "Name must be at least 3 characters long.",
-                "pattern": "Name can only contain letters and spaces."
+                "pattern": "Name can only contain letters and no spaces."
             }
         },
         "last_name": {
@@ -23,7 +23,7 @@
             "placeholder": "Enter Last Name",
             "errorMessage": {
                 "minLength": "Name must be at least 3 characters long.",
-                "pattern": "Name can only contain letters and spaces."
+                "pattern": "Name can only contain letters and no spaces."
             }
         },
         "email": {
