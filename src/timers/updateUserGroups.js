@@ -12,6 +12,7 @@ const { tr } = require("@faker-js/faker");
 
     while (true) {
         try {
+            console.log("Starting updateUserGroups");
             const settingsResult = await pool.query(`
                 SELECT 
                     target_group_status_update_interval as interval,
@@ -35,6 +36,7 @@ const { tr } = require("@faker-js/faker");
 
             const entitySchemaCollection = loadEntitySchemas("admin");
             const reportService = new ReportService();
+            console.log('[updateUserGroups] Aquire client from pool...');
             client = await pool.connect();
             logger = new Logger({ dbConnection: new DbConnectionWrapper(client) });
 
@@ -100,10 +102,13 @@ const { tr } = require("@faker-js/faker");
                 long_description: "User group update completed by cron"
             });
         } catch (error) {
-            if (logger) await logger.error(error);
             console.error("Error during User group update:", error);
+            if (logger) await logger.error(error);
         } finally {
-            if (client) client.release();
+            if (client) {
+                console.log('[updateUserGroups] Release client to pool');
+                client.release();
+            }
         }
     }
 })();

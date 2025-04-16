@@ -8,11 +8,13 @@ const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 
     while (true) {
         try {
+            console.log("Starting updateCampaignStatus");
             const campaignResult = await pool.query('SELECT campaign_status_update_interval FROM app_settings LIMIT 1');
             const interval = campaignResult.rows[0]?.campaign_status_update_interval;
             const milliseconds = interval.minutes * 60 * 1000;
 
             await new Promise(resolve => setTimeout(resolve, milliseconds));
+            console.log('[updateCampaignStatus] Aquire client from pool...');
             client = await pool.connect();
             logger = new Logger({ dbConnection: new DbConnectionWrapper(client) });
 
@@ -73,7 +75,10 @@ const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
             if (logger) await logger.error(error);
             console.error("Error during campaign update:", error);
         } finally {
-            if (client) client.release();
+            if (client) {
+                console.log('[updateCampaignStatus] Release client to pool...');
+                client.release();
+            }
         }
     }
 })();
