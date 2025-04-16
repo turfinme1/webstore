@@ -87,6 +87,10 @@
     "ratings": {
       "table" : "ratings",
       "foreign_key": "product_id"
+    },
+    "inventories": {
+      "table" : "inventories",
+      "foreign_key": "product_id"
     }
   },
   "required": [
