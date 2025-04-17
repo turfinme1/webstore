@@ -578,7 +578,6 @@ class CrudPageBuilder {
     // Add additional form data to the form data object
     for (const [key, value] of Object.entries(this.state.additionalFormData)) {
       console.log("Additional form data:", key, value);
-      // console.log(JSON.stringify(value));
       data[key] = value;
     }
 
@@ -591,6 +590,24 @@ class CrudPageBuilder {
         ? `${this.apiEndpoint}`
         : `${this.apiEndpoint}/${this.elements.updateEntityId}`;
     const method = type === "create" ? "POST" : "PUT";
+
+    if(this.schema.dryRun === true) {
+      const dryRunresponse = await fetchWithErrorHandling(url, {
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({...data, dry_run: true}),
+      });
+
+      if (dryRunresponse.ok) {
+        const confirmResult = confirm(dryRunresponse.data.message);
+        if (!confirmResult) {
+          return;
+        }
+      } else {
+        showToastMessage(dryRunresponse.error, "error");
+        return;
+      }
+    }
 
     console.log("Data to be submitted:", data);
     const response = await fetchWithErrorHandling(url, {
