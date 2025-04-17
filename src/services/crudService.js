@@ -21,6 +21,10 @@ class CrudService {
       data.body.password_hash = await bcrypt.hash(data.body.password_hash, 10);
     }
 
+    if (data.body.dry_run === true && this.hooks().dry_run[data.params.entity]) {
+      return await this.hooks().dry_run[data.params.entity](data);
+    }
+
     if (this.hooks().create[data.params.entity]?.before) {
       await this.hooks().create[data.params.entity].before(data);
     }
@@ -419,7 +423,7 @@ class CrudService {
         "user-groups": {
           after: this.userGroupCreateHook.bind(this),
         },
-        notifications: {
+        "notifications": {
           after: this.notificationCreateHook.bind(this),
         }
       },
@@ -436,6 +440,9 @@ class CrudService {
         "user-groups": {
           before: this.userGroupUpdateHook.bind(this),
         },
+      },
+      dry_run: {
+        "notifications": this.notificationDryRunHook.bind(this),
       },
     }
   };
@@ -731,6 +738,40 @@ class CrudService {
           VALUES ($1, $2, $3, $4, $5, $6)`,
           [user.id, user.email, template.subject, text_content, mainEntity.id, template.type]
         );
+    }
+  }
+
+  async notificationDryRunHook(data) {
+    const templateResult = await data.dbConnection.query(
+      `SELECT * FROM email_templates WHERE id = $1`,
+      [data.body.template_id]
+    );
+    ASSERT_USER(templateResult.rows.length > 0, "Template not found", {
+        code: "SERVICE.CRUD.00630.TEMPLATE_NOT_FOUND",
+        long_description: "Notification template not found"
+    });
+
+    const template = templateResult.rows[0];
+
+    if (template.type === 'Push-Notification-Broadcast') {
+      const countResult = await data.dbConnection.query(`
+        SELECT COUNT(*) FROM push_subscriptions`
+      );
+      return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
+    } else if (template.type === 'Push-Notification') {
+      const userIds = data.body.user_ids.split(',').map(id => parseInt(id.trim()));
+      const countResult = await data.dbConnection.query(`
+        SELECT COUNT(*) FROM push_subscriptions WHERE user_id = ANY($1)`,
+        [userIds]
+      );
+      return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
+    } else {
+      const userIds = data.body.user_ids.split(',').map(id => parseInt(id.trim()));
+      const countResult = await data.dbConnection.query(`
+        SELECT COUNT(*) FROM users WHERE id = ANY($1)`,
+        [userIds]
+      );
+      return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
     }
   }
 }

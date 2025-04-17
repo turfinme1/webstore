@@ -5,6 +5,7 @@
     "href": "/crud-notification",
     "views": "notifications_view",
     "queryValidationSchema": "notificationQueryParamsSchema",
+    "dryRun": true,
     "properties": {
         "name": {
             "type": "string",
