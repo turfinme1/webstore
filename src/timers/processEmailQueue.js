@@ -5,8 +5,9 @@ const { TemplateLoader } = require("../serverConfigurations/templateLoader");
 const Logger = require("../serverConfigurations/logger");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const { ENV } = require("../serverConfigurations/constants");
+const { ASSERT } = require("../serverConfigurations/assert");
 
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 5000;
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MINUTES = 2;
 const MESSAGE_TYPE = 'Email';
@@ -121,130 +122,38 @@ const EMAIL_ERROR_TYPES = {
                         [EMAIL_STATUS.SENT, email.id]
                     );
                 } else if (email.type === 'Push-Notification-Broadcast') {
-                        const PUSH_NOTIFICATION_BATCH_SIZE = 10000;
-                        const PUSH_CONCURRENT_REQUESTS = 100; 
-                        
-                        const countResult = await client.query(`
-                            SELECT COUNT(*) as total FROM push_subscriptions
-                        `);
-                        
-                        if (parseInt(countResult.rows[0].total) === 0) {
-                            await client.query(`
-                                UPDATE emails
-                                SET status = $1
-                                WHERE id = $2`,
-                                [EMAIL_STATUS.FAILED, email.id]
-                            );
+                    const subscription = await client.query(`
+                        SELECT * FROM push_subscriptions
+                        WHERE id = $1`,
+                        [email.push_subscription_id]
+                    );
+                    ASSERT(subscription.rows.length === 1, 'Expected exactly one subscription for broadcast', { code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EXPECTED_ONE_SUBSCRIPTION', long_description: `Expected exactly one subscription for broadcast with email id: ${email.id}` });
 
-                            await logger.info({
-                                code: 'TIMERS.PROCESS_EMAIL_QUEUE.00005.NO_SUBSCRIPTIONS',
-                                short_description: 'No push subscriptions found',
-                                long_description: 'No push subscriptions available for broadcast'
-                            });
-                            
-                            continue;
-                        }
-                        
-                        // Process in batches
-                        const totalSubscriptions = parseInt(countResult.rows[0].total);
-                        const notificationPayload = JSON.stringify({ 
-                            id: email.id, 
-                            title: email.subject, 
-                            body: email.text_content 
-                        });
-                        
-                        let successCount = 0;
-                        let failureCount = 0;
-                        let offset = 0;
-                        
-                        // Process in batches until all subscriptions are processed
-                        while (offset < totalSubscriptions) {
-                            // Get a batch of subscriptions
-                            const subscriptionsResult = await client.query(`
-                                SELECT * FROM push_subscriptions
-                                LIMIT $1 OFFSET $2`,
-                                [PUSH_NOTIFICATION_BATCH_SIZE, offset]
-                            );
-                            
-                            const subscriptions = subscriptionsResult.rows;
-                            const batchResults = [];
-                            
-                            // Process the batch in chunks to control concurrency
-                            for (let i = 0; i < subscriptions.length; i += PUSH_CONCURRENT_REQUESTS) {
-                                const chunk = subscriptions.slice(i, i + PUSH_CONCURRENT_REQUESTS);
-                                
-                                // Send notifications concurrently but with limits
-                                const promises = chunk.map(subscription => {
-                                    return webpush.sendNotification(subscription.data, notificationPayload)
-                                        .then(() => ({ success: true }))
-                                        .catch(error => {
-                                            // Log the error but don't fail the whole batch
-                                            logger.error(error).catch(() => {}); // Ignore logging errors
-                                            
-                                            // If the subscription is gone, we should remove it
-                                            if (error.statusCode === 410) {
-                                                return {
-                                                    success: false,
-                                                    expired: true,
-                                                    subscriptionId: subscription.id
-                                                };
-                                            }
-                                            
-                                            return { success: false };
-                                        });
-                                });
-                                
-                                // Wait for all promises in this chunk to resolve
-                                const chunkResults = await Promise.all(promises);
-                                batchResults.push(...chunkResults);
-                                
-                                // Short pause between chunks to prevent overwhelming servers
-                                await new Promise(resolve => setTimeout(resolve, 100));
-                            }
-                            
-                            // Process results of this batch
-                            const batchSuccessCount = batchResults.filter(r => r.success).length;
-                            const batchFailureCount = batchResults.length - batchSuccessCount;
-                            
-                            successCount += batchSuccessCount;
-                            failureCount += batchFailureCount;
-                            
-                            // Clean up expired subscriptions
-                            const expiredSubscriptions = batchResults
-                                .filter(r => r.expired && r.subscriptionId)
-                                .map(r => r.subscriptionId);
-                                
-                            if (expiredSubscriptions.length > 0) {
-                                await client.query(`
-                                    DELETE FROM push_subscriptions
-                                    WHERE id = ANY($1)
-                                `, [expiredSubscriptions]);
-                                
-                                await logger.info({
-                                    code: 'TIMERS.PROCESS_EMAIL_QUEUE.00012.REMOVED_EXPIRED_SUBSCRIPTIONS',
-                                    short_description: 'Removed expired push subscriptions',
-                                    long_description: `Removed ${expiredSubscriptions.length} expired push subscriptions`
-                                });
-                            }
-                            
-                            // Move to next batch
-                            offset += PUSH_NOTIFICATION_BATCH_SIZE;
-                        }
-                        
-                        const successRate = totalSubscriptions > 0 ? (successCount / totalSubscriptions) : 0;
-                        
+                    if (subscription.rows.length === 0) {
                         await client.query(`
-                            UPDATE emails 
-                            SET status = $1, sent_at = NOW()
-                            WHERE id = $2`, 
-                            [EMAIL_STATUS.SENT, email.id]
+                            UPDATE emails
+                            SET status = $1
+                            WHERE id = $2`,
+                            [EMAIL_STATUS.FAILED, email.id]
                         );
-                        
                         await logger.info({
-                            code: 'TIMERS.PROCESS_EMAIL_QUEUE.00014.PUSH_BROADCAST_COMPLETED',
-                            short_description: 'Push notification broadcast completed',
-                            long_description: `Sent push notifications to ${successCount} of ${totalSubscriptions} subscribers (${(successRate * 100).toFixed(2)}%)`
+                            code: 'TIMERS.PROCESS_EMAIL_QUEUE.00005.NO_SUBSCRIPTIONS',
+                            short_description: 'No push subscriptions found',
+                            long_description: 'No push subscriptions available for broadcast'
                         });
+                        continue;
+                    }
+
+                    const pushSubscription = subscription.rows[0];
+
+                    await webpush.sendNotification(pushSubscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
+                    
+                    await client.query(`
+                        UPDATE emails 
+                        SET status = $1, sent_at = NOW()
+                        WHERE id = $2`, 
+                        [EMAIL_STATUS.SENT, email.id]
+                    );
                 } else {
                     const emailOptions = { 
                         from: "no-reply@web-store4eto.com",
@@ -284,6 +193,20 @@ const EMAIL_ERROR_TYPES = {
                         email_priority = GREATEST(email_priority - 1, 1)
                     WHERE id = $3
                 `, [newStatus, retryDelay, email.id]);
+
+                if(errorType === EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND ) {
+                    await client.query(`
+                        UPDATE emails
+                        SET push_subscription_id = NULL
+                        WHERE id = $1`,
+                        [email.id]
+                    );
+                    await client.query(`
+                        DELETE FROM push_subscriptions
+                        WHERE id = $1`,
+                        [email.push_subscription_id]
+                    );
+                }
 
                 await logger.error(error);
             }

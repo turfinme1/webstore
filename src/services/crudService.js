@@ -708,9 +708,10 @@ class CrudService {
     const template = templateResult.rows[0];
     
     if (template.type === 'Push-Notification-Broadcast') {
-        await data.dbConnection.query(
-          `INSERT INTO emails (subject, text_content, notification_id, type) 
-          VALUES ($1, $2, $3, $4)`,
+        await data.dbConnection.query(`
+          INSERT INTO emails (recipient_id, push_subscription_id, subject, text_content, notification_id, type)
+          SELECT user_id, id, $1, $2, $3, $4
+          FROM push_subscriptions`,
           [template.subject, template.template, mainEntity.id, template.type]
         );
         return;
