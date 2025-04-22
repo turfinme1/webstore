@@ -851,40 +851,30 @@ async function renderTargetGroupChart(){
     }
 
     const data = await response.data;
-    const conversionRates = data.rows.map(g => Number(g.conversion_rate || 0));
-
-    const sortedIndices = conversionRates.map((rate, index) => ({rate, index}))
-      .sort((a, b) => parseFloat(b.rate) - parseFloat(a.rate))
-      .map(item => item.index);
-    
     const labels = data.rows.map(g => g.name);
     const counts = data.rows.map(g => Number(g.users_count));
+    const conversionRates = data.rows.map(g => Number(g.conversion_rate || 0));
     const colors = labels.map((_, index) => chartColorPalette[index % chartColorPalette.length]);
 
-    const sortedLabels = sortedIndices.map(i => labels[i]);
-    const sortedCounts = sortedIndices.map(i => counts[i]);
-    const sortedRates = sortedIndices.map(i => conversionRates[i]);
-    const sortedColors = sortedIndices.map(i => colors[i]);
-    
     // Create the chart
     const ctx = document.getElementById('targetGroupChart').getContext('2d');
     new Chart(ctx, {
       type: 'bar',
       data: { 
-        labels: sortedLabels, 
+        labels: labels, 
         datasets: [
           {
             label: 'User Count',
-            data: sortedCounts,
-            backgroundColor: sortedColors,
-            borderColor: sortedColors.map(c => c.replace('60%', '40%')),
+            data: counts,
+            backgroundColor: colors,
+            borderColor: colors.map(c => c.replace('60%', '40%')),
             borderWidth: 1,
             order: 2,
             yAxisID: 'y'
           },
           {
             label: 'Conversion Rate (%)',
-            data: sortedRates,
+            data: conversionRates,
             type: 'line',
             borderColor: '#ff6384',
             backgroundColor: 'rgba(255, 99, 132, 0.2)',
@@ -918,7 +908,7 @@ async function renderTargetGroupChart(){
             position: 'right',
             title: { display: true, text: 'Conversion %' },
             min: 0,
-            max: Math.max(...conversionRates) * 1.1 || 100,
+            max: Math.max(100, Math.max(...conversionRates) * 1.1),
             ticks: {
               callback: value => `${value.toFixed(1)}%`
             },
