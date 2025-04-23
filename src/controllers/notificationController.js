@@ -20,7 +20,6 @@ class NotificationController {
     }
 
     async markAsRead(req, res) {
-        ASSERT_USER(req.session.user_id, "You must be logged in", { code: "CONTROLLER.NOTIFICATION.00002.UNAUTHORIZED_MARK_READ", long_description: "User must be logged in to mark notifications as read" });
         const data = {
             session: req.session,
             dbConnection: req.dbConnection,

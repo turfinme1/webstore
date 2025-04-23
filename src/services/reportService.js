@@ -1725,7 +1725,8 @@ class ReportService {
                 { key: 'users_count', label: 'Users Count', format: 'number' },
                 { key: 'status_pending', label: 'Pending', format: 'number' },
                 { key: 'status_sent', label: 'Sent', format: 'number' },
-                { key: 'status_seen', label: 'Seen', format: 'number' }
+                { key: 'status_seen', label: 'Seen', format: 'number' },
+                { key: 'status_failed', label: 'Failed', format: 'number' },
             ]
         ]
     };
@@ -1765,6 +1766,7 @@ class ReportService {
             COUNT(CASE WHEN E.status = 'queued' THEN 1 END) AS status_pending,
             COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
             COUNT(CASE WHEN E.status = 'seen' THEN 1 END) AS status_seen,
+            COUNT(CASE WHEN E.status = 'failed' THEN 1 END) AS status_failed,
             0 AS "sort_order"
         FROM notifications N	
         JOIN emails E ON N.id = E.notification_id
@@ -1784,6 +1786,7 @@ class ReportService {
             COUNT(CASE WHEN E.status = 'queued' THEN 1 END) AS status_pending,
             COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
             COUNT(CASE WHEN E.status = 'seen' THEN 1 END) AS status_seen,
+            COUNT(CASE WHEN E.status = 'failed' THEN 1 END) AS status_failed,
             1 AS "sort_order"
         FROM notifications N	
         JOIN emails E ON N.id = E.notification_id
@@ -2101,8 +2104,10 @@ class ReportService {
                 { key: 'id', label: 'ID', format: 'text' },
                 { key: 'user_id', label: 'User ID', format: 'text' },
                 { key: 'user_email', label: 'User Email', format: 'text' },
+                { key: 'status', label: 'Status', format: 'text' },
                 { key: 'ip', label: 'IP Address', format: 'text' },
                 { key: 'user_agent', label: 'User Agent', format: 'text' },
+                { key: 'count', label: 'Count', format: 'number' },
             ]
         ],
     };
@@ -2139,6 +2144,19 @@ class ReportService {
             label: "User Email",
         },
         {
+            key: "status",
+            grouping_expression: "P.status",
+            filter_expression: "P.status = $FILTER_VALUE$",
+            type: "select",
+            label: "Status",
+            options: [
+                { value: 'active', label: 'Active' },
+                { value: 'blocked', label: 'Blocked' },
+                { value: 'inactive', label: 'Inactive' },
+            ],
+            groupable: true,
+        },
+        {
             key: "ip",
             grouping_expression: "ip",
             filter_expression: "STRPOS(LOWER(CAST( P.ip AS text )), LOWER( $FILTER_VALUE$ )) > 0",
@@ -2160,12 +2178,13 @@ class ReportService {
             NULL AS "id",
             NULL AS "user_id",
             NULL AS "user_email",
+            NULL AS "status",
             NULL AS "ip",
             NULL AS "user_agent",
             COUNT(*) AS "count",
             0 AS "sort_order"
         FROM push_subscriptions P
-        JOIN users U ON P.user_id = U.id
+        LEFT JOIN users U ON P.user_id = U.id
         WHERE TRUE
             AND $id_filter_expression$
             AND $created_at_minimum_filter_expression$
@@ -2173,6 +2192,7 @@ class ReportService {
             AND $user_id_filter_expression$
             AND $ip_filter_expression$
             AND $user_agent_filter_expression$
+            AND $status_filter_expression$
   
         UNION ALL
   
@@ -2181,12 +2201,13 @@ class ReportService {
             $id_grouping_expression$ AS "id",
             $user_id_grouping_expression$ AS "user_id",
             $user_email_grouping_expression$ AS "user_email",
+            $status_grouping_expression$ AS "status",
             $ip_grouping_expression$ AS "ip",
             $user_agent_grouping_expression$ AS "user_agent",
             COUNT(*) AS "count",
             1 AS "sort_order"
         FROM push_subscriptions P
-        JOIN users U ON P.user_id = U.id
+        LEFT JOIN users U ON P.user_id = U.id
         WHERE TRUE
             AND $id_filter_expression$
             AND $created_at_minimum_filter_expression$
@@ -2194,7 +2215,8 @@ class ReportService {
             AND $user_id_filter_expression$
             AND $ip_filter_expression$
             AND $user_agent_filter_expression$
-        GROUP BY 1, 2, 3, 4, 5
+            AND $status_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5, 6
         ORDER BY sort_order ASC, 1 DESC`;
   
     return { reportUIConfig, sql, reportFilters };

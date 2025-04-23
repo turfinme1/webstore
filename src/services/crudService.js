@@ -711,7 +711,8 @@ class CrudService {
         await data.dbConnection.query(`
           INSERT INTO emails (recipient_id, push_subscription_id, subject, text_content, notification_id, type)
           SELECT user_id, id, $1, $2, $3, $4
-          FROM push_subscriptions`,
+          FROM push_subscriptions
+          WHERE status = 'active'`,
           [template.subject, template.template, mainEntity.id, template.type]
         );
         return;
@@ -756,13 +757,13 @@ class CrudService {
 
     if (template.type === 'Push-Notification-Broadcast') {
       const countResult = await data.dbConnection.query(`
-        SELECT COUNT(*) FROM push_subscriptions`
+        SELECT COUNT(*) FROM push_subscriptions WHERE status = 'active'`,
       );
       return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
     } else if (template.type === 'Push-Notification') {
       const userIds = data.body.user_ids.split(',').map(id => parseInt(id.trim()));
       const countResult = await data.dbConnection.query(`
-        SELECT COUNT(*) FROM push_subscriptions WHERE user_id = ANY($1)`,
+        SELECT COUNT(*) FROM push_subscriptions WHERE user_id = ANY($1) AND status = 'active'`,
         [userIds]
       );
       return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }

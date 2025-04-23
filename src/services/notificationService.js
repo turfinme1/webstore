@@ -1,5 +1,4 @@
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
-const webpush = require("web-push");
 const { ENV } = require("../serverConfigurations/constants");
 
 class NotificationService {
@@ -22,30 +21,25 @@ class NotificationService {
     }
 
     async markAsRead(data) {
-        ASSERT_USER(data.session.user_id, "You must be logged in", { 
-            code: "SERVICE.NOTIFICATION.00002.UNAUTHORIZED_MARK_READ", 
-            long_description: "User must be logged in to mark notifications as read" 
-        });
-
         await data.dbConnection.query(
             `UPDATE emails 
              SET status = 'seen' 
-             WHERE id = $1 AND recipient_id = $2`,
-            [data.params.id, data.session.user_id]
+             WHERE id = $1`,
+            [data.params.id]
         );
     }
 
     async createPushSubscription(data) {
         await data.dbConnection.query(
-            `INSERT INTO push_subscriptions (endpoint, data, user_id, ip, user_agent) VALUES ($1, $2, $3, $4, $5) 
-            ON CONFLICT (endpoint) DO UPDATE SET data = $2, user_id = $3, ip = $4, user_agent = $5`,
-            [data.body.endpoint, data.body, data.session.user_id, data.ip, data.userAgent]
+            `INSERT INTO push_subscriptions (endpoint, data, user_id, ip, user_agent, status) VALUES ($1, $2, $3, $4, $5, $6) 
+            ON CONFLICT (endpoint) DO UPDATE SET data = $2, user_id = $3, ip = $4, user_agent = $5, status = $6`,
+            [data.body.endpoint, data.body, data.session.user_id, data.ip, data.userAgent, data.body.status || 'active']
         );
     }
 
     async deletePushSubscription(data) {
         await data.dbConnection.query(
-            `DELETE FROM push_subscriptions WHERE endpoint = $1`,
+            `UPDATE push_subscriptions SET status = 'inactive' WHERE endpoint = $1`,
             [data.body.endpoint]
         );
     }
