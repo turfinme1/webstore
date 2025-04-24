@@ -697,6 +697,8 @@ class CrudService {
   }
 
   async notificationCreateHook(data, mainEntity) {
+    const start = hrtime();
+
     const templateResult = await data.dbConnection.query(
         `SELECT * FROM email_templates WHERE id = $1`,
         [mainEntity.template_id]
@@ -716,10 +718,13 @@ class CrudService {
           WHERE status = 'active'`,
           [template.subject, template.template, mainEntity.id, template.type]
         );
+
+        const endBroadcast = hrtime(start);
+        const elapsedTimeBroadcast = (endBroadcast[0] * 1e9 + endBroadcast[1]) / 1e6; // Convert to milliseconds
+        console.log(`Email queue process completed in ${elapsedTimeBroadcast} ms`);
         return;
     }
 
-    const start = hrtime();
     const userIds = mainEntity.user_ids.split(',').map(id => parseInt(id.trim()));
     const usersResult = await data.dbConnection.query(
       `SELECT id, email, first_name, last_name, phone 
