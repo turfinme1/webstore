@@ -521,6 +521,8 @@ async function initSubscriptionButton(userStatus) {
     }
   }
 
+  setupPermissionChangeListener();
+
   subscribeButton.addEventListener("click", async () => {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
@@ -536,6 +538,7 @@ async function initSubscriptionButton(userStatus) {
         body: JSON.stringify(subscription)
       });
       subscribeButton.textContent = 'Unsubscribe';
+      window.subscription = subscription;
     } else {
       await subscription.unsubscribe();
       await fetch(`/api/subscriptions`, {
@@ -545,8 +548,76 @@ async function initSubscriptionButton(userStatus) {
       });
       subscribeButton.textContent = 'Subscribe';
       subscription = null;
+      window.subscription = null;
     }
   });
+}
+
+function setupPermissionChangeListener() {
+  // Store current permission state
+  let currentPermission = Notification.permission;
+  
+  // Check if browser supports the Permissions API
+  if (navigator.permissions) {
+    navigator.permissions.query({ name: 'notifications' })
+      .then(permissionStatus => {
+        // Listen for permission changes
+        permissionStatus.onchange = async () => {
+          const newPermission = Notification.permission;
+          console.log(`Notification permission changed: ${currentPermission} → ${newPermission}`);
+          const subscription = window?.subscription;
+          
+          // If permission changed from granted to denied/blocked and we have a subscription
+          if (currentPermission === 'granted' && 
+              newPermission !== 'granted' && 
+              subscription) {
+            try {
+              console.log('Updating subscription status to blocked');
+              subscription.status = 'blocked';
+              const body = subscription.toJSON();
+              body.status = subscription.status; 
+              await fetch("/api/subscriptions", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+              });
+            } catch (error) {
+              console.error('Error updating subscription status:', error);
+            }
+          }
+          
+          currentPermission = newPermission;
+        };
+      });
+  } else {
+    // Fallback for browsers without Permissions API
+    // Use visibility change as opportunity to check permission changes
+    document.addEventListener('visibilitychange', async () => {
+      const subscription = window?.subscription;
+
+      if (document.visibilityState === 'visible') {
+        const newPermission = Notification.permission;
+        if (currentPermission === 'granted' && 
+            newPermission !== 'granted' && 
+            subscription) {
+          try {
+            console.log('Visibility change - updating subscription status');
+            subscription.status = 'blocked';
+            const body = subscription.toJSON();
+            body.status = subscription.status; 
+            await fetch("/api/subscriptions", {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+          } catch (error) {
+            console.error('Error updating subscription status:', error);
+          }
+        }
+        currentPermission = newPermission;
+      }
+    });
+  }
 }
 
 async function updateNotificationsList() {

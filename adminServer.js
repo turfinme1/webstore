@@ -15,8 +15,8 @@ app.use(express.static(path.join(__dirname, "..")));
 app.use(express.static(path.join(__dirname, "src", "public", "admin"), { index:false, extensions:['html'] }));
 app.use(express.static(path.join(__dirname, "src", "public", "shared"), { index:false, extensions:['html'] }));
 app.use(express.static(path.join(__dirname, "src", "schemas")));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json({limit: "10mb", extended: true}))
+app.use(express.urlencoded({limit: "10mb", extended: true, parameterLimit: 50000}))
 
 serverConfig.registerRoutes(serverConfig.routeTable, app);
 

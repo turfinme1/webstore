@@ -1,4 +1,4 @@
-const webpush = require("web-push");
+const webpush = require("../serverConfigurations/webpushWrapper");
 const pool = require("../database/dbConfig");
 const { EmailService, transporter } = require("../services/emailService");
 const { TemplateLoader } = require("../serverConfigurations/templateLoader");
@@ -6,8 +6,9 @@ const Logger = require("../serverConfigurations/logger");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const { ENV } = require("../serverConfigurations/constants");
 const { ASSERT } = require("../serverConfigurations/assert");
+const { hrtime } = require("process");
 
-const BATCH_SIZE = 5000;
+const BATCH_SIZE = 100000;
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MINUTES = 2;
 const MESSAGE_TYPE = 'Email';
@@ -21,6 +22,12 @@ const EMAIL_STATUS = {
     SEEN: 'seen',
     FAILED: 'failed'
 };
+
+const NOTIFICATION_STATUS = {
+    ACTIVE: 'active',
+    BLOCKED: 'blocked',
+    INACTIVE: 'inactive',
+}
 
 const RETRY_BACKOFF = {
     INITIAL_DELAY: 5, // minutes
@@ -46,6 +53,7 @@ const EMAIL_ERROR_TYPES = {
 
     try {
         console.log('Starting processEmailQueue');
+        const start = hrtime();
         const templateLoader = new TemplateLoader();
         const emailService = new EmailService(transporter, templateLoader);
         
@@ -90,8 +98,8 @@ const EMAIL_ERROR_TYPES = {
                 if(email.type === 'Push-Notification') {
                     const subscriptions = await client.query(`
                         SELECT * FROM push_subscriptions
-                        WHERE user_id = $1`,
-                        [email.recipient_id]
+                        WHERE user_id = $1 AND status = $2`,
+                        [email.recipient_id, NOTIFICATION_STATUS.ACTIVE]
                     );
 
                     if(subscriptions.rows.length === 0) {
@@ -124,10 +132,10 @@ const EMAIL_ERROR_TYPES = {
                 } else if (email.type === 'Push-Notification-Broadcast') {
                     const subscription = await client.query(`
                         SELECT * FROM push_subscriptions
-                        WHERE id = $1`,
-                        [email.push_subscription_id]
+                        WHERE id = $1 AND status = $2`,
+                        [email.push_subscription_id, NOTIFICATION_STATUS.ACTIVE]
                     );
-                    ASSERT(subscription.rows.length === 1, 'Expected exactly one subscription for broadcast', { code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EXPECTED_ONE_SUBSCRIPTION', long_description: `Expected exactly one subscription for broadcast with email id: ${email.id}` });
+                    ASSERT(subscription.rows.length <= 1, 'Expected exactly one subscription for broadcast', { code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EXPECTED_ONE_SUBSCRIPTION', long_description: `Expected exactly one subscription for broadcast with email id: ${email.id}` });
 
                     if (subscription.rows.length === 0) {
                         await client.query(`
@@ -196,15 +204,10 @@ const EMAIL_ERROR_TYPES = {
 
                 if(errorType === EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND ) {
                     await client.query(`
-                        UPDATE emails
-                        SET push_subscription_id = NULL
-                        WHERE id = $1`,
-                        [email.id]
-                    );
-                    await client.query(`
-                        DELETE FROM push_subscriptions
-                        WHERE id = $1`,
-                        [email.push_subscription_id]
+                        UPDATE push_subscriptions
+                        SET status = $1
+                        WHERE id = $2`,
+                        [NOTIFICATION_STATUS.INACTIVE, email.push_subscription_id]
                     );
                 }
 
@@ -221,6 +224,10 @@ const EMAIL_ERROR_TYPES = {
         `, [EMAIL_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]);
 
         await client.query('COMMIT');
+
+        const end = hrtime(start);
+        const elapsedTime = (end[0] * 1e9 + end[1]) / 1e6; // Convert to milliseconds
+        console.log(`Email queue process completed in ${elapsedTime} ms`);
         console.log('Email queue process completed');
         await logger.info({
             code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EMAIL_QUEUE_PROCESS_SUCCESS',
@@ -228,6 +235,7 @@ const EMAIL_ERROR_TYPES = {
             long_description: 'Email queue process completed'
         });
     } catch (error) {
+        console.log(error);
         if (client) await client.query('ROLLBACK');
         if (logger) await logger.error(error);
     } finally {

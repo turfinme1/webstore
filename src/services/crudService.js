@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
+const { hrtime } = require("process");
 
 class CrudService {
   constructor(reportService) {
@@ -711,12 +712,14 @@ class CrudService {
         await data.dbConnection.query(`
           INSERT INTO emails (recipient_id, push_subscription_id, subject, text_content, notification_id, type)
           SELECT user_id, id, $1, $2, $3, $4
-          FROM push_subscriptions`,
+          FROM push_subscriptions
+          WHERE status = 'active'`,
           [template.subject, template.template, mainEntity.id, template.type]
         );
         return;
     }
 
+    const start = hrtime();
     const userIds = mainEntity.user_ids.split(',').map(id => parseInt(id.trim()));
     const usersResult = await data.dbConnection.query(
       `SELECT id, email, first_name, last_name, phone 
@@ -740,6 +743,10 @@ class CrudService {
           [user.id, user.email, template.subject, text_content, mainEntity.id, template.type]
         );
     }
+
+    const end = hrtime(start);
+    const elapsedTime = (end[0] * 1e9 + end[1]) / 1e6; // Convert to milliseconds
+    console.log(`Email queue process completed in ${elapsedTime} ms`);
   }
 
   async notificationDryRunHook(data) {
@@ -756,13 +763,13 @@ class CrudService {
 
     if (template.type === 'Push-Notification-Broadcast') {
       const countResult = await data.dbConnection.query(`
-        SELECT COUNT(*) FROM push_subscriptions`
+        SELECT COUNT(*) FROM push_subscriptions WHERE status = 'active'`,
       );
       return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
     } else if (template.type === 'Push-Notification') {
       const userIds = data.body.user_ids.split(',').map(id => parseInt(id.trim()));
       const countResult = await data.dbConnection.query(`
-        SELECT COUNT(*) FROM push_subscriptions WHERE user_id = ANY($1)`,
+        SELECT COUNT(*) FROM push_subscriptions WHERE user_id = ANY($1) AND status = 'active'`,
         [userIds]
       );
       return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
