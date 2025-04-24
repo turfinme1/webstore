@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
+const { hrtime } = require("process");
 
 class CrudService {
   constructor(reportService) {
@@ -718,6 +719,7 @@ class CrudService {
         return;
     }
 
+    const start = hrtime();
     const userIds = mainEntity.user_ids.split(',').map(id => parseInt(id.trim()));
     const usersResult = await data.dbConnection.query(
       `SELECT id, email, first_name, last_name, phone 
@@ -741,6 +743,10 @@ class CrudService {
           [user.id, user.email, template.subject, text_content, mainEntity.id, template.type]
         );
     }
+
+    const end = hrtime(start);
+    const elapsedTime = (end[0] * 1e9 + end[1]) / 1e6; // Convert to milliseconds
+    console.log(`Email queue process completed in ${elapsedTime} ms`);
   }
 
   async notificationDryRunHook(data) {
