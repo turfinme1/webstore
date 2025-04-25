@@ -5,8 +5,8 @@ class NotificationController {
         this.notificationService = notificationService;
         this.getNotificationByUserId = this.getNotificationByUserId.bind(this);
         this.markAsRead = this.markAsRead.bind(this);
-        this.createPushSubscription = this.createPushSubscription.bind(this);
-        this.deletePushSubscription = this.deletePushSubscription.bind(this);
+        this.createSubscription = this.createSubscription.bind(this);
+        this.deleteSubscription = this.deleteSubscription.bind(this);
     }
 
     async getNotificationByUserId(req, res) {
@@ -29,7 +29,7 @@ class NotificationController {
         res.status(200).end();
     }
 
-    async createPushSubscription(req, res) {
+    async createSubscription(req, res) {
         const data = {
             session: req.session,
             dbConnection: req.dbConnection,
@@ -37,17 +37,17 @@ class NotificationController {
             ip: req.ip,
             userAgent: req.headers["user-agent"],
         };
-        await this.notificationService.createPushSubscription(data);
+        await this.notificationService.createSubscription(data);
         res.status(200).end();
     }
 
-    async deletePushSubscription(req, res) {
+    async deleteSubscription(req, res) {
         const data = {
             session: req.session,
             dbConnection: req.dbConnection,
             body: req.body,
         };
-        await this.notificationService.deletePushSubscription(data);
+        await this.notificationService.deleteSubscription(data);
         res.status(200).end();
     }
 }

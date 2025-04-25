@@ -68,7 +68,7 @@ const routeTable = {
     "/api/cart/apply-voucher": cartController.applyVoucher,
     "/api/cart/remove-voucher": cartController.removeVoucher,
     "/api/orders": orderController.createOrder,
-    "/api/subscriptions": notificationController.createPushSubscription,
+    "/api/subscriptions": notificationController.createSubscription,
   },
   put: {
     "/auth/profile": authController.updateProfile,
@@ -76,7 +76,7 @@ const routeTable = {
   },
   delete: {
     "/api/cart/:itemId": cartController.deleteItem,
-    "/api/subscriptions": notificationController.deletePushSubscription,
+    "/api/subscriptions": notificationController.deleteSubscription,
   },
 };
 
