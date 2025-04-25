@@ -29,7 +29,7 @@ class NotificationService {
         );
     }
 
-    async createPushSubscription(data) {
+    async createSubscription(data) {
         await data.dbConnection.query(
             `INSERT INTO push_subscriptions (endpoint, data, user_id, ip, user_agent, status) VALUES ($1, $2, $3, $4, $5, $6) 
             ON CONFLICT (endpoint) DO UPDATE SET data = $2, user_id = $3, ip = $4, user_agent = $5, status = $6`,
@@ -37,7 +37,7 @@ class NotificationService {
         );
     }
 
-    async deletePushSubscription(data) {
+    async deleteSubscription(data) {
         await data.dbConnection.query(
             `UPDATE push_subscriptions SET status = 'inactive' WHERE endpoint = $1`,
             [data.body.endpoint]
