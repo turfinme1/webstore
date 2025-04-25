@@ -576,9 +576,71 @@ class ReportBuilder {
     
         this.state.sortCriteria = currentCriteria;
 
-        if(await this.validateForm()) {
-            const formData = new FormData(document.getElementById('report-form'));
-            await this.fetchData(formData, this.state.sortCriteria);
+        if(this.state.tableData && this.state.tableData?.rows?.length >= 2) {
+            const sortedData = this.applySorting(this.state.tableData, this.state.sortCriteria);
+            this.renderTableData(sortedData);
+            this.updateSortIndicators();
+        } else {
+            this.state.sortCriteria = [];
+            this.updateSortIndicators();
+        }
+    }
+
+    applySorting(data, sortCriteria) {
+        if (!sortCriteria || sortCriteria?.length === 0 || data?.rows?.length <= 2) {
+            return data;
+        }
+
+        const sortedDataCopy = {
+            ...data,
+            rows: [...data.rows]
+        }
+
+        const totalRow = sortedDataCopy.rows.pop();
+        const reversedSortCriteria = [...sortCriteria].reverse();
+
+        sortedDataCopy.rows.sort((rowA, rowB) => {
+            for (const { key, direction } of sortCriteria) {
+                const rowAValue = rowA[key];
+                const rowBValue = rowB[key];
+
+                const columnConfig = this.config.headerGroups.flat().find(col => col.key === key);
+
+                const conmparison = this.compareValues(rowAValue, rowBValue, columnConfig?.format);
+
+                if (conmparison !== 0) {
+                    return direction === 'ASC' ? conmparison : -conmparison;
+                }
+            }
+
+            return 0;
+        });
+
+        sortedDataCopy.rows.push(totalRow);
+        return sortedDataCopy;
+    }
+
+    compareValues(valueA, valueB, format) {
+        if (valueA === null || valueA === undefined) return 1;
+        if (valueB === null || valueB === undefined) return -1;
+        if (valueA === valueB) return 0;
+        
+        switch (format) {
+            case 'number':
+            case 'currency':
+            case 'percentage':
+                return parseFloat(valueA) - parseFloat(valueB);
+                
+            case 'date':
+            case 'time':
+            case 'date_time':
+                return new Date(valueA) - new Date(valueB);
+                
+            case 'boolean':
+                return (valueA === true ? 1 : 0) - (valueB === true ? 1 : 0);
+                
+            default:
+                return String(valueA).localeCompare(String(valueB));
         }
     }
 
@@ -587,9 +649,20 @@ class ReportBuilder {
             const key = header.dataset.sortKey;
             const sortEntry = this.state.sortCriteria.find(c => c.key === key);
             const sortEntryPosition = this.state.sortCriteria.findIndex(c => c.key === key);
-            header.innerHTML = header.innerHTML.replace(/\d+/s, '');
-            header.innerHTML = header.innerHTML.replace(/ ↑| ↓/g, '');
-            if (sortEntry) header.innerHTML += sortEntry.direction === 'ASC' ? ` ${sortEntryPosition+1}↑` : `${sortEntryPosition+1}↓`;
+            
+            // First, remove any existing sort indicators
+            const existingIndicator = header.querySelector('.sort-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+            
+            // Add new indicator if this column is sorted
+            if (sortEntry) {
+                const indicator = document.createElement('span');
+                indicator.className = 'sort-indicator';
+                indicator.textContent = ` ${sortEntryPosition + 1}${sortEntry.direction === 'ASC' ? '↑' : '↓'}`;
+                header.appendChild(indicator);
+            }
         });
     }
 
@@ -618,6 +691,8 @@ class ReportBuilder {
             });
             
             const data = await response.json();
+            this.state.tableData = data;
+
             if(data.overRowDisplayLimit){
                 showToastMessage("The row limit has been reached. Please refine your search criteria.", "error");
             }
@@ -836,7 +911,9 @@ class ReportBuilder {
     async handleUrlFilters() {
         const urlParams = new URLSearchParams(window.location.search);
         const filters = JSON.parse(decodeURIComponent(urlParams.get('filters')));
-        this.populateFormFieldsWithFilters(filters);
+        if (filters) {
+            this.populateFormFieldsWithFilters(filters);
+        }
 
         const form = document.getElementById('report-form');
         if(filters) {
