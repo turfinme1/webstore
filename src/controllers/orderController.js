@@ -90,7 +90,7 @@ class OrderController {
     }
 
     async deleteOrder(req, res) {
-      ASSERT_USER(req.session.user_id, "You must be logged in to perform this action", { code: "CONTROLLER.ORDER.00093.UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" });
+      ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.ORDER.00093.UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" });
       this.authService.requirePermission(req, "delete", 'orders');
       const data = {
         params: req.params,
