@@ -249,7 +249,7 @@ class OrderService {
 
     const orderResult = await data.dbConnection.query(
       `
-      SELECT * FROM orders_view WHERE id = $1`,
+      SELECT * FROM orders_detail_view WHERE id = $1`,
       [data.params.orderId]
     );
     ASSERT_USER(orderResult.rows.length === 1, "Order not found", { code: "SERVICE.ORDER.00255.ORDER_NOT_FOUND" , long_description: "Order not found" });
