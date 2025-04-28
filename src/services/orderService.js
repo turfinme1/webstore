@@ -39,7 +39,7 @@ class OrderService {
         'Pending',
         $2,
         $3,
-        (SELECT COALESCE(SUM(discount_percentage), 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date),
+        (SELECT COALESCE(discount_percentage, 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date ORDER BY discount_percentage DESC LIMIT 1),
         (SELECT SUM(ci.quantity * p.price) 
         FROM cart_items ci 
         JOIN products p ON ci.product_id = p.id 
@@ -174,7 +174,7 @@ class OrderService {
     const orderResult = await data.dbConnection.query(
       `
       INSERT INTO orders (user_id, status, vat_percentage, discount_percentage, total_price, total_stock_price) 
-      VALUES ($1, $2, $3, (SELECT COALESCE(SUM(discount_percentage), 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date),
+      VALUES ($1, $2, $3, (SELECT COALESCE(discount_percentage, 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date ORDER BY discount_percentage DESC LIMIT 1),
       (
         SELECT SUM(p.price * (oi->>'quantity')::BIGINT)
         FROM products p
