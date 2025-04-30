@@ -126,14 +126,14 @@ class CartService {
         SELECT
           SUM(cart_items_cte.total_price) AS total_price,
           largest_discount.discount_percentage,
-          ROUND(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2) AS discount_amount,
-          ROUND(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100), 2) AS total_price_after_discount,
+          TRUNC(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2) AS discount_amount,
+          TRUNC(SUM(cart_items_cte.total_price) - TRUNC(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2), 2) AS total_price_after_discount,
           vat.vat_percentage,
-          ROUND(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
+          TRUNC((SUM(cart_items_cte.total_price) - TRUNC(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2)) * vat.vat_percentage / 100, 2) AS vat_amount,
           cart_details.voucher_amount,
           cart_details.voucher_code,
-          ROUND(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
-          ROUND(GREATEST(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100) * (1 + vat.vat_percentage / 100) - cart_details.voucher_amount, 0), 2) AS total_price_with_voucher
+          TRUNC((SUM(cart_items_cte.total_price) - TRUNC(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2)) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
+          TRUNC(GREATEST((SUM(cart_items_cte.total_price) - TRUNC(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2))*  (1 + vat.vat_percentage / 100) - cart_details.voucher_amount, 0), 2) AS total_price_with_voucher
         FROM cart_items_cte, vat, largest_discount, cart_details
         GROUP BY vat.vat_percentage, largest_discount.discount_percentage, cart_details.voucher_amount, cart_details.voucher_code
       )
