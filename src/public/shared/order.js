@@ -1,4 +1,4 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage, formatCurrency } from "./page-utility.js";
 
 const state = {
   userStatus: null,
@@ -167,8 +167,8 @@ function renderCartItemReadOnly(item) {
     </td>
     <td style="vertical-align: middle;">${item.product_code}</td>
     <td style="vertical-align: middle; text-align: center;">${item.quantity}</td>
-    <td style="vertical-align: middle; text-align: right;">$${item.unit_price}</td>
-    <td style="vertical-align: middle; text-align: right;">$${item.total_price}</td>
+    <td style="vertical-align: middle; text-align: right;">${formatCurrency(item.unit_price)}</td>
+    <td style="vertical-align: middle; text-align: right;">${formatCurrency(item.total_price)}</td>
   `;
   return itemRow;
 }
@@ -179,7 +179,7 @@ function renderCartTotalRowReadOnly() {
   const subtotalRow = document.createElement('tr');
   subtotalRow.innerHTML = `
     <td colspan="4" style="text-align: right; font-weight: bold;">Subtotal:</td>
-    <td style="text-align: right; font-weight: bold;">$${state.cart.total_price}</td>
+    <td style="text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price)}</td>
   `;
   fragment.appendChild(subtotalRow);
 
@@ -187,7 +187,7 @@ function renderCartTotalRowReadOnly() {
   discountRow.classList.add('cart-discount');
   discountRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Discount (${state.cart.discount_percentage}%):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.discount_amount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.discount_amount)}</td>
   `;
   fragment.appendChild(discountRow);
 
@@ -195,14 +195,14 @@ function renderCartTotalRowReadOnly() {
   priceAfterDiscountRow.classList.add('cart-price-after-discount');
   priceAfterDiscountRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Price after discount:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_after_discount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price_after_discount)}</td>
   `;
   fragment.appendChild(priceAfterDiscountRow);
 
   const vatRow = document.createElement('tr');
   vatRow.innerHTML = `
     <td colspan="4" style="text-align: right; font-weight: bold;">VAT (${state.cart.vat_percentage}%):</td>
-    <td style="text-align: right; font-weight: bold;">$${state.cart.vat_amount}</td>
+    <td style="text-align: right; font-weight: bold;">${formatCurrency(state.cart.vat_amount)}</td>
   `;
   fragment.appendChild(vatRow);
 
@@ -210,7 +210,7 @@ function renderCartTotalRowReadOnly() {
   priceWithVatRow.classList.add('cart-price-with-vat');
   priceWithVatRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total price with VAT:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_with_vat}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price_with_vat)}</td>
     <td></td>
   `;
   fragment.appendChild(priceWithVatRow);
@@ -219,7 +219,7 @@ function renderCartTotalRowReadOnly() {
   voucherRow.classList.add('cart-voucher');
   voucherRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Voucher (${state.cart.voucher_code || "Not applied"}):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">-$${state.cart.voucher_amount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">-${formatCurrency(state.cart.voucher_amount)}</td>
     <td></td>
   `;
   fragment.appendChild(voucherRow);
@@ -228,7 +228,7 @@ function renderCartTotalRowReadOnly() {
   totalRow.classList.add('cart-total');
   totalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_with_voucher}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price_with_voucher)}</td>
     <td></td>
   `;
   fragment.appendChild(totalRow);
