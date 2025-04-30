@@ -15,11 +15,6 @@ self.addEventListener('push', async (event) => {
 
   event.waitUntil(
     self.registration.showNotification(title, options)
-      .then(() => {
-        if (payload.id) {
-          return markNotificationAsShown(payload.id);
-        }
-      })
   );
 });
 
@@ -32,6 +27,25 @@ self.addEventListener('notificationshow', (event) => {
       markNotificationAsShown(notificationId)
     );
   }
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const notification = event.notification;
+        const notificationId = notification.data?.id;
+        const response = await fetch(`/api/notifications/${notificationId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      } catch (error) {
+        console.error("Error processing notification click:", error);
+      }
+    })()
+  );
 });
 
 async function markNotificationAsShown(notificationId) {
