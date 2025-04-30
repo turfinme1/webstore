@@ -1763,7 +1763,7 @@ class ReportService {
             NULL AS name,
             NULL AS subject,
             COUNT(E.id) AS users_count,
-            COUNT(CASE WHEN E.status = 'queued' THEN 1 END) AS status_pending,
+            COUNT(CASE WHEN E.status = 'pending' THEN 1 END) AS status_pending,
             COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
             COUNT(CASE WHEN E.status = 'seen' THEN 1 END) AS status_seen,
             COUNT(CASE WHEN E.status = 'failed' THEN 1 END) AS status_failed,
@@ -1783,7 +1783,7 @@ class ReportService {
             $name_grouping_expression$ as name,
             $subject_grouping_expression$ as subject,
             COUNT(E.id) AS users_count,
-            COUNT(CASE WHEN E.status = 'queued' THEN 1 END) AS status_pending,
+            COUNT(CASE WHEN E.status = 'pending' THEN 1 END) AS status_pending,
             COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
             COUNT(CASE WHEN E.status = 'seen' THEN 1 END) AS status_seen,
             COUNT(CASE WHEN E.status = 'failed' THEN 1 END) AS status_failed,
@@ -2190,6 +2190,7 @@ class ReportService {
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$
             AND $user_id_filter_expression$
+            AND $user_email_filter_expression$
             AND $ip_filter_expression$
             AND $user_agent_filter_expression$
             AND $status_filter_expression$
@@ -2213,6 +2214,7 @@ class ReportService {
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$
             AND $user_id_filter_expression$
+            AND $user_email_filter_expression$
             AND $ip_filter_expression$
             AND $user_agent_filter_expression$
             AND $status_filter_expression$
