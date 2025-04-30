@@ -280,10 +280,10 @@ describe("ReportService", () => {
         const result = await reportService.ordersReportDefinition(data);
 
         expect(result.sql).toContain(
-          'SUM(ROUND(O.total_price * O.discount_percentage / 100, 2)) AS "discount_amount"'
+          'SUM(TRUNC(O.total_price * O.discount_percentage / 100, 2)) AS "discount_amount"'
         );
         expect(result.sql).toContain(
-          'SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2))  AS "vat_amount"'
+          'SUM(TRUNC((O.total_price - TRUNC(O.total_price * O.discount_percentage / 100, 2)) * O.vat_percentage / 100, 2)) AS "vat_amount"'
         );
       });
     });
