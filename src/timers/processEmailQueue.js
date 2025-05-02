@@ -3,15 +3,14 @@ const pool = require("../database/dbConfig");
 const { EmailService, transporter } = require("../services/emailService");
 const { TemplateLoader } = require("../serverConfigurations/templateLoader");
 const Logger = require("../serverConfigurations/logger");
-const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const { ENV } = require("../serverConfigurations/constants");
 const { ASSERT } = require("../serverConfigurations/assert");
 const { hrtime } = require("process");
 
-const BATCH_SIZE = 100000;
+const BATCH_SIZE = 10000;
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MINUTES = 2;
-const MESSAGE_TYPE = 'Email';
+const EMAIL_MESSAGE_TYPE = 'Email';
 const PUSH_MESSAGE_TYPE = 'Push-Notification';
 const PUSH_MESSAGE_BROADCAST_TYPE = 'Push-Notification-Broadcast';
 
@@ -20,7 +19,7 @@ const EMAIL_STATUS = {
     SENDING: 'sending',
     SENT: 'sent',
     SEEN: 'seen',
-    FAILED: 'failed'
+    FAILED: 'failed',
 };
 
 const NOTIFICATION_STATUS = {
@@ -49,7 +48,6 @@ const EMAIL_ERROR_TYPES = {
 (async () => {
     let client;
     let logger;
-    let loggerClient;
 
     try {
         console.log('Starting processEmailQueue');
@@ -59,9 +57,7 @@ const EMAIL_ERROR_TYPES = {
         
         console.log('[processEmailQueue] Aquire client from pool...');
         client = await pool.connect();
-        console.log('[processEmailQueue] Aquire logger client from pool');
-        loggerClient = await pool.connect();
-        logger = new Logger({ dbConnection: new DbConnectionWrapper(loggerClient) });
+        logger = new Logger({ dbConnection: client });
         webpush.setVapidDetails(
             ENV.VAPID_MAILTO,
             ENV.VAPID_PUBLIC_KEY,
@@ -69,7 +65,6 @@ const EMAIL_ERROR_TYPES = {
         );
 
         await client.query('BEGIN');
-
         const pendingEmails = await client.query(`
             WITH cte AS (
                 SELECT id
@@ -88,147 +83,29 @@ const EMAIL_ERROR_TYPES = {
                 email_processing_started_at = NOW()
             FROM cte
             WHERE emails.id = cte.id
-            RETURNING emails.*;
-        `, [MESSAGE_TYPE, PUSH_MESSAGE_TYPE, PUSH_MESSAGE_BROADCAST_TYPE, EMAIL_STATUS.PENDING, MAX_ATTEMPTS, BATCH_SIZE, EMAIL_STATUS.SENDING]);
+            RETURNING emails.*;`,
+            [EMAIL_MESSAGE_TYPE, PUSH_MESSAGE_TYPE, PUSH_MESSAGE_BROADCAST_TYPE, EMAIL_STATUS.PENDING, MAX_ATTEMPTS, BATCH_SIZE, EMAIL_STATUS.SENDING]);
+        await client.query(`COMMIT`);
 
-        for (const email of pendingEmails.rows) {
-            try {
-                await client.query('SAVEPOINT email_processing_savepoint');
+        const processResult = await Promise.all(
+            pendingEmails.rows.map(async (email) => 
+                processMessage(email, client, logger, emailService)
+            )
+        )
 
-                if(email.type === 'Push-Notification') {
-                    const subscriptions = await client.query(`
-                        SELECT * FROM push_subscriptions
-                        WHERE user_id = $1 AND status = $2`,
-                        [email.recipient_id, NOTIFICATION_STATUS.ACTIVE]
-                    );
-
-                    if(subscriptions.rows.length === 0) {
-                        await client.query(`
-                            UPDATE emails
-                            SET status = $1
-                            WHERE id = $2`,
-                            [EMAIL_STATUS.FAILED, email.id]
-                        );
-
-                        await logger.info({
-                            code: 'TIMERS.PROCESS_EMAIL_QUEUE.00005.NO_SUBSCRIPTIONS',
-                            short_description: 'Email queue process completed',
-                            long_description: 'Email queue process completed'
-                        });
-
-                        continue; 
-                    }
-
-                    for (const subscription of subscriptions.rows) {
-                        await webpush.sendNotification(subscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
-                    }
-                
-                    await client.query(`
-                        UPDATE emails 
-                        SET status = $1, sent_at = NOW()
-                        WHERE id = $2`, 
-                        [EMAIL_STATUS.SENT, email.id]
-                    );
-                } else if (email.type === 'Push-Notification-Broadcast') {
-                    const subscription = await client.query(`
-                        SELECT * FROM push_subscriptions
-                        WHERE id = $1 AND status = $2`,
-                        [email.push_subscription_id, NOTIFICATION_STATUS.ACTIVE]
-                    );
-                    ASSERT(subscription.rows.length <= 1, 'Expected exactly one subscription for broadcast', { code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EXPECTED_ONE_SUBSCRIPTION', long_description: `Expected exactly one subscription for broadcast with email id: ${email.id}` });
-
-                    if (subscription.rows.length === 0) {
-                        await client.query(`
-                            UPDATE emails
-                            SET status = $1
-                            WHERE id = $2`,
-                            [EMAIL_STATUS.FAILED, email.id]
-                        );
-                        await logger.info({
-                            code: 'TIMERS.PROCESS_EMAIL_QUEUE.00005.NO_SUBSCRIPTIONS',
-                            short_description: 'No push subscriptions found',
-                            long_description: 'No push subscriptions available for broadcast'
-                        });
-                        continue;
-                    }
-
-                    const pushSubscription = subscription.rows[0];
-
-                    await webpush.sendNotification(pushSubscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
-                    
-                    await client.query(`
-                        UPDATE emails 
-                        SET status = $1, sent_at = NOW()
-                        WHERE id = $2`, 
-                        [EMAIL_STATUS.SENT, email.id]
-                    );
-                } else {
-                    const emailOptions = { 
-                        from: "no-reply@web-store4eto.com",
-                        to: email.recipient_email,
-                        subject: email.subject,
-                        html: email.text_content
-                    };
-                    await emailService.sendEmail(emailOptions);
-
-                    await client.query(`
-                        UPDATE emails 
-                        SET status = $1, sent_at = NOW()
-                        WHERE id = $2`, 
-                        [EMAIL_STATUS.SENT, email.id]
-                    );
-                }
-
-                await client.query('RELEASE SAVEPOINT email_processing_savepoint');
-            } catch (error) {
-                await client.query('ROLLBACK TO SAVEPOINT email_processing_savepoint');
-                const { shouldRetry, errorType } = classifyEmailError(error);
-                const retryDelay = calculateRetryDelay(email.email_attempts + 1);
-                error.params = { 
-                    code: 'TIMERS.PROCESS_EMAIL_QUEUE.00010.SENDING_FAILED', 
-                    long_description: errorType 
-                };
-                
-                const maxAttemptsReached = email.email_attempts + 1 >= MAX_ATTEMPTS;
-                const newStatus = (shouldRetry && !maxAttemptsReached) ? EMAIL_STATUS.PENDING : EMAIL_STATUS.FAILED;
-                
-                await client.query(`
-                    UPDATE emails 
-                    SET status = $1,
-                        email_attempts = email_attempts + 1,
-                        email_last_attempt = NOW(),
-                        email_retry_after = NOW() + (INTERVAL '1 minute' * $2),
-                        email_priority = GREATEST(email_priority - 1, 1)
-                    WHERE id = $3
-                `, [newStatus, retryDelay, email.id]);
-
-                if(errorType === EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND ) {
-                    await client.query(`
-                        UPDATE push_subscriptions
-                        SET status = $1
-                        WHERE id = $2`,
-                        [NOTIFICATION_STATUS.INACTIVE, email.push_subscription_id]
-                    );
-                }
-
-                await logger.error(error);
-            }
-        }
-
+        await client.query('BEGIN');
         await client.query(`
             UPDATE emails
             SET status = $1,
                 email_retry_after = NOW() + (INTERVAL '1 minute' * $2)
             WHERE email_processing_started_at < NOW() - INTERVAL '10 minutes'
-            AND status = $3
-        `, [EMAIL_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]);
-
+            AND status = $3`,
+            [EMAIL_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]);
         await client.query('COMMIT');
 
         const end = hrtime(start);
-        const elapsedTime = (end[0] * 1e9 + end[1]) / 1e6; // Convert to milliseconds
+        const elapsedTime = (end[0] * 1e9 + end[1]) / 1e6;
         console.log(`Email queue process completed in ${elapsedTime} ms`);
-        console.log('Email queue process completed');
         await logger.info({
             code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EMAIL_QUEUE_PROCESS_SUCCESS',
             short_description: 'Email queue process completed',
@@ -243,12 +120,143 @@ const EMAIL_ERROR_TYPES = {
             console.log('[processEmailQueue] Released client to pool');
             client.release();
         }
-        if (loggerClient) {
-            console.log('[processEmailQueue] Released logger client to pool');
-            loggerClient.release();
-        }
     }
 })();
+
+async function processMessage(email, client, logger, emailService) {
+    try {
+        if(email.type === 'Push-Notification') {
+            const subscriptions = await client.query(`
+                SELECT * FROM push_subscriptions
+                WHERE user_id = $1 AND status = $2`,
+                [email.recipient_id, NOTIFICATION_STATUS.ACTIVE]
+            );
+
+            if(subscriptions.rows.length === 0) {
+                await client.query(`
+                    UPDATE emails
+                    SET status = $1
+                    WHERE id = $2`,
+                    [EMAIL_STATUS.FAILED, email.id]
+                );
+
+                await logger.info({
+                    code: 'TIMERS.PROCESS_EMAIL_QUEUE.00005.NO_SUBSCRIPTIONS',
+                    short_description: 'Email queue process completed',
+                    long_description: 'Email queue process completed'
+                });
+
+                return { id: email.id, success: false };
+            }
+
+            let sendNotificationCount = 0;
+            for (const subscription of subscriptions.rows) {
+                try {
+                    await webpush.sendNotification(subscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
+                    sendNotificationCount++;
+                } catch (error) {
+                    console.log(`[processEmailQueue] error: ${error}`);
+                    const { errorType } = classifyEmailError(error);
+
+                    if(errorType === EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND) {
+                        await client.query(`
+                            UPDATE push_subscriptions
+                            SET status = $1
+                            WHERE id = $2`,
+                            [NOTIFICATION_STATUS.INACTIVE, subscription.id]
+                        );
+                    }
+                }
+            }
+
+            if (sendNotificationCount === 0) {
+                await client.query(`
+                    UPDATE emails
+                    SET status = $1
+                    WHERE id = $2`,
+                    [EMAIL_STATUS.FAILED, email.id]
+                );
+                return { id: email.id, success: false };
+            }
+        } else if (email.type === 'Push-Notification-Broadcast') {
+            const subscription = await client.query(`
+                SELECT * FROM push_subscriptions
+                WHERE id = $1 AND status = $2`,
+                [email.push_subscription_id, NOTIFICATION_STATUS.ACTIVE]
+            );
+            ASSERT(subscription.rows.length <= 1, 'Expected exactly one subscription for broadcast', { code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EXPECTED_ONE_SUBSCRIPTION', long_description: `Expected exactly one subscription for broadcast with email id: ${email.id}` });
+
+            if (subscription.rows.length === 0) {
+                await client.query(`
+                    UPDATE emails
+                    SET status = $1
+                    WHERE id = $2`,
+                    [EMAIL_STATUS.FAILED, email.id]
+                );
+                await logger.info({
+                    code: 'TIMERS.PROCESS_EMAIL_QUEUE.00006.NO_SUBSCRIPTIONS',
+                    short_description: 'No push subscriptions found',
+                    long_description: 'No push subscriptions available for broadcast'
+                });
+                return { id: email.id, success: false };
+            }
+
+            const pushSubscription = subscription.rows[0];
+
+            await webpush.sendNotification(pushSubscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
+        } else {
+            const emailOptions = { 
+                from: "no-reply@web-store4eto.com",
+                to: email.recipient_email,
+                subject: email.subject,
+                html: email.text_content
+            };
+            await emailService.sendEmail(emailOptions);
+        }
+        
+        await client.query(`
+            UPDATE emails 
+            SET status = $1, sent_at = NOW()
+            WHERE id = $2`, 
+            [EMAIL_STATUS.SENT, email.id]
+        );
+        
+        return { id: email.id, success: true };
+    } catch (error) {
+        console.log(`[processEmailQueue] error: ${error}`);
+        const { shouldRetry, errorType } = classifyEmailError(error);
+        const retryDelay = calculateRetryDelay(email.email_attempts + 1);
+        error.params = { 
+            code: 'TIMERS.PROCESS_EMAIL_QUEUE.00010.SENDING_FAILED', 
+            long_description: errorType 
+        };
+        
+        const maxAttemptsReached = email.email_attempts + 1 >= MAX_ATTEMPTS;
+        const newStatus = (shouldRetry && !maxAttemptsReached) ? EMAIL_STATUS.PENDING : EMAIL_STATUS.FAILED;
+        
+        await client.query(`
+            UPDATE emails 
+            SET status = $1,
+                email_attempts = email_attempts + 1,
+                email_last_attempt = NOW(),
+                email_retry_after = NOW() + (INTERVAL '1 minute' * $2),
+                email_priority = GREATEST(email_priority - 1, 1)
+            WHERE id = $3
+        `, [newStatus, retryDelay, email.id]);
+
+        if(errorType === EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND && email.push_subscription_id) {
+            await client.query(`
+                UPDATE push_subscriptions
+                SET status = $1
+                WHERE id = $2`,
+                [NOTIFICATION_STATUS.INACTIVE, email.push_subscription_id]
+            );
+        }
+
+        await logger.error(error);
+        return { id: email.id, success: false, errorType };
+    }
+}
 
 function classifyEmailError(error) {
     let shouldRetry = false;

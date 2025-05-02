@@ -1495,7 +1495,7 @@ describe("CrudService", () => {
   
           // Verify users query
           expect(mockData.dbConnection.query).toHaveBeenNthCalledWith(2,
-              expect.stringContaining('SELECT id, email, first_name, last_name'),
+              expect.stringContaining('SELECT DISTINCT users.id, email, first_name, last_name, phone' ),
               [[1, 2, 3]]
           );
   
