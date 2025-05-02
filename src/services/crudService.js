@@ -726,10 +726,11 @@ class CrudService {
     }
 
     const userIds = mainEntity.user_ids.split(',').map(id => parseInt(id.trim()));
-    const usersResult = await data.dbConnection.query(
-      `SELECT id, email, first_name, last_name, phone 
-      FROM users 
-      WHERE id = ANY($1)`,
+    const usersResult = await data.dbConnection.query(`
+      SELECT DISTINCT users.id, email, first_name, last_name, phone 
+      FROM users
+      JOIN push_subscriptions ON users.id = push_subscriptions.user_id
+      WHERE push_subscriptions.status = 'active' AND users.id = ANY($1)`,
       [userIds]
     );
     
@@ -774,14 +775,14 @@ class CrudService {
     } else if (template.type === 'Push-Notification') {
       const userIds = data.body.user_ids.split(',').map(id => parseInt(id.trim()));
       const countResult = await data.dbConnection.query(`
-        SELECT COUNT(*) FROM push_subscriptions WHERE user_id = ANY($1) AND status = 'active'`,
+        SELECT COUNT(DISTINCT user_id) FROM push_subscriptions WHERE user_id = ANY($1) AND status = 'active'`,
         [userIds]
       );
       return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
     } else {
       const userIds = data.body.user_ids.split(',').map(id => parseInt(id.trim()));
       const countResult = await data.dbConnection.query(`
-        SELECT COUNT(*) FROM users WHERE id = ANY($1)`,
+        SELECT COUNT(DISTINCT id) FROM users WHERE id = ANY($1)`,
         [userIds]
       );
       return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
