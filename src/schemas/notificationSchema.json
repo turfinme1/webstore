@@ -75,6 +75,22 @@
                 "type": "Invalid value for template."
             }
         },
+        "valid_date": {
+            "type": "string",
+            "format": "date-time",
+            "label": "Valid Date",
+            "placeholder": "Enter Valid Date",
+            "required": {
+                "create": true,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "date"
+            },
+            "errorMessage": {
+                "type": "Invalid value for valid date."
+            }
+        },
         "user_ids": {
             "type": "string",
             "label": "Users (Comma separated User IDs)",
@@ -112,12 +128,14 @@
         "created_at",
         "name",
         "template_type",
+        "valid_date",
         "user_ids"
     ],
     "required": [
         "name",
         "template_id",
-        "user_ids"
+        "user_ids",
+        "valid_date"
     ],
     "crud": {
         "update": false,

@@ -13,13 +13,15 @@ const RETRY_DELAY_MINUTES = 2;
 const EMAIL_MESSAGE_TYPE = 'Email';
 const PUSH_MESSAGE_TYPE = 'Push-Notification';
 const PUSH_MESSAGE_BROADCAST_TYPE = 'Push-Notification-Broadcast';
+const IN_APP_MESSAGE_TYPE = 'Notification';
 
-const EMAIL_STATUS = {
+const MESSAGE_STATUS = {
     PENDING: 'pending',
     SENDING: 'sending',
     SENT: 'sent',
     SEEN: 'seen',
     FAILED: 'failed',
+    EXPIRED: 'expired',
 };
 
 const NOTIFICATION_STATUS = {
@@ -69,22 +71,22 @@ const EMAIL_ERROR_TYPES = {
             WITH cte AS (
                 SELECT id
                 FROM emails
-                WHERE type IN ($1, $2, $3)
-                  AND status = $4
+                WHERE type IN ($1, $2, $3, $4)
+                  AND status = $5
                   AND (email_last_attempt IS NULL OR email_last_attempt < NOW() - INTERVAL '${RETRY_DELAY_MINUTES} minutes')
-                  AND email_attempts < $5
+                  AND email_attempts < $6
                   AND (email_retry_after IS NULL OR email_retry_after < NOW())
-                ORDER BY email_priority DESC, created_at ASC
-                LIMIT $6
+                ORDER BY email_priority DESC, created_at DESC
+                LIMIT $7
                 FOR UPDATE SKIP LOCKED
             )
             UPDATE emails
-            SET status = $7,    
+            SET status = $8,    
                 email_processing_started_at = NOW()
             FROM cte
             WHERE emails.id = cte.id
             RETURNING emails.*;`,
-            [EMAIL_MESSAGE_TYPE, PUSH_MESSAGE_TYPE, PUSH_MESSAGE_BROADCAST_TYPE, EMAIL_STATUS.PENDING, MAX_ATTEMPTS, BATCH_SIZE, EMAIL_STATUS.SENDING]);
+            [EMAIL_MESSAGE_TYPE, PUSH_MESSAGE_TYPE, PUSH_MESSAGE_BROADCAST_TYPE, IN_APP_MESSAGE_TYPE, MESSAGE_STATUS.PENDING, MAX_ATTEMPTS, BATCH_SIZE, MESSAGE_STATUS.SENDING]);
         await client.query(`COMMIT`);
 
         const processResult = await Promise.all(
@@ -100,7 +102,7 @@ const EMAIL_ERROR_TYPES = {
                 email_retry_after = NOW() + (INTERVAL '1 minute' * $2)
             WHERE email_processing_started_at < NOW() - INTERVAL '10 minutes'
             AND status = $3`,
-            [EMAIL_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, EMAIL_STATUS.SENDING]);
+            [MESSAGE_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, MESSAGE_STATUS.SENDING]);
         await client.query('COMMIT');
 
         const end = hrtime(start);
@@ -137,7 +139,7 @@ async function processMessage(email, client, logger, emailService) {
                     UPDATE emails
                     SET status = $1
                     WHERE id = $2`,
-                    [EMAIL_STATUS.FAILED, email.id]
+                    [MESSAGE_STATUS.FAILED, email.id]
                 );
 
                 await logger.info({
@@ -174,7 +176,7 @@ async function processMessage(email, client, logger, emailService) {
                     UPDATE emails
                     SET status = $1
                     WHERE id = $2`,
-                    [EMAIL_STATUS.FAILED, email.id]
+                    [MESSAGE_STATUS.FAILED, email.id]
                 );
                 return { id: email.id, success: false };
             }
@@ -191,7 +193,7 @@ async function processMessage(email, client, logger, emailService) {
                     UPDATE emails
                     SET status = $1
                     WHERE id = $2`,
-                    [EMAIL_STATUS.FAILED, email.id]
+                    [MESSAGE_STATUS.FAILED, email.id]
                 );
                 await logger.info({
                     code: 'TIMERS.PROCESS_EMAIL_QUEUE.00006.NO_SUBSCRIPTIONS',
@@ -204,6 +206,62 @@ async function processMessage(email, client, logger, emailService) {
             const pushSubscription = subscription.rows[0];
 
             await webpush.sendNotification(pushSubscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
+        } else if (email.type === 'Notification') {
+            const expirationUpdateResult = await client.query(`
+                UPDATE emails e
+                    SET status = $1
+                FROM notifications n
+                WHERE e.id = $2
+                    AND e.notification_id = n.id
+                    AND e.type         = 'Notification'
+                    AND n.valid_date   < NOW()
+                RETURNING e.id;`,
+                [MESSAGE_STATUS.EXPIRED, email.id]
+            );
+            if (expirationUpdateResult.rows.length > 0) {
+                return { id: email.id, success: false };
+            }
+
+            const result = await fetch(`${ENV.WEB_SOCKET_API_URL}/message`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: 'message',
+                    user_id: email.recipient_id,
+                    payload: {
+                        id: email.id,
+                        title: email.subject,
+                        body: email.text_content,
+                    },
+                }),
+            });
+
+            if (result.status === 404) {
+                return { id: email.id, success: false };
+            } else if (result.status === 400) {
+                await client.query(`
+                    UPDATE emails
+                    SET status = $1
+                    WHERE id = $2`,
+                    [MESSAGE_STATUS.FAILED, email.id]
+                );
+                return { id: email.id, success: false };
+            } else if (result.status === 500) {
+                const retryDelay = calculateRetryDelay(email.email_attempts + 1);
+                await client.query(`
+                    UPDATE emails
+                    SET status = $1,
+                        email_attempts = email_attempts + 1,
+                        email_last_attempt = NOW(),
+                        email_retry_after = NOW() + (INTERVAL '1 minute' * $2),
+                        email_priority = GREATEST(email_priority - 1, 1)
+                    WHERE id = $3`,
+                    [MESSAGE_STATUS.PENDING, retryDelay, email.id]
+                );
+                return { id: email.id, success: false };
+            }
         } else {
             const emailOptions = { 
                 from: "no-reply@web-store4eto.com",
@@ -218,7 +276,7 @@ async function processMessage(email, client, logger, emailService) {
             UPDATE emails 
             SET status = $1, sent_at = NOW()
             WHERE id = $2`, 
-            [EMAIL_STATUS.SENT, email.id]
+            [MESSAGE_STATUS.SENT, email.id]
         );
         
         return { id: email.id, success: true };
@@ -232,7 +290,7 @@ async function processMessage(email, client, logger, emailService) {
         };
         
         const maxAttemptsReached = email.email_attempts + 1 >= MAX_ATTEMPTS;
-        const newStatus = (shouldRetry && !maxAttemptsReached) ? EMAIL_STATUS.PENDING : EMAIL_STATUS.FAILED;
+        const newStatus = (shouldRetry && !maxAttemptsReached) ? MESSAGE_STATUS.PENDING : MESSAGE_STATUS.FAILED;
         
         await client.query(`
             UPDATE emails 
@@ -284,6 +342,10 @@ function classifyEmailError(error) {
             shouldRetry = true;
             errorType = EMAIL_ERROR_TYPES.EXTERNAL_SERVER_ERROR;
         }
+    } else if (error?.cause?.code === 'UND_ERR_HEADERS_TIMEOUT') {
+        // timeout on fetch request
+        shouldRetry = true;
+        errorType = EMAIL_ERROR_TYPES.NETWORK;
     } else {
         errorType = EMAIL_ERROR_TYPES.EXTERNAL_SERVER_ERROR;
     }
