@@ -47,11 +47,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.pageSize = urlParams.pageSize || 10;
     state.filterParams = urlParams.filterParams || {};
     state.orderParams = urlParams.orderParams || [];
+    
+    if (!hasPermission(state.userStatus, "read", "email-templates")) {
+        elements.mainContainer.innerHTML = "<h1>Email Template Management</h1>";
+        return;
+    }
 
-    // if (!hasPermission(state.userStatus, "read", "email-templates")) {
-    //     elements.mainContainer.innerHTML = "<h1>Email Template Management</h1>";
-    //     return;
-    // }
+    if(!hasPermission(state.userStatus, "create", "email-templates")) {
+        elements.showFormButton.style.display = "none";
+    }
 
     // Initialize CKEditor
     CKEDITOR.replace("template", {
@@ -194,13 +198,13 @@ async function renderTemplateList(templates) {
 
         // Actions cell
         const actionsCell = document.createElement("td");
-        // if (hasPermission(state.userStatus, "update", "email-templates")) {
+        if (hasPermission(state.userStatus, "update", "email-templates")) {
             actionsCell.appendChild(
                 createActionButton("Edit", "btn-warning", () =>
                     displayUpdateForm(template.id)
                 )
             );
-        // }
+        }
         // if (hasPermission(state.userStatus, "delete", "email-templates")) {
             // actionsCell.appendChild(
             //     createActionButton("Delete", "btn-danger", () =>
