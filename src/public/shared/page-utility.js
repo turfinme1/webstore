@@ -407,6 +407,8 @@ function createNavigation(userStatus) {
               </button>
               <div class="collapse navbar-collapse" id="navbarNav">
                   <ul class="navbar-nav ms-auto">
+                    ${userStatus.user_type !== "admin" 
+                      ? `
                       <li class="nav-item">
                           <a class="nav-link" href="/index.html">Products</a>
                       </li>
@@ -415,7 +417,8 @@ function createNavigation(userStatus) {
                       </li>
                       <li class="nav-item">
                           <a class="nav-link subscribe-button">Subscribe</a>
-                      </li>
+                      </li>` 
+                      : ""}
                       ${
                         userStatus.session_type === "Authenticated"
                           ? `
