@@ -14,6 +14,8 @@ const CartController = require("../controllers/cartController");
 const CartService = require("../services/cartService");
 const OrderService = require("../services/orderService");
 const OrderController = require("../controllers/orderController");
+const AppConfigService = require("../services/appConfigService");
+const AppConfigController = require("../controllers/appConfigController");
 const { EmailService, transporter } = require("../services/emailService");
 const { TemplateLoader } = require("./templateLoader");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
@@ -38,6 +40,8 @@ const cartService = new CartService();
 const cartController = new CartController(cartService);
 const orderService = new OrderService(emailService, paypalClient);
 const orderController = new OrderController(orderService);
+const appConfigService = new AppConfigService();
+const appConfigController = new AppConfigController(appConfigService, authService);
 
 const routeTable = {
   get: {
@@ -56,6 +60,7 @@ const routeTable = {
     "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
     "/api/paypal/cancel/:orderId": orderController.cancelPaypalPayment,
     "/api/notifications": notificationController.getNotificationByUserId,
+    "/api/websocket-url": appConfigController.getWebSocketUrl,
   },
   post: {
     "/auth/register": authController.register,

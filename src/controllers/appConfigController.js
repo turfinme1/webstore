@@ -9,6 +9,7 @@ class AppConfigController {
     this.updateRateLimitSettings = this.updateRateLimitSettings.bind(this);
     this.getRateLimitSettings = this.getRateLimitSettings.bind(this);
     this.getJavaAPIUrl = this.getJavaAPIUrl.bind(this);
+    this.getWebSocketUrl = this.getWebSocketUrl.bind(this);
   }
 
   async updateRateLimitSettings(req, res, next) {
@@ -36,6 +37,10 @@ class AppConfigController {
 
   async getJavaAPIUrl(req, res, next) {
     res.status(200).json({ url: ENV.JAVA_API_URL });
+  }
+
+  async getWebSocketUrl(req, res, next) {
+    res.status(200).json({ url: ENV.WEB_SOCKET_URL });
   }
 }
 

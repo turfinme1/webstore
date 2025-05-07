@@ -484,19 +484,19 @@ function createNavigation(userStatus) {
   document.body.prepend(navBar);
 
   initSubscriptionButton(userStatus);
+  initMessageWebSocket(userStatus);
 
   const logoutButton = document.querySelector(".logout-btn");
-  if (!logoutButton) return;
-
-  logoutButton.addEventListener("click", async (event) => {
-    event.preventDefault();
-    const response = await fetch("/auth/logout");
-    window.location.href = "/index";
-  });
+  if (logoutButton) {
+    logoutButton.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const response = await fetch("/auth/logout");
+      window.location.href = "/index";
+    });
+  }
 
   if (userStatus.session_type === "Authenticated" && userStatus.user_type === "user") {
     updateNotificationsList();
-    setInterval(updateNotificationsList, 60000); // Update every 30 seconds
   }
 }
 
@@ -745,6 +745,48 @@ async function markNotificationAsRead(notificationId) {
   }
 }
 
+async function initMessageWebSocket(userStatus) {
+  try {
+    if (!userStatus || userStatus.session_type !== "Authenticated" || userStatus.user_type !== "user") return;
+    
+    if(window.webSocketConnection) {
+      window.webSocketConnection.close();
+    }
+
+    const cookieName = "session_id";
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.startsWith(`${cookieName}=`))
+      ?.split('=')[1];
+    
+    const webSocketUrlResult = await fetch("/api/websocket-url");
+    const json = await webSocketUrlResult.json();
+    const websocektUrl = json.url;
+    const ws = new WebSocket(`${websocektUrl}?session_id=${encodeURIComponent(cookieValue)}`);
+    window.webSocketConnection = ws;
+
+    ws.addEventListener("open", () => {
+      console.log("WebSocket connection established");
+    });
+
+    ws.addEventListener("message", async (event) => {
+      const result = JSON.parse(event.data);
+      await updateNotificationsList();
+      showToastMessage("You have a new message", "success");
+    });
+
+    ws.addEventListener("close", () => {
+      console.log("WebSocket connection closed");
+    });
+
+    ws.addEventListener("error", (error) => {
+      console.error("WebSocket error: ", error);
+    });
+  } catch (error) {
+    console.log("Error initializing WebSocket: ", error);
+    showToastMessage("Error initializing WebSocket: " + error.message, "error");
+  }
+}
 
 async function createBackofficeNavigation(userStatus) {
   const navContainer = document.getElementById("dynamic-nav");

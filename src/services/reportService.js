@@ -1642,7 +1642,9 @@ class ReportService {
                 { value: 'pending', label: 'Pending' },
                 { value: 'sending', label: 'Sending' },
                 { value: 'sent', label: 'Sent' },
-                { value: 'seen', label: 'Seen' }
+                { value: 'seen', label: 'Seen' },
+                { value: 'failed', label: 'Failed' },
+                { value: 'expired', label: 'Expired' },
             ],
             groupable: true,
         },
@@ -1727,6 +1729,7 @@ class ReportService {
                 { key: 'status_sent', label: 'Sent', format: 'number' },
                 { key: 'status_seen', label: 'Seen', format: 'number' },
                 { key: 'status_failed', label: 'Failed', format: 'number' },
+                { key: 'status_expired', label: 'Expired', format: 'number' },
             ]
         ]
     };
@@ -1767,6 +1770,7 @@ class ReportService {
             COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
             COUNT(CASE WHEN E.status = 'seen' THEN 1 END) AS status_seen,
             COUNT(CASE WHEN E.status = 'failed' THEN 1 END) AS status_failed,
+            COUNT(CASE WHEN E.status = 'expired' THEN 1 END) AS status_expired,
             0 AS "sort_order"
         FROM notifications N	
         JOIN emails E ON N.id = E.notification_id
@@ -1787,6 +1791,7 @@ class ReportService {
             COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
             COUNT(CASE WHEN E.status = 'seen' THEN 1 END) AS status_seen,
             COUNT(CASE WHEN E.status = 'failed' THEN 1 END) AS status_failed,
+            COUNT(CASE WHEN E.status = 'expired' THEN 1 END) AS status_expired,
             1 AS "sort_order"
         FROM notifications N	
         JOIN emails E ON N.id = E.notification_id

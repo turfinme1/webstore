@@ -8,14 +8,10 @@ class NotificationService {
     async getNotificationByUserId(data){
         ASSERT_USER(data.session.user_id, "You must be logged in to perform this action", { code: "SERVICE.NOTIFICATION.00001.UNAUTHORIZED_GET_NOTIFICATION", long_description: "You must be logged in to perform this action" });
         const allUserNotifications = await data.dbConnection.query(
-            `SELECT * FROM emails WHERE recipient_id = $1 AND type = 'Notification' ORDER BY created_at DESC`,
+            `SELECT * FROM emails WHERE recipient_id = $1 AND type = 'Notification' AND status IN ('pending', 'sent', 'seen') ORDER BY created_at DESC LIMIT 50`,
             [data.session.user_id]
         );
 
-        const updatedNotifications = await data.dbConnection.query(
-            `UPDATE emails SET status = 'sent' WHERE recipient_id = $1 AND type = 'Notification' AND status IN ('pending')`,
-            [data.session.user_id]
-        );
 
         return allUserNotifications.rows;
     }
