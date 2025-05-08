@@ -7,6 +7,8 @@ const { ENV } = require("../serverConfigurations/constants");
 const { ASSERT } = require("../serverConfigurations/assert");
 const { hrtime } = require("process");
 
+const isDryRun = process.env.DRY_RUN === 'true';
+
 const BATCH_SIZE = 10000;
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MINUTES = 2;
@@ -220,6 +222,26 @@ async function processMessage(email, client, logger, emailService) {
             );
             if (expirationUpdateResult.rows.length > 0) {
                 return { id: email.id, success: false };
+            }
+
+            if (isDryRun) {
+                console.log(
+                    `[processEmailQueue] request payload: ${JSON.stringify({
+                    method: "POST",
+                    url: `${ENV.WEB_SOCKET_API_URL}/message`,
+                    body: {
+                        type: "message",
+                        user_id: email.recipient_id,
+                        payload: {
+                        id: email.id,
+                        title: email.subject,
+                        body: email.text_content,
+                        },
+                    },
+                    })}`
+                );
+
+                return { id: email.id, success: true };
             }
 
             const result = await fetch(`${ENV.WEB_SOCKET_API_URL}/message`, {

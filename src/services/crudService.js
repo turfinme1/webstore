@@ -726,14 +726,25 @@ class CrudService {
     }
 
     const userIds = mainEntity.user_ids.split(',').map(id => parseInt(id.trim()));
-    const usersResult = await data.dbConnection.query(`
-      SELECT DISTINCT users.id, email, first_name, last_name, phone 
-      FROM users
-      JOIN push_subscriptions ON users.id = push_subscriptions.user_id
-      WHERE push_subscriptions.status = 'active' AND users.id = ANY($1)`,
-      [userIds]
-    );
-    
+    let usersResult;
+
+    if(template.type === 'Notification') {
+      usersResult = await data.dbConnection.query(`
+        SELECT DISTINCT id, email, first_name, last_name, phone 
+        FROM users
+        WHERE id = ANY($1)`,
+        [userIds]
+      );
+    } else {
+      usersResult = await data.dbConnection.query(`
+        SELECT DISTINCT users.id, email, first_name, last_name, phone 
+        FROM users
+        JOIN push_subscriptions ON users.id = push_subscriptions.user_id
+        WHERE push_subscriptions.status = 'active' AND users.id = ANY($1)`,
+        [userIds]
+      );
+    }
+
     // Create emails for each user
     for (const user of usersResult.rows) {
         let text_content = template.template;
