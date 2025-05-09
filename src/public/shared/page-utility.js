@@ -774,8 +774,15 @@ async function initMessageWebSocket(userStatus) {
 
     ws.addEventListener("message", async (event) => {
       const result = JSON.parse(event.data);
-      await updateNotificationsList();
-      showToastMessage("You have a new message", "success");
+      if(result.type === 'cart_update_sync_clients'){
+        const cartUpdateEvent = new CustomEvent('cart_update_sync_clients', {
+          detail: result.payload,
+        });
+        window.dispatchEvent(cartUpdateEvent);
+      } else if(result.type === 'message') {
+        await updateNotificationsList();
+        showToastMessage("You have a new message", "success");
+      }
     });
 
     ws.addEventListener("close", () => {

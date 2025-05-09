@@ -230,7 +230,7 @@ async function processMessage(email, client, logger, emailService) {
                     method: "POST",
                     url: `${ENV.WEB_SOCKET_API_URL}/message`,
                     body: {
-                        type: "message",
+                        type: email.event_type,
                         user_id: email.recipient_id,
                         payload: {
                         id: email.id,
@@ -250,7 +250,7 @@ async function processMessage(email, client, logger, emailService) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    type: 'message',
+                    type: email.event_type,
                     user_id: email.recipient_id,
                     payload: {
                         id: email.id,

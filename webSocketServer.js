@@ -21,16 +21,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.post('/message', async (req, res) => {
   try {
-    const { user_id, payload } = req.body;
-
-    if (!user_id || !payload) {
+    if (!req.body.user_id || !req.body.payload || !req.body.type) {
       return res.status(400).json({ error: 'User ID and message are required' });
     }
 
-    const userSockets = userConnections.get(user_id);
+    const userSockets = userConnections.get(req.body.user_id);
     if (userSockets?.size > 0) {
       for (const userConnection of userSockets) {
-        userConnection.send(JSON.stringify({ type: 'message', payload }));
+        userConnection.send(JSON.stringify({ type: req.body.type, payload: req.body.payload }));
       }
       return res.status(200).json({ success: true });
     } else {
