@@ -23,6 +23,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   state.cart = cartData;
   updateCartDisplay(state);
   attachEventListeners();
+
+  window.addEventListener('cart_update_sync_clients', async (e) => {
+    console.log('Cart updated on another device');
+    const cartData = await getCartItems();
+    state.items = cartData.items;
+    state.cart = cartData;
+    updateCartDisplay(state);
+  });
 });
 
 // Attach event listeners

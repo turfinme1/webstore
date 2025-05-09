@@ -238,7 +238,8 @@ describe('CartService', () => {
 
       dbConnection.query
         .mockResolvedValueOnce({ rows: [mockCart] })  // Existing cart
-        .mockResolvedValueOnce({ rows: [mockUpdatedItem] });  // Item updated
+        .mockResolvedValueOnce({ rows: [mockUpdatedItem] })  // Item updated
+        .mockResolvedValueOnce({ rows: [] }); // Insert notification
 
       const data = {
         session: { user_id: 'user123', id: 'session123' },
@@ -248,7 +249,7 @@ describe('CartService', () => {
 
       const result = await cartService.updateItem(data);
 
-      expect(dbConnection.query).toHaveBeenCalledTimes(2);
+      expect(dbConnection.query).toHaveBeenCalledTimes(3);
       expect(result).toEqual(mockUpdatedItem);
     });
 
@@ -259,7 +260,8 @@ describe('CartService', () => {
       dbConnection.query
         .mockResolvedValueOnce({ rows: [] })  // No existing cart
         .mockResolvedValueOnce({ rows: [mockNewCart] })  // Create new cart
-        .mockResolvedValueOnce({ rows: [mockUpdatedItem] });  // Item added
+        .mockResolvedValueOnce({ rows: [mockUpdatedItem] })  // Item added
+        .mockResolvedValueOnce({ rows: [] }); // Insert notification
 
       const data = {
         session: { user_id: 'user123', id: 'session123' },
@@ -269,7 +271,7 @@ describe('CartService', () => {
 
       const result = await cartService.updateItem(data);
 
-      expect(dbConnection.query).toHaveBeenCalledTimes(3);
+      expect(dbConnection.query).toHaveBeenCalledTimes(4);
       expect(result).toEqual(mockUpdatedItem);
     });
   });
@@ -281,7 +283,8 @@ describe('CartService', () => {
 
       dbConnection.query
         .mockResolvedValueOnce({ rows: [mockCart] })  // Existing cart
-        .mockResolvedValueOnce({ rows: [mockDeletedItem] });  // Item deleted
+        .mockResolvedValueOnce({ rows: [mockDeletedItem] })  // Item deleted
+        .mockResolvedValueOnce({ rows: [] }); // Insert notification
 
       const data = {
         session: { user_id: 'user123', id: 'session123' },
@@ -291,7 +294,7 @@ describe('CartService', () => {
 
       const result = await cartService.deleteItem(data);
 
-      expect(dbConnection.query).toHaveBeenCalledTimes(2);
+      expect(dbConnection.query).toHaveBeenCalledTimes(3);
       expect(result).toEqual(mockDeletedItem);
     });
   });
@@ -371,7 +374,8 @@ describe('CartService', () => {
 
           dbConnection.query
             .mockResolvedValueOnce({ rows: [mockCart] })  // Existing cart
-            .mockResolvedValueOnce({ rows: [mockUpdatedItem] });  // Item updated
+            .mockResolvedValueOnce({ rows: [mockUpdatedItem] })  // Item updated
+            .mockResolvedValueOnce({ rows: [] }); // Insert notification
 
           const data = {
             session: { user_id: 'user123', id: 'session123' },
@@ -381,7 +385,7 @@ describe('CartService', () => {
 
           const result = await cartService.updateItem(data);
 
-          expect(dbConnection.query).toHaveBeenCalledTimes(2);
+          expect(dbConnection.query).toHaveBeenCalledTimes(3);
           expect(result).toEqual(mockUpdatedItem);
         });
 
@@ -392,7 +396,8 @@ describe('CartService', () => {
           dbConnection.query
             .mockResolvedValueOnce({ rows: [] })  // No existing cart
             .mockResolvedValueOnce({ rows: [mockNewCart] })  // Create new cart
-            .mockResolvedValueOnce({ rows: [mockUpdatedItem] });  // Item added
+            .mockResolvedValueOnce({ rows: [mockUpdatedItem] })  // Item added
+            .mockResolvedValueOnce({ rows: [] }); // Insert notification
 
           const data = {
             session: { user_id: 'user123', id: 'session123' },
@@ -402,7 +407,7 @@ describe('CartService', () => {
 
           const result = await cartService.updateItem(data);
 
-          expect(dbConnection.query).toHaveBeenCalledTimes(3);
+          expect(dbConnection.query).toHaveBeenCalledTimes(4);
           expect(result).toEqual(mockUpdatedItem);
         });
       });
@@ -414,8 +419,9 @@ describe('CartService', () => {
 
           dbConnection.query
             .mockResolvedValueOnce({ rows: [mockCart] })  // Existing cart
-            .mockResolvedValueOnce({ rows: [mockDeletedItem] });  // Item deleted
-
+            .mockResolvedValueOnce({ rows: [mockDeletedItem] })  // Item deleted
+            .mockResolvedValueOnce({ rows: [] }); // Insert notification
+          
           const data = {
             session: { user_id: 'user123', id: 'session123' },
             params: { itemId: 'item123' },
@@ -424,7 +430,7 @@ describe('CartService', () => {
 
           const result = await cartService.deleteItem(data);
 
-          expect(dbConnection.query).toHaveBeenCalledTimes(2);
+          expect(dbConnection.query).toHaveBeenCalledTimes(3);
           expect(result).toEqual(mockDeletedItem);
         });
       });

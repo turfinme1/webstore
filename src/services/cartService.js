@@ -166,6 +166,8 @@ class CartService {
       [cart.id, data.body.product_id, data.body.quantity]
     );
 
+    await this.sendCartUpdateSyncClientsEvent(data);
+
     return result.rows[0];
   }
 
@@ -178,6 +180,8 @@ class CartService {
       RETURNING *`,
       [cart.id, data.params.itemId]
     );
+
+    await this.sendCartUpdateSyncClientsEvent(data);
 
     return result.rows[0];
   }
@@ -265,6 +269,14 @@ class CartService {
     );
 
     return { message: "Voucher removed successfully." };
+  }
+
+  async sendCartUpdateSyncClientsEvent(data) {
+    await data.dbConnection.query(`
+      INSERT INTO emails (recipient_id, subject, text_content, type, event_type)
+      VALUES ($1, $2, $3, $4, $5)`,
+      [data.session.user_id, "Cart updated", "Your cart was updated", "Notification", "cart_update_sync_clients"]
+    );
   }
 }
 
