@@ -5,8 +5,8 @@ const { Readable } = require("nodemailer/lib/xoauth2");
 const { ENV }  = require("../serverConfigurations/constants");
 
 class AuthService {
-  constructor(emailService) {
-    this.emailService = emailService;
+  constructor(messageService) {
+    this.messageService = messageService;
   }
 
   async register(data) {
@@ -51,7 +51,7 @@ class AuthService {
         address: `<a href="${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/auth/verify-mail?token=${verifyToken}">Verify Email</a>`
       }
     }
-    await this.emailService.queueEmail(emailObject);
+    await this.messageService.queueEmail(emailObject);
 
     return session;
   }
@@ -401,7 +401,7 @@ class AuthService {
         address: `<a href="${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/reset-password?token=${createResetTokenResult.rows[0].token_hash}">Reset Password</a>`
       }
     }
-    await this.emailService.queueEmail(emailObject);
+    await this.messageService.queueEmail(emailObject);
 
     return { message: "If the email exists, a password reset link will be sent"};
   }

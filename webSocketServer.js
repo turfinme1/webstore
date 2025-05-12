@@ -39,13 +39,13 @@ app.post('/message', async (req, res) => {
   }
 });
 
-const server = https.createServer({
+const httpServer = https.createServer({
   key: fs.readFileSync(path.join(__dirname, 'cert-key.pem'), 'utf8'),
   cert: fs.readFileSync(path.join(__dirname, 'cert.pem'), 'utf8')
 }, app);
 
 const wss = new WebSocket.Server({
-  server: server,
+  server: httpServer,
   path: '/ws/messages'
 });
 
@@ -117,7 +117,7 @@ wss.on('connection', async (ws, req) => {
   }
 });
 
-server.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`Websocket Server listening on port ${port}`);
 });
 

@@ -1,21 +1,21 @@
 const { ASSERT_USER } = require("../../serverConfigurations/assert");
-const EmailController = require("../emailController");
+const MessageController = require("../messageController");
 
 jest.mock("../../serverConfigurations/assert");
 
 describe("EmailController", () => {
   let emailController;
-  let emailService;
+  let messageService;
   let mockRes;
   let mockNext;
 
   beforeEach(() => {
-    emailService = {
+    messageService = {
       sendTestEmail: jest.fn(),
       previewEmail: jest.fn(),
     };
 
-    emailController = new EmailController(emailService);
+    emailController = new MessageController(messageService);
 
     mockRes = {
       status: jest.fn().mockReturnThis(),
@@ -27,7 +27,7 @@ describe("EmailController", () => {
   });
 
   describe("sendTestEmail", () => {
-    it("should call emailService.sendTestEmail and respond with status 200", async () => {
+    it("should call messageService.sendTestEmail and respond with status 200", async () => {
       const req = {
         body: { email: "test@example.com" },
         params: {},
@@ -37,7 +37,7 @@ describe("EmailController", () => {
       };
       const sendResult = { success: true };
 
-      emailService.sendTestEmail.mockResolvedValue(sendResult);
+      messageService.sendTestEmail.mockResolvedValue(sendResult);
 
       await emailController.sendTestEmail(req, mockRes, mockNext);
 
@@ -46,7 +46,7 @@ describe("EmailController", () => {
         "You must be logged in to perform this action",
         { code: "CONTROLLER.EMAIL.00011.EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
-      expect(emailService.sendTestEmail).toHaveBeenCalledWith({
+      expect(messageService.sendTestEmail).toHaveBeenCalledWith({
         body: req.body,
         params: req.params,
         session: req.session,
@@ -59,7 +59,7 @@ describe("EmailController", () => {
   });
 
   describe("previewEmail", () => {
-    it("should call emailService.previewEmail and respond with status 200", async () => {
+    it("should call messageService.previewEmail and respond with status 200", async () => {
       const req = {
         body: { email: "test@example.com" },
         params: {},
@@ -69,7 +69,7 @@ describe("EmailController", () => {
       };
       const previewResult = { success: true };
 
-      emailService.previewEmail.mockResolvedValue(previewResult);
+      messageService.previewEmail.mockResolvedValue(previewResult);
 
       await emailController.previewEmail(req, mockRes, mockNext);
 
@@ -78,7 +78,7 @@ describe("EmailController", () => {
         "You must be logged in to perform this action",
         { code: "CONTROLLER.EMAIL.00024.EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
-      expect(emailService.previewEmail).toHaveBeenCalledWith({
+      expect(messageService.previewEmail).toHaveBeenCalledWith({
         body: req.body,
         params: req.params,
         session: req.session,

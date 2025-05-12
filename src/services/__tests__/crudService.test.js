@@ -1408,7 +1408,7 @@ describe("CrudService", () => {
           await crudService.emailTemplateUpdateHook(mockData, mockInsertObject);
   
           expect(mockData.dbConnection.query).toHaveBeenCalledWith(
-              expect.stringContaining('SELECT * FROM email_templates'),
+              expect.stringContaining('SELECT * FROM message_templates'),
               [mockData.params.id]
           );
           expect(mockData.body.placeholders).toBe(JSON.stringify(mockTemplate.placeholders));
@@ -1424,7 +1424,7 @@ describe("CrudService", () => {
               .toThrow('Email template not found');
   
           expect(mockData.dbConnection.query).toHaveBeenCalledWith(
-              expect.stringContaining('SELECT * FROM email_templates'),
+              expect.stringContaining('SELECT * FROM message_templates'),
               [mockData.params.id]
           );
       });
@@ -1489,7 +1489,7 @@ describe("CrudService", () => {
   
           // Verify template query
           expect(mockData.dbConnection.query).toHaveBeenNthCalledWith(1,
-              expect.stringContaining('SELECT * FROM email_templates'),
+              expect.stringContaining('SELECT * FROM message_templates'),
               [123]
           );
   
@@ -1501,7 +1501,7 @@ describe("CrudService", () => {
   
           // Verify email insertions
           expect(mockData.dbConnection.query).toHaveBeenNthCalledWith(3,
-              expect.stringContaining('INSERT INTO emails'),
+              expect.stringContaining('INSERT INTO message_queue'),
               [1, 'user1@test.com', 'Test Subject', 'Hello John Doe!', 1]
           );
       });

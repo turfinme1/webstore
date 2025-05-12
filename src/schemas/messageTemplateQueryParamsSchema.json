@@ -1,6 +1,6 @@
 {   
     "type": "object",
-    "name": "emailTemplateQueryParamsSchema",
+    "name": "messageTemplateQueryParamsSchema",
     "searchParams": {
         "type": "object",
         "properties": {
