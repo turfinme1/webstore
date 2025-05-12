@@ -69,6 +69,8 @@ const EMAIL_ERROR_TYPES = {
         );
 
         await client.query('BEGIN');
+        const settings = await client.query(`SELECT * FROM app_settings LIMIT 1`);
+        ASSERT(settings.rows.length === 1, 'App settings not found', { code: 'TIMERS.PROCESS_EMAIL_QUEUE.00001.APP_SETTINGS_NOT_FOUND', long_description: 'App settings not found' });
         const pendingEmails = await client.query(`
             WITH cte AS (
                 SELECT id
@@ -93,7 +95,7 @@ const EMAIL_ERROR_TYPES = {
 
         const processResult = await Promise.all(
             pendingEmails.rows.map(async (email) => 
-                processMessage(email, client, logger, emailService)
+                processMessage(email, client, logger, emailService, settings.rows[0])
             )
         )
 
@@ -127,7 +129,7 @@ const EMAIL_ERROR_TYPES = {
     }
 })();
 
-async function processMessage(email, client, logger, emailService) {
+async function processMessage(email, client, logger, emailService, settings) {
     try {
         if(email.type === 'Push-Notification') {
             const subscriptions = await client.query(`
@@ -228,7 +230,7 @@ async function processMessage(email, client, logger, emailService) {
                 console.log(
                     `[processEmailQueue] request payload: ${JSON.stringify({
                     method: "POST",
-                    url: `${ENV.WEB_SOCKET_API_URL}/message`,
+                    url: `${settings.web_socket_api_url}/message`,
                     body: {
                         type: email.event_type,
                         user_id: email.recipient_id,
@@ -244,7 +246,7 @@ async function processMessage(email, client, logger, emailService) {
                 return { id: email.id, success: true };
             }
 
-            const result = await fetch(`${ENV.WEB_SOCKET_API_URL}/message`, {
+            const result = await fetch(`${settings.web_socket_api_url}/message`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

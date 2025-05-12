@@ -14,6 +14,11 @@ describe("Logger", () => {
 
     mockReq = {
       dbConnection: mockDbConnection,
+      context: {
+        settings: {
+          issues_url: "http://example.com/issues",
+        }
+      }
     };
 
     jest.replaceProperty(ENV, "ISSUES_URL", "http://example.com/issues");
@@ -194,7 +199,7 @@ describe("Logger", () => {
       at AuthService.verifyCaptcha (/home/tb-intern1/Desktop/repo/borislav.a-training/src/services/authService.js:313:16)
       at processTicksAndRejections (internal/process/task_queues.js:95:5)`;
   
-      await logger.createIssue(errorObject);
+      await logger.createIssue(errorObject, mockReq);
   
       expect(global.fetch).toHaveBeenCalledTimes(1);
       const fetchCall = global.fetch.mock.calls[0];
@@ -202,7 +207,7 @@ describe("Logger", () => {
       const options = fetchCall[1];
       const body = JSON.parse(options.body);
   
-      expect(url).toEqual(ENV.ISSUES_URL);
+      expect(url).toEqual(mockReq.context.settings.issues_url);
       expect(options.method).toEqual("POST");
       expect(options.headers["Content-Type"]).toEqual("application/json");
   
@@ -222,7 +227,7 @@ describe("Logger", () => {
       at AuthService.verifyCaptcha (/home/tb-intern1/Desktop/repo/borislav.a-training/src/services/authService.js:313:16)
       at processTicksAndRejections (internal/process/task_queues.js:95:5)`;
   
-      await logger.createIssue(errorObject);
+      await logger.createIssue(errorObject, mockReq);
   
       expect(global.fetch).toHaveBeenCalledTimes(1);
       const fetchCall = global.fetch.mock.calls[0];

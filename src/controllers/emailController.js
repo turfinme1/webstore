@@ -13,6 +13,7 @@ class EmailController {
       body: req.body,
       params: req.params,
       session: req.session,
+      context: req.context,
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
     };
@@ -26,6 +27,7 @@ class EmailController {
       body: req.body,
       params: req.params,
       session: req.session,
+      context: req.context,
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
     };

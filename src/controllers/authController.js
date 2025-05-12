@@ -22,6 +22,7 @@ class AuthController {
       body: req.body,
       params: req.params,
       session: req.session,
+      context: req.context,
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
     }; 
@@ -120,6 +121,7 @@ class AuthController {
       body: req.body,
       params: req.params,
       session: req.session,
+      context: req.context,
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
     }; 

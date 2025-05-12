@@ -3,6 +3,7 @@ const AuthService = require("../authService");
 const bcrypt = require("bcrypt");
 const { fa } = require("@faker-js/faker");
 const { ENV } = require("../../serverConfigurations/constants");
+const { url } = require("inspector");
 
 describe("AuthService", () => {
   let authService;
@@ -52,6 +53,11 @@ describe("AuthService", () => {
       session: {
         session_hash: "session123",
       },
+      context:{
+        settings: {
+          url: "http://localhost",
+        }
+      }
     };
   });
 
@@ -82,7 +88,7 @@ describe("AuthService", () => {
       expect(mockMailService.queueEmail).toHaveBeenCalledWith({
         dbConnection: mockDbConnection,
         emailData: {
-          address: `<a href="${ENV.URL}:${ENV.FRONTOFFICE_PORT}/auth/verify-mail?token=token123">Verify Email</a>`,
+          address: `<a href="${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/auth/verify-mail?token=token123">Verify Email</a>`,
           first_name: undefined,
           last_name: undefined,
           recipient_email: "test@example.com",
@@ -852,7 +858,7 @@ describe("AuthService", () => {
       expect(mockMailService.queueEmail).toHaveBeenCalledWith({
         dbConnection: mockDbConnection,
         emailData: {
-          address: `<a href="${ENV.URL}:${ENV.FRONTOFFICE_PORT}/reset-password?token=resetToken123">Reset Password</a>`,
+          address: `<a href="${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/reset-password?token=resetToken123">Reset Password</a>`,
           recipient_email: "test@example.com",
           templateType: "Forgot password",
         },

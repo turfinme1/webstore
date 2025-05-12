@@ -36,11 +36,11 @@ class AppConfigController {
   }
 
   async getJavaAPIUrl(req, res, next) {
-    res.status(200).json({ url: ENV.JAVA_API_URL });
+    res.status(200).json({ url: req.context.settings.java_api_url });
   }
 
   async getWebSocketUrl(req, res, next) {
-    res.status(200).json({ url: ENV.WEB_SOCKET_URL });
+    res.status(200).json({ url: req.context.settings.web_socket_url });
   }
 }
 
