@@ -1679,7 +1679,7 @@ class ReportService {
             NULL AS "text_content",
             COUNT(*) AS "count",
             0 AS "sort_order"
-        FROM emails N
+        FROM message_queue N
         WHERE TRUE
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$
@@ -1700,7 +1700,7 @@ class ReportService {
             $text_content_grouping_expression$ AS "text_content",
             COUNT(*) AS "count",
             1 AS "sort_order"
-        FROM emails N
+        FROM message_queue N
         WHERE TRUE
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$
@@ -1773,7 +1773,7 @@ class ReportService {
             COUNT(CASE WHEN E.status = 'expired' THEN 1 END) AS status_expired,
             0 AS "sort_order"
         FROM notifications N	
-        JOIN emails E ON N.id = E.notification_id
+        JOIN message_queue E ON N.id = E.notification_id
         WHERE TRUE
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$
@@ -1794,7 +1794,7 @@ class ReportService {
             COUNT(CASE WHEN E.status = 'expired' THEN 1 END) AS status_expired,
             1 AS "sort_order"
         FROM notifications N	
-        JOIN emails E ON N.id = E.notification_id
+        JOIN message_queue E ON N.id = E.notification_id
         WHERE TRUE
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$

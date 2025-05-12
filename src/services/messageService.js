@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
   auth: null,
 });
 
-class EmailService {
+class MessageService {
     constructor(transporter, templateLoader) {
         this.transporter = transporter;
         this.templateLoader = templateLoader;
@@ -44,7 +44,7 @@ class EmailService {
         };
 
         const emailResult = await data.dbConnection.query(
-            `SELECT * FROM email_templates WHERE id = $1`,
+            `SELECT * FROM message_templates WHERE id = $1`,
             [data.params.id]
         );
         ASSERT_USER(emailResult.rows.length === 1, "Email template not found", { code: "SERVICE.EMAIL.00053.EMAIL_NOT_FOUND", long_description: "Email template not found" });
@@ -94,7 +94,7 @@ class EmailService {
 
         const processedEmail = await this.processTemplate(data);
         const emailRecord = await data.dbConnection.query(`
-            INSERT INTO emails (recipient_email, subject, text_content)
+            INSERT INTO message_queue (recipient_email, subject, text_content)
             VALUES ($1, $2, $3)`,
             [data.emailData.recipient_email, processedEmail.subject, processedEmail.html]
         );
@@ -104,7 +104,7 @@ class EmailService {
 
     async processTemplate(data) {
         const emailTemplateResult = await data.dbConnection.query(
-            `SELECT * FROM email_templates WHERE name = $1`,
+            `SELECT * FROM message_templates WHERE name = $1`,
             [data.emailData.templateType]
         );
         ASSERT(emailTemplateResult.rows.length === 1, "Template not found", { code: "SERVICE.EMAIL.00109.EMAIL_NOT_FOUND", long_description: "Template not found" });
@@ -162,4 +162,4 @@ class EmailService {
     }
 }
 
-module.exports = { EmailService, transporter };
+module.exports = { MessageService, transporter };

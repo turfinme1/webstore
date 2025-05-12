@@ -1,6 +1,6 @@
 const webpush = require("../serverConfigurations/webpushWrapper");
 const pool = require("../database/dbConfig");
-const { EmailService, transporter } = require("../services/emailService");
+const { MessageService, transporter } = require("../services/messageService");
 const { TemplateLoader } = require("../serverConfigurations/templateLoader");
 const Logger = require("../serverConfigurations/logger");
 const { ENV } = require("../serverConfigurations/constants");
@@ -57,7 +57,7 @@ const EMAIL_ERROR_TYPES = {
         console.log('Starting processEmailQueue');
         const start = hrtime();
         const templateLoader = new TemplateLoader();
-        const emailService = new EmailService(transporter, templateLoader);
+        const messageService = new MessageService(transporter, templateLoader);
         
         console.log('[processEmailQueue] Aquire client from pool...');
         client = await pool.connect();
@@ -71,10 +71,10 @@ const EMAIL_ERROR_TYPES = {
         await client.query('BEGIN');
         const settings = await client.query(`SELECT * FROM app_settings LIMIT 1`);
         ASSERT(settings.rows.length === 1, 'App settings not found', { code: 'TIMERS.PROCESS_EMAIL_QUEUE.00001.APP_SETTINGS_NOT_FOUND', long_description: 'App settings not found' });
-        const pendingEmails = await client.query(`
+        const pendingMessages = await client.query(`
             WITH cte AS (
                 SELECT id
-                FROM emails
+                FROM message_queue
                 WHERE type IN ($1, $2, $3, $4)
                   AND status = $5
                   AND (email_last_attempt IS NULL OR email_last_attempt < NOW() - INTERVAL '${RETRY_DELAY_MINUTES} minutes')
@@ -84,24 +84,24 @@ const EMAIL_ERROR_TYPES = {
                 LIMIT $7
                 FOR UPDATE SKIP LOCKED
             )
-            UPDATE emails
+            UPDATE message_queue
             SET status = $8,    
                 email_processing_started_at = NOW()
             FROM cte
-            WHERE emails.id = cte.id
-            RETURNING emails.*;`,
+            WHERE message_queue.id = cte.id
+            RETURNING message_queue.*;`,
             [EMAIL_MESSAGE_TYPE, PUSH_MESSAGE_TYPE, PUSH_MESSAGE_BROADCAST_TYPE, IN_APP_MESSAGE_TYPE, MESSAGE_STATUS.PENDING, MAX_ATTEMPTS, BATCH_SIZE, MESSAGE_STATUS.SENDING]);
         await client.query(`COMMIT`);
 
         const processResult = await Promise.all(
-            pendingEmails.rows.map(async (email) => 
-                processMessage(email, client, logger, emailService, settings.rows[0])
+            pendingMessages.rows.map(async (email) => 
+                processMessage(email, client, logger, messageService, settings.rows[0])
             )
         )
 
         await client.query('BEGIN');
         await client.query(`
-            UPDATE emails
+            UPDATE message_queue
             SET status = $1,
                 email_retry_after = NOW() + (INTERVAL '1 minute' * $2)
             WHERE email_processing_started_at < NOW() - INTERVAL '10 minutes'
@@ -129,7 +129,7 @@ const EMAIL_ERROR_TYPES = {
     }
 })();
 
-async function processMessage(email, client, logger, emailService, settings) {
+async function processMessage(email, client, logger, messageService, settings) {
     try {
         if(email.type === 'Push-Notification') {
             const subscriptions = await client.query(`
@@ -140,7 +140,7 @@ async function processMessage(email, client, logger, emailService, settings) {
 
             if(subscriptions.rows.length === 0) {
                 await client.query(`
-                    UPDATE emails
+                    UPDATE message_queue
                     SET status = $1
                     WHERE id = $2`,
                     [MESSAGE_STATUS.FAILED, email.id]
@@ -177,7 +177,7 @@ async function processMessage(email, client, logger, emailService, settings) {
 
             if (sendNotificationCount === 0) {
                 await client.query(`
-                    UPDATE emails
+                    UPDATE message_queue
                     SET status = $1
                     WHERE id = $2`,
                     [MESSAGE_STATUS.FAILED, email.id]
@@ -194,7 +194,7 @@ async function processMessage(email, client, logger, emailService, settings) {
 
             if (subscription.rows.length === 0) {
                 await client.query(`
-                    UPDATE emails
+                    UPDATE message_queue
                     SET status = $1
                     WHERE id = $2`,
                     [MESSAGE_STATUS.FAILED, email.id]
@@ -212,13 +212,13 @@ async function processMessage(email, client, logger, emailService, settings) {
             await webpush.sendNotification(pushSubscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
         } else if (email.type === 'Notification') {
             const expirationUpdateResult = await client.query(`
-                UPDATE emails e
+                UPDATE message_queue e
                     SET status = $1
                 FROM notifications n
                 WHERE e.id = $2
                     AND e.notification_id = n.id
-                    AND e.type         = 'Notification'
-                    AND n.valid_date   < NOW()
+                    AND e.type = 'Notification'
+                    AND n.valid_to_timestamp < NOW()
                 RETURNING e.id;`,
                 [MESSAGE_STATUS.EXPIRED, email.id]
             );
@@ -266,7 +266,7 @@ async function processMessage(email, client, logger, emailService, settings) {
                 return { id: email.id, success: false };
             } else if (result.status === 400) {
                 await client.query(`
-                    UPDATE emails
+                    UPDATE message_queue
                     SET status = $1
                     WHERE id = $2`,
                     [MESSAGE_STATUS.FAILED, email.id]
@@ -275,7 +275,7 @@ async function processMessage(email, client, logger, emailService, settings) {
             } else if (result.status === 500) {
                 const retryDelay = calculateRetryDelay(email.email_attempts + 1);
                 await client.query(`
-                    UPDATE emails
+                    UPDATE message_queue
                     SET status = $1,
                         email_attempts = email_attempts + 1,
                         email_last_attempt = NOW(),
@@ -293,11 +293,11 @@ async function processMessage(email, client, logger, emailService, settings) {
                 subject: email.subject,
                 html: email.text_content
             };
-            await emailService.sendEmail(emailOptions);
+            await messageService.sendEmail(emailOptions);
         }
         
         await client.query(`
-            UPDATE emails 
+            UPDATE message_queue 
             SET status = $1, sent_at = NOW()
             WHERE id = $2`, 
             [MESSAGE_STATUS.SENT, email.id]
@@ -317,7 +317,7 @@ async function processMessage(email, client, logger, emailService, settings) {
         const newStatus = (shouldRetry && !maxAttemptsReached) ? MESSAGE_STATUS.PENDING : MESSAGE_STATUS.FAILED;
         
         await client.query(`
-            UPDATE emails 
+            UPDATE message_queue 
             SET status = $1,
                 email_attempts = email_attempts + 1,
                 email_last_attempt = NOW(),

@@ -68,14 +68,14 @@
             },
             "renderConfig": {
                 "type": "select",
-                "fetchFrom": "/crud/email-templates",
+                "fetchFrom": "/crud/message-templates",
                 "displayKey": "name"
             },
             "errorMessage": {
                 "type": "Invalid value for template."
             }
         },
-        "valid_date": {
+        "valid_to_timestamp": {
             "type": "string",
             "format": "date-time",
             "label": "Valid Date",
@@ -128,14 +128,14 @@
         "created_at",
         "name",
         "template_type",
-        "valid_date",
+        "valid_to_timestamp",
         "user_ids"
     ],
     "required": [
         "name",
         "template_id",
         "user_ids",
-        "valid_date"
+        "valid_to_timestamp"
     ],
     "crud": {
         "update": false,

@@ -428,7 +428,7 @@ class CrudService {
         "admin-users": {
           before: this.adminUsersUpdateHook,
         },
-        "email-templates": {
+        "message-templates": {
           before: this.emailTemplateUpdateHook,
         },
         "user-groups": {
@@ -680,11 +680,11 @@ class CrudService {
 
   async emailTemplateUpdateHook(data, insertObject) {
     const currentEmailTemplateResult = await data.dbConnection.query(`
-      SELECT * FROM email_templates
+      SELECT * FROM message_templates
       WHERE id = $1`,
       [data.params.id]
     );
-    ASSERT_USER(currentEmailTemplateResult.rows.length > 0, "Email template not found", { code: "SERVICE.CRUD.00620.INVALID_INPUT_UPDATE_EMAIL_TEMPLATE_NOT_FOUND", long_description: "Email template not found" });
+    ASSERT_USER(currentEmailTemplateResult.rows.length > 0, "Email template not found", { code: "SERVICE.CRUD.00620.INVALID_INPUT_UPDATE_TEMPLATE_NOT_FOUND", long_description: "Email template not found" });
     const currentEmailTemplate = currentEmailTemplateResult.rows[0];
     data.body.placeholders = JSON.stringify(currentEmailTemplate.placeholders);
   }
@@ -693,7 +693,7 @@ class CrudService {
     const start = hrtime();
 
     const templateResult = await data.dbConnection.query(
-        `SELECT * FROM email_templates WHERE id = $1`,
+        `SELECT * FROM message_templates WHERE id = $1`,
         [mainEntity.template_id]
     );
     ASSERT_USER(templateResult.rows.length > 0, "Template not found", {
@@ -705,7 +705,7 @@ class CrudService {
     
     if (template.type === 'Push-Notification-Broadcast') {
         await data.dbConnection.query(`
-          INSERT INTO emails (recipient_id, push_subscription_id, subject, text_content, notification_id, type)
+          INSERT INTO message_queue (recipient_id, push_subscription_id, subject, text_content, notification_id, type)
           SELECT user_id, id, $1, $2, $3, $4
           FROM push_subscriptions
           WHERE status = 'active'`,
@@ -738,7 +738,7 @@ class CrudService {
       );
     }
 
-    // Create emails for each user
+    // Create message for each user
     for (const user of usersResult.rows) {
         let text_content = template.template;
         for (const placeholder of template.placeholders) {
@@ -748,7 +748,7 @@ class CrudService {
         }
         
         await data.dbConnection.query(
-          `INSERT INTO emails (recipient_id, recipient_email, subject, text_content, notification_id, type) 
+          `INSERT INTO message_queue (recipient_id, recipient_email, subject, text_content, notification_id, type) 
           VALUES ($1, $2, $3, $4, $5, $6)`,
           [user.id, user.email, template.subject, text_content, mainEntity.id, template.type]
         );
@@ -761,7 +761,7 @@ class CrudService {
 
   async notificationDryRunHook(data) {
     const templateResult = await data.dbConnection.query(
-      `SELECT * FROM email_templates WHERE id = $1`,
+      `SELECT * FROM message_templates WHERE id = $1`,
       [data.body.template_id]
     );
     ASSERT_USER(templateResult.rows.length > 0, "Template not found", {

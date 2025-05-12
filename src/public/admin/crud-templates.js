@@ -48,12 +48,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.filterParams = urlParams.filterParams || {};
     state.orderParams = urlParams.orderParams || [];
     
-    if (!hasPermission(state.userStatus, "read", "email-templates")) {
+    if (!hasPermission(state.userStatus, "read", "message-templates")) {
         elements.mainContainer.innerHTML = "<h1>Email Template Management</h1>";
         return;
     }
 
-    if(!hasPermission(state.userStatus, "create", "email-templates")) {
+    if(!hasPermission(state.userStatus, "create", "message-templates")) {
         elements.showFormButton.style.display = "none";
     }
 
@@ -134,7 +134,7 @@ async function loadTemplates(page) {
             page: page.toString(),
         });
         updateUrlParams(state);
-        const response = await fetchWithErrorHandling(`/crud/email-templates/filtered?${queryParams.toString()}`);
+        const response = await fetchWithErrorHandling(`/crud/message-templates/filtered?${queryParams.toString()}`);
         if (!response.ok) {
             showToastMessage(response.error, "error");
             return;
@@ -198,14 +198,14 @@ async function renderTemplateList(templates) {
 
         // Actions cell
         const actionsCell = document.createElement("td");
-        if (hasPermission(state.userStatus, "update", "email-templates")) {
+        if (hasPermission(state.userStatus, "update", "message-templates")) {
             actionsCell.appendChild(
                 createActionButton("Edit", "btn-warning", () =>
                     displayUpdateForm(template.id)
                 )
             );
         }
-        // if (hasPermission(state.userStatus, "delete", "email-templates")) {
+        // if (hasPermission(state.userStatus, "delete", "message-templates")) {
             // actionsCell.appendChild(
             //     createActionButton("Delete", "btn-danger", () =>
             //         handleDeleteTemplate(template.id)
@@ -286,7 +286,7 @@ function createPaginationButton(text, enabled, onClick) {
 async function displayUpdateForm(templateId) {
     try {
         const response = await fetchWithErrorHandling(
-            `/crud/email-templates/${templateId}`
+            `/crud/message-templates/${templateId}`
         );
         if (!response.ok) {
             showToastMessage(response.error, "error");
@@ -339,7 +339,7 @@ async function handleCreateTemplate(event) {
         data.placeholders = JSON.stringify([]);
     }
     try {
-        const response = await fetchWithErrorHandling("/crud/email-templates", {
+        const response = await fetchWithErrorHandling("/crud/message-templates", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -373,7 +373,7 @@ async function handleUpdateTemplate(event) {
     }
     try {
         const response = await fetchWithErrorHandling(
-            `/crud/email-templates/${state.currentTemplateId}`,
+            `/crud/message-templates/${state.currentTemplateId}`,
             {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -401,7 +401,7 @@ async function handleDeleteTemplate(templateId) {
 
     try {
         const response = await fetchWithErrorHandling(
-            `/crud/email-templates/${templateId}`,
+            `/crud/message-templates/${templateId}`,
             { method: "DELETE" }
         );
 

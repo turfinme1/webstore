@@ -1,8 +1,8 @@
 const { ASSERT_USER } = require("../serverConfigurations/assert");
 
-class EmailController {
-  constructor(emailService) {
-    this.emailService = emailService;
+class MessageController {
+  constructor(messageService) {
+    this.messageService = messageService;
   }
 
   sendTestEmail = async (req, res, next) => {
@@ -15,7 +15,7 @@ class EmailController {
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
     };
-    const result = await this.emailService.sendTestEmail(data);
+    const result = await this.messageService.sendTestEmail(data);
     res.status(200).json(result);
   }
 
@@ -29,9 +29,9 @@ class EmailController {
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
     };
-    const result = await this.emailService.previewEmail(data);
+    const result = await this.messageService.previewEmail(data);
     res.status(200).json(result);
   }
 }
 
-module.exports = EmailController;
+module.exports = MessageController;

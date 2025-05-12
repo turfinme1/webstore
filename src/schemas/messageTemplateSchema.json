@@ -1,10 +1,10 @@
 {
     "type": "object",
-    "name": "email-templates",
-    "table": "email_templates",
+    "name": "message-templates",
+    "table": "message_templates",
     "href": "/crud-templates",
-    "views": "email_templates_view",
-    "queryValidationSchema": "emailTemplateQueryParamsSchema",
+    "views": "message_templates_view",
+    "queryValidationSchema": "messageTemplateQueryParamsSchema",
     "properties": {
         "name": {
             "type": "string",

@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function getTemplates() {
   try {
-    const response = await fetchWithErrorHandling("/crud/email-templates");
+    const response = await fetchWithErrorHandling("/crud/message-templates");
     if (response.ok) {
       const templates = await response.data;
       state.templates = templates;
@@ -130,7 +130,7 @@ async function handleTemplateFormSubmit(event) {
     data.table_border_width = null;
   }
   const response = await fetchWithErrorHandling(
-    `/crud/email-templates/${state.emailTemplateId}`,
+    `/crud/message-templates/${state.emailTemplateId}`,
     {
       method: "PUT",
       headers: {
@@ -159,7 +159,7 @@ async function loadCurrentTemplate() {
 
   try {
     const response = await fetchWithErrorHandling(
-      `/crud/email-templates/${state.emailTemplateId}`
+      `/crud/message-templates/${state.emailTemplateId}`
     );
     if (response.ok) {
       const emailTemplate = await response.data;
@@ -265,7 +265,7 @@ async function handleCreateTemplate(event) {
     showToastMessage("Please enter a subject", "error");
     return;
   }
-  const response = await fetchWithErrorHandling(`/crud/email-templates`,
+  const response = await fetchWithErrorHandling(`/crud/message-templates`,
     {
       method: "POST",
       headers: {

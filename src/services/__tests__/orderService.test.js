@@ -5,12 +5,12 @@ jest.mock('@paypal/checkout-server-sdk');
 
 describe('OrderService', () => {
     let orderService;
-    let mockEmailService;
+    let mockMessageService;
     let mockPaypalClient;
     let mockDbConnection;
 
     beforeEach(() => {
-        mockEmailService = {
+        mockMessageService = {
             sendOrderCreatedConfirmationEmail: jest.fn(),
             sendOrderPaidConfirmationEmail: jest.fn(),
             queueEmail: jest.fn(),
@@ -22,7 +22,7 @@ describe('OrderService', () => {
             query: jest.fn(),
         };
 
-        orderService = new OrderService(mockEmailService, mockPaypalClient);
+        orderService = new OrderService(mockMessageService, mockPaypalClient);
     });
 
     describe('createOrder', () => {
@@ -74,7 +74,7 @@ describe('OrderService', () => {
             });
 
             expect(mockDbConnection.query).toHaveBeenCalledTimes(10);
-            expect(mockEmailService.queueEmail).toHaveBeenCalledTimes(1);
+            expect(mockMessageService.queueEmail).toHaveBeenCalledTimes(1);
         });
 
         it('should throw an error if cart is empty', async () => {
@@ -106,7 +106,7 @@ describe('OrderService', () => {
             await expect(orderService.createOrder(data)).rejects.toThrow('Cart is empty');
 
             expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
-            expect(mockEmailService.sendOrderCreatedConfirmationEmail).not.toHaveBeenCalled();
+            expect(mockMessageService.sendOrderCreatedConfirmationEmail).not.toHaveBeenCalled();
         });
 
         it('should throw an error if not enough stock for a product', async () => {
@@ -139,7 +139,7 @@ describe('OrderService', () => {
             await expect(orderService.createOrder(data)).rejects.toThrow('Not enough stock for product Product 1');
 
             expect(mockDbConnection.query).toHaveBeenCalledTimes(4);
-            expect(mockEmailService.sendOrderCreatedConfirmationEmail).not.toHaveBeenCalled();
+            expect(mockMessageService.sendOrderCreatedConfirmationEmail).not.toHaveBeenCalled();
         });
     });
 
@@ -490,7 +490,7 @@ describe('OrderService', () => {
     
             expect(result).toEqual({ message: 'Payment completed successfully' });
             expect(mockDbConnection.query).toHaveBeenCalledTimes(5);
-            expect(mockEmailService.queueEmail).toHaveBeenCalledWith(
+            expect(mockMessageService.queueEmail).toHaveBeenCalledWith(
                 expect.objectContaining({
                     emailData: {
                         first_name: 'Ivan',
@@ -518,7 +518,7 @@ describe('OrderService', () => {
                 .rejects.toThrow('Order not found');
     
             expect(mockDbConnection.query).toHaveBeenCalledTimes(1);
-            expect(mockEmailService.sendOrderPaidConfirmationEmail).not.toHaveBeenCalled();
+            expect(mockMessageService.sendOrderPaidConfirmationEmail).not.toHaveBeenCalled();
         });
     
         it('should throw error when payment not found', async () => {
@@ -535,7 +535,7 @@ describe('OrderService', () => {
                 .rejects.toThrow('Payment not found');
     
             expect(mockDbConnection.query).toHaveBeenCalledTimes(2);
-            expect(mockEmailService.sendOrderPaidConfirmationEmail).not.toHaveBeenCalled();
+            expect(mockMessageService.sendOrderPaidConfirmationEmail).not.toHaveBeenCalled();
         });
     
         it('should throw error when PayPal capture fails', async () => {
@@ -557,7 +557,7 @@ describe('OrderService', () => {
                 .rejects.toThrow('Payment failed');
     
             expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
-            expect(mockEmailService.sendOrderPaidConfirmationEmail).not.toHaveBeenCalled();
+            expect(mockMessageService.sendOrderPaidConfirmationEmail).not.toHaveBeenCalled();
         });
     });
 
