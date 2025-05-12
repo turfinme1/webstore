@@ -1,16 +1,9 @@
 class CartController {
   constructor(cartService) {
     this.cartService = cartService;
-    this.getCart = this.getCart.bind(this);
-    this.updateItem = this.updateItem.bind(this);
-    this.deleteItem = this.deleteItem.bind(this);
-    this.clearCart = this.clearCart.bind(this);
-    this.getActiveVouchers = this.getActiveVouchers.bind(this);
-    this.applyVoucher = this.applyVoucher.bind(this);
-    this.removeVoucher = this.removeVoucher.bind(this);
   }
 
-  async getCart(req, res) {
+  getCart = async (req, res) => {
     const data = {
       session: req.session,
       dbConnection: req.dbConnection,
@@ -19,7 +12,7 @@ class CartController {
     res.status(200).json(result);
   }
 
-  async updateItem(req, res) {
+  updateItem = async (req, res) => {
     const data = {
       body: req.body,
       session: req.session,
@@ -29,7 +22,7 @@ class CartController {
     res.status(201).json(result);
   }
 
-  async deleteItem(req, res) {
+  deleteItem = async (req, res) => {
     const data = {
       params: req.params,
       session: req.session,
@@ -39,7 +32,7 @@ class CartController {
     res.status(200).json(result);
   }
         
-  async clearCart(req, res) {
+  clearCart = async (req, res) => {
     const data = {
       session: req.session,
       dbConnection: req.dbConnection,
@@ -48,7 +41,7 @@ class CartController {
     res.status(200).json(result);
   }
 
-  async getActiveVouchers(req, res) {
+  getActiveVouchers = async (req, res) => {
     const data = {
       session: req.session,
       dbConnection: req.dbConnection,
@@ -57,7 +50,7 @@ class CartController {
     res.status(200).json(result);
   }
 
-  async applyVoucher(req, res) {
+  applyVoucher = async (req, res) => {
     const data = {
       body: req.body,
       session: req.session,
@@ -67,7 +60,7 @@ class CartController {
     res.status(200).json(result);
   }
 
-  async removeVoucher(req, res) {
+  removeVoucher = async (req, res) => {
     const data = {
       session: req.session,
       dbConnection: req.dbConnection,

@@ -1,12 +1,9 @@
 class ReportController {
   constructor(reportService) {
     this.reportService = reportService;
-    this.getReport = this.getReport.bind(this);
-    this.exportReport = this.exportReport.bind(this);
-    this.getAllReports = this.getAllReports.bind(this);
   }
 
-  async getReport(req, res, next) {
+  getReport = async (req, res, next) => {
     const data = {
       body: req.body,
       params: req.params,
@@ -19,7 +16,7 @@ class ReportController {
     res.status(200).json(result);
   }
 
-  async exportReport(req, res, next) {
+  exportReport = async (req, res, next) => {
     const data = {
       res: res,
       body: req.body,
@@ -32,7 +29,7 @@ class ReportController {
     res.status(200).json(result);
   }
 
-  async getAllReports(req, res, next) {
+  getAllReports = async (req, res, next) => {
     const result = await this.reportService.getAllReports();
     res.status(200).json(result);
   }

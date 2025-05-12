@@ -6,14 +6,6 @@ class OrderService {
   constructor(emailService, paypalClient) { 
     this.emailService = emailService;
     this.paypalClient = paypalClient;
-    this.createOrder = this.createOrder.bind(this);
-    this.createOrderByStaff = this.createOrderByStaff.bind(this);
-    this.updateOrderByStaff = this.updateOrderByStaff.bind(this);
-    this.getOrder = this.getOrder.bind(this);
-    this.capturePaypalPayment = this.capturePaypalPayment.bind(this);
-    this.cancelPaypalPayment = this.cancelPaypalPayment.bind(this);
-    this.verifyCartPricesAreUpToDate = this.verifyCartPricesAreUpToDate.bind(this);
-    this.deleteOrder = this.deleteOrder.bind(this);
   }
   
   async createOrder(data) {

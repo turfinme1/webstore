@@ -6,8 +6,6 @@ const { ASSERT } = require("../serverConfigurations/assert");
 class ExportService {
     constructor(crudService) {
         this.crudService = crudService;
-        this.exportToExcel = this.exportToExcel.bind(this);
-        this.exportToCsv = this.exportToCsv.bind(this);
     }
 
     async exportToExcel(data) {

@@ -2,15 +2,6 @@ const { ASSERT_USER } = require("../serverConfigurations/assert");
 
 class CartService {
   constructor() {
-    this.getOrCreateCart = this.getOrCreateCart.bind(this);
-    this.mergeCartsOnLogin = this.mergeCartsOnLogin.bind(this);
-    this.getCart = this.getCart.bind(this);
-    this.updateItem = this.updateItem.bind(this);
-    this.deleteItem = this.deleteItem.bind(this);
-    this.clearCart = this.clearCart.bind(this);
-    this.getActiveVouchers = this.getActiveVouchers.bind(this);
-    this.applyVoucher = this.applyVoucher.bind(this);
-    this.removeVoucher = this.removeVoucher.bind(this);
   }
 
   async getOrCreateCart(data) {

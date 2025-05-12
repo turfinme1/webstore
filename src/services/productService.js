@@ -7,17 +7,6 @@ const fetch = require("node-fetch");
 
 class ProductService {
   constructor() {
-    this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
-    this.createComment = this.createComment.bind(this);
-    this.createRating = this.createRating.bind(this);
-    this.getComments = this.getComments.bind(this);
-    this.getRatings = this.getRatings.bind(this);
-    this.create = this.create.bind(this);
-    this.update = this.update.bind(this);
-    this.delete = this.delete.bind(this);
-    this.uploadProducts = this.uploadProducts.bind(this);
-    this.uploadImages = this.uploadImages.bind(this);
-    this.handleFileUploads = this.handleFileUploads.bind(this);
   }
 
   async getFilteredPaginated(data) {
