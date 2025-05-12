@@ -76,25 +76,34 @@ const STATUS_CODES = {
 };
 
 const ENV = {
-  URL: 'http://localhost',
+  URL: 'http://10.20.3.21',
   BACKOFFICE_PORT: 4000,
   FRONTOFFICE_PORT: 3000,
-  PAYPAL_CLIENT_ID:"",
-  PAYPAL_CLIENT_SECRET:"",
+  WEBSOCKET_PORT: 2002,
+  PAYPAL_CLIENT_ID:"Aa3N2FW_E6sIybxEbJ5ioVPY8Z9x8do7NEy1CjJ6TW08FR4dSVi7fj7wsP-V5D23wTu5yVh1P4L3-Nzr",
+  PAYPAL_CLIENT_SECRET:"EAe1aPRgNqf7dFVM3440ZeUghaF2SIfEafX3NB-6jS-cw0QVp9hmML14_iJNKUWrspXsiXMtzc4FqQD1",
   
-  ISSUES_URL: 'http://localhost/createIssue',
+  VAPID_PUBLIC_KEY: 'BJ7UuFCX99N49hlHSrTP76J_88LdIDJQ0YWuMVvC2O7GHI12eLNZK5_MGuD1leViV28gGoG1YwpYv8l3Y1yWoaU',
+  VAPID_PRIVATE_KEY: 'FdumMISVmgrbZ2gyjAlOkQICVKXpawj5tXTg3hCRgNI',
+  VAPID_MAILTO: 'mailto:abv@abv.bg',
+
+  ISSUES_URL: 'http://10.20.3.22:4545/createIssue',
   REPO_OWNER: "telebid-interns",
   REPO_NAME: "borislav.a-training",
   BRANCH: "web-store-rc",
+ 
+  DB_USER: 'postgres',
+  DB_HOST: 'localhost',
+  DB_DATABASE: 'webstore',
+  DB_PASSWORD: 'postgres',
+  DB_PORT: '5432',
+  DB_MAX: 10, 
+ 
+  JAVA_API_URL: "https://10.20.3.21:9090",
+  WEB_SOCKET_URL: "wss://bobi-dev.tb-pro.com:12002/ws/messages",
+  WEB_SOCKET_API_URL: "https://bobi-dev.tb-pro.com:12002",
+};
 
-  DB_USER: '',
-  DB_HOST: '',
-  DB_DATABASE: '',
-  DB_PASSWORD: '',
-  DB_PORT: '',
-  DB_MAX: 10,
 
-  JAVA_API_URL: "http://localhost:8080",
-}
 
 module.exports = {STATUS_CODES, ENV};

@@ -39,7 +39,7 @@ class OrderService {
         'Pending',
         $2,
         $3,
-        (SELECT COALESCE(discount_percentage, 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date ORDER BY discount_percentage DESC LIMIT 1),
+        (SELECT COALESCE( (SELECT discount_percentage FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date ORDER BY discount_percentage DESC LIMIT 1), 0)),
         (SELECT SUM(ci.quantity * p.price) 
         FROM cart_items ci 
         JOIN products p ON ci.product_id = p.id 
@@ -133,8 +133,8 @@ class OrderService {
           },
         ],
         application_context: {
-          return_url: `${ENV.URL}:${ENV.FRONTOFFICE_PORT}/api/paypal/capture/${order.id}`,
-          cancel_url: `${ENV.URL}:${ENV.FRONTOFFICE_PORT}/api/paypal/cancel/${order.id}`,
+          return_url: `${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/api/paypal/capture/${order.id}`,
+          cancel_url: `${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/api/paypal/cancel/${order.id}`,
           shipping_preference: 'NO_SHIPPING',
           user_action: 'PAY_NOW'
         }

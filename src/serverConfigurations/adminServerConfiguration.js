@@ -139,7 +139,7 @@ function requestMiddleware(handler) {
       await req.logger.error(error);
 
       if(!(error instanceof UserError)) {
-        await req.logger.createIssue(error);
+        await req.logger.createIssue(error, req);
       }
 
       if(req.signal?.aborted) {

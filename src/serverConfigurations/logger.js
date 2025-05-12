@@ -67,7 +67,7 @@ class Logger {
     await this.logToDatabase(logObject);
   }
 
-  async createIssue(errorObject) {
+  async createIssue(errorObject, req) {
     try {
       ASSERT(errorObject, "Error object is required", { code: "LOGGER.CRT_ISS.001", long_description: "Error object is required" });
       ASSERT(errorObject.stack, "Error object must have a stack trace", { code: "LOGGER.CRT_ISS.002", long_description: "Error object must have a stack trace" });
@@ -103,7 +103,7 @@ class Logger {
         }
       }
       
-      await fetch(ENV.ISSUES_URL, {
+      await fetch(req.context.settings.issues_url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

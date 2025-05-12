@@ -63,7 +63,7 @@ class AuthService {
         recipient_email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
-        address: `<a href="${ENV.URL}:${ENV.FRONTOFFICE_PORT}/auth/verify-mail?token=${verifyToken}">Verify Email</a>`
+        address: `<a href="${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/auth/verify-mail?token=${verifyToken}">Verify Email</a>`
       }
     }
     await this.emailService.queueEmail(emailObject);
@@ -413,7 +413,7 @@ class AuthService {
       emailData: {
         templateType: "Forgot password",
         recipient_email: user.email,
-        address: `<a href="${ENV.URL}:${ENV.FRONTOFFICE_PORT}/reset-password?token=${createResetTokenResult.rows[0].token_hash}">Reset Password</a>`
+        address: `<a href="${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/reset-password?token=${createResetTokenResult.rows[0].token_hash}">Reset Password</a>`
       }
     }
     await this.emailService.queueEmail(emailObject);
