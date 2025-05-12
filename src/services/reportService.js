@@ -5,21 +5,21 @@ class ReportService {
   constructor(exportService) {
     this.exportService = exportService;
     this.reports = {
-        "report-orders-by-user": this.ordersByUserReportDefinition.bind(this),
-        "report-logs": this.logsReportDefinition.bind(this),
-        "report-orders": this.ordersReportDefinition.bind(this),
-        "report-users": this.usersReportDefinition.bind(this),
-        "report-notifications": this.notificationsReportDefinition.bind(this),
-        "report-notifications-status": this.notificationsStatusReportDefinition.bind(this),
-        "report-campaigns": this.campaignsReportDefinition.bind(this),
-        "report-push-subscriptions": this.pushSubscriptionsReportDefinition.bind(this),
+        "report-orders-by-user": this.ordersByUserReportDefinition,
+        "report-logs": this.logsReportDefinition,
+        "report-orders": this.ordersReportDefinition,
+        "report-users": this.usersReportDefinition,
+        "report-notifications": this.notificationsReportDefinition,
+        "report-notifications-status": this.notificationsStatusReportDefinition,
+        "report-campaigns": this.campaignsReportDefinition,
+        "report-push-subscriptions": this.pushSubscriptionsReportDefinition,
     }
     this.dashboardReports = {
-        "store-trends": this.storeTrendsReportDefinition.bind(this),
-        "campaign-trends": this.campaignTrendsReportDefinition.bind(this),
-        "target-group-trends": this.targetGroupTrendsReportDefinition.bind(this),
-        "monthly-orders": this.monthlyOrdersReportDefinition.bind(this),
-        "daily-orders": this.dailyOrdersReportDefinition.bind(this),
+        "store-trends": this.storeTrendsReportDefinition,
+        "campaign-trends": this.campaignTrendsReportDefinition,
+        "target-group-trends": this.targetGroupTrendsReportDefinition,
+        "monthly-orders": this.monthlyOrdersReportDefinition,
+        "daily-orders": this.dailyOrdersReportDefinition,
     }
   }
 

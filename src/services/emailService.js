@@ -13,8 +13,6 @@ class EmailService {
     constructor(transporter, templateLoader) {
         this.transporter = transporter;
         this.templateLoader = templateLoader;
-        this.sendTestEmail = this.sendTestEmail.bind(this);
-        this.previewEmail = this.previewEmail.bind(this);
     }
 
     async sendEmail(data) {

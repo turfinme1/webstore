@@ -5,13 +5,6 @@ const { hrtime } = require("process");
 class CrudService {
   constructor(reportService) {
     this.reportService = reportService;
-    this.getAll = this.getAll.bind(this);
-    this.getById = this.getById.bind(this);
-    this.update = this.update.bind(this);
-    this.delete = this.delete.bind(this);
-    this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
-    this.buildFilteredPaginatedQuery =
-      this.buildFilteredPaginatedQuery.bind(this);
   }
 
   async create(data) {

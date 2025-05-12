@@ -4,18 +4,9 @@ const { validateBody } = require("../serverConfigurations/validation");
 class AuthController {
   constructor(authService) {
     this.authService = authService;
-    this.register = this.register.bind(this);
-    this.login = this.login.bind(this);
-    this.logout = this.logout.bind(this);
-    this.verifyMail = this.verifyMail.bind(this);
-    this.getStatus = this.getStatus.bind(this);
-    this.getCaptcha = this.getCaptcha.bind(this);
-    this.updateProfile = this.updateProfile.bind(this);
-    this.forgotPassword = this.forgotPassword.bind(this);
-    this.resetPassword = this.resetPassword.bind(this);
   }
 
-  async register(req, res, next) {
+  register = async (req, res, next) => {
     ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", { code: "CONTROLLER.AUTH.00019.RATE_LIMITED", long_description: "Too many failed attempts. Try again later" });
     validateBody(req, req.entitySchemaCollection.userRegisterSchema);
     const data = {
@@ -34,7 +25,7 @@ class AuthController {
     await req.logger.info({ code: "CONTROLLER.AUTH.00033.REGISTRATION_SUCCESS", short_description: "Registration successful", long_description: `User ${req.body.email} registered successfully` });
   }
 
-  async login(req, res, next) {
+  login = async (req, res, next) => {
     ASSERT_USER(req.session.rate_limited_until <= Date.now(), "Too many failed attempts. Try again later", { code: "CONTROLLER.AUTH.00037.RATE_LIMITED", long_description: "Too many failed attempts. Try again later" });
     validateBody(req, req.entitySchemaCollection.userLoginSchema);
     const data = {
@@ -53,7 +44,7 @@ class AuthController {
     await req.logger.info({ code: "CONTROLLER.AUTH.00051.LOGIN_SUCCESS", short_description: "Login successful", long_description: `User ${req.body.email} logged in successfully` });
   }
 
-  async logout(req, res, next) {
+  logout = async (req, res, next) => {
     const data = {
       params: req.params,
       session: req.session,
@@ -66,7 +57,7 @@ class AuthController {
       .json({message: "Logout successful"});
   }
 
-  async verifyMail(req, res, next) {
+  verifyMail = async (req, res, next) => {
     const data = {
       query : req.query,
       params: req.params,
@@ -78,7 +69,7 @@ class AuthController {
     res.status(200).json(result);
   }
 
-  async getStatus(req, res, next) {
+  getStatus = async (req, res, next) => {
     const data = {
       cookies: req.cookies,
       session: req.session,
@@ -89,7 +80,7 @@ class AuthController {
     res.status(200).json(result);
   }
 
-  async getCaptcha(req, res, next) {
+  getCaptcha = async (req, res, next) => {
     const data = {
       session: req.session,
       dbConnection: req.dbConnection,
@@ -100,7 +91,7 @@ class AuthController {
     await resultStream.pipe(res);
   }
 
-  async updateProfile(req, res, next) {
+  updateProfile = async (req, res, next) => {
     validateBody(req, req.entitySchemaCollection.userUpdateSchema);
     const data = {
       body: req.body,
@@ -115,7 +106,7 @@ class AuthController {
     await req.logger.info({ code: "CONTROLLER.AUTH.00113.UPDATE_SUCCESS", short_description: "User profile update successful", long_description: `User ${req.session.session_hash} updated their profile successfully` });
   }
 
-  async forgotPassword(req, res, next) {
+  forgotPassword = async (req, res, next) => {
     validateBody(req, req.entitySchemaCollection.userForgotPasswordSchema);
     const data = {
       body: req.body,
@@ -129,7 +120,7 @@ class AuthController {
     res.status(200).json(result);
   }
 
-  async resetPassword(req, res, next) {
+  resetPassword = async (req, res, next) => {
     validateBody(req, req.entitySchemaCollection.userResetPasswordSchema);
     const data = {
       body: req.body,

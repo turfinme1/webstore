@@ -3,11 +3,9 @@ const { ASSERT_USER } = require("../serverConfigurations/assert");
 class EmailController {
   constructor(emailService) {
     this.emailService = emailService;
-    this.sendTestEmail = this.sendTestEmail.bind(this);
-    this.previewEmail = this.previewEmail.bind(this);
   }
 
-  async sendTestEmail(req, res, next) {
+  sendTestEmail = async (req, res, next) => {
     ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action",{ code: "CONTROLLER.EMAIL.00011.EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,
@@ -21,7 +19,7 @@ class EmailController {
     res.status(200).json(result);
   }
 
-  async previewEmail(req, res, next) {
+  previewEmail = async (req, res, next) => {
     ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action",{ code: "CONTROLLER.EMAIL.00024.EMAIL_UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     const data = {
       body: req.body,

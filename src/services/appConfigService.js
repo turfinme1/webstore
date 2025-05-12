@@ -1,7 +1,5 @@
 class AppConfigService {
   constructor() {
-    this.updateRateLimitSettings = this.updateRateLimitSettings.bind(this);
-    this.getRateLimitSettings = this.getRateLimitSettings.bind(this);
   }
 
   async updateRateLimitSettings(data) {

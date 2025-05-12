@@ -7,21 +7,6 @@ const { ENV }  = require("../serverConfigurations/constants");
 class AuthService {
   constructor(emailService) {
     this.emailService = emailService;
-    this.register = this.register.bind(this);
-    this.login = this.login.bind(this);
-    this.logout = this.logout.bind(this);
-    this.verifyMail = this.verifyMail.bind(this);
-    this.createSession = this.createSession.bind(this);
-    this.getSession = this.getSession.bind(this);
-    this.refreshSessionExpiry = this.refreshSessionExpiry.bind(this);
-    this.changeSessionType = this.changeSessionType.bind(this);
-    this.getStatus = this.getStatus.bind(this);
-    this.generateCaptcha = this.getCaptcha.bind(this);
-    this.generateCaptchaImage = this.generateCaptchaImage.bind(this);
-    this.verifyCaptcha = this.verifyCaptcha.bind(this);
-    this.updateProfile = this.updateProfile.bind(this);
-    this.forgotPassword = this.forgotPassword.bind(this);
-    this.requirePermission = this.requirePermission.bind(this);
   }
 
   async register(data) {
