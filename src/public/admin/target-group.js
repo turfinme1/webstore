@@ -4,7 +4,7 @@ import { fetchUserSchema, createNavigation, createBackofficeNavigation, populate
 const state = {
   currentPage: 1,
   currentTargetGroupPage: 1,
-  pageSize: 1000,
+  pageSize: 10,
   searchParams: {},
   filterParams: {},
   orderParams: [],
@@ -553,6 +553,10 @@ async function handleFilterUsers(event) {
 // target group list
 async function handleFilterTargetGroups(event) {
   event.preventDefault();
+  function toIso(dt) {
+    return new Date(dt);
+  }
+
   const formData = new FormData(elements.targetGroupFilterForm);
   const filterParams = {};
 
@@ -576,8 +580,8 @@ async function handleFilterTargetGroups(event) {
   const createdAtMax = formData.get("created_at_max");
   if (createdAtMin || createdAtMax) {
       filterParams.created_at = {};
-      if (createdAtMin) filterParams.created_at.min = createdAtMin;
-      if (createdAtMax) filterParams.created_at.max = createdAtMax;
+      if (createdAtMin) filterParams.created_at.min = toIso(createdAtMin);
+      if (createdAtMax) filterParams.created_at.max = toIso(createdAtMax);
   }
   if(createdAtMin && createdAtMax && (new Date(createdAtMax) < new Date(createdAtMin))){
     showErrorMessage("Created At Min should be less than Created At Max");
@@ -596,8 +600,8 @@ async function handleFilterTargetGroups(event) {
   const updatedAtMax = formData.get("updated_at_max");
   if (updatedAtMin || updatedAtMax) {
       filterParams.updated_at = {};
-      if (updatedAtMin) filterParams.updated_at.min = updatedAtMin;
-      if (updatedAtMax) filterParams.updated_at.max = updatedAtMax;
+      if (updatedAtMin) filterParams.updated_at.min = toIso(updatedAtMin);
+      if (updatedAtMax) filterParams.updated_at.max = toIso(updatedAtMax);
   }
   if(updatedAtMax && updatedAtMax && (new Date(updatedAtMax) < new Date(updatedAtMin))){
     showErrorMessage("Updated At Min should be less than Updated At Max");
