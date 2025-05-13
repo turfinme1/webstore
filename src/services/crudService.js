@@ -419,7 +419,10 @@ class CrudService {
         },
         "notifications": {
           after: this.notificationCreateHook.bind(this),
-        }
+        },
+        "vouchers": {
+          before: this.voucherCreateHook.bind(this),
+        },
       },
       update: {
         roles: {
@@ -791,6 +794,14 @@ class CrudService {
       );
       return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
     }
+  }
+
+  async voucherCreateHook(data) {
+    const currentDate = new Date();
+    const start_date = new Date(data.body.start_date);
+    const end_date = new Date(data.body.end_date);
+    ASSERT_USER(start_date < end_date, "Start date must be before end date", { code: "SERVICE.CRUD.00444.INVALID_INPUT_CREATE_VOUCHER_DATE_RANGE", long_description: "Start date must be before end date" });
+    ASSERT_USER(end_date > currentDate, "End date must be in the future", { code: "SERVICE.CRUD.00445.INVALID_INPUT_CREATE_VOUCHER_END_DATE", long_description: "End date must be in the future" });
   }
 }
 
