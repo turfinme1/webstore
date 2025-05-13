@@ -451,6 +451,9 @@ class CrudPageBuilder {
       if (property.pattern) {
         input.pattern = property.pattern;
       }
+      if(property.pattern_errorMessage) {
+        input.title = property.pattern_errorMessage;
+      }
       if (property?.required?.[formType]) {
         input.required = true;
         label.innerHTML = `${label.textContent} <span style="color:red;">*</span>`;
