@@ -1,4 +1,4 @@
-import { hasPermission, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { hasPermission, fetchWithErrorHandling, showErrorMessage, showMessage } from "./page-utility.js";
 
 class CrudPageBuilder {
   constructor(schema, apiEndpoint, rootContainerId, userStatus, querySchema) {
@@ -604,7 +604,7 @@ class CrudPageBuilder {
           return;
         }
       } else {
-        showToastMessage(dryRunresponse.error, "error");
+        showErrorMessage(dryRunresponse.error);
         return;
       }
     }
@@ -617,14 +617,14 @@ class CrudPageBuilder {
     });
 
     if (response.ok) {
-      showToastMessage(type === "create" ? "Record created successfully!" : "Record updated successfully!", "success");
+      showMessage(type === "create" ? "Record created successfully!" : "Record updated successfully!");
       this.elements.createFormContainer.style.display = "none";
       this.elements.updateFormContainer.style.display = "none";
       await new Promise((resolve) => setTimeout(resolve, 2000));
       this.loadRecords();
       event.target.reset();
     } else {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     }
   }
 
@@ -646,7 +646,7 @@ class CrudPageBuilder {
 
     const response = await fetchWithErrorHandling(`${this.apiEndpoint}/filtered?${queryParams}`);
     if(!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
     const { result, count } = await response.data;
@@ -815,10 +815,10 @@ class CrudPageBuilder {
         this.elements.createFormContainer.style.display = "none";
       } else {
         this.elements.updateEntityId = null;
-        showToastMessage(`${response.error}`, "error");
+        showErrorMessage(`${response.error}`);
       }
     } catch (error) {
-      showToastMessage("An error occurred while fetching the record.", "error");
+      showErrorMessage("An error occurred while fetching the record.");
     }
   }
 
@@ -829,15 +829,15 @@ class CrudPageBuilder {
           method: "DELETE",
         });
         if (result.ok) {
-          showToastMessage("Record deleted successfully!", "success");
+          showMessage("Record deleted successfully!");
           await new Promise((resolve) => setTimeout(resolve, 2000));
           await this.loadRecords();
         } else {
-          showToastMessage(`Error deleting record: ${result.error}`, "error");
+          showErrorMessage(`Error deleting record: ${result.error}`);
         }
       }
     } catch (error) {
-      showToastMessage("An error occurred while deleting the record.", "error");
+      showErrorMessage("An error occurred while deleting the record.");
     }
   }
 

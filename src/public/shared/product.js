@@ -1,4 +1,4 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -68,13 +68,13 @@ async function addToCart(productId) {
     });
 
     if(!response.ok){
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     } else {
-      showToastMessage("Product added to cart!", "success");
+      showMessage("Product added to cart!");
     }
   } catch (error) {
     console.error("Error adding to cart:", error);
-    showToastMessage("Failed to add product to cart. Please try again", "error");
+    showErrorMessage("Failed to add product to cart. Please try again");
   }
 }
 
@@ -177,7 +177,7 @@ async function fetchProductData(productId) {
   try {
     const response = await fetchWithErrorHandling(`/crud/products/${productId}`);
     if(!response.ok){
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     }
     return await response.data;
   } catch (error) {
@@ -197,7 +197,7 @@ async function submitRating(productId, rating) {
   // const result = await response.json();
   
   if(!response.ok){
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
   }
 }
 
@@ -214,7 +214,7 @@ async function submitComment(productId, comment) {
 async function fetchProductComments(productId) {
   const response = await fetchWithErrorHandling(`/api/products/${productId}/comments`);
   if (!response.ok) {
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
   }
   return await response.data;
 }

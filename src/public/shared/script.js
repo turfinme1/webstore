@@ -1,4 +1,4 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
 
 class ProductState {
   constructor() {
@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const fetchCategories = async () => {
     const response = await fetchWithErrorHandling("/crud/categories");
     if(!response.ok){
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     }
     return await response.data;
   };
@@ -157,7 +157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.updateUrl();
     const response = await fetchWithErrorHandling(`/api/products?${queryParams.toString()}`);
     if (!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     }
     return response.data;
   };

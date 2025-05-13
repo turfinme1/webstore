@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showErrorMessage, showMessage} from "./page-utility.js";
 
 let state = {
   userStatus: null,
@@ -61,10 +61,10 @@ async function getTemplates() {
       const templates = await response.data;
       state.templates = templates;
     } else {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     }
   } catch (error) {
-    showToastMessage("Error while fetching templates", "error");
+    showErrorMessage("Error while fetching templates");
   }
 }
 
@@ -141,10 +141,10 @@ async function handleTemplateFormSubmit(event) {
   );
 
   if (response.ok) {
-    showToastMessage("Template saved", "success");
+    showMessage("Template saved");
     await getTemplates();
   } else {
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
   }
 }
 
@@ -165,7 +165,7 @@ async function loadCurrentTemplate() {
       const emailTemplate = await response.data;
       populateTemplateForm(emailTemplate);
     } else {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     }
   } catch (error) {
     console.error("fetch error", error);
@@ -196,9 +196,9 @@ async function handleSendTestEmail() {
   const response = await fetchWithErrorHandling(`/api/test-email/${emailType}`);
 
   if (response.ok) {
-    showToastMessage("Test email sent", "success");
+    showMessage("Test email sent");
   } else {
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
   }
 }
 
@@ -233,7 +233,7 @@ async function handlePreviewEmail() {
       modal.appendChild(iframe);
       document.body.appendChild(modal);
     } else {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     }
   }
   catch (error) {
@@ -258,11 +258,11 @@ async function handleCreateTemplate(event) {
   const notificationTemplate = state.templates.find(template => template.type === "Notification");
   data.placeholders = JSON.stringify(notificationTemplate.placeholders);
   if(data.template_name.length <= 2) {
-    showToastMessage("Please select a type", "error");
+    showErrorMessage("Please select a type");
     return;
   }
   if(data.subject.length <= 2) {
-    showToastMessage("Please enter a subject", "error");
+    showErrorMessage("Please enter a subject");
     return;
   }
   const response = await fetchWithErrorHandling(`/crud/message-templates`,
@@ -276,10 +276,10 @@ async function handleCreateTemplate(event) {
   );
 
   if (response.ok) {
-    showToastMessage("Template saved", "success");
+    showMessage("Template saved");
     await getTemplates();
   } else {
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
   }
 }
 

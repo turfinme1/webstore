@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showErrorMessage, showMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
 
 // Centralized state object
 const state = {
@@ -136,7 +136,7 @@ async function loadTemplates(page) {
         updateUrlParams(state);
         const response = await fetchWithErrorHandling(`/crud/message-templates/filtered?${queryParams.toString()}`);
         if (!response.ok) {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
             return;
         }
         const { result, count } = await response.data;
@@ -289,7 +289,7 @@ async function displayUpdateForm(templateId) {
             `/crud/message-templates/${templateId}`
         );
         if (!response.ok) {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
             return;
         }
         const template = await response.data;
@@ -298,7 +298,7 @@ async function displayUpdateForm(templateId) {
         state.currentTemplateId = templateId;
     } catch (error) {
         console.error("Error loading user for update:", error);
-        showToastMessage("Error loading template", "error");
+        showErrorMessage("Error loading template");
     }
 }
 
@@ -346,12 +346,12 @@ async function handleCreateTemplate(event) {
         });
 
         if (response.ok) {
-            showToastMessage("Template created successfully!", "success");
+            showMessage("Template created successfully!");
             elements.templateForm.reset();
             hideForm();
             await loadTemplates(state.currentPage);
         } else {
-            showToastMessage(`Failed to create template: ${response.error}`, "error");
+            showErrorMessage(`Failed to create template: ${response.error}`);
         }
     } catch (error) {
         console.error("Error creating user:", error);
@@ -382,17 +382,17 @@ async function handleUpdateTemplate(event) {
         );
 
         if (response.ok) {
-            showToastMessage("Template updated successfully!", "success");
+            showMessage("Template updated successfully!");
             hideUpdateForm();
             state.currentTemplateId = null;
             state.currentPage = 1;
             state.filterParams = {};
             await loadTemplates(state.currentPage);
         } else {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
         }
     } catch (error) {
-        showToastMessage("Error updating template", "error");
+        showErrorMessage("Error updating template");
     }
 }
 
@@ -406,13 +406,13 @@ async function handleDeleteTemplate(templateId) {
         );
 
         if (response.ok) {
-            showToastMessage("Template deleted successfully!", "success");
+            showMessage("Template deleted successfully!");
             await loadTemplates();
         } else {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
         }
     } catch (error) {
-        showToastMessage("Error deleting template", "error");
+        showErrorMessage("Error deleting template");
     }
 }
 
@@ -442,13 +442,13 @@ async function handleSendTestEmail(templateId) {
         if (!confirm("Are you sure you want to send a test email?")) return;
         const response = await fetchWithErrorHandling(`/api/test-email/${templateId}`);
         if (response.ok) {
-            showToastMessage("Test email sent successfully!", "success");
+            showMessage("Test email sent successfully!");
         } else {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
         }
     } catch (error) {
         console.error("Error sending test email:", error);
-        showToastMessage("Error sending test email", "error");
+        showErrorMessage("Error sending test email");
     }
 }
 
@@ -481,7 +481,7 @@ async function handlePreviewEmail(templateId) {
         modal.appendChild(iframe);
         document.body.appendChild(modal);
     } else {
-        showToastMessage(response.error, "error");
+        showErrorMessage(response.error);
     }
 }
 

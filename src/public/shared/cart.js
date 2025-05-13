@@ -1,4 +1,4 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage, formatCurrency } from "./page-utility.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage, formatCurrency } from "./page-utility.js";
 
 // Centralized state for the cart
 const state = {
@@ -64,7 +64,7 @@ async function updateCartItemQuantity(productId, newQuantity) {
       body: JSON.stringify({ product_id: productId, quantity: newQuantity }),
     });
     if (!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     } else {
       const cartData = await getCartItems();
       state.items = cartData.items;
@@ -85,7 +85,7 @@ async function removeItemFromCart(itemId) {
     });
 
     if (!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     } else {
       const cartData = await getCartItems();
       state.items = cartData.items;
@@ -121,7 +121,7 @@ async function handleCheckout() {
 async function getCartItems() {
   const response = await fetchWithErrorHandling('/api/cart');
   if (!response.ok) {
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
   } else {
     return await response.data;
   }
@@ -289,7 +289,7 @@ async function attachVoucherEvents() {
     if (code) {
       await applyVoucher(code);
     } else {
-      showToastMessage('Please enter a valid voucher code', 'error');
+      showErrorMessage('Please enter a valid voucher code');
     }
   });
 
@@ -314,7 +314,7 @@ async function loadAvailableVouchers() {
     }
   } catch (error) {
     console.error('Error loading vouchers:', error);
-    showToastMessage('Failed to load vouchers', 'error');
+    showErrorMessage('Failed to load vouchers', 'error');
   }
 }
 
@@ -353,14 +353,14 @@ async function applyVoucher(code) {
   });
 
   if(!response.ok) {
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
     return;
   }
 
   const cartData = await getCartItems();
   state.cart = cartData;
   updateCartDisplay(state);
-  showToastMessage('Voucher applied successfully', 'success');
+  showMessage('Voucher applied successfully');
 }
 
 async function removeVoucher() {
@@ -369,12 +369,12 @@ async function removeVoucher() {
   });
 
   if(!response.ok) {
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
     return;
   }
 
   const cartData = await getCartItems();
   state.cart = cartData;
   updateCartDisplay(state);
-  showToastMessage('Voucher removed successfully', 'success');
+  showMessage('Voucher removed successfully');
 }
