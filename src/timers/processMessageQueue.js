@@ -54,12 +54,10 @@ const EMAIL_ERROR_TYPES = {
     let logger;
 
     try {
-        console.log('Starting processEmailQueue');
         const start = hrtime();
         const templateLoader = new TemplateLoader();
         const messageService = new MessageService(transporter, templateLoader);
         
-        console.log('[processEmailQueue] Aquire client from pool...');
         client = await pool.connect();
         logger = new Logger({ dbConnection: client });
         webpush.setVapidDetails(
@@ -70,7 +68,7 @@ const EMAIL_ERROR_TYPES = {
 
         await client.query('BEGIN');
         const settings = await client.query(`SELECT * FROM app_settings LIMIT 1`);
-        ASSERT(settings.rows.length === 1, 'App settings not found', { code: 'TIMERS.PROCESS_EMAIL_QUEUE.00001.APP_SETTINGS_NOT_FOUND', long_description: 'App settings not found' });
+        ASSERT(settings.rows.length === 1, 'App settings not found', { code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00001.APP_SETTINGS_NOT_FOUND', long_description: 'App settings not found' });
         const pendingMessages = await client.query(`
             WITH cte AS (
                 SELECT id
@@ -94,8 +92,8 @@ const EMAIL_ERROR_TYPES = {
         await client.query(`COMMIT`);
 
         const processResult = await Promise.all(
-            pendingMessages.rows.map(async (email) => 
-                processMessage(email, client, logger, messageService, settings.rows[0])
+            pendingMessages.rows.map(async (message) => 
+                processMessage(message, client, logger, messageService, settings.rows[0])
             )
         )
 
@@ -111,11 +109,11 @@ const EMAIL_ERROR_TYPES = {
 
         const end = hrtime(start);
         const elapsedTime = (end[0] * 1e9 + end[1]) / 1e6;
-        console.log(`Email queue process completed in ${elapsedTime} ms`);
+        console.log(`Message queue process completed in ${elapsedTime} ms`);
         await logger.info({
-            code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EMAIL_QUEUE_PROCESS_SUCCESS',
-            short_description: 'Email queue process completed',
-            long_description: 'Email queue process completed'
+            code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00017.EMAIL_QUEUE_PROCESS_SUCCESS',
+            short_description: 'Message queue process completed',
+            long_description: 'Message queue process completed'
         });
     } catch (error) {
         console.log(error);
@@ -123,19 +121,18 @@ const EMAIL_ERROR_TYPES = {
         if (logger) await logger.error(error);
     } finally {
         if (client) {
-            console.log('[processEmailQueue] Released client to pool');
             client.release();
         }
     }
 })();
 
-async function processMessage(email, client, logger, messageService, settings) {
+async function processMessage(message, client, logger, messageService, settings) {
     try {
-        if(email.type === 'Push-Notification') {
+        if(message.type === 'Push-Notification') {
             const subscriptions = await client.query(`
                 SELECT * FROM push_subscriptions
                 WHERE user_id = $1 AND status = $2`,
-                [email.recipient_id, NOTIFICATION_STATUS.ACTIVE]
+                [message.recipient_id, NOTIFICATION_STATUS.ACTIVE]
             );
 
             if(subscriptions.rows.length === 0) {
@@ -143,22 +140,22 @@ async function processMessage(email, client, logger, messageService, settings) {
                     UPDATE message_queue
                     SET status = $1
                     WHERE id = $2`,
-                    [MESSAGE_STATUS.FAILED, email.id]
+                    [MESSAGE_STATUS.FAILED, message.id]
                 );
 
                 await logger.info({
-                    code: 'TIMERS.PROCESS_EMAIL_QUEUE.00005.NO_SUBSCRIPTIONS',
-                    short_description: 'Email queue process completed',
-                    long_description: 'Email queue process completed'
+                    code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00005.NO_SUBSCRIPTIONS',
+                    short_description: 'No push subscriptions found',
+                    long_description: 'No push subscriptions found',
                 });
 
-                return { id: email.id, success: false };
+                return { id: message.id, success: false };
             }
 
             let sendNotificationCount = 0;
             for (const subscription of subscriptions.rows) {
                 try {
-                    await webpush.sendNotification(subscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
+                    await webpush.sendNotification(subscription.data, JSON.stringify({ id: message.id, title: message.subject, body: message.text_content }));
                     sendNotificationCount++;
                 } catch (error) {
                     console.log(`[processEmailQueue] error: ${error}`);
@@ -180,37 +177,37 @@ async function processMessage(email, client, logger, messageService, settings) {
                     UPDATE message_queue
                     SET status = $1
                     WHERE id = $2`,
-                    [MESSAGE_STATUS.FAILED, email.id]
+                    [MESSAGE_STATUS.FAILED, message.id]
                 );
-                return { id: email.id, success: false };
+                return { id: message.id, success: false };
             }
-        } else if (email.type === 'Push-Notification-Broadcast') {
+        } else if (message.type === 'Push-Notification-Broadcast') {
             const subscription = await client.query(`
                 SELECT * FROM push_subscriptions
                 WHERE id = $1 AND status = $2`,
-                [email.push_subscription_id, NOTIFICATION_STATUS.ACTIVE]
+                [message.push_subscription_id, NOTIFICATION_STATUS.ACTIVE]
             );
-            ASSERT(subscription.rows.length <= 1, 'Expected exactly one subscription for broadcast', { code: 'TIMERS.PROCESS_EMAIL_QUEUE.00017.EXPECTED_ONE_SUBSCRIPTION', long_description: `Expected exactly one subscription for broadcast with email id: ${email.id}` });
+            ASSERT(subscription.rows.length <= 1, 'Expected exactly one subscription for broadcast', { code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00017.EXPECTED_ONE_SUBSCRIPTION', long_description: `Expected exactly one subscription for broadcast with email id: ${message.id}` });
 
             if (subscription.rows.length === 0) {
                 await client.query(`
                     UPDATE message_queue
                     SET status = $1
                     WHERE id = $2`,
-                    [MESSAGE_STATUS.FAILED, email.id]
+                    [MESSAGE_STATUS.FAILED, message.id]
                 );
                 await logger.info({
-                    code: 'TIMERS.PROCESS_EMAIL_QUEUE.00006.NO_SUBSCRIPTIONS',
+                    code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00006.NO_SUBSCRIPTIONS',
                     short_description: 'No push subscriptions found',
                     long_description: 'No push subscriptions available for broadcast'
                 });
-                return { id: email.id, success: false };
+                return { id: message.id, success: false };
             }
 
             const pushSubscription = subscription.rows[0];
 
-            await webpush.sendNotification(pushSubscription.data, JSON.stringify({ id: email.id, title: email.subject, body: email.text_content }));
-        } else if (email.type === 'Notification') {
+            await webpush.sendNotification(pushSubscription.data, JSON.stringify({ id: message.id, title: message.subject, body: message.text_content }));
+        } else if (message.type === 'Notification') {
             const expirationUpdateResult = await client.query(`
                 UPDATE message_queue e
                     SET status = $1
@@ -220,10 +217,10 @@ async function processMessage(email, client, logger, messageService, settings) {
                     AND e.type = 'Notification'
                     AND n.valid_to_timestamp < NOW()
                 RETURNING e.id;`,
-                [MESSAGE_STATUS.EXPIRED, email.id]
+                [MESSAGE_STATUS.EXPIRED, message.id]
             );
             if (expirationUpdateResult.rows.length > 0) {
-                return { id: email.id, success: false };
+                return { id: message.id, success: false };
             }
 
             if (isDryRun) {
@@ -232,18 +229,18 @@ async function processMessage(email, client, logger, messageService, settings) {
                     method: "POST",
                     url: `${settings.web_socket_api_url}/message`,
                     body: {
-                        type: email.event_type,
-                        user_id: email.recipient_id,
+                        type: message.event_type,
+                        user_id: message.recipient_id,
                         payload: {
-                        id: email.id,
-                        title: email.subject,
-                        body: email.text_content,
+                        id: message.id,
+                        title: message.subject,
+                        body: message.text_content,
                         },
                     },
                     })}`
                 );
 
-                return { id: email.id, success: true };
+                return { id: message.id, success: true };
             }
 
             const result = await fetch(`${settings.web_socket_api_url}/message`, {
@@ -252,28 +249,28 @@ async function processMessage(email, client, logger, messageService, settings) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    type: email.event_type,
-                    user_id: email.recipient_id,
+                    type: message.event_type,
+                    user_id: message.recipient_id,
                     payload: {
-                        id: email.id,
-                        title: email.subject,
-                        body: email.text_content,
+                        id: message.id,
+                        title: message.subject,
+                        body: message.text_content,
                     },
                 }),
             });
 
             if (result.status === 404) {
-                return { id: email.id, success: false };
+                return { id: message.id, success: false };
             } else if (result.status === 400) {
                 await client.query(`
                     UPDATE message_queue
                     SET status = $1
                     WHERE id = $2`,
-                    [MESSAGE_STATUS.FAILED, email.id]
+                    [MESSAGE_STATUS.FAILED, message.id]
                 );
-                return { id: email.id, success: false };
+                return { id: message.id, success: false };
             } else if (result.status === 500) {
-                const retryDelay = calculateRetryDelay(email.email_attempts + 1);
+                const retryDelay = calculateRetryDelay(message.email_attempts + 1);
                 await client.query(`
                     UPDATE message_queue
                     SET status = $1,
@@ -282,16 +279,16 @@ async function processMessage(email, client, logger, messageService, settings) {
                         email_retry_after = NOW() + (INTERVAL '1 minute' * $2),
                         email_priority = GREATEST(email_priority - 1, 1)
                     WHERE id = $3`,
-                    [MESSAGE_STATUS.PENDING, retryDelay, email.id]
+                    [MESSAGE_STATUS.PENDING, retryDelay, message.id]
                 );
-                return { id: email.id, success: false };
+                return { id: message.id, success: false };
             }
         } else {
             const emailOptions = { 
                 from: "no-reply@web-store4eto.com",
-                to: email.recipient_email,
-                subject: email.subject,
-                html: email.text_content
+                to: message.recipient_email,
+                subject: message.subject,
+                html: message.text_content
             };
             await messageService.sendEmail(emailOptions);
         }
@@ -300,20 +297,20 @@ async function processMessage(email, client, logger, messageService, settings) {
             UPDATE message_queue 
             SET status = $1, sent_at = NOW()
             WHERE id = $2`, 
-            [MESSAGE_STATUS.SENT, email.id]
+            [MESSAGE_STATUS.SENT, message.id]
         );
         
-        return { id: email.id, success: true };
+        return { id: message.id, success: true };
     } catch (error) {
-        console.log(`[processEmailQueue] error: ${error}`);
+        console.log(error);
         const { shouldRetry, errorType } = classifyEmailError(error);
-        const retryDelay = calculateRetryDelay(email.email_attempts + 1);
+        const retryDelay = calculateRetryDelay(message.email_attempts + 1);
         error.params = { 
-            code: 'TIMERS.PROCESS_EMAIL_QUEUE.00010.SENDING_FAILED', 
+            code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00010.SENDING_FAILED', 
             long_description: errorType 
         };
         
-        const maxAttemptsReached = email.email_attempts + 1 >= MAX_ATTEMPTS;
+        const maxAttemptsReached = message.email_attempts + 1 >= MAX_ATTEMPTS;
         const newStatus = (shouldRetry && !maxAttemptsReached) ? MESSAGE_STATUS.PENDING : MESSAGE_STATUS.FAILED;
         
         await client.query(`
@@ -324,19 +321,19 @@ async function processMessage(email, client, logger, messageService, settings) {
                 email_retry_after = NOW() + (INTERVAL '1 minute' * $2),
                 email_priority = GREATEST(email_priority - 1, 1)
             WHERE id = $3
-        `, [newStatus, retryDelay, email.id]);
+        `, [newStatus, retryDelay, message.id]);
 
-        if(errorType === EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND && email.push_subscription_id) {
+        if(errorType === EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND && message.push_subscription_id) {
             await client.query(`
                 UPDATE push_subscriptions
                 SET status = $1
                 WHERE id = $2`,
-                [NOTIFICATION_STATUS.INACTIVE, email.push_subscription_id]
+                [NOTIFICATION_STATUS.INACTIVE, message.push_subscription_id]
             );
         }
 
         await logger.error(error);
-        return { id: email.id, success: false, errorType };
+        return { id: message.id, success: false, errorType };
     }
 }
 
