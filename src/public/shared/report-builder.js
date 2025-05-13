@@ -1,4 +1,4 @@
-import { showToastMessage } from "./page-utility.js";
+import { showErrorMessage } from "./page-utility.js";
 
 class ReportBuilder {
     constructor(config) {
@@ -694,15 +694,15 @@ class ReportBuilder {
             this.state.tableData = data;
 
             if(data.overRowDisplayLimit){
-                showToastMessage("The row limit has been reached. Please refine your search criteria.", "error");
+                showErrorMessage("The row limit has been reached. Please refine your search criteria.");
             }
             this.renderTableData(data);
         } catch (error) {
             console.error('Error fetching data:', error);
             if (!navigator.onLine) {
-                showToastMessage('No internet connection', 'error');
+                showErrorMessage('No internet connection');
             } else {
-                showToastMessage('Error fetching data', 'error');
+                showErrorMessage('Error fetching data');
             }
         } finally {
             button.disabled = false;
@@ -793,9 +793,9 @@ class ReportBuilder {
             URL.revokeObjectURL(url);
         } catch (error) {
             if (!navigator.onLine) {
-                showToastMessage('No internet connection', 'error');
+                showErrorMessage('No internet connection');
             } else {
-                showToastMessage('Export failed.', 'error');
+                showErrorMessage('Export failed.');
             }
         } finally {
             button.disabled = false;
@@ -867,7 +867,7 @@ class ReportBuilder {
         }
 
         if (!isValid) {
-            showToastMessage('Please correct the validation errors', 'error');
+            showErrorMessage('Please correct the validation errors');
         }
 
         return isValid;

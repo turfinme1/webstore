@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showErrorMessage, showMessage } from "./page-utility.js";
 
 // Centralized state object
 const state = {
@@ -159,7 +159,7 @@ async function loadUsers(page) {
       `/crud/users/filtered?${queryParams.toString()}`
     );
     if(!response.ok){
-      showToastMessage(response.error, 'error');
+      showErrorMessage(response.error);
       return;
     }
     const { result, count } = await response.data;
@@ -168,7 +168,7 @@ async function loadUsers(page) {
     renderUserList(result);
 
     if(parseInt(count) > state.pageSize){
-      showToastMessage("Only the first 1000 users are displayed.", 'error');
+      showErrorMessage("Only the first 1000 users are displayed.");
     }
 
     const userTableSection = document.getElementById("user-table-section");
@@ -294,7 +294,7 @@ async function handleCreateTargetGroup(event) {
   //   `/crud/users/filtered?${queryParams.toString()}`
   // );
   // if(!response.ok){
-  //   showToastMessage(response.error, 'error');
+  //   showErrorMessage(response.error);
   //   return;
   // }
   // const { result, count } = await response.data;
@@ -314,12 +314,12 @@ async function handleCreateTargetGroup(event) {
       body: JSON.stringify(data),
     });
     if (response.ok) {
-      showToastMessage('Target group created successfully', 'success');
+      showMessage('Target group created successfully');
       elements.targetGroupCreateForm.reset();
       hideForm();
       loadUsers(state.currentPage);
     } else {
-      showToastMessage(response.error, 'error');
+      showErrorMessage(response.error);
     }
   } catch (error) {
     console.error("Error creating user:", error);
@@ -337,7 +337,7 @@ async function handleUpdateUser(event) {
       body: JSON.stringify(Object.fromEntries(formData)),
     });
     if (response.ok) {
-      showToastMessage('User updated successfully', 'success');
+      showMessage('User updated successfully');
       elements.targetGroupUpdateForm.reset();
       state.filterParams = {};
       state.currentPage = 1;
@@ -345,7 +345,7 @@ async function handleUpdateUser(event) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       loadUsers(state.currentPage);
     } else {
-      showToastMessage(response.error, 'error');
+      showErrorMessage(response.error);
     }
   } catch (error) {
     console.error("Error updating user:", error);
@@ -568,7 +568,7 @@ async function handleFilterTargetGroups(event) {
       if (userCountMax) filterParams.user_count.max = userCountMax;
   }
   if(userCountMax < userCountMin){
-    showToastMessage("User Count Min should be less than User Count Max", 'error');
+    showErrorMessage("User Count Min should be less than User Count Max");
     return;
   }
 
@@ -580,15 +580,15 @@ async function handleFilterTargetGroups(event) {
       if (createdAtMax) filterParams.created_at.max = createdAtMax;
   }
   if(createdAtMin && createdAtMax && (new Date(createdAtMax) < new Date(createdAtMin))){
-    showToastMessage("Created At Min should be less than Created At Max", 'error');
+    showErrorMessage("Created At Min should be less than Created At Max");
     return;
   }
   if(createdAtMax && new Date(createdAtMax) > new Date()){
-    showToastMessage("Created At Max should be in the past", 'error');
+    showErrorMessage("Created At Max should be in the past");
     return;
   }
   if(createdAtMin && new Date(createdAtMin) > new Date()){
-    showToastMessage("Created At Min should be in the past", 'error');
+    showErrorMessage("Created At Min should be in the past");
     return;
   }
 
@@ -600,15 +600,15 @@ async function handleFilterTargetGroups(event) {
       if (updatedAtMax) filterParams.updated_at.max = updatedAtMax;
   }
   if(updatedAtMax && updatedAtMax && (new Date(updatedAtMax) < new Date(updatedAtMin))){
-    showToastMessage("Updated At Min should be less than Updated At Max", 'error');
+    showErrorMessage("Updated At Min should be less than Updated At Max");
     return;
   }
   if(updatedAtMax && new Date(updatedAtMax) > new Date()){
-    showToastMessage("Updated At Max should be in the past", 'error');
+    showErrorMessage("Updated At Max should be in the past");
     return;
   }
   if(updatedAtMin && new Date(updatedAtMin) > new Date()){
-    showToastMessage("Updated At Min should be in the past", 'error');
+    showErrorMessage("Updated At Min should be in the past");
     return;
   }
 
@@ -635,7 +635,7 @@ async function loadTargetGroups(page) {
       `/crud/target-groups/filtered?${queryParams.toString()}`
     );
     if(!response.ok){
-      showToastMessage(response.error, 'error');
+      showErrorMessage(response.error);
       return;
     }
     const { result, count } = await response.data;
@@ -667,7 +667,7 @@ function renderTargetGroupList(targetGroups) {
 
         const targetGroupDetailResponse = await fetchWithErrorHandling(`/crud/target-groups/${targetGroup.id}`);
         if(!targetGroupDetailResponse.ok){
-          showToastMessage(response.error, 'error');
+          showErrorMessage(response.error);
           return;
         }
 
@@ -733,9 +733,9 @@ async function handleExportCsv(targetGroupId) {
   } catch (error) {
     console.log(error);
     if (!navigator.onLine) {
-      showToastMessage('No internet connection', 'error');
+      showErrorMessage('No internet connection');
     } else {
-        showToastMessage('Export failed.', 'error');
+        showErrorMessage('Export failed.');
     }
     // toggleExportLoadingState();
   }

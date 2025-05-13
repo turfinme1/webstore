@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createForm, attachValidationListeners, getUserStatus } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const updateProfile = document.getElementById("change-password-link");

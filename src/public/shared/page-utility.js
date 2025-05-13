@@ -752,10 +752,6 @@ async function initMessageWebSocket(userStatus) {
   try {
     if (!userStatus || userStatus.session_type !== "Authenticated" || userStatus.user_type !== "user") return;
     
-    if(window.webSocketConnection) {
-      window.webSocketConnection.close();
-    }
-
     const cookieName = "session_id";
     const cookieValue = document.cookie
       .split('; ')
@@ -766,7 +762,6 @@ async function initMessageWebSocket(userStatus) {
     const json = await webSocketUrlResult.json();
     const websocektUrl = json.url;
     const ws = new WebSocket(`${websocektUrl}?session_id=${encodeURIComponent(cookieValue)}`);
-    window.webSocketConnection = ws;
 
     ws.addEventListener("open", () => {
       console.log("WebSocket connection established");
@@ -781,7 +776,7 @@ async function initMessageWebSocket(userStatus) {
         window.dispatchEvent(cartUpdateEvent);
       } else if(result.type === 'message') {
         await updateNotificationsList();
-        showToastMessage("You have a new message", "success");
+        showMessage("You have a new message");
       }
     });
 
@@ -794,7 +789,7 @@ async function initMessageWebSocket(userStatus) {
     });
   } catch (error) {
     console.log("Error initializing WebSocket: ", error);
-    showToastMessage("Error initializing WebSocket: " + error.message, "error");
+    showErrorMessage("Error initializing WebSocket: " + error.message);
   }
 }
 
@@ -805,7 +800,7 @@ async function createBackofficeNavigation(userStatus) {
 
   const crudResult = await fetchWithErrorHandling("/api/crud");
   if (!crudResult.ok) {
-    showToastMessage(crudResult.error, "error");
+    showErrorMessage(crudResult.error);
   }
 
   const crudLinks = crudResult.data.map((entity) => {
@@ -828,7 +823,7 @@ async function createBackofficeNavigation(userStatus) {
 
   const reportResults = await fetchWithErrorHandling("/api/reports");
   if (!reportResults.ok) {
-    showToastMessage(reportResults.error, "error");
+    showErrorMessage(reportResults.error);
   }
 
   const reportLinks = reportResults.data.map((report) => {
@@ -927,7 +922,7 @@ async function fetchWithErrorHandling(url, options) {
   }
 }
 
-function showToastMessage(message, type) {
+function showMessage(message) {
   let container = document.getElementById("message-container");
   if (!container) {
     const messageContainer = document.createElement("div");
@@ -950,10 +945,54 @@ function showToastMessage(message, type) {
   toast.setAttribute("role", "alert");
   toast.innerHTML = `
         <div class="toast-header ${
-          type === "error" ? "bg-danger text-white" : "bg-success text-white"
+          "bg-success text-white"
         }">
           <strong class="me-auto">${
-            type === "error" ? "Error" : "Success"
+            "Success"
+          }</strong>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+          ${message}
+        </div>
+      `;
+
+  container.appendChild(toast);
+  const toastInstance = new bootstrap.Toast(toast, { delay: 5000 });
+  toastInstance.show();
+
+  toast.addEventListener("hidden.bs.toast", () => {
+    toast.remove();
+  });
+}
+
+function showErrorMessage(message) {
+  let container = document.getElementById("message-container");
+  if (!container) {
+    const messageContainer = document.createElement("div");
+    messageContainer.id = "message-container";
+    messageContainer.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1050;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      `;
+    document.body.appendChild(messageContainer);
+    container = messageContainer;
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast`;
+  toast.setAttribute("role", "alert");
+  toast.innerHTML = `
+        <div class="toast-header ${
+          "bg-danger text-white"
+        }">
+          <strong class="me-auto">${
+            "Error"
           }</strong>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
         </div>
@@ -1017,7 +1056,8 @@ export {
   createNavigation,
   createBackofficeNavigation,
   fetchWithErrorHandling,
-  showToastMessage,
+  showMessage,
+  showErrorMessage,
   populateFormFields,
   getUrlParams,
   updateUrlParams,

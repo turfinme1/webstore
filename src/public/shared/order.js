@@ -1,4 +1,4 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage, formatCurrency } from "./page-utility.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage, formatCurrency } from "./page-utility.js";
 
 const state = {
   userStatus: null,
@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await attachEventListeners();
   } catch (error) {
     console.error("Error loading order:", error);
-    showToastMessage("Failed to load order", "error");
+    showErrorMessage("Failed to load order");
   }
 });
 
@@ -82,25 +82,25 @@ async function handlePayWithPayPal(event) {
 
    elements.spinner.style.display = "none";
     if (!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
     const data = await response.data;
 
     if(state.cart.total_price_with_voucher == 0){
-      showToastMessage("Order placed successfully. Navigating to order complete page...", "success");
+      showMessage("Order placed successfully. Navigating to order complete page...");
       await new Promise(resolve => setTimeout(resolve, 3000));
       window.location.href = `/order-complete?orderId=${data.orderId}`;
       return;
     }
-    showToastMessage("Order placed successfully. Navigating to Paypal...", "success");
+    showMessage("Order placed successfully. Navigating to Paypal...");
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     window.location.href = data.approvalUrl;
   } catch (error) {
     elements.spinner.style.display = "none";
     console.error("Error placing order:", error);
-    showToastMessage("Failed to place order", "error");
+    showErrorMessage("Failed to place order");
   }
 }
 

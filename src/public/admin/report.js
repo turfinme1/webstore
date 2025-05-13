@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, hasPermission, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, hasPermission, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling } from "./page-utility.js";
 import { ReportBuilder } from "./report-builder.js";
 
 const state = {

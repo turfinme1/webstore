@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showErrorMessage, showMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
 import { ReportBuilder } from "./report-builder.js";
 
 // Centralized state object
@@ -143,7 +143,7 @@ async function loadUsers(page) {
       `/crud/user-groups/filtered?${queryParams.toString()}`
     );
     if(!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
     const { result, count } = await response.data;
@@ -311,7 +311,7 @@ async function handleCreateUser(event) {
     elements.createForm.querySelector('#spinner').style.display = "inline-block";
 
     if(!name && name.trim() === "") {
-      showToastMessage("Group Name is required", "error");
+      showErrorMessage("Group Name is required");
       elements.createForm.querySelector('button[type="submit"]').disabled = false;
       return;
     }
@@ -330,7 +330,7 @@ async function handleCreateUser(event) {
         }
         
         if(min > max) {
-          showToastMessage(`Min should be less than Max for ${key.replace("minimum_filter_value", "").split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}`, "error");
+          showErrorMessage(`Min should be less than Max for ${key.replace("minimum_filter_value", "").split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}`);
           elements.createForm.querySelector('button[type="submit"]').disabled = false;
           return;
         }
@@ -343,13 +343,13 @@ async function handleCreateUser(event) {
       body: JSON.stringify(payload),
     });
     if (response.ok) {
-      showToastMessage("User group created successfully!", "success");
+      showMessage("User group created successfully!");
       elements.createForm.reset();
       hideForm();
       await new Promise((resolve) => setTimeout(resolve, 2000));
       loadUsers(state.currentPage);
     } else {
-      showToastMessage(`Failed to create user group: ${response.error}`, "error");
+      showErrorMessage(`Failed to create user group: ${response.error}`);
     }
   } catch (error) {
     console.error("Error creating user:", error);
@@ -387,7 +387,7 @@ async function handleUpdateUser(event) {
       body: JSON.stringify(payload),
     });
     if (response.ok) {
-      showToastMessage("User group updated successfully!", "success");
+      showMessage("User group updated successfully!");
       elements.userUpdateForm.reset();
       state.filterParams = {};
       state.currentPage = 1;
@@ -395,7 +395,7 @@ async function handleUpdateUser(event) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
       loadUsers(state.currentPage);
     } else {
-      showToastMessage(`Failed to update user group: ${response.error}`, "error");
+      showErrorMessage(`Failed to update user group: ${response.error}`);
     }
   } catch (error) {
     console.error("Error updating user:", error);
@@ -409,7 +409,7 @@ async function displayUpdateForm(userId) {
   try {
     const userResponse = await fetchWithErrorHandling(`/crud/user-groups/${userId}`);
     if (!userResponse.ok) {
-      showToastMessage(userResponse.error, "error");
+      showErrorMessage(userResponse.error);
       return;
     }
     const user = await userResponse.data;
@@ -467,11 +467,11 @@ async function handleDeleteUser(userId) {
       method: "DELETE",
     });
     if (response.ok) {
-      showToastMessage("User group deleted successfully!", "success");
+      showMessage("User group deleted successfully!");
       await new Promise((resolve) => setTimeout(resolve, 2000));
       loadUsers(state.currentPage);
     } else {
-      showToastMessage(`Failed to delete user: ${response.error}`, "error");
+      showErrorMessage(`Failed to delete user: ${response.error}`);
     }
   } catch (error) {
     console.error("Error deleting user:", error);

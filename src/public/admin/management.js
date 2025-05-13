@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showErrorMessage } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
@@ -143,12 +143,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const end_date = endDateElement.value;
 
     if (new Date(end_date) - new Date(start_date) !== 6 * 24 * 60 * 60 * 1000) {
-      showToastMessage('Date range must be 7 days', 'error');
+      showErrorMessage('Date range must be 7 days');
       return;
     }
 
     if (new Date(end_date) > new Date()) {
-      showToastMessage('End date must be in the past', 'error');
+      showErrorMessage('End date must be in the past');
       return;
     }
    
@@ -193,7 +193,7 @@ async function renderOrderChartLastSixMonths() {
       })
     })
     if(!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
 
@@ -291,7 +291,7 @@ async function renderOrderChartLastTwoDays() {
       })
     })
     if(!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
 
@@ -382,7 +382,7 @@ async function renderDashboard(startDate, endDate) {
     });
 
     if(!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
     const data = await response.data;
@@ -487,7 +487,7 @@ async function renderCampaignDashboard(startDate, endDate) {
     });
 
     if(!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
 
@@ -651,13 +651,13 @@ async function renderUserGroupsChart() {
     const appSettings = await fetchWithErrorHandling("/app-config/rate-limit-settings");
 
     if (!appSettings.ok) {
-      showToastMessage(appSettings.error, "error");
+      showErrorMessage(appSettings.error);
       return;
     }
 
     const userGroups = await fetchWithErrorHandling(`/crud/user-groups/filtered?filterParams={}&pageSize=${appSettings.data.user_group_chart_count}&page=1`);
     if (!userGroups.ok) {
-      showToastMessage(userGroups.error, "error");
+      showErrorMessage(userGroups.error);
       return;
     }
 
@@ -846,7 +846,7 @@ async function renderTargetGroupChart(){
       body: JSON.stringify({})
     })
     if(!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
 
