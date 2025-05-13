@@ -82,7 +82,8 @@
                 "update": true
             },
             "renderConfig": {
-                "type": "date"
+                "type": "date",
+                "in_past": true
             },
             "errorMessage": {
                 "type": "Invalid value for end date."

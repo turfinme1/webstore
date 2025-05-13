@@ -465,6 +465,22 @@ class CrudPageBuilder {
       });
     }
 
+    if (property?.renderConfig?.in_past === true) {
+      if(formType) {
+        this.state.collectValuesCallbacks[formType].push(() => {
+          const date = new Date(input.value);
+          const today = new Date();
+          if (date < today) {
+            showErrorMessage("Date must be in the future");
+            throw new Error("Date must be in the future");
+          }
+
+          return;
+        });
+      }
+
+    }
+
     if (input) {
       formGroup.appendChild(input);
     }
@@ -570,8 +586,11 @@ class CrudPageBuilder {
 
     for (const callback of collectValuesCallbacks[type]) {
       const additionalData = callback();
-      for (const [key, value] of Object.entries(additionalData)) {
-        data[key] = value;
+
+      if(additionalData) {
+        for (const [key, value] of Object.entries(additionalData)) {
+          data[key] = value;
+        }
       }
     }
 
