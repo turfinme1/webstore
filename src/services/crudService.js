@@ -751,8 +751,8 @@ class CrudService {
         }
         
         await data.dbConnection.query(
-          `INSERT INTO message_queue (recipient_id, recipient_email, subject, text_content, notification_id, type) 
-          VALUES ($1, $2, $3, $4, $5, $6)`,
+          `INSERT INTO message_queue (recipient_id, recipient_email, subject, text_content, notification_id, type, event_type) 
+          VALUES ($1, $2, $3, $4, $5, $6, 'message')`,
           [user.id, user.email, template.subject, text_content, mainEntity.id, template.type]
         );
     }
