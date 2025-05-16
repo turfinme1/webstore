@@ -635,7 +635,7 @@ class CrudService {
     data.body.metadataRequest = true;
     data.params.report = 'report-users'
     const reportDefinition = await this.reportService.getReport(data)
-    const replacedQueryData = this.reportService.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body.filters);
+    const replacedQueryData = await this.reportService.replaceFilterExpressions(data, reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.reportUIConfig, data.body.filters, false);
     
     const insertQuery = `
       INSERT INTO user_user_groups (user_id, user_group_id)
@@ -651,7 +651,7 @@ class CrudService {
     data.body.metadataRequest = true;
     data.params.report = 'report-users'
     const reportDefinition = await this.reportService.getReport(data)
-    const replacedQueryData = this.reportService.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body.filters);
+    const replacedQueryData = await this.reportService.replaceFilterExpressions(data, reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.reportUIConfig, data.body.filters, false);
 
     await data.dbConnection.query(`
       DELETE FROM user_user_groups

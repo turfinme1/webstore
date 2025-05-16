@@ -61,6 +61,7 @@ const routeTable = {
     "/api/reports": reportController.getAllReports,
     "/api/crud": crudController.getAllEntities,
     "/api/java-url": appConfigController.getJavaAPIUrl,
+    "/api/reports/:report/preferences": reportController.getReportPreference,
   },
   post: {
     "/crud/:entity": crudController.create,
@@ -76,6 +77,7 @@ const routeTable = {
     '/api/products/upload': productController.uploadProducts,
     "/api/reports/:report": reportController.getReport,
     "/api/reports/:report/export/:format": reportController.exportReport,
+    "/api/reports/:report/preferences": reportController.setReportPreference,
   },
   put: {
     "/crud/:entity/:id": crudController.update,
