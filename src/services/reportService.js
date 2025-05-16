@@ -31,7 +31,7 @@ class ReportService {
             return reportDefinition;
         }
 
-        const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body);
+        const replacedQueryData = await this.replaceFilterExpressions(data, reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.reportUIConfig, data.body, true);
         let displayRowLimit = parseInt(data.context.settings.report_row_limit_display);
         console.log(this.#testReplacePlaceholders(replacedQueryData.sql, replacedQueryData.insertValues));
         const result = await data.dbConnection.query(`${replacedQueryData.sql} LIMIT ${displayRowLimit + 1}`, replacedQueryData.insertValues);
@@ -42,7 +42,7 @@ class ReportService {
         return { rows: result.rows, overRowDisplayLimit };
     } else if (this.dashboardReports[data.params.report]) {
         const reportDefinition = await this.dashboardReports[data.params.report](data);
-        const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body);
+        const replacedQueryData = await this.replaceFilterExpressions(data, reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.reportUIConfig, data.body, false);
     
         const result = await data.dbConnection.query(replacedQueryData.sql, replacedQueryData.insertValues);
         return { rows: result.rows };
@@ -65,7 +65,7 @@ class ReportService {
     });
 
     const reportDefinition = await this.reports[data.params.report](data);
-    const replacedQueryData = this.replaceFilterExpressions(reportDefinition.sql, reportDefinition.reportFilters, data.body);
+    const replacedQueryData = await this.replaceFilterExpressions(data, reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.reportUIConfig, data.body, true);
     const reportMetadata = this.formatReportMetadata(reportDefinition.reportFilters, data.body);
     const exportData = {
         res : data.res,
@@ -82,7 +82,7 @@ class ReportService {
     await this.exportService.exportReport(exportData);
   }
 
-  replaceFilterExpressions(sql, reportFilters, INPUT_DATA) {
+  async replaceFilterExpressions(data, sql, reportFilters, reportUIConfig, INPUT_DATA, shouldApplyUserPreference) {
     let insertValues = [];
     const hasAnyGrouping = reportFilters.some(filter =>INPUT_DATA[`${filter.key}_grouping_select_value`]);
 
@@ -173,7 +173,59 @@ class ReportService {
         }
     }
 
+    sql = await this.replacePreferenceExpressions(data, sql, reportUIConfig, shouldApplyUserPreference);
+
     return { sql, insertValues };
+  }
+
+  async setReportPreference(data) {
+    await data.dbConnection.query(`
+        INSERT INTO user_report_preferences (admin_user_id, report_name, preference)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (admin_user_id, report_name)
+        DO UPDATE SET preference = $3`,
+        [data.session.admin_user_id, data.params.report, JSON.stringify(data.body)]
+    );
+  }
+
+  async getReportPreference(data) {
+    return await data.dbConnection.query(`
+        SELECT * FROM user_report_preferences
+        WHERE admin_user_id = $1 AND report_name = $2`,
+        [data.session.admin_user_id, data.params.report]
+    );
+  }
+
+  async replacePreferenceExpressions(data, sql, reportUIConfig, shouldApplyUserPreference) {
+    if(shouldApplyUserPreference) {
+        const preferenceResult = await this.getReportPreference(data);
+        const preference = preferenceResult.rows[0]?.preference?.headerGroups || [];
+
+        const hiddenColumnMap = preference.reduce((object, col) => {
+            object[col.key] = !!col.hideInUI;
+            return object;
+        }, {});
+        sql = sql.replaceAll(/\$([a-z0-9_]+)_display_preference\$/g,(_, key) => hiddenColumnMap[key] ? "-- " : "");
+
+        const groupableColumns = reportUIConfig.headerGroups[0]
+            .filter(col => !hiddenColumnMap[col.key] && !col.isAggregate)
+            .map((col, index) => index + 1);
+        const groupExpression = groupableColumns.length > 0 ? `GROUP BY ${groupableColumns.join(', ')}` : '';
+        sql = sql.replaceAll('$group_by_expression$', groupExpression);
+    } else {
+        sql = sql.replaceAll(/\$([a-z0-9_]+)_display_preference\$/g, '');
+        
+        if(reportUIConfig?.headerGroups?.[0]) {
+            const groupableColumns = reportUIConfig.headerGroups[0]
+                .filter(col => !col.isAggregate)
+                .map((col, index) => index + 1);
+
+            const groupExpression = groupableColumns.length > 0 ? `GROUP BY ${groupableColumns.join(', ')}` : '';
+            sql = sql.replaceAll('$group_by_expression$', groupExpression);
+        }
+    }
+
+    return sql;
   }
 
   async ordersByUserReportDefinition(data) {
@@ -782,6 +834,17 @@ class ReportService {
     const reportUIConfig = {
         title: 'Users Report',
         dataEndpoint: '/api/reports/report-users',
+        isPreferenceConfigurable: true,
+        exportConfig: {
+            csv: {
+                endpoint: '/api/reports/report-users/export/csv',
+                label: 'Export to CSV'
+            },
+            excel: {
+                endpoint: '/api/reports/report-users/export/excel',
+                label: 'Export to Excel'
+            }
+        },
         headerGroups: [
             [
                 { key: 'created_at', label: 'Created At', format: 'date_time' },
@@ -797,17 +860,17 @@ class ReportService {
                 { key: 'is_email_verified', label: 'Is Email Verified', format: 'boolean' },
                 { key: 'days_since_creation', label: 'Days Since Creation', format: 'number' },
                 { key: 'has_paid_order', label: 'Has Paid Order', format: 'boolean' },
-                { key: 'order_total_paid_amount', label: 'Order Total Paid Amount', format: 'currency' },
-                { key: 'order_count', label: 'Order Count', format: 'number' },
+                { key: 'order_total_paid_amount', label: 'Order Total Paid Amount', format: 'currency', isAggregate: true, },
+                { key: 'order_count', label: 'Order Count', format: 'number', isAggregate: true, },
                 { key: 'average_paid_amount', label: 'Average Paid Amount', format: 'currency' },
                 { key: 'first_order_created_at', label: 'First Order Created At', format: 'date_time' },
                 { key: 'days_since_first_order', label: 'Days Since First Order', format: 'number' },
                 { key: 'first_order_total_paid_amount', label: 'First Order Total Paid Amount', format: 'currency' },
                 { key: 'days_since_last_order', label: 'Days Since Last Order', format: 'number' },
                 { key: 'days_since_last_login', label: 'Days Since Last Login', format: 'number' },
-                { key: 'login_count', label: 'Login Count', format: 'number' },
+                { key: 'login_count', label: 'Login Count', format: 'number', isAggregate: true,  },
                 { key: 'average_weekly_login_count', label: 'Average Weekly Login Count', format: 'number' },
-                { key: 'count', label: 'Count', format: 'number' }
+                { key: 'count', label: 'Count', format: 'number', isAggregate: true, }
             ]
         ],
     };
@@ -1037,172 +1100,6 @@ class ReportService {
             hideInUI: true,
         }
     ];
-  
-    let sql0 = `
-        WITH orders AS (
-            SELECT
-                o.user_id,
-                MAX(o.created_at) AS last_sale_date,
-                BOOL_OR(o.id IS NOT NULL) AS has_paid_order,
-                COUNT(*) AS order_count,
-                SUM(o.paid_amount) AS total_price,
-                SUM(o.paid_amount) / COUNT(*) AS avg_price,
-                MIN(o.created_at) AS first_order_date,
-                (
-                SELECT o2.paid_amount
-                FROM orders o2
-                WHERE o2.user_id = o.user_id
-                ORDER BY o2.created_at ASC
-                LIMIT 1
-                ) AS first_order_price
-            FROM orders o
-            WHERE o.status = 'Paid'
-                AND TRUE
-            GROUP BY o.user_id
-            ),
-        audit_logs as (
-        SELECT
-            a.user_id,
-            COUNT(*) AS total_login_count,
-            MAX(a.created_at) as last_login_date
-        FROM logs a
-        WHERE a.status_code = 'CONTROLLER.AUTH.00051.LOGIN_SUCCESS'
-        GROUP BY a.user_id
-        ),
-        filtered_users AS (
-            SELECT
-                U.id AS "id",
-                U.created_at AS "created_at",
-                U.first_name AS "first_name",
-                U.last_name  AS "last_name",
-                U.email AS "email",
-                U.phone AS "phone",
-                icc.phone_code AS "phone_code",
-                cc.country_name AS "country_name",
-                genders.type AS "gender",
-                U.birth_date AS "birth_date",
-                U.is_email_verified AS "is_email_verified",
-                DATE_PART('day', CURRENT_DATE - U.created_at) AS "days_since_creation",
-                COALESCE(lo.has_paid_order, FALSE) AS "has_paid_order",
-                lo.avg_price AS "average_paid_amount",
-                lo.first_order_date AS "first_order_created_at",
-                DATE_PART('day', CURRENT_DATE - lo.first_order_date) AS "days_since_first_order",
-                lo.first_order_price AS "first_order_total_paid_amount",
-                DATE_PART('day', CURRENT_DATE - lo.last_sale_date) AS "days_since_last_order",
-                DATE_PART('day', CURRENT_DATE - al.last_login_date) AS "days_since_last_login",
-                TRUNC(COALESCE(al.total_login_count, 0) / GREATEST(1, DATE_PART('day', CURRENT_DATE - U.created_at) / 7)::numeric,2) "average_weekly_login_count",
-                SUM(COALESCE(lo.total_price, 0)) AS "order_total_paid_amount",
-                SUM(COALESCE(lo.order_count, 0)) AS "order_count",
-                SUM(COALESCE(al.total_login_count, 0)) AS "login_count",
-                COUNT(*) AS "count",
-                1 AS "sort_order" 
-            FROM
-                users U
-            LEFT JOIN
-                iso_country_codes icc ON U.iso_country_code_id = icc.id
-            LEFT JOIN
-                iso_country_codes cc ON U.country_id = cc.id
-            LEFT JOIN 
-                genders ON U.gender_id = genders.id
-            LEFT JOIN
-                orders lo  ON u.id = lo.user_id
-            LEFT JOIN
-                audit_logs al  ON u.id = al.user_id
-            WHERE U.is_active = TRUE
-                AND $id_filter_expression$
-                AND $first_name_filter_expression$
-                AND $last_name_filter_expression$
-                AND $email_filter_expression$
-                AND $country_name_filter_expression$
-                AND $phone_code_filter_expression$
-                AND $created_at_minimum_filter_expression$
-                AND $created_at_maximum_filter_expression$
-                AND $days_since_creation_minimum_filter_expression$
-                AND $days_since_creation_maximum_filter_expression$
-                AND $is_email_verified_filter_expression$
-                AND $has_paid_order_filter_expression$
-                AND $order_total_paid_amount_minimum_filter_expression$
-                AND $order_total_paid_amount_maximum_filter_expression$
-                AND $order_count_minimum_filter_expression$
-                AND $order_count_maximum_filter_expression$
-                AND $first_order_created_at_minimum_filter_expression$
-                AND $first_order_created_at_maximum_filter_expression$
-                AND $first_order_total_paid_amount_minimum_filter_expression$
-                AND $first_order_total_paid_amount_maximum_filter_expression$
-                AND $days_since_last_order_minimum_filter_expression$
-                AND $days_since_last_order_maximum_filter_expression$
-                AND $days_since_last_login_minimum_filter_expression$
-                AND $days_since_last_login_maximum_filter_expression$
-                AND $login_count_minimum_filter_expression$
-                AND $login_count_maximum_filter_expression$
-                AND $average_weekly_login_count_minimum_filter_expression$
-                AND $average_weekly_login_count_maximum_filter_expression$
-            GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-            ORDER BY 1 DESC
-            
-        )
-        SELECT
-            NULL AS "id",
-            NULL AS "created_at",
-            NULL AS "first_name",
-            NULL AS "last_name",
-            NULL AS "email",
-            NULL AS "phone",
-            NULL AS "phone_code",
-            NULL AS "country_name",
-            NULL AS "gender",
-            NULL AS "birth_date",
-            NULL AS "is_email_verified",
-            NULL AS "days_since_creation",
-            NULL AS "has_paid_order",
-            NULL AS "average_paid_amount",
-            NULL AS "first_order_created_at",
-            NULL AS "days_since_first_order",
-            NULL AS "first_order_total_paid_amount",
-            NULL AS "days_since_last_order",
-            NULL AS "days_since_last_login",
-            NULL AS "average_weekly_login_count",
-            SUM(order_total_paid_amount) AS "order_total_paid_amount",
-            SUM(order_count) AS "order_count",
-            SUM(login_count) AS "login_count",
-            COUNT(*) AS "count",
-            0 AS "sort_order" 
-        FROM filtered_users
-        WHERE TRUE
-  
-        UNION ALL
-  
-        SELECT
-            $id_grouping_expression$ AS "id",
-            $created_at_grouping_expression$ AS "created_at",
-            $first_name_grouping_expression$ AS "first_name",
-            $last_name_grouping_expression$  AS "last_name",
-            $email_grouping_expression$  AS "email",
-            $phone_grouping_expression$  AS "phone",
-            $phone_code_grouping_expression$ AS "phone_code",
-            $country_name_grouping_expression$ AS "country_name",
-            $gender_grouping_expression$ AS "gender",
-            $birth_date_grouping_expression$ AS "birth_date",
-            $is_email_verified_grouping_expression$ AS "is_email_verified",
-            $days_since_creation_grouping_expression$ AS "days_since_creation",
-            $has_paid_order_grouping_expression$ AS "has_paid_order",
-            $average_paid_amount_grouping_expression$ AS "average_paid_amount",
-            $first_order_created_at_grouping_expression$ AS "first_order_created_at",
-            $days_since_first_order_grouping_expression$ AS "days_since_first_order",
-            $first_order_total_paid_amount_grouping_expression$ AS "first_order_total_paid_amount",
-            $days_since_last_order_grouping_expression$ AS "days_since_last_order",
-            $days_since_last_login_grouping_expression$ AS "days_since_last_login",
-            $average_weekly_login_count_grouping_expression$ AS "average_weekly_login_count",
-            SUM(order_total_paid_amount) AS "order_total_paid_amount",
-            SUM(order_count) AS "order_count",
-            SUM(login_count) AS "login_count",
-            COUNT(*) AS "count",
-            1 AS "sort_order" 
-        FROM filtered_users
-        WHERE TRUE
-        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-        ORDER BY sort_order ASC, 1 DESC
-    `;
 
     let sql = `
         WITH filtered_users AS (
@@ -1272,30 +1169,30 @@ class ReportService {
         )
         -- First part: the overall totals row
         SELECT
-            NULL AS "id",
-            NULL AS "created_at",
-            NULL AS "first_name",
-            NULL AS "last_name",
-            NULL AS "email",
-            NULL AS "phone",
-            NULL AS "phone_code",
-            NULL AS "country_name",
-            NULL AS "gender",
-            NULL AS "birth_date",
-            NULL AS "is_email_verified",
-            NULL AS "days_since_creation",
-            NULL AS "has_paid_order",
-            NULL AS "average_paid_amount",
-            NULL AS "first_order_created_at",
-            NULL AS "days_since_first_order",
-            NULL AS "first_order_total_paid_amount",
-            NULL AS "days_since_last_order",
-            NULL AS "days_since_last_login",
-            NULL AS "average_weekly_login_count",
-            SUM(order_total_paid_amount) AS "order_total_paid_amount",
-            SUM(order_count) AS "order_count",
-            SUM(login_count) AS "login_count",
-            COUNT(*) AS "count",
+            $id_display_preference$ NULL AS "id",
+            $created_at_display_preference$ NULL AS "created_at",
+            $first_name_display_preference$ NULL AS "first_name",
+            $last_name_display_preference$ NULL AS "last_name",
+            $email_display_preference$ NULL AS "email",
+            $phone_display_preference$ NULL AS "phone",
+            $phone_code_display_preference$ NULL AS "phone_code",
+            $country_name_display_preference$ NULL AS "country_name",
+            $gender_display_preference$ NULL AS "gender",
+            $birth_date_display_preference$ NULL AS "birth_date",
+            $is_email_verified_display_preference$ NULL AS "is_email_verified",
+            $days_since_creation_display_preference$ NULL AS "days_since_creation",
+            $has_paid_order_display_preference$ NULL AS "has_paid_order",
+            $average_paid_amount_display_preference$ NULL AS "average_paid_amount",
+            $first_order_created_at_display_preference$ NULL AS "first_order_created_at",
+            $days_since_first_order_display_preference$ NULL AS "days_since_first_order",
+            $first_order_total_paid_amount_display_preference$ NULL AS "first_order_total_paid_amount",
+            $days_since_last_order_display_preference$ NULL AS "days_since_last_order",
+            $days_since_last_login_display_preference$ NULL AS "days_since_last_login",
+            $average_weekly_login_count_display_preference$ NULL AS "average_weekly_login_count",
+            $order_total_paid_amount_display_preference$ SUM(order_total_paid_amount) AS "order_total_paid_amount",
+            $order_count_display_preference$ SUM(order_count) AS "order_count",
+            $login_count_display_preference$ SUM(login_count) AS "login_count",
+            $count_display_preference$ COUNT(*) AS "count",
             0 AS "sort_order"
         FROM filtered_users
         WHERE TRUE
@@ -1303,42 +1200,40 @@ class ReportService {
         UNION ALL
 
         SELECT
-            $id_grouping_expression$ AS "id",
-            $created_at_grouping_expression$ AS "created_at",
-            $first_name_grouping_expression$ AS "first_name",
-            $last_name_grouping_expression$  AS "last_name",
-            $email_grouping_expression$  AS "email",
-            $phone_grouping_expression$  AS "phone",
-            $phone_code_grouping_expression$ AS "phone_code",
-            $country_name_grouping_expression$ AS "country_name",
-            $gender_grouping_expression$ AS "gender",
-            $birth_date_grouping_expression$ AS "birth_date",
-            $is_email_verified_grouping_expression$ AS "is_email_verified",
-            $days_since_creation_grouping_expression$ AS "days_since_creation",
-            $has_paid_order_grouping_expression$ AS "has_paid_order",
-            $average_paid_amount_grouping_expression$ AS "average_paid_amount",
-            $first_order_created_at_grouping_expression$ AS "first_order_created_at",
-            $days_since_first_order_grouping_expression$ AS "days_since_first_order",
-            $first_order_total_paid_amount_grouping_expression$ AS "first_order_total_paid_amount",
-            $days_since_last_order_grouping_expression$ AS "days_since_last_order",
-            $days_since_last_login_grouping_expression$ AS "days_since_last_login",
-            $average_weekly_login_count_grouping_expression$ AS "average_weekly_login_count",
-            SUM(order_total_paid_amount) AS "order_total_paid_amount",
-            SUM(order_count) AS "order_count",
-            SUM(login_count) AS "login_count",
-            COUNT(*) AS "count",
+            $id_display_preference$ $id_grouping_expression$ AS "id",
+            $created_at_display_preference$ $created_at_grouping_expression$ AS "created_at",
+            $first_name_display_preference$ $first_name_grouping_expression$ AS "first_name",
+            $last_name_display_preference$ $last_name_grouping_expression$ AS "last_name",
+            $email_display_preference$ $email_grouping_expression$ AS "email",
+            $phone_display_preference$ $phone_grouping_expression$ AS "phone",
+            $phone_code_display_preference$ $phone_code_grouping_expression$ AS "phone_code",
+            $country_name_display_preference$ $country_name_grouping_expression$ AS "country_name",
+            $gender_display_preference$ $gender_grouping_expression$ AS "gender",
+            $birth_date_display_preference$ $birth_date_grouping_expression$ AS "birth_date",
+            $is_email_verified_display_preference$ $is_email_verified_grouping_expression$ AS "is_email_verified",
+            $days_since_creation_display_preference$ $days_since_creation_grouping_expression$ AS "days_since_creation",
+            $has_paid_order_display_preference$ $has_paid_order_grouping_expression$  AS "has_paid_order",
+            $average_paid_amount_display_preference$ $average_paid_amount_grouping_expression$ AS "average_paid_amount",
+            $first_order_created_at_display_preference$ $first_order_created_at_grouping_expression$ AS "first_order_created_at",
+            $days_since_first_order_display_preference$ $days_since_first_order_grouping_expression$ AS "days_since_first_order",
+            $first_order_total_paid_amount_display_preference$ $first_order_total_paid_amount_grouping_expression$ AS "first_order_total_paid_amount",
+            $days_since_last_order_display_preference$ $days_since_last_order_grouping_expression$ AS "days_since_last_order",
+            $days_since_last_login_display_preference$ $days_since_last_login_grouping_expression$ AS "days_since_last_login",
+            $average_weekly_login_count_display_preference$ $average_weekly_login_count_grouping_expression$ AS "average_weekly_login_count",
+            $order_total_paid_amount_display_preference$ SUM(order_total_paid_amount) AS "order_total_paid_amount",
+            $order_count_display_preference$ SUM(order_count) AS "order_count",
+            $login_count_display_preference$ SUM(login_count) AS "login_count",
+            $count_display_preference$ COUNT(*) AS "count",
             1 AS "sort_order"
         FROM filtered_users
         WHERE TRUE
-        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+        $group_by_expression$
         ORDER BY sort_order ASC, 1 DESC
     `;
     
     return { reportUIConfig, sql, reportFilters };
   }
   
-  
-
   async storeTrendsReportDefinition(data) {
     const reportUIConfig = {};
 

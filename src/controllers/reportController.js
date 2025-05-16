@@ -33,6 +33,30 @@ class ReportController {
     const result = await this.reportService.getAllReports();
     res.status(200).json(result);
   }
+
+  setReportPreference = async (req, res, next) => {
+    const data = {
+      body: req.body,
+      params: req.params,
+      session: req.session,
+      context: req.context,
+      dbConnection: req.dbConnection,
+    };
+    const result = await this.reportService.setReportPreference(data);
+    res.status(200).json(result);
+  }
+
+  getReportPreference = async (req, res, next) => {
+    const data = {
+      body: req.body,
+      params: req.params,
+      session: req.session,
+      context: req.context,
+      dbConnection: req.dbConnection,
+    };
+    const result = await this.reportService.getReportPreference(data);
+    res.status(200).json(result);
+  }
 }
 
 module.exports = ReportController;

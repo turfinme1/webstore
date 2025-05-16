@@ -524,8 +524,8 @@ class ReportBuilder {
         title.textContent = this.config.title;
         container.appendChild(title);
 
-        // Add export section
-        container.appendChild(this.buildExportSection(this.config.exportConfig));
+        // Add option section
+        container.appendChild(this.buildOptionSection(this.config));
 
         // Add filter form
         await this.buildFilterForm(container);
@@ -741,25 +741,39 @@ class ReportBuilder {
         this.updateSortIndicators();
     }
 
-    buildExportSection(exportConfig) {
+    buildOptionSection(config) {
         const exportContainer = document.createElement('div');
-        // exportContainer.className = 'mt-5';
         exportContainer.className = 'mb-3';
 
-        if(exportConfig?.csv) {
+        if(config.exportConfig?.csv) {
             const exportButton = document.createElement('button');
             exportButton.className = 'btn btn-primary export';
             exportButton.textContent = 'Export to CSV';
-            exportButton.addEventListener('click', async () => this.handleExport(exportConfig.csv.endpoint));
+            exportButton.addEventListener('click', async () => this.handleExport(config.exportConfig.csv.endpoint));
             exportContainer.appendChild(exportButton);
         }
 
-        if(exportConfig?.excel) {
+        if(config.exportConfig?.excel) {
             const exportButton = document.createElement('button');
             exportButton.className = 'btn btn-primary ms-3 export';
             exportButton.textContent = 'Export to Excel';
-            exportButton.addEventListener('click', async () => this.handleExport(exportConfig.excel.endpoint));
+            exportButton.addEventListener('click', async () => this.handleExport(config.exportConfig.excel.endpoint));
             exportContainer.appendChild(exportButton);
+        }
+
+        if(config?.isPreferenceConfigurable) {
+            const preferenceButton = document.createElement('button');
+            preferenceButton.className = 'btn btn-primary ms-3';
+            preferenceButton.textContent = 'Configure Preferences';
+            preferenceButton.addEventListener('click', () => {
+                const currentParams = new URLSearchParams(window.location.search);
+                const reportName = currentParams.get('report');
+                const url = new URL(window.location.origin + '/report-preference');
+                url.searchParams.set('report', reportName);
+                window.location.href = url.toString();
+            });
+
+            exportContainer.appendChild(preferenceButton);
         }
 
         return exportContainer;

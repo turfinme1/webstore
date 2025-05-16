@@ -35,9 +35,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         elements.mainContainer.innerHTML = "<h1>Failed to load report</h1>";
         return;
     }
-
     const reportConfig = await reportConfigResponse.json();
-    reportConfig.reportUIConfig.filters = reportConfig.reportFilters;
+
+    const prefResponse = await fetch(`/api/reports/${reportName}/preferences`);
+    let hideColumns = {};
+    if (prefResponse.ok) {
+        const prefData = await prefResponse.json();
+        if (prefData.rows[0]?.preference?.headerGroups) {
+            for (const col of prefData.rows[0]?.preference?.headerGroups) {
+                if (col.hideInUI) {
+                    hideColumns[col.key] = true;
+                }
+            }
+        }
+    }
+
+    reportConfig.reportUIConfig.headerGroups = reportConfig.reportUIConfig.headerGroups
+        .map(group => group.filter(col => !hideColumns[col.key]));
+    reportConfig.reportUIConfig.filters = reportConfig.reportFilters.filter(filter => !hideColumns[filter.key]);
+
     const reportUI = new ReportBuilder(reportConfig.reportUIConfig);
     await reportUI.render('main-container');
 });
