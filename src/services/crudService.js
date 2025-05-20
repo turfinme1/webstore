@@ -740,6 +740,7 @@ class CrudService {
         [userIds]
       );
     }
+    ASSERT_USER(usersResult.rows.length > 0, "No users found", { code: "SERVICE.EMAIL.00114.INVALID_USERS", long_description: "No users found" });
 
     // Create message for each user
     for (const user of usersResult.rows) {
