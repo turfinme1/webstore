@@ -1168,6 +1168,7 @@ class ReportService {
             AND $average_weekly_login_count_maximum_filter_expression$
         )
         -- First part: the overall totals row
+        (
         SELECT
             $id_display_preference$ NULL AS "id",
             $created_at_display_preference$ NULL AS "created_at",
@@ -1196,6 +1197,8 @@ class ReportService {
             0 AS "sort_order"
         FROM filtered_users
         WHERE TRUE
+        LIMIT 1
+        )
 
         UNION ALL
 
