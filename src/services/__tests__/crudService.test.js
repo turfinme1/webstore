@@ -1548,8 +1548,10 @@ describe("CrudService", () => {
           });
   
           mockData.dbConnection.query.mockResolvedValueOnce({ rows: [] });
-  
-          await crudService.notificationCreateHook(mockData, mockMainEntity);
+          
+          await expect(crudService.notificationCreateHook(mockData, mockMainEntity))
+              .rejects
+              .toThrow('No users found');
   
           expect(mockData.dbConnection.query).toHaveBeenCalledTimes(2);
       });
