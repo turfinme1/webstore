@@ -338,6 +338,12 @@ async function handleInAppMessage(message, client, logger, messageService, setti
     });
 
     if (result.status === 404) {
+        await client.query(`
+            UPDATE message_queue
+            SET status = $1
+            WHERE id = $2`,
+            [MESSAGE_STATUS.PENDING, message.id]
+        );
         return { id: message.id, success: false };
     } else if (result.status === 400) {
         await client.query(`
