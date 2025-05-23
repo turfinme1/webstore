@@ -141,6 +141,10 @@ class AuthService {
     return result.rows[0];
   }
 
+  async getUserIdBySession(data) {
+    return data.session.user_id;
+  }
+
   async refreshSessionExpiry(data) {
     const result = await data.dbConnection.query(`
       UPDATE ${data.entitySchemaCollection.userManagementSchema.session_table} SET expires_at = NOW() + INTERVAL '40 minutes' WHERE session_hash = $1 RETURNING *`,

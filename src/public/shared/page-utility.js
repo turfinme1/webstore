@@ -1,7 +1,12 @@
+import * as WebSocketClientModule from "./websocketClient.js";
+import { HttpTransport, WebSocketTransport } from "./transport.js";
+
+let transport = new HttpTransport();
+
 async function fetchUserSchema(url) {
-  const response = await fetch(url);
+  const response = await fetchWithErrorHandling(url);
   if (!response.ok) throw new Error("Failed to fetch schema");
-  return await response.json();
+  return response.data;
 }
 
 async function createForm(schema, formId, formType) {
@@ -163,9 +168,9 @@ async function createForm(schema, formId, formType) {
 
 async function populateFormFields(formId, url) {
   const form = document.getElementById(formId);
-  const response = await fetch(url);
+  const response = await fetchWithErrorHandling(url);
   if (!response.ok) throw new Error("Failed to fetch user data");
-  const userData = await response.json();
+  const userData = response.data;
 
   Object.keys(userData).forEach((key) => {
     const input = form.querySelector(`[name="${key}"], [id="${key}"]`);
@@ -210,9 +215,10 @@ async function populateFormFields(formId, url) {
 
 async function fetchCountryCodes(apiUrl) {
   try {
-    const response = await fetch(apiUrl);
+    const response = await fetchWithErrorHandling(apiUrl);
     if (!response.ok) throw new Error("Failed to fetch country codes");
-    return await response.json();
+    // return await response.json();
+    return response.data;
   } catch (error) {
     console.error("Error fetching country codes:", error);
     return [];
@@ -365,8 +371,8 @@ function getFormTypeBasedOnUrl() {
 }
 
 async function getUserStatus() {
-  const response = await fetch("/auth/status");
-  return await response.json();
+  const response = await fetchWithErrorHandling("/auth/status");
+  return response.data;
 }
 
 async function loadCaptchaImage() {
@@ -487,13 +493,12 @@ function createNavigation(userStatus) {
   document.body.prepend(navBar);
 
   initSubscriptionButton(userStatus);
-  initMessageWebSocket(userStatus);
 
   const logoutButton = document.querySelector(".logout-btn");
   if (logoutButton) {
     logoutButton.addEventListener("click", async (event) => {
       event.preventDefault();
-      const response = await fetch("/auth/logout");
+      const response = await fetchWithErrorHandling("/auth/logout");
       window.location.href = "/index";
     });
   }
@@ -501,6 +506,12 @@ function createNavigation(userStatus) {
   if (userStatus.session_type === "Authenticated" && userStatus.user_type === "user") {
     updateNotificationsList();
   }
+
+  window.addEventListener('notification', async (e) => {
+    console.log('New notification received:', e.data);
+    await updateNotificationsList();
+    showMessage("You have a new notification");
+  });
 }
 
 async function initSubscriptionButton(userStatus) {
@@ -514,7 +525,7 @@ async function initSubscriptionButton(userStatus) {
 
   if(subscription && userStatus.session_type === "Authenticated") {
     try{
-      const response = await fetch("/api/subscriptions", {
+      const response = await fetchWithErrorHandling("/api/subscriptions", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription)
@@ -535,7 +546,7 @@ async function initSubscriptionButton(userStatus) {
         userVisibleOnly: true,
         applicationServerKey: 'BJ7UuFCX99N49hlHSrTP76J_88LdIDJQ0YWuMVvC2O7GHI12eLNZK5_MGuD1leViV28gGoG1YwpYv8l3Y1yWoaU',
       });
-      await fetch("/api/subscriptions", {
+      await fetchWithErrorHandling("/api/subscriptions", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription)
@@ -544,7 +555,7 @@ async function initSubscriptionButton(userStatus) {
       window.subscription = subscription;
     } else {
       await subscription.unsubscribe();
-      await fetch(`/api/subscriptions`, {
+      await fetchWithErrorHandling(`/api/subscriptions`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription)
@@ -579,7 +590,7 @@ function setupPermissionChangeListener() {
               subscription.status = 'blocked';
               const body = subscription.toJSON();
               body.status = subscription.status; 
-              await fetch("/api/subscriptions", {
+              await fetchWithErrorHandling("/api/subscriptions", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -608,7 +619,7 @@ function setupPermissionChangeListener() {
             subscription.status = 'blocked';
             const body = subscription.toJSON();
             body.status = subscription.status; 
-            await fetch("/api/subscriptions", {
+            await fetchWithErrorHandling("/api/subscriptions", {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(body)
@@ -728,9 +739,9 @@ async function updateNotificationCount() {
 
 async function loadNotifications() {
   try {
-      const response = await fetch('/api/notifications');
+      const response = await fetchWithErrorHandling('/api/notifications');
       if (!response.ok) return [];
-      const data = await response.json();
+      const data = response.data;
       return data;
   } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -740,56 +751,11 @@ async function loadNotifications() {
 
 async function markNotificationAsRead(notificationId) {
   try {
-      await fetch(`/api/notifications/${notificationId}`, {
+      return await fetchWithErrorHandling(`/api/notifications/${notificationId}`, {
           method: 'PUT'
       });
   } catch (error) {
       console.error('Error marking notification as read:', error);
-  }
-}
-
-async function initMessageWebSocket(userStatus) {
-  try {
-    if (!userStatus || userStatus.session_type !== "Authenticated" || userStatus.user_type !== "user") return;
-    
-    const cookieName = "session_id";
-    const cookieValue = document.cookie
-      .split('; ')
-      .find(row => row.startsWith(`${cookieName}=`))
-      ?.split('=')[1];
-    
-    const webSocketUrlResult = await fetch("/api/websocket-url");
-    const json = await webSocketUrlResult.json();
-    const websocektUrl = json.url;
-    const ws = new WebSocket(`${websocektUrl}?session_id=${encodeURIComponent(cookieValue)}`);
-
-    ws.addEventListener("open", () => {
-      console.log("WebSocket connection established");
-    });
-
-    ws.addEventListener("message", async (event) => {
-      const result = JSON.parse(event.data);
-      if(result.type === 'cart_update_sync_clients'){
-        const cartUpdateEvent = new CustomEvent('cart_update_sync_clients', {
-          detail: result.payload,
-        });
-        window.dispatchEvent(cartUpdateEvent);
-      } else if(result.type === 'message') {
-        await updateNotificationsList();
-        showMessage("You have a new message");
-      }
-    });
-
-    ws.addEventListener("close", () => {
-      console.log("WebSocket connection closed");
-    });
-
-    ws.addEventListener("error", (error) => {
-      console.error("WebSocket error: ", error);
-    });
-  } catch (error) {
-    console.log("Error initializing WebSocket: ", error);
-    showErrorMessage("Error initializing WebSocket: " + error.message);
   }
 }
 
@@ -891,8 +857,8 @@ async function createBackofficeNavigation(userStatus) {
 
 async function fetchWithErrorHandling(url, options) {
   try {
-    const response = await fetch(url, options);
-    const data = await response.json();
+    const response = await transport.fetch(url, options);
+    const data = response.payload;
 
     if (response.ok) {
       return {
@@ -1044,6 +1010,18 @@ function formatCurrency(number) {
   return `$${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(number)).replace(',', '.')}`;
 }
 
+async function initializePage() {
+  const frontOfficeTransportConfig = await fetch('/api/front-office-transport');
+  const frontOfficeTransportConfigResult = await frontOfficeTransportConfig.json();
+
+  const webSocketClient = new WebSocketClientModule.WebSocketClient(frontOfficeTransportConfigResult.url);
+  await webSocketClient.init();
+  
+  if (window.location.port === frontOfficeTransportConfigResult.front_office_port && frontOfficeTransportConfigResult.front_office_transport === "websocket") {
+    transport = new WebSocketTransport(webSocketClient);
+  }
+}
+
 export {
   fetchUserSchema,
   createForm,
@@ -1062,4 +1040,5 @@ export {
   getUrlParams,
   updateUrlParams,
   formatCurrency,
+  initializePage,
 };

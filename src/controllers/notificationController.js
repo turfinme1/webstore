@@ -22,7 +22,7 @@ class NotificationController {
             params: req.params
         };
         await this.notificationService.markAsRead(data);
-        res.status(200).end();
+        res.status(204).end();
     }
 
     createSubscription = async (req, res) => {
@@ -34,7 +34,7 @@ class NotificationController {
             userAgent: req.headers["user-agent"],
         };
         await this.notificationService.createSubscription(data);
-        res.status(200).end();
+        res.status(204).end();
     }
 
     deleteSubscription = async (req, res) => {
@@ -44,7 +44,7 @@ class NotificationController {
             body: req.body,
         };
         await this.notificationService.deleteSubscription(data);
-        res.status(200).end();
+        res.status(204).end();
     }
 }
 

@@ -1,4 +1,4 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage, formatCurrency } from "./page-utility.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage, formatCurrency, initializePage } from "./page-utility.js";
 
 // Centralized state for the cart
 const state = {
@@ -16,6 +16,7 @@ const elements = {
 
 // Initialize cart page and attach event listeners
 document.addEventListener('DOMContentLoaded', async () => {
+  await initializePage();
   state.userStatus = await getUserStatus();
   createNavigation(state.userStatus);
   const cartData = await getCartItems();

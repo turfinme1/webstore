@@ -6,6 +6,7 @@ const Logger = require("../serverConfigurations/logger");
 const { ENV } = require("../serverConfigurations/constants");
 const { ASSERT } = require("../serverConfigurations/assert");
 const { hrtime } = require("process");
+const WebSocketModule = require("../serverConfigurations/webSocketModule");
 
 const isDryRun = process.env.DRY_RUN === 'true';
 
@@ -327,12 +328,13 @@ async function handleInAppMessage(message, client, logger, messageService, setti
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            type: message.event_type,
-            user_id: message.recipient_id,
+            type: WebSocketModule.MESSAGE_TYPES.EVENT,
             payload: {
                 id: message.id,
                 title: message.subject,
+                type: message.event_type,
                 body: message.text_content,
+                user_id: message.recipient_id,
             },
         }),
     });
