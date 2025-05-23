@@ -1012,8 +1012,7 @@ function formatCurrency(number) {
 
 async function initializePage() {
   const frontOfficeTransportConfig = await fetchWithErrorHandling('/api/front-office-transport');
-  const frontOfficeTransportConfigResult = await frontOfficeTransportConfig.json();
-
+  const frontOfficeTransportConfigResult = frontOfficeTransportConfig.data;
   const webSocketClient = new WebSocketClientModule.WebSocketClient(frontOfficeTransportConfigResult.url);
   await webSocketClient.init();
   
