@@ -51,6 +51,7 @@ const routeTable = {
     "/auth/status": authController.getStatus,
     "/auth/logout": authController.logout,
     "/auth/captcha": authController.getCaptcha,
+    "/auth/session/user": authController.getUserIdBySession,
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
     "/api/cart": cartController.getCart,
@@ -59,7 +60,7 @@ const routeTable = {
     "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
     "/api/paypal/cancel/:orderId": orderController.cancelPaypalPayment,
     "/api/notifications": notificationController.getNotificationByUserId,
-    "/api/websocket-url": appConfigController.getWebSocketUrl,
+    "/api/front-office-transport": appConfigController.getFrontOfficeTransportConfig,
   },
   post: {
     "/auth/register": authController.register,

@@ -1,8 +1,9 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage } from "./page-utility.js";
+import * as Utils from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
-    createNavigation(await getUserStatus());
+    await Utils.initializePage();
+    Utils.createNavigation(await Utils.getUserStatus());
     const productId = getProductIdFromURL();
 
     if (!productId) {
@@ -59,7 +60,7 @@ function populateProductData(product) {
 
 async function addToCart(productId) {
   try {
-    const response = await fetchWithErrorHandling(`/api/cart`, {
+    const response = await Utils.fetchWithErrorHandling(`/api/cart`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -68,13 +69,13 @@ async function addToCart(productId) {
     });
 
     if(!response.ok){
-      showErrorMessage(response.error);
+      Utils.showErrorMessage(response.error);
     } else {
-      showMessage("Product added to cart!");
+      Utils.showMessage("Product added to cart!");
     }
   } catch (error) {
     console.error("Error adding to cart:", error);
-    showErrorMessage("Failed to add product to cart. Please try again");
+    Utils.showErrorMessage("Failed to add product to cart. Please try again");
   }
 }
 
@@ -82,8 +83,8 @@ async function renderRatingSection(product) {
   const ratingSection = document.getElementById("rating-section");
   let averageRating = 0;
   let totalRatings = 0;
-  const ratingResponse = await fetch(`/api/products/${product.id}/ratings`);
-  const ratingData = await ratingResponse.json();
+  const ratingResponse = await Utils.fetchWithErrorHandling(`/api/products/${product.id}/ratings`);
+  const ratingData = await ratingResponse.data;
   console.log(ratingData);
 
   if (ratingData.length > 0) {
@@ -175,9 +176,9 @@ async function renderCommentSection(productId) {
 
 async function fetchProductData(productId) {
   try {
-    const response = await fetchWithErrorHandling(`/crud/products/${productId}`);
+    const response = await Utils.fetchWithErrorHandling(`/crud/products/${productId}`);
     if(!response.ok){
-      showErrorMessage(response.error);
+      Utils.showErrorMessage(response.error);
     }
     return await response.data;
   } catch (error) {
@@ -187,7 +188,7 @@ async function fetchProductData(productId) {
 }
 
 async function submitRating(productId, rating) {
-  const response = await fetchWithErrorHandling(`/api/products/${productId}/ratings`, {
+  const response = await Utils.fetchWithErrorHandling(`/api/products/${productId}/ratings`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -197,12 +198,12 @@ async function submitRating(productId, rating) {
   // const result = await response.json();
   
   if(!response.ok){
-    showErrorMessage(response.error);
+    Utils.showErrorMessage(response.error);
   }
 }
 
 async function submitComment(productId, comment) {
-  const response = await fetchWithErrorHandling(`/api/products/${productId}/comments`, {
+  const response = await Utils.fetchWithErrorHandling(`/api/products/${productId}/comments`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -212,9 +213,9 @@ async function submitComment(productId, comment) {
 }
 
 async function fetchProductComments(productId) {
-  const response = await fetchWithErrorHandling(`/api/products/${productId}/comments`);
+  const response = await Utils.fetchWithErrorHandling(`/api/products/${productId}/comments`);
   if (!response.ok) {
-    showErrorMessage(response.error);
+    Utils.showErrorMessage(response.error);
   }
   return await response.data;
 }

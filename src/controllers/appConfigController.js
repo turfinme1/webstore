@@ -35,8 +35,12 @@ class AppConfigController {
     res.status(200).json({ url: req.context.settings.java_api_url });
   }
 
-  getWebSocketUrl = async (req, res, next) => {
-    res.status(200).json({ url: req.context.settings.web_socket_url });
+  getFrontOfficeTransportConfig = async (req, res, next) => {
+    res.status(200).json({ 
+      url: req.context.settings.web_socket_url, 
+      front_office_port: req.context.settings.front_office_port,
+      front_office_transport: req.context.settings.front_office_transport,
+    });
   }
 }
 

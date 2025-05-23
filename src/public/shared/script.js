@@ -1,4 +1,4 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
+import * as Utils from "./page-utility.js";
 
 class ProductState {
   constructor() {
@@ -33,7 +33,7 @@ class ProductState {
       page: this.currentPage,
       currentPage: this.currentPage
     };
-    updateUrlParams(urlParamData);
+    Utils.updateUrlParams(urlParamData);
   }
 
   setSort(sortOption) {
@@ -98,7 +98,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Initialize state
   const state = new ProductState();
-  state.initFromUrl(getUrlParams());
+  state.initFromUrl(Utils.getUrlParams());
 
   // Sync UI with initial state
   elements.searchInput.value = state.searchTerm;
@@ -116,9 +116,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Function to fetch categories from the server
   const fetchCategories = async () => {
-    const response = await fetchWithErrorHandling("/crud/categories");
+    const response = await Utils.fetchWithErrorHandling("/crud/categories");
     if(!response.ok){
-      showErrorMessage(response.error);
+      Utils.showErrorMessage(response.error);
     }
     return await response.data;
   };
@@ -155,9 +155,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const fetchProducts = async () => {
     const queryParams = state.getQueryParams();
     state.updateUrl();
-    const response = await fetchWithErrorHandling(`/api/products?${queryParams.toString()}`);
+    const response = await Utils.fetchWithErrorHandling(`/api/products?${queryParams.toString()}`);
     if (!response.ok) {
-      showErrorMessage(response.error);
+      Utils.showErrorMessage(response.error);
     }
     return response.data;
   };
@@ -316,8 +316,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // Initialize
-  const userStatus = await getUserStatus();
-  createNavigation(userStatus);
+  await Utils.initializePage();
+  const userStatus = await Utils.getUserStatus();
+  Utils.createNavigation(userStatus);
   await initializeCategories();
   updateSelectedCategories();
   await updateProductList();

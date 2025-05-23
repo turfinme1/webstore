@@ -1,11 +1,12 @@
-import { fetchUserSchema, createNavigation, createForm, attachValidationListeners, getUserStatus } from "./page-utility.js";
+import * as Utils from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const updateProfile = document.getElementById("change-password-link");
   const contentArea = document.getElementById("content-area");
   
-  let userStatus = await getUserStatus();
-  createNavigation(userStatus);
+  await Utils.initializePage();
+  let userStatus = await Utils.getUserStatus();
+  Utils.createNavigation(userStatus);
 
   const links = [
     updateProfile,
@@ -23,10 +24,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     contentArea.innerHTML = "";
     try {
       // Fetch user preferences schema from the server
-      const schema = await fetchUserSchema("/userUpdateSchema.json");
+      const schema = await Utils.fetchUserSchema("/userUpdateSchema.json");
 
       // Create form dynamically based on fetched schema
-      const preferencesForm = await createForm(
+      const preferencesForm = await Utils.createForm(
         schema,
         "update-form",
         "Update"
@@ -36,9 +37,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       formContainer.id = "form-container";
       formContainer.appendChild(preferencesForm);
       contentArea.appendChild(preferencesForm);
-      userStatus = await getUserStatus();
       populateFormFields("update-form", userStatus);
-      attachValidationListeners("update-form", schema, "/auth/profile",  "PUT");
+      Utils.attachValidationListeners("update-form", schema, "/auth/profile",  "PUT");
     } catch (error) {
       console.error("Error rendering preferences form:", error);
       contentArea.innerHTML = `<p class="text-danger">Failed to load preferences. Please try again later.</p>`;
