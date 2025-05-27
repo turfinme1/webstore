@@ -115,8 +115,17 @@ class WebSocketServer {
     async sendMessage(data) {
         ASSERT_USER(data.type, " Type is required", { code: "SERVER.WEBSOCKET.00002.TYPE_REQUIRED", long_description: "Type is required" });
         ASSERT_USER(data.payload, " Payload is required", { code: "SERVER.WEBSOCKET.00003.PAYLOAD_REQUIRED", long_description: "Payload is required" });
-        ASSERT_USER(data.payload.user_id, " User ID is required", { code: "SERVER.WEBSOCKET.00001.USER_REQUIRED", long_description: "User ID is required" });
         
+        if( ! data.payload.user_id) {
+            for (const sessionId in this.sessionConnections) {
+                const sessionSockets = this.sessionConnections[sessionId];
+                for (const sessionConnection of sessionSockets) {
+                    sessionConnection.send(JSON.stringify(new WebSocketMessage(data?.id, data.type, data.payload, true)));
+                }
+            }
+            return;
+        }
+
         const userSockets = this.userConnections[data.payload.user_id];
         
         ASSERT_USER(userSockets?.size > 0, "No user connections found", { code: "SERVER.WEBSOCKET.00004.NO_CONNECTIONS", long_description: "No user connections found" });

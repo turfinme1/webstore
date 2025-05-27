@@ -54,6 +54,7 @@ const routeTable = {
     "/auth/session/user": authController.getUserIdBySession,
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
+    "/api/products/:id/quantity": productController.getQuantity,
     "/api/cart": cartController.getCart,
     "/api/cart/active-vouchers": cartController.getActiveVouchers,
     "/api/orders/:orderId": orderController.getOrder,

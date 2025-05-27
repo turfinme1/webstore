@@ -73,7 +73,7 @@ describe('OrderService', () => {
                 orderId: 1,
             });
 
-            expect(mockDbConnection.query).toHaveBeenCalledTimes(10);
+            expect(mockDbConnection.query).toHaveBeenCalledTimes(11);
             expect(mockMessageService.queueEmail).toHaveBeenCalledTimes(1);
         });
 
@@ -178,7 +178,7 @@ describe('OrderService', () => {
                 order: { id: 1, total_price: 20 },
                 message: "Order created successfully"
             });
-            expect(mockDbConnection.query).toHaveBeenCalledTimes(6);
+            expect(mockDbConnection.query).toHaveBeenCalledTimes(7);
         });
     
         it('should throw error when product does not exist', async () => {

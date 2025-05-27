@@ -169,6 +169,15 @@ class ProductService {
     return result.rows;
   }
 
+  async getQuantity(data) {
+    const result = await data.dbConnection.query(`
+      SELECT COALESCE((SELECT quantity FROM inventories WHERE product_id = $1), 0) AS quantity`,
+      [data.params.id]
+    );
+
+    return result.rows[0];
+  }
+
   async create(data) {
     const schema = data.entitySchemaCollection["products"];
     const keys = Object.keys(schema.properties);
@@ -241,6 +250,15 @@ class ProductService {
         [productResult.rows[0].id, data.body.quantity]
       );
     } else {
+      
+      if (inventoryResult.rows[0].quantity !== data.body.quantity) {
+        await data.dbConnection.query(`
+          INSERT INTO message_queue (subject, text_content, type, event_type)
+          VALUES ($1, $2, $3, $4)`,
+          ["Quantity changed", "Product Quantity changed", "Notification", "quantity_update_sync_clients"]
+        );
+      }
+
       await data.dbConnection.query(`
         UPDATE inventories SET quantity = $1 WHERE product_id = $2`,
         [data.body.quantity, productResult.rows[0].id]

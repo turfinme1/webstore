@@ -709,6 +709,165 @@ describe("ReportService", () => {
       
       expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
     });
+
+      it('should handle array filter values by replacing with parameter placeholders', async () => {
+    // Arrange
+    const sql = 'SELECT * FROM orders WHERE $status_filter_expression$';
+    const reportFilters = [{
+      key: 'status',
+      filter_expression: 'status IN $FILTER_VALUE$',
+      grouping_expression: 'status'
+    }];
+    const inputData = {
+      status_filter_value: ['Pending', 'Paid', 'Cancelled']
+    };
+    
+    // Act
+    const result = await reportService.replaceFilterExpressions(
+      testData, 
+      sql, 
+      reportFilters, 
+      testReportUIConfig, 
+      inputData, 
+      false
+    );
+    
+    // Assert
+    expect(result.sql).toBe('SELECT * FROM orders WHERE status IN ($1,$2,$3)');
+    expect(result.insertValues).toEqual(['Pending', 'Paid', 'Cancelled']);
+  });
+  
+  it('should replace with TRUE when array filter value is empty', async () => {
+    // Arrange
+    const sql = 'SELECT * FROM orders WHERE $status_filter_expression$';
+    const reportFilters = [{
+      key: 'status',
+      filter_expression: 'status IN $FILTER_VALUE$',
+      grouping_expression: 'status'
+    }];
+    const inputData = {
+      status_filter_value: [] // Empty array
+    };
+    
+    // Act
+    const result = await reportService.replaceFilterExpressions(
+      testData, 
+      sql, 
+      reportFilters, 
+      testReportUIConfig, 
+      inputData, 
+      false
+    );
+    
+    // Assert
+    expect(result.sql).toBe('SELECT * FROM orders WHERE TRUE');
+    expect(result.insertValues).toEqual([]);
+  });
+  
+  it('should handle multiple array filters correctly', async () => {
+    // Arrange
+    const sql = 'SELECT * FROM orders WHERE $status_filter_expression$ AND $payment_method_filter_expression$';
+    const reportFilters = [
+      {
+        key: 'status',
+        filter_expression: 'status IN $FILTER_VALUE$',
+        grouping_expression: 'status'
+      },
+      {
+        key: 'payment_method',
+        filter_expression: 'payment_method IN $FILTER_VALUE$',
+        grouping_expression: 'payment_method'
+      }
+    ];
+    const inputData = {
+      status_filter_value: ['Pending', 'Paid'],
+      payment_method_filter_value: ['Credit Card', 'PayPal']
+    };
+    
+    // Act
+    const result = await reportService.replaceFilterExpressions(
+      testData, 
+      sql, 
+      reportFilters, 
+      testReportUIConfig, 
+      inputData, 
+      false
+    );
+    
+    // Assert
+    expect(result.sql).toBe('SELECT * FROM orders WHERE status IN ($1,$2) AND payment_method IN ($3,$4)');
+    expect(result.insertValues).toEqual(['Pending', 'Paid', 'Credit Card', 'PayPal']);
+  });
+  
+  it('should handle mixed array and non-array filters', async () => {
+    // Arrange
+    const sql = 'SELECT * FROM orders WHERE $status_filter_expression$ AND $user_id_filter_expression$';
+    const reportFilters = [
+      {
+        key: 'status',
+        filter_expression: 'status IN $FILTER_VALUE$',
+        grouping_expression: 'status'
+      },
+      {
+        key: 'user_id',
+        filter_expression: 'user_id = $FILTER_VALUE$',
+        grouping_expression: 'user_id'
+      }
+    ];
+    const inputData = {
+      status_filter_value: ['Pending', 'Paid'],
+      user_id_filter_value: 42
+    };
+    
+    // Act
+    const result = await reportService.replaceFilterExpressions(
+      testData, 
+      sql, 
+      reportFilters, 
+      testReportUIConfig, 
+      inputData, 
+      false
+    );
+    
+    // Assert
+    expect(result.sql).toBe('SELECT * FROM orders WHERE status IN ($1,$2) AND user_id = $3');
+    expect(result.insertValues).toEqual(['Pending', 'Paid', 42]);
+  });
+  
+  it('should handle case when one array filter is empty and another is not', async () => {
+    // Arrange
+    const sql = 'SELECT * FROM orders WHERE $status_filter_expression$ AND $payment_method_filter_expression$';
+    const reportFilters = [
+      {
+        key: 'status',
+        filter_expression: 'status IN $FILTER_VALUE$',
+        grouping_expression: 'status'
+      },
+      {
+        key: 'payment_method',
+        filter_expression: 'payment_method IN $FILTER_VALUE$',
+        grouping_expression: 'payment_method'
+      }
+    ];
+    const inputData = {
+      status_filter_value: ['Pending', 'Paid'],
+      payment_method_filter_value: []
+    };
+    
+    // Act
+    const result = await reportService.replaceFilterExpressions(
+      testData, 
+      sql, 
+      reportFilters, 
+      testReportUIConfig, 
+      inputData, 
+      false
+    );
+    
+    // Assert
+    expect(result.sql).toBe('SELECT * FROM orders WHERE status IN ($1,$2) AND TRUE');
+    expect(result.insertValues).toEqual(['Pending', 'Paid']);
+  });
   });
   
   describe('Report Preferences', () => {
@@ -924,4 +1083,68 @@ describe("ReportService", () => {
       expect(mockDbConnection.query).not.toHaveBeenCalled();
     });
   });
+
+  describe('getAllReports', () => {
+  let reportService;
+  
+  beforeEach(() => {
+    reportService = new ReportService({});
+  });
+
+  it('should return an array of all report keys', async () => {
+    // Act
+    const result = await reportService.getAllReports();
+    
+    // Assert
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result).toContain('report-orders');
+    expect(result).toContain('report-logs');
+    expect(result).toContain('report-orders-by-user');
+    expect(result).toContain('report-users');
+    expect(result).toContain('report-notifications');
+    expect(result).toContain('report-notifications-status');
+    expect(result).toContain('report-campaigns');
+    expect(result).toContain('report-push-subscriptions');
+  });
+  });
+
+  describe("ReportService — smoke-tests for all definitions", () => {
+  let reportService;
+  const data = {
+    body: {},
+    session: { admin_user_id: 1 },
+    context: { settings: { campaign_chart_count: 10 } },
+    dbConnection: { query: jest.fn().mockResolvedValue({ rows: [] }) }
+  };
+
+  beforeAll(() => {
+    reportService = new ReportService({ exportReport: () => {} });
+  });
+
+  it("all 'reports' definitions should return { reportUIConfig, sql, reportFilters }", async () => {
+    for (const [name, fn] of Object.entries(reportService.reports)) {
+      // each fn returns { reportUIConfig, sql, reportFilters }
+      const def = await fn.call(reportService, data);
+      expect(def).toBeInstanceOf(Object);
+      expect(def).toHaveProperty("reportUIConfig");
+      expect(def).toHaveProperty("sql");
+      expect(def).toHaveProperty("reportFilters");
+      expect(typeof def.sql).toBe("string");
+      expect(Array.isArray(def.reportFilters)).toBe(true);
+    }
+  });
+
+  it("all 'dashboardReports' definitions should return { reportUIConfig, sql, reportFilters }", async () => {
+    for (const [name, fn] of Object.entries(reportService.dashboardReports)) {
+      const def = await fn.call(reportService, data);
+      expect(def).toBeInstanceOf(Object);
+      expect(def).toHaveProperty("reportUIConfig");
+      expect(def).toHaveProperty("sql");
+      expect(def).toHaveProperty("reportFilters");
+      expect(typeof def.sql).toBe("string");
+      expect(Array.isArray(def.reportFilters)).toBe(true);
+    }
+  });
+});
 });
