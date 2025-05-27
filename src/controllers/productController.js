@@ -62,6 +62,15 @@ class ProductController {
     res.status(200).json(result);
   }
 
+  getQuantity = async (req, res) => {
+    const data = {
+      params: req.params,
+      dbConnection: req.dbConnection,
+    };
+    const result = await this.productService.getQuantity(data);
+    res.status(200).json(result);
+  }
+
   create = async (req, res) => {
     ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.PRODUCT.00076.UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "update", 'products');

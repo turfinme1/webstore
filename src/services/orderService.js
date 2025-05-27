@@ -157,6 +157,7 @@ class OrderService {
       }
     };
     await this.messageService.queueEmail(emailObject);
+    await this.sendQuantityUpdateSyncClientsEvent(data);
 
     return { approvalUrl, message: "Order placed successfully", orderId: order.id };
   }
@@ -227,6 +228,8 @@ class OrderService {
       WHERE id = $2`,
       [addressId, order.id]
     );
+
+    await this.sendQuantityUpdateSyncClientsEvent(data);
 
     return { order, message: "Order created successfully" };
   }
@@ -504,6 +507,14 @@ class OrderService {
     ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: "SERVICE.ORDER.00512.ORDER_NOT_FOUND", long_description: "Order not found" });
 
     return { message: "Order deleted successfully" };
+  }
+
+  async sendQuantityUpdateSyncClientsEvent(data) {
+    await data.dbConnection.query(`
+      INSERT INTO message_queue (subject, text_content, type, event_type)
+      VALUES ($1, $2, $3, $4)`,
+      ["Quantity changed", "Product Quantity changed", "Notification", "quantity_update_sync_clients"]
+    );
   }
 }
 

@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     populateProductData(productData);
     await renderRatingSection(productData);
     await renderCommentSection(productId);
+    await renderQuantitySection(productId);
     
   } catch (error) {
     console.error("Error initializing product page:", error);
@@ -171,6 +172,22 @@ async function renderCommentSection(productId) {
     } catch (error) {
       console.error("Error submitting comment:", error);
     }
+  });
+}
+
+async function renderQuantitySection(productId) {
+  const quantitySection = document.getElementById("quantity-section");
+  const quantityResponse = await Utils.fetchWithErrorHandling(`/api/products/${productId}/quantity`);
+  const quantityData = await quantityResponse.data;
+  const h4Element = document.createElement("h4");
+
+  h4Element.textContent = `Available Quantity: ${quantityData.quantity}`;
+  quantitySection.innerHTML = "";
+  quantitySection.appendChild(h4Element);
+
+  window.addEventListener('quantity_update_sync_clients', async (e) => {
+    console.log('Quantity update event received');
+    await renderQuantitySection(productId);
   });
 }
 
