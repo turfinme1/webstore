@@ -113,7 +113,7 @@ class ProductService {
       `;
     
     const countQuery = `
-          SELECT COUNT(*) as count FROM products
+          SELECT COUNT(DISTINCT products.id) as count FROM products
           JOIN products_categories pc ON pc.product_id = products.id
           JOIN categories c ON pc.category_id = c.id
           ${combinedConditions}`;
