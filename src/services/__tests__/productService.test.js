@@ -118,7 +118,7 @@ describe("ProductService", () => {
       const result = await productService.getFilteredPaginated(params);
 
       expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT COUNT(*) as count FROM products"),
+        expect.stringContaining("SELECT COUNT(DISTINCT products.id) as count FROM products"),
         expect.any(Array)
       );
 
@@ -137,7 +137,7 @@ describe("ProductService", () => {
       const result = await productService.getFilteredPaginated(params);
 
       expect(mockDbConnection.query).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT COUNT(*) as count FROM products"),
+        expect.stringContaining("SELECT COUNT(DISTINCT products.id) as count FROM products"),
         expect.any(Array)
       );
 
