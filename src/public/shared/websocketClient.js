@@ -18,6 +18,8 @@ export class WebSocketClient {
     this.nextRequestId = 1;
     this.pendingRequests = {};
     this.webSocketConnection = null;
+    this.reconnectInterval = null;
+    this.requestTimeout = 10000;
     this.MESSAGE_DISPATCH = {
       "event": this.handleEventMessage,
       "api_call": this.handleApiCallMessage,
@@ -28,6 +30,25 @@ export class WebSocketClient {
     if (this.webSocketConnection) {
       console.log("WebSocket connection already established");
       return Promise.resolve();
+    }
+
+    if (!navigator.onLine) {
+      if (!this.reconnectInterval) {
+        this.reconnectInterval = setInterval(() => {
+          if (navigator.onLine) {
+            clearInterval(this.reconnectInterval);
+            this.reconnectInterval = null;
+            console.log("Back online—reinitializing WebSocket…");
+            this.init();
+          }
+        }, 3000);
+      }
+      return Promise.reject(new Error("Offline"));
+    }
+
+    if (this.reconnectInterval) {
+      clearInterval(this.reconnectInterval);
+      this.reconnectInterval = null;
     }
 
     this.webSocketConnection = new WebSocket(this.url);
@@ -47,6 +68,7 @@ export class WebSocketClient {
 
     this.webSocketConnection.addEventListener("close", () => {
       console.log("WebSocket connection closed");
+      this.webSocketConnection = null;
 
       setTimeout(() => {
         console.log("Reconnecting...");
@@ -65,6 +87,13 @@ export class WebSocketClient {
         console.error("WebSocket error: ", error);
         reject(error);
       });
+
+      setTimeout(() => {
+        if (this.webSocketConnection?.readyState !== WebSocket.OPEN) {
+          console.error("WebSocket connection timed out");
+          reject(new Error("WebSocket connection timed out"));
+        }
+      }, 5000);
     });
   }
 
@@ -77,6 +106,22 @@ export class WebSocketClient {
 
       return new Promise((resolve, reject) => {
         this.pendingRequests[messageId] = { resolve, reject };
+
+        const timeoutId = setTimeout(() => {
+          delete this.pendingRequests[messageId];
+          reject(new WebSocketMessage(messageId, message.type, { error: "Request timed out" }, false));
+        }, this.requestTimeout);
+
+        this.pendingRequests[messageId].resolve = (response) => {
+          clearTimeout(timeoutId);
+          resolve(response);
+        }
+
+        this.pendingRequests[messageId].reject = (error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        }
+
         this.webSocketConnection.send(JSON.stringify(messageToSend));
       });
     } catch (error) {

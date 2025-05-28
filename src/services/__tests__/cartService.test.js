@@ -104,6 +104,7 @@ describe('CartService', () => {
         .mockResolvedValueOnce({ rows: [userCart] }) // Find user's cart
         .mockResolvedValueOnce({ rows: [] }) // mergeCartsOnLogin first query
         .mockResolvedValueOnce({ rows: [] }) // mergeCartsOnLogin second query
+        .mockResolvedValueOnce({ rows: [] }) // sendCartUpdateSyncClientsEvent query
         .mockResolvedValueOnce({ rows: [userCart] }) // getOrCreateCart in recursive call
         .mockResolvedValueOnce({ rows: [] }) // Voucher check
         .mockResolvedValueOnce({ rows: [mergedCartItems] }); // Get cart items
@@ -115,7 +116,7 @@ describe('CartService', () => {
   
       const result = await cartService.getCart(data);
   
-      expect(dbConnection.query).toHaveBeenCalledTimes(7);
+      expect(dbConnection.query).toHaveBeenCalledTimes(8);
       expect(result.cart).toEqual(userCart);
       expect(result.items).toEqual([{ id: 'item1' }]);
     });
@@ -574,7 +575,7 @@ describe('CartService', () => {
     
         const result = await cartService.applyVoucher(data);
     
-        expect(dbConnection.query).toHaveBeenCalledTimes(4);
+        expect(dbConnection.query).toHaveBeenCalledTimes(5);
         expect(result).toEqual({ message: 'Voucher applied successfully.' });
       });
     
@@ -640,7 +641,7 @@ describe('CartService', () => {
     
         const result = await cartService.removeVoucher(data);
     
-        expect(dbConnection.query).toHaveBeenCalledTimes(2);
+        expect(dbConnection.query).toHaveBeenCalledTimes(3);
         expect(result).toEqual({ message: 'Voucher removed successfully.' });
       });
     
