@@ -59,6 +59,7 @@ class CartService {
 
       if (userCart.rows.length > 0) {
         await this.mergeCartsOnLogin(cart, userCart.rows[0], data.dbConnection);
+        await this.sendCartUpdateSyncClientsEvent(data);
         return this.getCart(data); // Re-fetch the merged cart
       } else {
         // Assign the session cart to the user and remove session_id
@@ -243,6 +244,8 @@ class CartService {
       [voucher.id, voucher.discount_amount, cart.id]
     );
 
+    await this.sendCartUpdateSyncClientsEvent(data);
+
     return { message: "Voucher applied successfully." };
   }
 
@@ -258,6 +261,8 @@ class CartService {
       WHERE id = $1`,
       [cart.id]
     );
+
+    await this.sendCartUpdateSyncClientsEvent(data);
 
     return { message: "Voucher removed successfully." };
   }

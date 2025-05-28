@@ -1,10 +1,12 @@
 const WebSocket = require('ws');
-
+const { validateObject } = require('./validation');
 const { ASSERT_USER, ASSERT } = require('./assert');
+const websocketSchema = require('../schemas/webSocketMessageSchema.json');
 
 const MESSAGE_TYPES = {
     EVENT: 'event',
     API_CALL: 'api_call',
+    SYS: 'system',
 }
 
 class WebSocketMessage {
@@ -38,6 +40,8 @@ class WebSocketServer {
             ws.on('message', async (messageRaw) => {
                 try {
                     const message = JSON.parse(messageRaw);
+                    validateObject(message, websocketSchema);
+
                     console.log(`Received message from user ${sessionId}:`, message);
 
                     if(this.MESSAGE_DISPATCH[message.type]) {
@@ -48,6 +52,11 @@ class WebSocketServer {
                     
                 } catch (error) {
                     console.error('Error processing message:', error);
+                    const errorPayload = {
+                        code: error.params?.code || "SERVER.WEBSOCKET.00001.UNKNOWN_ERROR",
+                        error: error.params?.long_description || error.message || "Internal server error",
+                    };
+                    ws.send(JSON.stringify(new WebSocketMessage(null, MESSAGE_TYPES.SYS, errorPayload, false)));
                 }
             });
 

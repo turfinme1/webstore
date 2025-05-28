@@ -873,13 +873,15 @@ async function fetchWithErrorHandling(url, options) {
       error: data.error || "Failed to fetch data, please try again later",
     };
   } catch (error) {
+    console.error("Error fetching data:", error);
     if (!navigator.onLine) {
+      showErrorMessage("No internet connection. Please reconnect and try again.");
       return {
         ok: false,
         error: "No internet connection. Please reconnect and try again.",
       };
     } else {
-      console.error("Error fetching data:", error);
+      showErrorMessage(error.payload.error || error.message || "Failed to fetch data, please try again later");
       return {
         ok: false,
         error: "Failed to fetch data, please try again later",
