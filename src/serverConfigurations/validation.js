@@ -126,7 +126,7 @@ function validateObject(object, schema) {
   }
   let formattedErrors = "";
   for (const key in errors) {
-    formattedErrors += `${errors[key].join(", ")}\n`;
+    formattedErrors += `${key}: ${errors[key].join(", ")}\n`;
   }
   ASSERT(isValid, `Validation error for ${schema.name} object`, { code: "SERVER_CONFIG.VALIDATION.00131.INVALID_INPUT", long_description: `Validation error for ${schema.name}: ${formattedErrors}` });
 }

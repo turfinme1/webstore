@@ -1,0 +1,36 @@
+{
+  "title": "WebSocketMessage",
+  "name": "WebSocketMessage",
+  "type": "object",
+  "properties": {
+    "id": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "number" }
+      ],
+        "errorMessage": {
+            "type": "Invalid value for message ID."
+        }
+    },
+    "type": { 
+        "type": "string",
+        "errorMessage": {
+            "type": "Invalid value for message type."
+        }
+    },
+    "ok": { 
+        "type": "boolean",
+        "errorMessage": {
+            "type": "Invalid value for ok status."
+        }
+    },
+    "payload": { 
+        "type": "object",
+        "errorMessage": {
+            "type": "Invalid value for payload."
+        }
+    }
+  },
+  "required": ["id", "type", "payload"],
+  "additionalProperties": false
+}

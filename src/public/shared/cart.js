@@ -214,7 +214,7 @@ function renderCartTotalRow() {
         </div>
       </div>
     </td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">-${formatCurrency(state.cart.voucher_amount)}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${state.cart.voucher_amount ? `-${formatCurrency(state.cart.voucher_amount)}`: `${formatCurrency(state.cart.voucher_amount)}`}</td>
    <td>
       <button class="btn btn-secondary" id="browse-vouchers-btn">Browse Vouchers</button>
    </td>
