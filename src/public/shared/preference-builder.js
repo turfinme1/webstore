@@ -57,26 +57,49 @@ export class PreferenceBuilder {
   renderCheckboxes() {
     this.formEl.innerHTML = '';
 
+    const list = document.createElement('ul');
+    list.id = 'column-list';
+    list.className = 'list-group mb-4';
+    this.formEl.appendChild(list);
+
     for (const col of this.columns) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'form-check mb-2';
+      const li = document.createElement('li');
+      li.className = 'list-group-item d-flex align-items-center';
+      li.dataset.key = col.key;
+
+      // drag handle
+      const handle = document.createElement('span');
+      handle.className = 'me-3 drag-handle';
+      handle.style.cursor = 'grab';
+      handle.innerHTML = '&#9776;'; // ☰
+      li.appendChild(handle);
 
       const chk = document.createElement('input');
-      chk.className = 'form-check-input';
       chk.type = 'checkbox';
+      chk.className = 'form-check-input me-2';
       chk.id = `chk-${col.key}`;
-      chk.dataset.key = col.key;
       chk.checked = !col.hideInUI;
+      li.appendChild(chk);
 
       const label = document.createElement('label');
-      label.className = 'form-check-label';
       label.htmlFor = chk.id;
+      label.className = 'form-check-label';
       label.textContent = col.label;
+      li.appendChild(label);
 
-      wrapper.appendChild(chk);
-      wrapper.appendChild(label);
-      this.formEl.appendChild(wrapper);
+      list.appendChild(li);
     }
+
+    // wire up Sortable on our list
+    this.sortable = Sortable.create(list, {
+      handle: '.drag-handle',
+      animation: 150,
+      onEnd: (evt) => {
+        // update this.columns to reflect new order
+        const movedItem = this.columns.splice(evt.oldIndex, 1)[0];
+        this.columns.splice(evt.newIndex, 0, movedItem);
+      }
+    });
   }
 
   async load() {
@@ -91,6 +114,17 @@ export class PreferenceBuilder {
           col.hideInUI = saved.hideInUI;
         }
       }
+
+      const orderMap = new Map(
+        prefCols.map((p, index) => [p.key, index])
+      );
+
+      this.columns.sort((a, b) => {
+        const ia = orderMap.has(a.key) ? orderMap.get(a.key) : Number.MAX_SAFE_INTEGER;
+        const ib = orderMap.has(b.key) ? orderMap.get(b.key) : Number.MAX_SAFE_INTEGER;
+        return ia - ib;
+     });
+
       this.renderCheckboxes();
     } catch (err) {
       console.error(err);

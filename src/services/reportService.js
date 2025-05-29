@@ -179,11 +179,12 @@ class ReportService {
   }
 
   async setReportPreference(data) {
-    await data.dbConnection.query(`
+    return await data.dbConnection.query(`
         INSERT INTO user_report_preferences (admin_user_id, report_name, preference)
         VALUES ($1, $2, $3)
         ON CONFLICT (admin_user_id, report_name)
-        DO UPDATE SET preference = $3`,
+        DO UPDATE SET preference = $3
+        RETURNING *`,
         [data.session.admin_user_id, data.params.report, JSON.stringify(data.body)]
     );
   }
