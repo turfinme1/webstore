@@ -51,9 +51,11 @@ class AuthController {
       dbConnection: req.dbConnection,
       entitySchemaCollection: req.entitySchemaCollection,
     }; 
-    const result = await this.authService.logout(data);
+    const newSession = await this.authService.logout(data);
+    res.cookie(req.entitySchemaCollection.userManagementSchema.cookie_name, newSession.session_hash, { 
+      expires: newSession.expires_at, secure: false, httpOnly: false
+    });
     res.status(200)
-      .clearCookie("session_id", { expires: result.expires_at, secure: false, httpOnly: false})
       .json({message: "Logout successful"});
   }
 

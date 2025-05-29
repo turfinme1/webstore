@@ -5,8 +5,9 @@ const { Readable } = require("nodemailer/lib/xoauth2");
 const { ENV }  = require("../serverConfigurations/constants");
 
 class AuthService {
-  constructor(messageService) {
+  constructor(messageService, cartService) {
     this.messageService = messageService;
+    this.cartService = cartService;
   }
 
   async register(data) {
@@ -84,7 +85,20 @@ class AuthService {
     );
     ASSERT_USER(result.rows.length === 1, "Invalid session", { code: "SERVICE.AUTH.00100.INVALID_SESSION", long_description: `Invalid session ${data.session.session_hash}` });
 
-    return result.rows[0];
+    const newSessionData = {
+      entitySchemaCollection: data.entitySchemaCollection,
+      dbConnection: data.dbConnection,
+      userId: null,
+      ipAddress: data.session.ip_address,
+      sessionType: "Anonymous"
+    };
+    const newSession = await this.createSession(newSessionData);
+
+    if(data.session.user_id){ 
+      await this.cartService.cloneCartForNewSession(data.session.user_id, newSession.id, data.dbConnection);
+    }
+
+    return newSession;
   }
 
   async verifyMail(data) {

@@ -110,10 +110,13 @@ describe("AuthController", () => {
         params: {},
         session: {},
         dbConnection: {},
+        entitySchemaCollection: {
+          userManagementSchema: { cookie_name: "session_id" }
+        }
       };
       const logoutResult = { expires_at: new Date() };
 
-      authService.logout.mockResolvedValue(logoutResult);
+      authService.logout.mockResolvedValue({ session_hash: "newHash", expires_at: logoutResult.expires_at });
 
       await authController.logout(req, mockRes, mockNext);
 
@@ -121,9 +124,10 @@ describe("AuthController", () => {
         params: req.params,
         session: req.session,
         dbConnection: req.dbConnection,
+        entitySchemaCollection: req.entitySchemaCollection,
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.clearCookie).toHaveBeenCalledWith("session_id", expect.any(Object));
+      expect(mockRes.cookie).toHaveBeenCalledWith("session_id", "newHash", expect.any(Object));
       expect(mockRes.json).toHaveBeenCalledWith({ message: "Logout successful" });
     });
   });
