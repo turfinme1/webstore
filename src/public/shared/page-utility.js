@@ -498,7 +498,7 @@ function createNavigation(userStatus) {
   if (logoutButton) {
     logoutButton.addEventListener("click", async (event) => {
       event.preventDefault();
-      const response = await fetchWithErrorHandling("/auth/logout");
+      const response = await fetch("/auth/logout");
       window.location.href = "/index";
     });
   }

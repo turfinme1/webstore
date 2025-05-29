@@ -8,6 +8,7 @@ const { url } = require("inspector");
 describe("AuthService", () => {
   let authService;
   let mockMailService;
+  let mockCartService;
   let mockDbConnection;
   let data;
 
@@ -17,12 +18,15 @@ describe("AuthService", () => {
       sendVerificationEmail: jest.fn(),
       queueEmail: jest.fn(),
     };
+    mockCartService = {
+      cloneCartForNewSession: jest.fn(),
+    };
 
     mockDbConnection = {
       query: jest.fn(),
     };
 
-    authService = new AuthService(mockMailService);
+    authService = new AuthService(mockMailService, mockCartService);
 
     // Data structure passed to the AuthService methods
     data = {
@@ -169,6 +173,8 @@ describe("AuthService", () => {
       mockDbConnection.query.mockResolvedValueOnce({
         rows: [{ session_hash: "session123" }],
       });
+      // mock createSession for logout to return a session
+      authService.createSession = jest.fn().mockResolvedValue({ id: 1, session_hash: "session123" });
 
       const result = await authService.logout(data);
 

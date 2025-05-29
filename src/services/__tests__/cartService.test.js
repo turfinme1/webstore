@@ -35,6 +35,173 @@ describe('CartService', () => {
     });
   });
 
+  describe('cloneCartForNewSession', () => {
+    it('should clone cart items from user cart to new session cart', async () => {
+      // Arrange
+      const oldUserId = 'user123';
+      const newSessionId = 'session456';
+      const oldCart = { 
+        id: 'oldCart123', 
+        user_id: oldUserId,
+        is_active: true
+      };
+      const newCart = { 
+        id: 'newCart456', 
+        session_id: newSessionId,
+        is_active: true
+      };
+
+      // Mock sequence for successful cart cloning
+      dbConnection.query
+        .mockResolvedValueOnce({ rows: [oldCart] }) // Find old user cart
+        .mockResolvedValueOnce({ rows: [newCart] }) // Create new cart
+        .mockResolvedValueOnce({ rows: [] });       // Clone cart items
+
+      // Act
+      const result = await cartService.cloneCartForNewSession(oldUserId, newSessionId, dbConnection);
+
+      // Assert
+      expect(dbConnection.query).toHaveBeenCalledTimes(3);
+      
+      // Check first query - find old cart
+      expect(dbConnection.query).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining('SELECT * FROM carts WHERE user_id = $1 AND is_active = TRUE'),
+        [oldUserId]
+      );
+      
+      // Check second query - create new cart
+      expect(dbConnection.query).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('INSERT INTO carts (session_id)'),
+        [newSessionId]
+      );
+      
+      // Check third query - clone cart items
+      expect(dbConnection.query).toHaveBeenNthCalledWith(
+        3,
+        expect.stringContaining('INSERT INTO cart_items'),
+        [newCart.id, oldCart.id]
+      );
+      
+      // Check returned cart
+      expect(result).toEqual(newCart);
+    });
+
+    it('should return null when user has no active cart', async () => {
+      // Arrange
+      const oldUserId = 'user123';
+      const newSessionId = 'session456';
+      
+      // Mock empty result for user cart query
+      dbConnection.query.mockResolvedValueOnce({ rows: [] });
+
+      // Act
+      const result = await cartService.cloneCartForNewSession(oldUserId, newSessionId, dbConnection);
+
+      // Assert
+      expect(dbConnection.query).toHaveBeenCalledTimes(1);
+      expect(dbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT * FROM carts WHERE user_id = $1'),
+        [oldUserId]
+      );
+      expect(result).toBeNull();
+    });
+
+    it('should handle cart with voucher and discount information', async () => {
+      // Arrange
+      const oldUserId = 'user123';
+      const newSessionId = 'session456';
+      const oldCart = { 
+        id: 'oldCart123', 
+        user_id: oldUserId,
+        voucher_id: 1,
+        voucher_discount_amount: 10,
+        is_active: true
+      };
+      const newCart = { 
+        id: 'newCart456', 
+        session_id: newSessionId,
+        is_active: true
+      };
+
+      dbConnection.query
+        .mockResolvedValueOnce({ rows: [oldCart] }) // Find old user cart
+        .mockResolvedValueOnce({ rows: [newCart] }) // Create new cart
+        .mockResolvedValueOnce({ rows: [] });       // Clone cart items
+
+      // Act
+      const result = await cartService.cloneCartForNewSession(oldUserId, newSessionId, dbConnection);
+
+      // Assert
+      expect(dbConnection.query).toHaveBeenCalledTimes(3);
+      
+      // We should specifically check the cart creation query to ensure voucher info is properly handled
+      expect(dbConnection.query).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('INSERT INTO carts (session_id)'),
+        [newSessionId]
+      );
+      
+      expect(result).toEqual(newCart);
+    });
+
+    it('should handle database errors gracefully', async () => {
+      // Arrange
+      const oldUserId = 'user123';
+      const newSessionId = 'session456';
+      const dbError = new Error('Database connection failed');
+      
+      dbConnection.query.mockRejectedValueOnce(dbError);
+
+      // Act & Assert
+      await expect(cartService.cloneCartForNewSession(oldUserId, newSessionId, dbConnection))
+        .rejects
+        .toThrow('Database connection failed');
+        
+      expect(dbConnection.query).toHaveBeenCalledTimes(1);
+    });
+    
+    it('should correctly handle multiple cart items', async () => {
+      // Arrange
+      const oldUserId = 'user123';
+      const newSessionId = 'session456';
+      const oldCart = { 
+        id: 'oldCart123', 
+        user_id: oldUserId,
+        is_active: true
+      };
+      const newCart = { 
+        id: 'newCart456', 
+        session_id: newSessionId,
+        is_active: true
+      };
+      
+      // Mock multiple cart items being copied
+      const cartItems = [
+        { product_id: 'product1', quantity: 2, unit_price: 19.99 },
+        { product_id: 'product2', quantity: 1, unit_price: 29.99 }
+      ];
+
+      dbConnection.query
+        .mockResolvedValueOnce({ rows: [oldCart] }) // Find old user cart
+        .mockResolvedValueOnce({ rows: [newCart] }) // Create new cart
+        .mockResolvedValueOnce({ rows: cartItems }); // Mock insert of multiple items
+
+      // Act
+      const result = await cartService.cloneCartForNewSession(oldUserId, newSessionId, dbConnection);
+
+      // Assert
+      expect(dbConnection.query).toHaveBeenCalledTimes(3);
+      expect(dbConnection.query).toHaveBeenNthCalledWith(
+        3,
+        expect.stringContaining('INSERT INTO cart_items'),
+        [newCart.id, oldCart.id]
+      );
+      expect(result).toEqual(newCart);
+    });
+  });
+
   describe('getCart', () => {
     it('should return an existing cart with items', async () => {
       const mockCart = { id: 'cart123', user_id: 'user123' };

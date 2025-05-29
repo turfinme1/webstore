@@ -46,6 +46,38 @@ class CartService {
     await dbConnection.query(`UPDATE carts SET is_active = FALSE WHERE id = $1`, [sessionCart.id]);
   }
 
+  async cloneCartForNewSession(oldUserId, newSessionId, dbConnection) {
+    const oldCartResult = await dbConnection.query(`
+      SELECT * FROM carts WHERE user_id = $1 AND is_active = TRUE LIMIT 1`,
+      [oldUserId]
+    );
+
+    if (oldCartResult.rows.length === 0) {
+      return null;
+    }
+
+    const oldCart = oldCartResult.rows[0];
+
+    const newCartResult = await dbConnection.query(`
+      INSERT INTO carts (session_id)
+      VALUES ($1)
+      RETURNING *`,
+      [newSessionId]
+    );
+    
+    const newCart = newCartResult.rows[0];
+
+    await dbConnection.query(`
+      INSERT INTO cart_items (cart_id, product_id, quantity, unit_price)
+      SELECT $1, product_id, quantity, unit_price
+      FROM cart_items
+      WHERE cart_id = $2`,
+      [newCart.id, oldCart.id]
+    );
+
+    return newCart;
+  }
+
   async getCart(data) {
     const { user_id } = data.session;
 
