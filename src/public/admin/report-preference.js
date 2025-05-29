@@ -1,4 +1,4 @@
-import * as pageUtility from "./page-utility.js";
+import * as Utils from "./page-utility.js";
 import { PreferenceBuilder } from "./preference-builder.js";
 
 const state = {
@@ -10,14 +10,14 @@ const elements = {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    state.userStatus = await pageUtility.getUserStatus();
-    pageUtility.createNavigation(state.userStatus);
-    pageUtility.createBackofficeNavigation(state.userStatus);
+    state.userStatus = await Utils.getUserStatus();
+    Utils.createNavigation(state.userStatus);
+    Utils.createBackofficeNavigation(state.userStatus);
 
     const URLParams = new URLSearchParams(window.location.search);
     const reportName = URLParams.get('report');
 
-    if ( ! pageUtility.hasPermission(state.userStatus, "read", reportName)) {
+    if ( ! Utils.hasPermission(state.userStatus, "read", reportName)) {
         elements.mainContainer.innerHTML = "";
         const h1 = document.createElement("h1");
         h1.innerText = "You don't have permission to view this report";
@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    const reportConfigResponse = await fetch(`/api/reports/${reportName}`,
+    const reportConfigResponse = await Utils.fetchWithErrorHandling(`/api/reports/${reportName}`,
         {
             method: 'POST',
             headers: {
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    const reportConfig = await reportConfigResponse.json();
+    const reportConfig = await reportConfigResponse.data;
     reportConfig.reportUIConfig.filters = reportConfig.reportFilters;
     const builder = new PreferenceBuilder(reportName, reportConfig.reportUIConfig);
     await builder.render("main-container");

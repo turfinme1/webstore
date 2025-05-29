@@ -47,11 +47,24 @@ document.addEventListener("DOMContentLoaded", async () => {
                     hideColumns[col.key] = true;
                 }
             }
+
+            const orderMap = new Map(
+                prefData.rows[0]?.preference?.headerGroups.map((p, index) => [p.key, index])
+            );
+
+            let cols = reportConfig.reportUIConfig.headerGroups[0]
+                .filter(col => !hideColumns[col.key]);
+
+            cols.sort((a, b) => {
+                const ia = orderMap.has(a.key) ? orderMap.get(a.key) : Number.MAX_SAFE_INTEGER;
+                const ib = orderMap.has(b.key) ? orderMap.get(b.key) : Number.MAX_SAFE_INTEGER;
+                return ia - ib;
+            });
+
+            reportConfig.reportUIConfig.headerGroups = [ cols ];
         }
     }
 
-    reportConfig.reportUIConfig.headerGroups = reportConfig.reportUIConfig.headerGroups
-        .map(group => group.filter(col => !hideColumns[col.key]));
     reportConfig.reportUIConfig.filters = reportConfig.reportFilters.filter(filter => !hideColumns[filter.key]);
 
     const reportUI = new ReportBuilder(reportConfig.reportUIConfig);
