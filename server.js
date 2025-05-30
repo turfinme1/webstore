@@ -26,6 +26,8 @@ const server = https.createServer({
   cert: fs.readFileSync(path.join(__dirname, 'cert.pem'), 'utf8')
 }, app);
 
+server.maxConnections = 1000;
+
 server.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
