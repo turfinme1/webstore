@@ -72,7 +72,9 @@ async function handlePayWithPayPal(event) {
     city: document.getElementById("city").value,
   };
 
+  const payButton = document.getElementById("pay-with-paypal");
   try {
+    payButton.disabled = true;
     elements.spinner.style.display = "inline-block";
     const response = await fetchWithErrorHandling('/api/orders', {
       method: 'POST',
@@ -82,6 +84,7 @@ async function handlePayWithPayPal(event) {
 
    elements.spinner.style.display = "none";
     if (!response.ok) {
+      payButton.disabled = false;
       showErrorMessage(response.error);
       return;
     }
@@ -89,15 +92,16 @@ async function handlePayWithPayPal(event) {
 
     if(state.cart.total_price_with_voucher == 0){
       showMessage("Order placed successfully. Navigating to order complete page...");
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       window.location.href = `/order-complete?orderId=${data.orderId}`;
       return;
     }
     showMessage("Order placed successfully. Navigating to Paypal...");
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     window.location.href = data.approvalUrl;
   } catch (error) {
+    payButton.disabled = false;
     elements.spinner.style.display = "none";
     console.error("Error placing order:", error);
     showErrorMessage("Failed to place order");
