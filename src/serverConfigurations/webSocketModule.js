@@ -2,6 +2,11 @@ const WebSocket = require('ws');
 const { validateObject } = require('./validation');
 const { ASSERT_USER, ASSERT } = require('./assert');
 const websocketSchema = require('../schemas/webSocketMessageSchema.json');
+const WebSocketStream = require('./webSocketStream');
+const { Readable } = require('stream');
+
+const HIGH_WATER_MARK = 128 * 1024; // 128 KB
+const THRESHOLD = 256 * 1024; // 256 KB
 
 const MESSAGE_TYPES = {
     EVENT: 'event',
@@ -169,8 +174,7 @@ class WebSocketServer {
 
             if(this.MESSAGE_DISPATCH[message.type]) {
                 const messageHandler = this.MESSAGE_DISPATCH[message.type];
-                const response = await messageHandler(message, context.sessionId);
-                context.ws.send(JSON.stringify(response));
+                await messageHandler(message, context);
             }
         } catch (error) {
             console.error('Error processing message:', error);
@@ -192,7 +196,7 @@ class WebSocketServer {
             for (const sessionId in this.sessionConnections) {
                 const sessionSockets = this.sessionConnections[sessionId];
                 for (const sessionConnection of sessionSockets) {
-                    sessionConnection.send(JSON.stringify(new WebSocketMessage(data?.id, data.type, data.payload, true)));
+                    await this.sendStreamedJson(sessionConnection, data?.id, new WebSocketMessage(data?.id, data.type, data.payload, true));
                 }
             }
             return;
@@ -203,17 +207,17 @@ class WebSocketServer {
         ASSERT_USER(userSockets?.size > 0, "No user connections found", { code: "SERVER.WEBSOCKET.00004.NO_CONNECTIONS", long_description: "No user connections found" });
 
         for (const userConnection of userSockets) {
-            userConnection.send(JSON.stringify(new WebSocketMessage(data?.id, data.type, data.payload, true)));
+            await this.sendStreamedJson(userConnection, data?.id, new WebSocketMessage(data?.id, data.type, data.payload, true));
         }
     }
 
-    handleApiCallMessage = async (message, sessionId) => {
+    handleApiCallMessage = async (message, context) => {
         try {
             message.payload.options = {
                 ...message.payload?.options,
                 headers: {
                     ...message.payload.options?.headers,
-                    "Cookie": `session_id=${sessionId}`,
+                    "Cookie": `session_id=${context.sessionId}`,
                 }
             };
 
@@ -222,15 +226,41 @@ class WebSocketServer {
             const apiUrl = new URL(message.payload.url, baseUrl);
 
             const apiResponse = await fetch(apiUrl.toString(), message.payload.options);
-            let data = null;
-            if(apiResponse.status !== 204){
-                data = await apiResponse.json();
+            
+            if (apiResponse.status === 204) {
+                await this.sendStreamedJson(context.ws, message.id, new WebSocketMessage(message.id, MESSAGE_TYPES.API_CALL, null, true));
+                return;
             }
-            return new WebSocketMessage(message.id, MESSAGE_TYPES.API_CALL, data, apiResponse.ok === true);
+
+            const responseBodyReadableStream = Readable.fromWeb(apiResponse.body);
+            const webSocketStream = new WebSocketStream(context.ws, {  
+                highWaterMark: HIGH_WATER_MARK,
+                threshold: THRESHOLD,
+                requestId: message.id, 
+            });
+            responseBodyReadableStream.pipe(webSocketStream);
         } catch (error) {
             console.error('Error processing API call:', error);
-            return new WebSocketMessage(message.id, MESSAGE_TYPES.API_CALL, null, false);
+            await this.sendStreamedJson(context.ws, message.id, new WebSocketMessage(message.id, MESSAGE_TYPES.API_CALL, null, false)); 
         }
+    }
+
+    sendStreamedJson = async (ws, requestId, payload) => {
+        const jsonString = JSON.stringify(payload);
+        const buffer = Buffer.from(jsonString, 'utf8');
+        const readableStream = new Readable({
+            read() {
+                this.push(buffer);
+                this.push(null);
+            }
+        });
+
+        const webSocketStream = new WebSocketStream(ws, {
+            highWaterMark: HIGH_WATER_MARK,
+            threshold: THRESHOLD,
+            requestId: requestId,
+        });
+        readableStream.pipe(webSocketStream);
     }
 
     parseCookies = (cookieHeader = '') => {

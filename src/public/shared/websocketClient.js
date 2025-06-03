@@ -3,6 +3,15 @@ export const MESSAGE_TYPES = {
   API_CALL: 'api_call',
 }
 
+export const HEADER_CONFIG = {
+  HEADER_LENGTH: 16,
+  OFFSET_REQUEST_ID: 0,
+  OFFSET_SEQUENCE: 4,
+  OFFSET_FLAGS: 8,
+  OFFSET_RESERVED: 9,
+  OFFSET_PAYLOAD_LENGTH: 12,
+}
+
 export class WebSocketMessage {
   constructor(id, type, payload, ok) {
     this.id = id;
@@ -20,9 +29,9 @@ export class WebSocketClient {
     this.webSocketConnection = null;
     this.reconnectInterval = null;
     this.requestTimeout = 10000;
+    this._inFlight = {};
     this.MESSAGE_DISPATCH = {
       "event": this.handleEventMessage,
-      "api_call": this.handleApiCallMessage,
     }
   }
 
@@ -55,12 +64,8 @@ export class WebSocketClient {
 
     this.webSocketConnection.addEventListener("message", async (event) => {
       try {
-        const message = JSON.parse(event.data);
+       await this.parseAndProcessMessage(event);
 
-        if(this.MESSAGE_DISPATCH[message.type]) {
-          const messageHandler = this.MESSAGE_DISPATCH[message.type];
-          await messageHandler(message);
-        }
       } catch (error) {
         console.error('Error processing message:', error);
       }
@@ -146,20 +151,61 @@ export class WebSocketClient {
     window.dispatchEvent(customEvent);
   }
 
-  handleApiCallMessage = async (message) => {
-    console.log('API call message received:', message);
-    const requestEntry = this.pendingRequests[message.id];
+  parseAndProcessMessage = async (event) => {
+    const buffer = await event.data.arrayBuffer();
+    const view = new DataView(buffer);
 
-    if(!requestEntry) {
-      return;
+    // parse header
+    const requestId = view.getUint32(HEADER_CONFIG.OFFSET_REQUEST_ID);
+    const sequenceNumber = view.getUint32(HEADER_CONFIG.OFFSET_SEQUENCE);
+    const flags = view.getUint8(HEADER_CONFIG.OFFSET_FLAGS);
+    const isFinal = (flags & 0x1) === 1;
+    const payloadLen = view.getUint32(HEADER_CONFIG.OFFSET_PAYLOAD_LENGTH);
+
+    // slice out the payload
+    const payload = new Uint8Array(buffer, HEADER_CONFIG.HEADER_LENGTH, payloadLen);
+
+    // accumulate bytes
+    let entry = this._inFlight[requestId];
+    if (!entry) {
+      entry = { fragments: [], fragmentsTotalCount: null };
+      this._inFlight[requestId] = entry;
+    }
+    entry.fragments.push({ seq: sequenceNumber, chunk: payload });
+
+    if (isFinal) {
+      entry.fragmentsTotalCount = sequenceNumber;
     }
 
-    delete this.pendingRequests[message.id];
+    if (entry.fragmentsTotalCount !== null && entry.fragmentsTotalCount === entry.fragments.length) {
+      entry.fragments.sort((a, b) => a.seq - b.seq);
+      const totalLen = entry.fragments.reduce((sum, entry) => sum + entry.chunk.byteLength, 0);
+      const full = new Uint8Array(totalLen);
+      let offset = 0;
+      for (const { chunk } of entry.fragments) {
+        full.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
 
-    if (message.ok) {
-      requestEntry.resolve(message);
-    } else {
-      requestEntry.reject(message);
+      const text = new TextDecoder().decode(full);
+      console.log('Received complete message:', text);
+      const message = await JSON.parse(text);
+
+      delete this._inFlight[requestId];
+
+      const pending = this.pendingRequests[requestId];
+      delete this.pendingRequests[requestId];
+
+      if(this.MESSAGE_DISPATCH[message.type]) {
+        const messageHandler = this.MESSAGE_DISPATCH[message.type];
+        await messageHandler(message);
+      } else if (pending) {
+          if (message.error) {
+            pending.reject(message);
+          } else {
+            pending.resolve(message);
+          }            
+      }
     }
   }
 }

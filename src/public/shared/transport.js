@@ -14,6 +14,7 @@ export class WebSocketTransport {
     }
 
     async fetch(url, options) {
-        return await this.webSocketClient.sendMessage({type: MESSAGE_TYPES.API_CALL, payload: { url, options }});
+        const data = await this.webSocketClient.sendMessage({type: MESSAGE_TYPES.API_CALL, payload: { url, options }});
+        return { payload: data, ok: data.error ? false : true };
     }
 }
