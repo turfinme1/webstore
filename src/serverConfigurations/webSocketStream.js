@@ -58,7 +58,7 @@ class WebSocketStream extends Writable {
 
     if (this.ws.bufferedAmount > this._threshold) {
       this.ws.once('bufferedAmountLow', () => {
-        this.emit('drain');
+        callback();
       });
     } else {
       callback();
