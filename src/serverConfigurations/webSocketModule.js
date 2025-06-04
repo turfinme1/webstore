@@ -7,6 +7,7 @@ const { Readable } = require('stream');
 
 const HIGH_WATER_MARK = 128 * 1024; // 128 KB
 const THRESHOLD = 256 * 1024; // 256 KB
+const MAX_PAYLOAD = 1 * 1024 * 1024; // 1 MB
 
 const MESSAGE_TYPES = {
     EVENT: 'event',
@@ -36,7 +37,7 @@ class WebSocketServer {
         this.path = path;
         this.apiUrl = apiUrl;
         this.apiPort = apiPort;
-        this.websocketServer = new WebSocket.Server({ server, path });
+        this.websocketServer = new WebSocket.Server({ server, path, maxPayload: MAX_PAYLOAD });
         this.sessionConnections = {};
         this.userConnections = {};
         this.MESSAGE_DISPATCH = {
