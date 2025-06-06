@@ -258,6 +258,13 @@ class ProductService {
           ["Quantity changed", "Product Quantity changed", "Notification", "quantity_update_sync_clients"]
         );
       }
+      if (inventoryResult.rows[0].price !== data.body.price) {
+        await data.dbConnection.query(`
+          INSERT INTO message_queue (subject, text_content, type, event_type)
+          VALUES ($1, $2, $3, $4)`,
+          ["Quantity changed", "Product Quantity changed", "Notification", "quantity_update_sync_clients"]
+        );
+      }
 
       await data.dbConnection.query(`
         UPDATE inventories SET quantity = $1 WHERE product_id = $2`,

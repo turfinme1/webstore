@@ -21,8 +21,11 @@ describe('OrderService', () => {
         mockDbConnection = {
             query: jest.fn(),
         };
+        mockCartService = {
+            sendCartUpdateSyncClientsEvent: jest.fn(),
+        };
 
-        orderService = new OrderService(mockMessageService, mockPaypalClient);
+        orderService = new OrderService(mockMessageService, mockPaypalClient, mockCartService);
     });
 
     describe('createOrder', () => {
@@ -64,6 +67,7 @@ describe('OrderService', () => {
             });
 
             jest.spyOn(orderService, "verifyCartPricesAreUpToDate").mockResolvedValue(true);
+
 
             const result = await orderService.createOrder(data);
 

@@ -47,7 +47,7 @@ function populateProductData(product) {
 
   const productInfoHtml = `
   <h2>${product.name}</h2>
-  <h4 class="text-muted">$${product.price}</h4>
+  <h4 class="text-muted" id="product_price">$${product.price}</h4>
   <p>${product.long_description}</p>
   <p>Categories: ${product.categories.join(", ")}</p>
   <button id="add-to-cart-btn" class="btn btn-primary">Add to Cart</button>
@@ -57,6 +57,14 @@ function populateProductData(product) {
   // Attach event listener to "Add to Cart" button
   const addToCartBtn = document.getElementById("add-to-cart-btn");
   addToCartBtn.addEventListener("click", () => addToCart(product.id));
+
+  window.addEventListener('quantity_update_sync_clients', async (e) => {
+    const updatedProduct = await fetchProductData(product.id);
+    if (updatedProduct) {
+      const productPriceElement = document.getElementById("product_price");
+      productPriceElement.textContent = `$${updatedProduct.price}`;
+    }
+  });
 }
 
 async function addToCart(productId) {
