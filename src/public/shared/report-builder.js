@@ -788,7 +788,16 @@ class ReportBuilder {
         exportButtons.forEach(button => button.disabled = true);
         try {
             const formData = new FormData(document.getElementById('report-form'));
-            const filters = Object.fromEntries(formData);
+            const filters = {};
+            for (const [key, value] of formData.entries()) {
+                if (key.endsWith('_filter_value') && document.getElementById(key)?.multiple) {
+                    if (!filters[key]) {
+                        filters[key] = formData.getAll(key);
+                    }
+                } else {
+                    filters[key] = typeof value === 'string' ? value.trim() : value;
+                }    
+            }
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

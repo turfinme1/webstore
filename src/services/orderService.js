@@ -3,7 +3,8 @@ const { ENV } = require("../serverConfigurations/constants");
 const paypal = require("../serverConfigurations/paypalClient");
 
 class OrderService {
-  constructor(messageService, paypalClient) { 
+  constructor(messageService, paypalClient, cartService) {
+    this.cartService = cartService; 
     this.messageService = messageService;
     this.paypalClient = paypalClient;
   }
@@ -158,6 +159,7 @@ class OrderService {
     };
     await this.messageService.queueEmail(emailObject);
     await this.sendQuantityUpdateSyncClientsEvent(data);
+    await this.cartService.sendCartUpdateSyncClientsEvent(data);
 
     return { approvalUrl, message: "Order placed successfully", orderId: order.id };
   }
