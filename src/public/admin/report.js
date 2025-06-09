@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    reportConfig.reportUIConfig.filters = reportConfig.reportFilters.filter(filter => !hideColumns[filter.key]);
+    reportConfig.reportUIConfig.filters = reportConfig.reportFilters;
 
     const reportUI = new ReportBuilder(reportConfig.reportUIConfig);
     await reportUI.render('main-container');
