@@ -1,4 +1,4 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage, formatCurrency } from "./page-utility.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage, formatCurrency, initializePage } from "./page-utility.js";
 
 const state = {
   userStatus: null,
@@ -15,6 +15,7 @@ const elements = {
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    await initializePage();
     state.userStatus = await getUserStatus();
     createNavigation(state.userStatus, document.getElementById("navigation-container"));
 
@@ -150,15 +151,15 @@ async function populateCountryDropdown() {
 }
 
 async function getCountries() {
-  const response = await fetch("/crud/iso-country-codes");
+  const response = await fetchWithErrorHandling("/crud/iso-country-codes");
   if (!response.ok) throw new Error("Failed to fetch countries");
-  return await response.json();
+  return response.data;
 }
 
 async function getCartItems() {
-  const response = await fetch('/api/cart');
+  const response = await fetchWithErrorHandling('/api/cart');
   if (!response.ok) throw new Error('Failed to fetch cart items');
-  return await response.json();
+  return response.data;
 }
 
 function renderCartItemReadOnly(item) {
