@@ -428,6 +428,28 @@ class ReportBuilder {
                 }
                 return flatpickr.formatDate(date, format);
             },
+            onValueUpdate: function(selectedDates, dateStr, instance) {
+                if (instance.input && instance.input.id.endsWith('_maximum_filter_value')) {
+                    let date = selectedDates[0];
+                    if (!date) return;
+                    date.setMilliseconds(999);
+
+                    const pad = (n, d = 2) => String(n).padStart(d, "0");
+                    const ms = pad(date.getMilliseconds(), 3);
+                    console.log(`${date}, with ${ms}ms`);
+                    const tzOffset = date.getTimezoneOffset();
+                    const tzSign = tzOffset <= 0 ? '+' : '-';
+                    
+                    const tzHours = Math.abs(Math.floor(tzOffset / 60));
+                    const tzMinutes = Math.abs(tzOffset % 60);
+                    
+                    const tzString = `${tzSign}${String(tzHours).padStart(2, '0')}:${String(tzMinutes).padStart(2, '0')}`;
+                    
+                    const formatedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}.${ms}${tzString}`;
+                
+                    instance.input.value = formatedDate;
+                }
+            },
             onReady: function(selectedDates, dateStr, instance) {
                 var customContainer = document.createElement("div");
                 customContainer.className = "custom-buttons-container";
