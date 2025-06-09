@@ -62,6 +62,7 @@ const routeTable = {
     "/api/paypal/cancel/:orderId": orderController.cancelPaypalPayment,
     "/api/notifications": notificationController.getNotificationByUserId,
     "/api/front-office-transport": appConfigController.getFrontOfficeTransportConfig,
+    "/api/cart/validate-stock": cartController.validateStockForItems,
   },
   post: {
     "/auth/register": authController.register,

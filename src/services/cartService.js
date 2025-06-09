@@ -306,6 +306,32 @@ class CartService {
       [data.session.user_id, "Cart updated", "Your cart was updated", "Notification", "cart_update_sync_clients"]
     );
   }
+
+  async validateStockForItems(data) {
+    const cartResult = await data.dbConnection.query(`
+      SELECT ci.*, p.name, c.voucher_id
+      FROM carts c
+      LEFT JOIN cart_items ci ON c.id = ci.cart_id
+      LEFT JOIN products p ON ci.product_id = p.id
+      WHERE c.user_id = $1 AND c.is_active = TRUE`,
+      [data.session.user_id]
+    );
+    const cartItems = cartResult.rows;
+    ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", { code: "SERVICE.ORDER.00067.ORDER_INVALID_INPUT", long_description: "Cart is empty" });
+
+    for (const item of cartItems) {
+      const inventoryResult = await data.dbConnection.query(`
+        SELECT quantity 
+        FROM inventories 
+        WHERE product_id = $1`,
+        [item.product_id]
+      );
+      ASSERT_USER(inventoryResult.rows.length > 0, `Not enough stock for product ${item.name}`, { code: "SERVICE.ORDER.00085.ORDER_INVALID_INPUT.NO_STOCK", long_description: `Not enough stock for product ${item.name}` });
+      ASSERT_USER(parseInt(item.quantity) <= parseInt(inventoryResult.rows[0].quantity), `Not enough stock for product ${item.name}`, { code: "SERVICE.ORDER.00086.NO_STOCK", long_description: `Not enough stock for product ${item.name}` });
+    }
+
+    return { message: "Stock validation successful" };
+  }
 }
 
 module.exports = CartService;

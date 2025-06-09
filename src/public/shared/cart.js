@@ -109,6 +109,11 @@ async function handleCheckout() {
       return;
     }
 
+    const response = await fetchWithErrorHandling('/api/cart/validate-stock');
+    if (!response.ok) {
+      return;
+    }
+
     window.location.href = '/order';
 
   } catch (error) {

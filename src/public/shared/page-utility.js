@@ -881,10 +881,10 @@ async function fetchWithErrorHandling(url, options) {
         error: "No internet connection. Please reconnect and try again.",
       };
     } else {
-      showErrorMessage(error.payload.error || error.message || "Failed to fetch data, please try again later");
+      showErrorMessage(error?.error || error.message || "Failed to fetch data, please try again later");
       return {
         ok: false,
-        error: "Failed to fetch data, please try again later",
+        error: error?.error || error.message || "Failed to fetch data, please try again later",
       };
     }
   }

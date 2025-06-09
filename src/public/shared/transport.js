@@ -3,7 +3,12 @@ import { MESSAGE_TYPES } from "./websocketClient.js";
 export class HttpTransport {
     async fetch(url, options) {
         const response = await fetch(url, options);
-        const data = await response.json();
+        let data;
+        if(response.status === 204) {
+            data = {};
+        } else {
+            data = await response.json();
+        }
         return { payload: data, ok: response.ok };
     }
 }

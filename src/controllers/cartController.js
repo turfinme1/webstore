@@ -68,6 +68,15 @@ class CartController {
     const result = await this.cartService.removeVoucher(data);
     res.status(200).json(result);
   }
+
+  validateStockForItems = async (req, res) => {
+    const data = {
+      session: req.session,
+      dbConnection: req.dbConnection,
+    };
+    const result = await this.cartService.validateStockForItems(data);
+    res.status(200).json(result);
+  }
 }
 
 module.exports = CartController;
