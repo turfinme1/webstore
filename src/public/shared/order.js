@@ -86,7 +86,6 @@ async function handlePayWithPayPal(event) {
    elements.spinner.style.display = "none";
     if (!response.ok) {
       payButton.disabled = false;
-      showErrorMessage(response.error);
       return;
     }
     const data = await response.data;
