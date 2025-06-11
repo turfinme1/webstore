@@ -77,6 +77,7 @@ class ReportService {
         groupings: reportMetadata.groupings,
         params: data.params,
         dbConnection: data.dbConnection,
+        session: data.session,
     };
 
     await this.exportService.exportReport(exportData);
