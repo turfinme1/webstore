@@ -245,7 +245,17 @@ describe("ExportService", () => {
         filters: { status: "Active" },
         groupings: { date: "month" },
         dbConnection: dbConnectionMock,
+        session: {
+          admin_user_id: 1,
+        },
+        params: {
+          report: "testReport",
+        }
       };
+
+      dbConnectionMock.query.mockResolvedValueOnce({
+        rows: [],
+      });
 
       exportService.fetchRowsWithCursor = jest
         .fn()
@@ -285,7 +295,17 @@ describe("ExportService", () => {
         filters: { status: "Active" },
         groupings: { date: "month" },
         dbConnection: dbConnectionMock,
+        session: {
+          admin_user_id: 1,
+        },
+        params: {
+          report: "testReport",
+        },
       };
+
+      dbConnectionMock.query.mockResolvedValueOnce({
+        rows: [],
+      });
 
       exportService.fetchRowsWithCursor = jest
         .fn()
