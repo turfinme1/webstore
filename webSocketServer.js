@@ -65,6 +65,13 @@ process.on('uncaughtException', async (error) => {
   let client;
   console.error('Uncaught Exception:', error);
   try {
+    if(error.message.includes("WebSocket is not open")) {
+      error.params = {
+        code: "SERVER.WEBSOCKET.00005.WEBSOCKET_NOT_OPEN",
+        long_description: "WebSocket is not open",
+        temporary: true,
+      }
+    }
     client = await pool.connect();
     const logger =  new Logger({ dbConnection: client });
     await logger.error(error);
