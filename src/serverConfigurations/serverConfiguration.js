@@ -1,3 +1,8 @@
+if (typeof global.crypto === 'undefined') {
+  const { webcrypto } = require('crypto');
+  global.crypto = webcrypto;
+}
+
 const pool = require("../database/dbConfig");
 const { UserError } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");

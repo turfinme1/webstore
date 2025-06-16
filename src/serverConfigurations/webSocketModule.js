@@ -1,3 +1,8 @@
+if (typeof global.crypto === 'undefined') {
+  const { webcrypto } = require('crypto');
+  global.crypto = webcrypto;
+}
+
 const WebSocket = require('ws');
 const { validateObject } = require('./validation');
 const { ASSERT_USER, ASSERT } = require('./assert');
