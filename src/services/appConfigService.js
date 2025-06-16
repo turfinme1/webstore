@@ -1,3 +1,6 @@
+const { ENV } = require('../serverConfigurations/constants');
+
+
 class AppConfigService {
   constructor() {
   }
@@ -32,6 +35,23 @@ class AppConfigService {
       SELECT * FROM app_settings WHERE id = 1`
     );
     return result.rows[0];
+  }
+
+  async getFrontOfficeTransportConfig(data) {
+    const { SignJWT } = await import('jose');
+    const secretKey = new TextEncoder().encode(ENV.JWT_SECRET);
+
+    const JWTToken = await new SignJWT({ user_id: data.session.user_id, session_id: data.session.session_hash })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime(data.session.expires_at)
+      .sign(secretKey);
+
+    return {
+      url: `${data.context.settings.web_socket_url}?token=${JWTToken}`, 
+      front_office_port: data.context.settings.front_office_port,
+      front_office_transport: data.context.settings.front_office_transport,
+    };
   }
 }
 

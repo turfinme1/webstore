@@ -55,9 +55,9 @@ class WebSocketStream extends Writable {
         return this._handleError(err);
       }
     });
-
-    if (this.ws.bufferedAmount > this._threshold) {
-      this.ws.once('bufferedAmountLow', () => {
+    
+    if (this.ws._socket.bufferSize > this._threshold) {
+      this.ws._socket.once('drain', () => {
         callback();
       });
     } else {

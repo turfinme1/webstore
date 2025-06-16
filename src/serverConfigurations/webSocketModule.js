@@ -4,6 +4,8 @@ const { ASSERT_USER, ASSERT } = require('./assert');
 const websocketSchema = require('../schemas/webSocketMessageSchema.json');
 const WebSocketStream = require('./webSocketStream');
 const { Readable } = require('stream');
+const { ENV } = require('./constants');
+const url = require('url');
 
 const HIGH_WATER_MARK = 128 * 1024; // 128 KB
 const THRESHOLD = 256 * 1024; // 256 KB
@@ -84,7 +86,7 @@ class WebSocketServer {
                 userId: null,
                 sessionId: null,
                 state: STATES.CONNECTING,
-            }
+            };
 
             ws.on('message', async (messageRaw) => {
                 await this.machine.changeState(context.state, STATES.MESSAGE_RECEIVED, context, messageRaw);
@@ -105,42 +107,39 @@ class WebSocketServer {
                 return true; // Already connected
             }
 
+            const { jwtVerify } = await import('jose');
+            const secretKey = new TextEncoder().encode(ENV.JWT_SECRET);
+            const { query } = url.parse(context.req.url, true);
+            const decodedToken = (await jwtVerify(query.token, secretKey, { algorithms: ['HS256'] })).payload;
+
             console.log('New connection from:', context.req.socket.remoteAddress);
-            const cookie = this.parseCookies(context.req.headers.cookie);
-            context.sessionId = cookie.session_id;
+            context.sessionId = decodedToken.session_id;
+            context.userId = decodedToken.user_id;
             
             if ( ! context.sessionId) {
                 context.ws.close(4001, "Session ID required");
                 return;
             }
             
-            if( ! this.sessionConnections[context.sessionId]) {
+            if ( ! this.sessionConnections[context.sessionId]) {
                 this.sessionConnections[context.sessionId] = new Set();
             }
             this.sessionConnections[context.sessionId].add(context.ws);
 
-            const baseUrl = new URL(this.apiUrl);
-            baseUrl.port = this.apiPort;
-            const apiUrl = new URL(`/auth/session/user`, baseUrl);
-            const userIdRequest = await fetch(apiUrl.toString(), {
-                headers: {
-                    "Cookie": `session_id=${context.sessionId}`,
+            if (context.userId) {
+                if( ! this.userConnections[context.userId]) {
+                    this.userConnections[context.userId] = new Set();
                 }
-            });
-
-            if(userIdRequest.ok) {
-                context.userId = await userIdRequest.json();
-                if(context.userId) {
-                    if( ! this.userConnections[context.userId]) {
-                        this.userConnections[context.userId] = new Set();
-                    }
-                    this.userConnections[context.userId].add(context.ws);
-                }
+                this.userConnections[context.userId].add(context.ws);
             }
 
             console.log(`User ${context.sessionId} connected to notification system`);
         } catch (error) {
             console.log('Error during WebSocket connection:', error);
+            if(error?.code === 'ERR_JWT_EXPIRED') {
+                context.ws.close(4000, "Session expired");
+                return;
+            }
             context.ws.close(1011, "Server error");
         }
 

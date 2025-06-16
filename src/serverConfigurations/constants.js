@@ -101,6 +101,8 @@ const ENV = {
   JAVA_API_URL: "https://10.20.3.21:9090",
   WEB_SOCKET_URL: "wss://bobi-dev.tb-pro.com:12002/ws/messages",
   WEB_SOCKET_API_URL: "https://bobi-dev.tb-pro.com:12002",
+
+  JWT_SECRET: "token4e",
 };
 
 

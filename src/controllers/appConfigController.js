@@ -1,5 +1,4 @@
 const { ASSERT_USER } = require("../serverConfigurations/assert");
-const { ENV } = require("../serverConfigurations/constants");
 const { validateBody } = require("../serverConfigurations/validation");
 
 class AppConfigController {
@@ -36,11 +35,12 @@ class AppConfigController {
   }
 
   getFrontOfficeTransportConfig = async (req, res, next) => {
-    res.status(200).json({ 
-      url: req.context.settings.web_socket_url, 
-      front_office_port: req.context.settings.front_office_port,
-      front_office_transport: req.context.settings.front_office_transport,
-    });
+    const data = {
+      context: req.context,
+      session: req.session,
+    };
+    const result = await this.appConfigService.getFrontOfficeTransportConfig(data);
+    res.status(200).json(result);
   }
 }
 
