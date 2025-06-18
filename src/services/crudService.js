@@ -705,14 +705,27 @@ class CrudService {
     });
     
     const template = templateResult.rows[0];
+
+    let notificationSettings = null;
+    if (template.type === 'Push-Notification' || template.type === 'Push-Notification-Broadcast') {
+      let topic = null;
+      if(data.body.use_topic === 'true') {
+        topic = template.subject.substring(0, 32).replace(/[^a-zA-Z0-9-_]/g, '');
+      }
+      notificationSettings = {
+        TTL: data.body.time_to_live,
+        urgency: data.body.urgency,
+        topic: topic,
+      };
+    }
     
     if (template.type === 'Push-Notification-Broadcast') {
         await data.dbConnection.query(`
-          INSERT INTO message_queue (recipient_id, push_subscription_id, subject, text_content, notification_id, type)
-          SELECT user_id, id, $1, $2, $3, $4
+          INSERT INTO message_queue (recipient_id, push_subscription_id, subject, text_content, notification_id, type, notification_settings)
+          SELECT user_id, id, $1, $2, $3, $4, $5
           FROM push_subscriptions
           WHERE status = 'active'`,
-          [template.subject, template.template, mainEntity.id, template.type]
+          [template.subject, template.template, mainEntity.id, template.type, notificationSettings]
         );
 
         const endBroadcast = hrtime(start);
@@ -752,9 +765,9 @@ class CrudService {
         }
         
         await data.dbConnection.query(
-          `INSERT INTO message_queue (recipient_id, recipient_email, subject, text_content, notification_id, type, event_type) 
-          VALUES ($1, $2, $3, $4, $5, $6, 'notification')`,
-          [user.id, user.email, template.subject, text_content, mainEntity.id, template.type]
+          `INSERT INTO message_queue (recipient_id, recipient_email, subject, text_content, notification_id, type, event_type, notification_settings) 
+          VALUES ($1, $2, $3, $4, $5, $6, 'notification', $7)`,
+          [user.id, user.email, template.subject, text_content, mainEntity.id, template.type, notificationSettings]
         );
     }
 

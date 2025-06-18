@@ -1043,6 +1043,9 @@ class CrudPageBuilder {
     const templateType = event.target.value;
     const userIdsInput = document.querySelector("#user_ids");
     const templateIdInput = document.querySelector("#template_id");
+    const timeToLiveInput = document.querySelector("#time_to_live");
+    const urgencyInput = document.querySelector("#urgency");
+    const useTopicInput = document.querySelector("#use_topic");
 
     const filteredTemplates = this.state.fetchedSelectOptions["template_id"].filter(
       (template) => template.type === templateType
@@ -1055,15 +1058,30 @@ class CrudPageBuilder {
       );
       templateIdInput.appendChild(optionElement);
     }
+
+    userIdsInput.disabled = false;
+    userIdsInput.required = this.schema.properties.user_ids.required.create || 
+                            this.schema.properties.user_ids.required.update;
+    timeToLiveInput.disabled = true;
+    timeToLiveInput.required = false;
+    urgencyInput.disabled = true;
+    urgencyInput.required = false;
+    useTopicInput.disabled = true;
+    useTopicInput.required = false;
     
     if (templateType === "Push-Notification-Broadcast") {
       userIdsInput.disabled = true;
       userIdsInput.required = false;
       userIdsInput.value = "";
-    } else {
-      userIdsInput.disabled = false;
-      userIdsInput.required = this.schema.properties.user_ids.required.create || 
-                            this.schema.properties.user_ids.required.update;
+    }
+
+    if (templateType === "Push-Notification" || templateType === "Push-Notification-Broadcast") {
+      timeToLiveInput.disabled = false;
+      timeToLiveInput.required = true;
+      urgencyInput.disabled = false;
+      urgencyInput.required = true;
+      useTopicInput.disabled = false;
+      useTopicInput.required = true;
     }
   }
 }

@@ -226,7 +226,7 @@ async function handlePushMessage(message, client, logger, messageService, settin
     let sendNotificationCount = 0;
     for (const subscription of subscriptions.rows) {
         try {
-            await webpush.sendNotification(subscription.data, JSON.stringify({ id: message.id, title: message.subject, body: message.text_content }));
+            await webpush.sendNotification(subscription.data, JSON.stringify({ id: message.id, title: message.subject, body: message.text_content }), message.notification_settings);
             sendNotificationCount++;
         } catch (error) {
             console.log(`[processEmailQueue] error: ${error}`);
@@ -281,7 +281,7 @@ async function handlePushBroadcastMessage(message, client, logger, messageServic
 
     const pushSubscription = subscription.rows[0];
 
-    await webpush.sendNotification(pushSubscription.data, JSON.stringify({ id: message.id, title: message.subject, body: message.text_content }));
+    await webpush.sendNotification(pushSubscription.data, JSON.stringify({ id: message.id, title: message.subject, body: message.text_content }), message.notification_settings);
     
     return { id: message.id, success: true };
 }

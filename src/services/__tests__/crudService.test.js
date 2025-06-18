@@ -1453,6 +1453,11 @@ describe("CrudService", () => {
           mockData = {
               dbConnection: {
                   query: jest.fn()
+              },
+              body: {
+                use_topic: "true",
+                time_to_live: 3600,
+                urgency: "high",
               }
           };
   
@@ -1470,6 +1475,7 @@ describe("CrudService", () => {
                   id: 123,
                   subject: 'Test Subject',
                   template: 'Hello {first_name} {last_name}!',
+                  type: "Push-Notification",
                   placeholders: ['{first_name}', '{last_name}']
               }]
           });
@@ -1502,7 +1508,7 @@ describe("CrudService", () => {
           // Verify email insertions
           expect(mockData.dbConnection.query).toHaveBeenNthCalledWith(3,
               expect.stringContaining('INSERT INTO message_queue'),
-              [1, 'user1@test.com', 'Test Subject', 'Hello John Doe!', 1]
+              [1, 'user1@test.com', 'Test Subject', 'Hello John Doe!', 1, "Push-Notification", expect.any(Object)]
           );
       });
   
