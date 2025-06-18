@@ -122,6 +122,83 @@
             "errorMessage": {
                 "type": "Invalid value for created at."
             }
+        },
+        "time_to_live": {
+            "type": "number",
+            "label": "Time to Live (in seconds)",
+            "placeholder": "Enter Time to Live",
+            "required": {
+                "create": true,
+                "update": false
+            },
+            "renderConfig": {
+                "minimum": "0",
+                "maximum": "2419200",
+                "step": "1"
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for time to live."
+            }
+        },
+        "urgency": {
+            "type": "string",
+            "label": "Urgency",
+            "placeholder": "Select Urgency",
+            "required": {
+                "create": true,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "select",
+                "options": [
+                    {
+                        "value": "low",
+                        "label": "Low"
+                    },
+                    {
+                        "value": "normal",
+                        "label": "Normal"
+                    },
+                    {
+                        "value": "high",
+                        "label": "High"
+                    }
+                ]
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for urgency."
+            }
+        },
+        "use_topic": {
+            "type": "string",
+            "label": "Use Topic (Replace previous messages with the same topic)",
+            "placeholder": "Enter Topic",
+            "required": {
+                "create": true,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "select",
+                "options": [
+                    {
+                        "value": "false",
+                        "label": "No"
+                    },
+                    {
+                        "value": "true",
+                        "label": "Yes"
+                    }
+                ]
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for topic."
+            }
         }
     },
     "table_display_columns": [
@@ -135,7 +212,10 @@
         "name",
         "template_id",
         "user_ids",
-        "valid_to_timestamp"
+        "valid_to_timestamp",
+        "time_to_live",
+        "urgency",
+        "use_topic"
     ],
     "crud": {
         "update": false,
