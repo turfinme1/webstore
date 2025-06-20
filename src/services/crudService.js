@@ -713,6 +713,7 @@ class CrudService {
         topic = template.subject.substring(0, 32).replace(/[^a-zA-Z0-9-_]/g, '');
       }
       notificationSettings = {
+        ...template.notification_settings,
         TTL: data.body.time_to_live,
         urgency: data.body.urgency,
         topic: topic,
