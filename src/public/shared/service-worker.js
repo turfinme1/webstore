@@ -14,7 +14,15 @@ self.addEventListener('push', async (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(title, options)
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: payload.icon,
+      badge: payload.badge,
+      image: payload.image,
+      actions: payload.actions,
+      data: payload.data,
+      tag: payload.id,
+    })
   );
 });
 
@@ -35,12 +43,21 @@ self.addEventListener("notificationclick", (event) => {
       try {
         const notification = event.notification;
         const notificationId = notification.data?.id;
-        const response = await fetch(`/api/notifications/${notificationId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        if(notificationId) {
+          const response = await fetch(`/api/notifications/${notificationId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+        }
+        const actionData = event.action.split('$__$');
+        if (actionData[0] === 'redirect') {
+          const url = actionData[1] || '/';
+          if (url) {
+            const client = await self.clients.openWindow(url);
+          }
+        }
       } catch (error) {
         console.error("Error processing notification click:", error);
       }

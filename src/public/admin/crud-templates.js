@@ -28,6 +28,7 @@ const elements = {
     resultCountDisplay: document.getElementById("result-count"),
     placeholderArea: document.getElementById("placeholders"),
     typeSelectCreate: document.getElementById("type"),
+    typeSelectCreateUpdate: document.getElementById("type-update"),
     placeholdersCreate: document.getElementById("placeholders-create"),
 
     showFilterButton: document.getElementById("show-filter-btn"),
@@ -35,6 +36,9 @@ const elements = {
     filterContainer: document.getElementById("filter-container"),
     filterForm: document.getElementById("filter-form"),
     orderBySelect: document.getElementById("order_by"),
+
+    addNewButton: document.getElementById("add-button"),
+    addNewButtonUpdateForm: document.getElementById("add-button-update"),
 };
 
 // Initialize page
@@ -73,6 +77,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     attachEventListeners();
+    elements.typeSelectCreate.dispatchEvent(new Event("change"));
     await loadTemplates(state.currentPage);
 });
 
@@ -90,6 +95,10 @@ function attachEventListeners() {
     elements.orderBySelect.addEventListener("change", handleFilterTemplates);
 
     elements.typeSelectCreate.addEventListener("change", handleTypeChange);
+    elements.typeSelectCreateUpdate.addEventListener("change", handleTypeChange);
+
+    elements.addNewButton.addEventListener("click", handleAddNewButtonToTemplate);
+    elements.addNewButtonUpdateForm.addEventListener("click", handleAddNewButtonToUpdateForm);
 }
 
 // Show/Hide Forms
@@ -307,6 +316,9 @@ function populateUpdateForm(template) {
     elements.templateUpdateForm["type-update"].value = template.type;
     elements.templateUpdateForm["type-update"].disabled = true;
     elements.templateUpdateForm["subject-update"].value = template.subject;
+    elements.templateUpdateForm["icon-update"].value = template?.notification_settings?.icon || "";
+    elements.templateUpdateForm["badge-update"].value = template?.notification_settings?.badge || "";
+    elements.templateUpdateForm["image-update"].value = template?.notification_settings?.image || "";
     CKEDITOR.instances["template-update"].setData(template.template);
     elements.placeholderArea.innerHTML =
     "Available placeholders: " + template.placeholders.join(", ") ||
@@ -323,6 +335,15 @@ function populateUpdateForm(template) {
             element.style.display = "none";
         });
     }
+
+    elements.typeSelectCreateUpdate.dispatchEvent(new Event("change"));
+
+    const buttonContainer = document.getElementById("buttons-update-container");
+    buttonContainer.innerHTML = ""; // Clear previous entries
+    const buttons = template.notification_settings?.actions || [];
+    buttons.forEach((btn) => {
+        handleAddNewButtonToUpdateForm(btn);
+    });
 }
 
 async function handleCreateTemplate(event) {
@@ -332,6 +353,17 @@ async function handleCreateTemplate(event) {
     data.template = CKEDITOR.instances.template.getData();
     data.table_border_color = null;
     data.table_border_width = null;
+    data.notification_settings = {
+        icon: data.icon || null,
+        badge: data.badge || null,
+        image: data.image || null,
+        actions: getButtonsData(),
+    };
+    delete data.icon;
+    delete data.badge;
+    delete data.image;
+
+    data
 
     if(data.type === 'Push-Notification' || data.type === 'Notification'){
         data.placeholders = JSON.stringify(["{first_name}","{last_name}","{email}","{phone}"]);
@@ -371,6 +403,15 @@ async function handleUpdateTemplate(event) {
         data.table_border_color = null;
         data.table_border_width = null
     }
+    data.notification_settings = {
+        icon: data.icon || null,
+        badge: data.badge || null,
+        image: data.image || null,
+        actions: getButtonsData("update"),
+    };
+    delete data.icon;
+    delete data.badge;
+    delete data.image;
     try {
         const response = await fetchWithErrorHandling(
             `/crud/message-templates/${state.currentTemplateId}`,
@@ -485,6 +526,64 @@ async function handlePreviewEmail(templateId) {
     }
 }
 
+async function handleAddNewButtonToTemplate() {
+    const container = document.getElementById("buttons-container");
+    const index = container.children.length;
+
+    const group = document.createElement("div");
+    group.className = "input-group mb-2";
+
+    group.innerHTML = `
+        <input type="text" class="form-control" name="button_title_${index}" placeholder="Button Title" required>
+        <input type="url" class="form-control" name="button_link_${index}" placeholder="Button Link" required>
+        <button type="button" class="btn btn-outline-danger remove-button">✖</button>
+    `;
+
+    container.appendChild(group);
+
+    group.querySelector(".remove-button").addEventListener("click", () => {
+        group.remove();
+    });
+}
+
+function handleAddNewButtonToUpdateForm(buttonData = null) {
+    const container = document.getElementById("buttons-update-container");
+    const index = container.children.length;
+
+    const group = document.createElement("div");
+    group.className = "input-group mb-2";
+
+    group.innerHTML = `
+        <input type="text" class="form-control" name="button_title_update_${index}" placeholder="Button Title" required value="${buttonData?.title || ''}">
+        <input type="url" class="form-control" name="button_link_update_${index}" placeholder="Button Link" required value="${buttonData?.action?.split('$__$')[1] || ''}">
+        <button type="button" class="btn btn-outline-danger remove-button">✖</button>
+    `;
+
+    container.appendChild(group);
+
+    group.querySelector(".remove-button").addEventListener("click", () => {
+        group.remove();
+    });
+}
+
+function getButtonsData(mode = "create") {
+    const containerId = mode === "update" ? "buttons-update-container" : "buttons-container";
+    const buttons = [];
+
+    document.querySelectorAll(`#${containerId} .input-group`).forEach((group) => {
+        const inputs = group.querySelectorAll("input");
+        if (inputs[0].value && inputs[1].value) {
+            buttons.push({
+                title: inputs[0].value,
+                action: `redirect$__$${inputs[1].value}`
+            });
+        }
+    });
+
+    return buttons;
+}
+
+
 async function handleTypeChange(params) {
     const selectedType = params.target.value;
     if (selectedType === "Push-Notification") {
@@ -494,4 +593,11 @@ async function handleTypeChange(params) {
     } else {
         elements.placeholdersCreate.innerHTML = "No available placeholders";
     }
+
+      // 2. Notification customization (icon, badge, image, buttons)
+    const notifElems = document.querySelectorAll(".notification-customization");
+    const showNotificationOptions = ["Push-Notification", "Push-Notification-Broadcast"].includes(selectedType);
+    notifElems.forEach(el => {
+        el.style.display = showNotificationOptions ? "block" : "none";
+    });
 }

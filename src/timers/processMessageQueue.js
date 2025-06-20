@@ -10,7 +10,7 @@ const WebSocketModule = require("../serverConfigurations/webSocketModule");
 
 const isDryRun = process.env.DRY_RUN === 'true';
 
-const BATCH_SIZE = 10000;
+const BATCH_SIZE = 1;
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MINUTES = 2;
 const EMAIL_MESSAGE_TYPE = 'Email';
@@ -97,7 +97,7 @@ const MESSAGE_HANDLER = {
             WHERE message_queue.id = cte.id
             RETURNING message_queue.*;`,
             [EMAIL_MESSAGE_TYPE, PUSH_MESSAGE_TYPE, PUSH_MESSAGE_BROADCAST_TYPE, IN_APP_MESSAGE_TYPE, MESSAGE_STATUS.PENDING, MAX_ATTEMPTS, BATCH_SIZE, MESSAGE_STATUS.SENDING]);
-        await client.query(`COMMIT`);
+        // await client.query(`COMMIT`);
 
         const processResult = await Promise.all(
             pendingMessages.rows.map(async (message) => 
@@ -113,7 +113,7 @@ const MESSAGE_HANDLER = {
             WHERE email_processing_started_at < NOW() - INTERVAL '10 minutes'
             AND status = $3`,
             [MESSAGE_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, MESSAGE_STATUS.SENDING]);
-        await client.query('COMMIT');
+        // await client.query('COMMIT');
 
         const end = hrtime(start);
         const elapsedTime = (end[0] * 1e9 + end[1]) / 1e6;
@@ -226,7 +226,16 @@ async function handlePushMessage(message, client, logger, messageService, settin
     let sendNotificationCount = 0;
     for (const subscription of subscriptions.rows) {
         try {
-            await webpush.sendNotification(subscription.data, JSON.stringify({ id: message.id, title: message.subject, body: message.text_content }), message.notification_settings);
+            await webpush.sendNotification(subscription.data, JSON.stringify({
+                id: message.id,
+                title: message.subject,
+                body: message.text_content, 
+                ...message.notification_settings,
+            }), { 
+                TTL: message.notification_settings.TTL, 
+                urgency: message.notification_settings.urgency, 
+                topic: message.notification_settings.topic,
+            });
             sendNotificationCount++;
         } catch (error) {
             console.log(`[processEmailQueue] error: ${error}`);
@@ -281,8 +290,16 @@ async function handlePushBroadcastMessage(message, client, logger, messageServic
 
     const pushSubscription = subscription.rows[0];
 
-    await webpush.sendNotification(pushSubscription.data, JSON.stringify({ id: message.id, title: message.subject, body: message.text_content }), message.notification_settings);
-    
+    await webpush.sendNotification(pushSubscription.data, JSON.stringify({
+                id: message.id,
+                title: message.subject,
+                body: message.text_content, 
+                ...message.notification_settings,
+            }), { 
+                TTL: message.notification_settings.TTL, 
+                urgency: message.notification_settings.urgency, 
+                topic: message.notification_settings.topic,
+            });
     return { id: message.id, success: true };
 }
 

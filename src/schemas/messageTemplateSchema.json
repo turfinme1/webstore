@@ -93,6 +93,15 @@
                 "create": true,
                 "update": false
             }
+        },
+        "notification_settings": {
+            "type": "object",
+            "label": "Notification Settings",
+            "placeholder": "Enter Notification Settings",
+            "required": {
+                "create": false,
+                "update": false
+            }
         }
     },
     "table_display_columns": [
