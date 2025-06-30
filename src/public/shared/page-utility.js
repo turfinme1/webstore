@@ -525,7 +525,7 @@ async function initSubscriptionButton(userStatus) {
 
   if(subscription && userStatus.session_type === "Authenticated") {
     try{
-      const response = await fetchWithErrorHandling("/api/subscriptions", {
+      const response = await fetch("/api/subscriptions", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription)
@@ -546,7 +546,7 @@ async function initSubscriptionButton(userStatus) {
         userVisibleOnly: true,
         applicationServerKey: 'BJ7UuFCX99N49hlHSrTP76J_88LdIDJQ0YWuMVvC2O7GHI12eLNZK5_MGuD1leViV28gGoG1YwpYv8l3Y1yWoaU',
       });
-      await fetchWithErrorHandling("/api/subscriptions", {
+      await fetch("/api/subscriptions", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription)
