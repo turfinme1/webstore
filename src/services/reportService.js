@@ -2012,6 +2012,7 @@ class ReportService {
                 { key: 'status', label: 'Status', format: 'text' },
                 { key: 'ip', label: 'IP Address', format: 'text' },
                 { key: 'user_agent', label: 'User Agent', format: 'text' },
+                { key: 'platform', label: 'Platform', format: 'text' },
                 { key: 'count', label: 'Count', format: 'number' },
             ]
         ],
@@ -2075,6 +2076,13 @@ class ReportService {
             type: "text",
             label: "User Agent",
         },
+        {
+            key: "platform",
+            grouping_expression: "platform",
+            filter_expression: "STRPOS(LOWER(CAST( P.platform AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "Platform",
+        },
     ];
   
     const sql = `
@@ -2086,6 +2094,7 @@ class ReportService {
             NULL AS "status",
             NULL AS "ip",
             NULL AS "user_agent",
+            NULL AS "platform",
             COUNT(*) AS "count",
             0 AS "sort_order"
         FROM push_subscriptions P
@@ -2099,7 +2108,7 @@ class ReportService {
             AND $ip_filter_expression$
             AND $user_agent_filter_expression$
             AND $status_filter_expression$
-  
+            AND $platform_filter_expression$
         UNION ALL
   
         SELECT
@@ -2110,6 +2119,7 @@ class ReportService {
             $status_grouping_expression$ AS "status",
             $ip_grouping_expression$ AS "ip",
             $user_agent_grouping_expression$ AS "user_agent",
+            $platform_grouping_expression$ AS "platform",
             COUNT(*) AS "count",
             1 AS "sort_order"
         FROM push_subscriptions P
@@ -2123,7 +2133,8 @@ class ReportService {
             AND $ip_filter_expression$
             AND $user_agent_filter_expression$
             AND $status_filter_expression$
-        GROUP BY 1, 2, 3, 4, 5, 6
+            AND $platform_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5, 6, 7
         ORDER BY sort_order ASC, 1 DESC`;
   
     return { reportUIConfig, sql, reportFilters };
