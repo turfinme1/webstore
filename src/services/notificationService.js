@@ -25,10 +25,20 @@ class NotificationService {
     }
 
     async createSubscription(data) {
+        let platform = "unknown";
+        if (data.userAgent.includes("Android")) {
+            platform = "android";
+        } else if (data.userAgent.includes("iOS") || data.userAgent.includes("iPhone") || data.userAgent.includes("iPad")) {
+            platform = "ios";
+        } else if (data.userAgent.includes("Windows")) {
+            platform = "windows";
+        } else if (data.userAgent.includes("Linux")) {
+            platform = "linux";
+        }
         await data.dbConnection.query(
-            `INSERT INTO push_subscriptions (endpoint, data, user_id, ip, user_agent, status) VALUES ($1, $2, $3, $4, $5, $6) 
-            ON CONFLICT (endpoint) DO UPDATE SET data = $2, user_id = $3, ip = $4, user_agent = $5, status = $6`,
-            [data.body.endpoint, data.body, data.session.user_id, data.ip, data.userAgent, data.body.status || 'active']
+            `INSERT INTO push_subscriptions (endpoint, data, user_id, ip, user_agent, status, platform) VALUES ($1, $2, $3, $4, $5, $6, $7) 
+            ON CONFLICT (endpoint) DO UPDATE SET data = $2, user_id = $3, ip = $4, user_agent = $5, status = $6, platform = $7`,
+            [data.body.endpoint, data.body, data.session.user_id, data.ip, data.userAgent, data.body.status || 'active', platform]
         );
     }
 
