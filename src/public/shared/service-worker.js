@@ -20,7 +20,9 @@ self.addEventListener('push', async (event) => {
       badge: payload.badge,
       image: payload.image,
       actions: payload.actions,
-      data: payload.data,
+      data: {
+        id: payload.id || null,
+      },
       tag: payload.id,
     })
   );
