@@ -1,6 +1,8 @@
 const bcrypt = require("bcrypt");
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
 const { hrtime } = require("process");
+const sanitizeHtml = require('sanitize-html');
+const he = require('he');
 
 class CrudService {
   constructor(reportService) {
@@ -692,6 +694,16 @@ class CrudService {
     data.body.placeholders = JSON.stringify(currentEmailTemplate.placeholders);
   }
 
+  async sanitizeHTMLTemplateText(templateText) {
+    let sanitizedText = sanitizeHtml(templateText, {
+      allowedTags: [],
+      allowedAttributes: {}
+    });
+    sanitizedText = he.decode(sanitizedText);
+    sanitizedText = sanitizedText.replace(/\u00A0/g, ' ');
+    return sanitizedText.trim();
+  }
+
   async notificationCreateHook(data, mainEntity) {
     const start = hrtime();
 
@@ -705,6 +717,7 @@ class CrudService {
     });
     
     const template = templateResult.rows[0];
+    template.template = await this.sanitizeHTMLTemplateText(template.template);
 
     let notificationSettings = null;
     if (template.type === 'Push-Notification' || template.type === 'Push-Notification-Broadcast') {
