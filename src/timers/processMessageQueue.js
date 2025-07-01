@@ -97,7 +97,7 @@ const MESSAGE_HANDLER = {
             WHERE message_queue.id = cte.id
             RETURNING message_queue.*;`,
             [EMAIL_MESSAGE_TYPE, PUSH_MESSAGE_TYPE, PUSH_MESSAGE_BROADCAST_TYPE, IN_APP_MESSAGE_TYPE, MESSAGE_STATUS.PENDING, MAX_ATTEMPTS, BATCH_SIZE, MESSAGE_STATUS.SENDING]);
-        // await client.query(`COMMIT`);
+        await client.query(`COMMIT`);
 
         const processResult = await Promise.all(
             pendingMessages.rows.map(async (message) => 
@@ -113,7 +113,7 @@ const MESSAGE_HANDLER = {
             WHERE email_processing_started_at < NOW() - INTERVAL '10 minutes'
             AND status = $3`,
             [MESSAGE_STATUS.PENDING, RETRY_BACKOFF.INITIAL_DELAY, MESSAGE_STATUS.SENDING]);
-        // await client.query('COMMIT');
+        await client.query('COMMIT');
 
         const end = hrtime(start);
         const elapsedTime = (end[0] * 1e9 + end[1]) / 1e6;
@@ -239,6 +239,18 @@ async function handlePushMessage(message, client, logger, messageService, settin
             sendNotificationCount++;
         } catch (error) {
             console.log(`[processEmailQueue] error: ${error}`);
+            let short_description = error.message;
+            if (error?.statusCode === 413) {
+                short_description = 'Push notification payload too large';
+            }
+            const logObject = {
+                code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00011.PUSH_NOTIFICATION_FAILED',
+                short_description: short_description,
+                long_description: error?.body,
+                debug_info: error.stack,
+                audit_type: 'ASSERT_USER',
+            };
+            await logger.logToDatabase(logObject);
             const { errorType } = classifyEmailError(error);
 
             if(errorType === EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND) {
