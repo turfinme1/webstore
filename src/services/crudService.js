@@ -692,7 +692,7 @@ class CrudService {
     ASSERT_USER(currentEmailTemplateResult.rows.length > 0, "Email template not found", { code: "SERVICE.CRUD.00620.INVALID_INPUT_UPDATE_TEMPLATE_NOT_FOUND", long_description: "Email template not found" });
     const currentEmailTemplate = currentEmailTemplateResult.rows[0];
     data.body.placeholders = JSON.stringify(currentEmailTemplate.placeholders);
-   q}
+  }
 
   async sanitizeHTMLTemplateText(templateText) {
     let sanitizedText = sanitizeHtml(templateText, {
