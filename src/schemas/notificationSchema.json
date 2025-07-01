@@ -154,12 +154,12 @@
                 "type": "select",
                 "options": [
                     {
-                        "value": "low",
-                        "label": "Low"
-                    },
-                    {
                         "value": "normal",
                         "label": "Normal"
+                    },
+                    {
+                        "value": "low",
+                        "label": "Low"
                     },
                     {
                         "value": "high",
