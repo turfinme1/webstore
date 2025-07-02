@@ -760,7 +760,7 @@ class CrudService {
       );
     } else {
       usersResult = await data.dbConnection.query(`
-        SELECT DISTINCT users.id, email, first_name, last_name, phone 
+        SELECT users.id, email, first_name, last_name, phone, push_subscriptions.id as push_subscription_id
         FROM users
         JOIN push_subscriptions ON users.id = push_subscriptions.user_id
         WHERE push_subscriptions.status = 'active' AND users.id = ANY($1)`,
@@ -779,9 +779,9 @@ class CrudService {
         }
         
         await data.dbConnection.query(
-          `INSERT INTO message_queue (recipient_id, recipient_email, subject, text_content, notification_id, type, event_type, notification_settings) 
-          VALUES ($1, $2, $3, $4, $5, $6, 'notification', $7)`,
-          [user.id, user.email, template.subject, text_content, mainEntity.id, template.type, notificationSettings]
+          `INSERT INTO message_queue (recipient_id, recipient_email, subject, text_content, notification_id, type, event_type, notification_settings, push_subscription_id) 
+          VALUES ($1, $2, $3, $4, $5, $6, 'notification', $7, $8)`,
+          [user.id, user.email, template.subject, text_content, mainEntity.id, template.type, notificationSettings, user.push_subscription_id]
         );
     }
 

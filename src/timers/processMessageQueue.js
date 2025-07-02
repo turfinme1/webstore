@@ -10,7 +10,7 @@ const WebSocketModule = require("../serverConfigurations/webSocketModule");
 
 const isDryRun = process.env.DRY_RUN === 'true';
 
-const BATCH_SIZE = 1;
+const BATCH_SIZE = 10000;
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MINUTES = 2;
 const EMAIL_MESSAGE_TYPE = 'Email';
@@ -200,13 +200,14 @@ async function handleEmailMessage(message, client, logger, messageService, setti
 }
 
 async function handlePushMessage(message, client, logger, messageService, settings) {
-    const subscriptions = await client.query(`
+    const subscription = await client.query(`
         SELECT * FROM push_subscriptions
-        WHERE user_id = $1 AND status = $2`,
-        [message.recipient_id, NOTIFICATION_STATUS.ACTIVE]
+        WHERE id = $1 AND status = $2`,
+        [message.push_subscription_id, NOTIFICATION_STATUS.ACTIVE]
     );
+    ASSERT(subscription.rows.length <= 1, 'Expected exactly one subscription for broadcast', { code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00023.EXPECTED_ONE_SUBSCRIPTION', long_description: `Expected exactly one subscription for broadcast with email id: ${message.id}` });
 
-    if(subscriptions.rows.length === 0) {
+    if(subscription.rows.length === 0) {
         await client.query(`
             UPDATE message_queue
             SET status = $1
@@ -223,57 +224,45 @@ async function handlePushMessage(message, client, logger, messageService, settin
         return { id: message.id, success: false };
     }
 
-    let sendNotificationCount = 0;
-    for (const subscription of subscriptions.rows) {
-        try {
-            await webpush.sendNotification(subscription.data, JSON.stringify({
-                id: message.id,
-                title: message.subject,
-                body: message.text_content, 
-                ...message.notification_settings,
-            }), { 
-                TTL: message.notification_settings.TTL, 
-                urgency: message.notification_settings.urgency, 
-                topic: message.notification_settings.topic,
-            });
-            sendNotificationCount++;
-        } catch (error) {
-            console.log(`[processEmailQueue] error: ${error}`);
-            let short_description = error.message;
-            if (error?.statusCode === 413) {
-                short_description = 'Push notification payload too large';
-            }
-            const logObject = {
-                code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00011.PUSH_NOTIFICATION_FAILED',
-                short_description: short_description,
-                long_description: error?.body,
-                debug_info: error.stack,
-                audit_type: 'ASSERT_USER',
-            };
-            await logger.logToDatabase(logObject);
-            const { errorType } = classifyEmailError(error);
+    const pushSubscription = subscription.rows[0];
 
-            if(errorType === EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND) {
-                await client.query(`
-                    UPDATE push_subscriptions
-                    SET status = $1
-                    WHERE id = $2`,
-                    [NOTIFICATION_STATUS.INACTIVE, subscription.id]
-                );
-            }
+    try {
+        await webpush.sendNotification(pushSubscription.data, JSON.stringify({
+            id: message.id,
+            title: message.subject,
+            body: message.text_content, 
+            ...message.notification_settings,
+        }), { 
+            TTL: message.notification_settings.TTL, 
+            urgency: message.notification_settings.urgency, 
+            topic: message.notification_settings.topic,
+        });
+    } catch (error) {
+        console.log(`[processEmailQueue] error: ${error}`);
+        let short_description = error.message;
+        if (error?.statusCode === 413) {
+            short_description = 'Push notification payload too large';
+        }
+        const logObject = {
+            code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00011.PUSH_NOTIFICATION_FAILED',
+            short_description: short_description,
+            long_description: error?.body,
+            debug_info: error.stack,
+            audit_type: 'ASSERT_USER',
+        };
+        await logger.logToDatabase(logObject);
+        const { errorType } = classifyEmailError(error);
+
+        if(errorType === EMAIL_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND) {
+            await client.query(`
+                UPDATE push_subscriptions
+                SET status = $1
+                WHERE id = $2`,
+                [NOTIFICATION_STATUS.INACTIVE, pushSubscription.id]
+            );
         }
     }
 
-    if (sendNotificationCount === 0) {
-        await client.query(`
-            UPDATE message_queue
-            SET status = $1
-            WHERE id = $2`,
-            [MESSAGE_STATUS.FAILED, message.id]
-        );
-        return { id: message.id, success: false };
-    }
-    
     return { id: message.id, success: true };
 }
 
