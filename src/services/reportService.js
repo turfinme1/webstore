@@ -1490,9 +1490,11 @@ class ReportService {
         headerGroups: [
             [
                 { key: 'created_at', label: 'Created At', format: 'date_time' },
+                { key: 'id', label: 'Notification ID', align: 'right', format: 'text' },
                 { key: 'type', label: 'Notification Type', format: 'text' },
                 { key: 'user_email', label: 'User Email', format: 'text' },
                 { key: 'status', label: 'Status', format: 'text' },
+                { key: 'error_message', label: 'Error Message', format: 'text' },
                 { key: 'subject' , label: 'Subject', format: 'text' },
                 { key: 'text_content', label: 'Text Content', format: 'text' },
                 { key: 'count', label: 'Count', format: 'number' }
@@ -1510,6 +1512,16 @@ class ReportService {
             type: "timestamp",
             label: "Period",
             groupable: true,
+        },
+        {
+            key: "id",
+            grouping_expression: "N.id",
+            filter_expression: "N.id = $FILTER_VALUE$",
+            type: "number_single",
+            label: "Notification ID",
+            step: "1",
+            min: 0,
+            max: 100000000,
         },
         {
             key: "type",
@@ -1541,10 +1553,14 @@ class ReportService {
             options: [
                 { value: 'pending', label: 'Pending' },
                 { value: 'sending', label: 'Sending' },
-                { value: 'sent', label: 'Sent' },
-                { value: 'seen', label: 'Seen' },
-                { value: 'failed', label: 'Failed' },
+                { value: 'unsubscribed', label: 'Unsubscribed' },
                 { value: 'expired', label: 'Expired' },
+                { value: 'failed', label: 'Failed' },
+                { value: 'sent', label: 'Sent' },
+                { value: 'delivered', label: 'Delivered' },
+                { value: 'opened', label: 'Opened' },
+                { value: 'dismissed', label: 'Dismissed' },
+                { value: 'clicked', label: 'Clicked' },
             ],
             groupable: true,
         },
@@ -1563,6 +1579,13 @@ class ReportService {
             label: "Text Content",
         },
         {
+            key: "error_message",
+            grouping_expression: "N.error_message",
+            filter_expression: "STRPOS(LOWER(CAST( N.error_message AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "Error Message",
+        },
+        {
             key: "count",
             type: "number",
             hideInUI: true
@@ -1572,9 +1595,11 @@ class ReportService {
     let sql = `
         SELECT
             NULL AS "created_at",
+            NULL AS "id",
             NULL AS "type",
             NULL AS "user_email",
             NULL AS "status",
+            NULL AS "error_message",
             NULL AS "subject",
             NULL AS "text_content",
             COUNT(*) AS "count",
@@ -1583,9 +1608,11 @@ class ReportService {
         WHERE TRUE
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$
+            AND $id_filter_expression$
             AND $type_filter_expression$
             AND $user_email_filter_expression$
             AND $status_filter_expression$
+            AND $error_message_filter_expression$
             AND $subject_filter_expression$
             AND $text_content_filter_expression$
         
@@ -1593,9 +1620,11 @@ class ReportService {
 
         SELECT
             $created_at_grouping_expression$ AS "created_at",
+            $id_grouping_expression$ AS "id",
             $type_grouping_expression$ AS "type",
             $user_email_grouping_expression$ AS "user_email",
             $status_grouping_expression$ AS "status",
+            $error_message_grouping_expression$ AS "error_message",
             $subject_grouping_expression$ AS "subject",
             $text_content_grouping_expression$ AS "text_content",
             COUNT(*) AS "count",
@@ -1604,12 +1633,14 @@ class ReportService {
         WHERE TRUE
             AND $created_at_minimum_filter_expression$
             AND $created_at_maximum_filter_expression$
+            AND $id_filter_expression$
             AND $type_filter_expression$
             AND $user_email_filter_expression$
             AND $status_filter_expression$
+            AND $error_message_filter_expression$
             AND $subject_filter_expression$
             AND $text_content_filter_expression$
-        GROUP BY 1, 2, 3, 4, 5, 6
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
         ORDER BY sort_order ASC, 1 DESC`;
 
     return { reportUIConfig, sql, reportFilters };
@@ -1626,10 +1657,14 @@ class ReportService {
                 { key: 'subject', label: 'Subject', format: 'text' },
                 { key: 'message_count', label: 'Message Count', format: 'number' },
                 { key: 'status_pending', label: 'Pending', format: 'number' },
-                { key: 'status_sent', label: 'Sent', format: 'number' },
-                { key: 'status_seen', label: 'Seen', format: 'number' },
-                { key: 'status_failed', label: 'Failed', format: 'number' },
+                { key: 'status_unsubscribed', label: 'Unsubscribed', format: 'number' },
                 { key: 'status_expired', label: 'Expired', format: 'number' },
+                { key: 'status_failed', label: 'Failed', format: 'number' },
+                { key: 'status_sent', label: 'Sent', format: 'number' },
+                { key: 'status_delivered', label: 'Delivered', format: 'number' },
+                { key: 'status_opened', label: 'Opened', format: 'number' },
+                { key: 'status_dismissed', label: 'Dismissed', format: 'number' },
+                { key: 'status_clicked', label: 'Clicked', format: 'number' },
             ]
         ]
     };
@@ -1667,10 +1702,14 @@ class ReportService {
             NULL AS subject,
             COUNT(E.id) AS message_count,
             COUNT(CASE WHEN E.status = 'pending' THEN 1 END) AS status_pending,
-            COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
-            COUNT(CASE WHEN E.status = 'seen' THEN 1 END) AS status_seen,
-            COUNT(CASE WHEN E.status = 'failed' THEN 1 END) AS status_failed,
+            COUNT(CASE WHEN E.status = 'unsubscribed' THEN 1 END) AS status_unsubscribed,
             COUNT(CASE WHEN E.status = 'expired' THEN 1 END) AS status_expired,
+            COUNT(CASE WHEN E.status = 'failed' THEN 1 END) AS status_failed,
+            COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
+            COUNT(CASE WHEN E.status = 'delivered' THEN 1 END) AS status_delivered,
+            COUNT(CASE WHEN E.status = 'opened' THEN 1 END) AS status_opened,
+            COUNT(CASE WHEN E.status = 'dismissed' THEN 1 END) AS status_dismissed,
+            COUNT(CASE WHEN E.status = 'clicked' THEN 1 END) AS status_clicked,
             0 AS "sort_order"
         FROM notifications N	
         JOIN message_queue E ON N.id = E.notification_id
@@ -1688,10 +1727,14 @@ class ReportService {
             $subject_grouping_expression$ as subject,
             COUNT(E.id) AS message_count,
             COUNT(CASE WHEN E.status = 'pending' THEN 1 END) AS status_pending,
-            COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
-            COUNT(CASE WHEN E.status = 'seen' THEN 1 END) AS status_seen,
-            COUNT(CASE WHEN E.status = 'failed' THEN 1 END) AS status_failed,
+            COUNT(CASE WHEN E.status = 'unsubscribed' THEN 1 END) AS status_unsubscribed,
             COUNT(CASE WHEN E.status = 'expired' THEN 1 END) AS status_expired,
+            COUNT(CASE WHEN E.status = 'failed' THEN 1 END) AS status_failed,
+            COUNT(CASE WHEN E.status = 'sent' THEN 1 END) AS status_sent,
+            COUNT(CASE WHEN E.status = 'delivered' THEN 1 END) AS status_delivered,
+            COUNT(CASE WHEN E.status = 'opened' THEN 1 END) AS status_opened,
+            COUNT(CASE WHEN E.status = 'dismissed' THEN 1 END) AS status_dismissed,
+            COUNT(CASE WHEN E.status = 'clicked' THEN 1 END) AS status_clicked,
             1 AS "sort_order"
         FROM notifications N	
         JOIN message_queue E ON N.id = E.notification_id
