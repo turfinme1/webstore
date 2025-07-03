@@ -15,12 +15,12 @@ class NotificationService {
         return allUserNotifications.rows;
     }
 
-    async markAsRead(data) {
+    async updateNotificationStatus(data) {
         await data.dbConnection.query(
             `UPDATE message_queue 
-             SET status = 'seen' 
-             WHERE id = $1`,
-            [data.params.id]
+             SET status = $1
+             WHERE id = $2`,
+            [data.body.status, data.params.id]
         );
     }
 

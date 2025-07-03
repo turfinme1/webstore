@@ -2,19 +2,12 @@ importScripts(
     'https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js'
   );
 
+let currentActiveMessage = {};
 self.addEventListener('push', async (event) => {
   const payload = event.data.json() || {};
-  const title   = payload.title  || 'New Notification';
-  const options = {
-    body : payload.body || 'You have a new notification',
-    data: {
-      id: payload.id || null,
-    },
-    tag: payload.id,
-  };
 
-  event.waitUntil(
-    self.registration.showNotification(payload.title, {
+  event.waitUntil((async () => {
+     self.registration.showNotification(payload.title, {
       body: payload.body,
       icon: payload.icon,
       badge: payload.badge,
@@ -24,20 +17,22 @@ self.addEventListener('push', async (event) => {
         id: payload.id || null,
       },
       tag: payload.id,
-    })
-  );
+    });
+
+    await changeNotificationStatus(payload.id, 'delivered');
+  })());
 });
 
-self.addEventListener('notificationshow', (event) => {
-  const notification = event.notification;
-  const notificationId = notification.data?.id;
+// self.addEventListener('notificationshow', (event) => {
+//   const notification = event.notification;
+//   const notificationId = notification.data?.id;
   
-  if (notificationId) {
-    event.waitUntil(
-      markNotificationAsShown(notificationId)
-    );
-  }
-});
+//   if (notificationId) {
+//     event.waitUntil(
+//       markNotificationAsShown(notificationId)
+//     );
+//   }
+// });
 
 self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
@@ -45,43 +40,49 @@ self.addEventListener("notificationclick", (event) => {
       try {
         const notification = event.notification;
         const notificationId = notification.data?.id;
-        if(notificationId) {
-          const response = await fetch(`/api/notifications/${notificationId}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-        }
+        currentActiveMessage.id = notificationId;
         const actionData = event.action.split('$__$');
         if (actionData[0] === 'redirect') {
+          await changeNotificationStatus(notificationId, 'clicked');
           const url = actionData[1] || '/';
           if (url) {
             const client = await self.clients.openWindow(url);
           }
+        } else {
+          await changeNotificationStatus(notificationId, 'opened');
         }
       } catch (error) {
         console.error("Error processing notification click:", error);
       }
-    })()
-  );
+    })());
 });
 
-async function markNotificationAsShown(notificationId) {
-  if (!notificationId) return;
-  
+self.addEventListener('notificationclose', (event) => {
+  event.waitUntil((async () => {
+    const notification = event.notification;
+    const notificationId = notification.data?.id;
+
+    if (notificationId && notificationId !== currentActiveMessage.id) {
+      try {
+        await changeNotificationStatus(notificationId, 'dismissed');
+      } catch (error) {
+        console.error('Error changing notification status on close:', error);
+      }
+    }
+  })());
+});
+
+async function changeNotificationStatus(notificationId, status) {
   try {
     const response = await fetch(`/api/notifications/${notificationId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
       },
-      // credentials: 'same-origin' 
+      body: JSON.stringify({ status })
     });
-    
-    return await response.json();
   } catch (error) {
-    console.error('Error marking notification as shown:', error);
+    console.error('Error changing notification status:', error);
   }
 }
 

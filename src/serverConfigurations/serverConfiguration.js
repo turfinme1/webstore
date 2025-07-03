@@ -84,7 +84,7 @@ const routeTable = {
   },
   put: {
     "/auth/profile": authController.updateProfile,
-    "/api/notifications/:id": notificationController.markAsRead,
+    "/api/notifications/:id": notificationController.updateNotificationStatus,
   },
   delete: {
     "/api/cart/:itemId": cartController.deleteItem,

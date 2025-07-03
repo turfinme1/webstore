@@ -15,13 +15,14 @@ class NotificationController {
         res.status(200).json(result);
     }
 
-    markAsRead = async (req, res) => {
+    updateNotificationStatus = async (req, res) => {
         const data = {
             session: req.session,
             dbConnection: req.dbConnection,
-            params: req.params
+            params: req.params,
+            body: req.body,
         };
-        await this.notificationService.markAsRead(data);
+        await this.notificationService.updateNotificationStatus(data);
         res.status(204).end();
     }
 
