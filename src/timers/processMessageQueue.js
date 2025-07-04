@@ -94,7 +94,7 @@ const MESSAGE_ERROR_STATUS_MAPPING = {
 const MESSAGE_HANDLER = {
     "Email": handleEmailMessage,
     "Push-Notification": handlePushMessage,
-    "Push-Notification-Broadcast": handlePushBroadcastMessage,
+    "Push-Notification-Broadcast": handlePushMessage,
     "Notification": handleInAppMessage,
 };
 
@@ -208,7 +208,7 @@ async function processMessage(message, client, logger, messageService, settings)
         return { id: message.id, success: false };
     } catch (error) {
         console.log(error);
-        const { shouldRetry, errorType } = await classifyMessageErrorAndSetStatus(error);
+        const { shouldRetry, errorType } = await classifyMessageErrorAndSetStatus(error, message, client);
         const retryDelay = calculateRetryDelay(message.email_attempts + 1);
         error.params = { 
             code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00010.SENDING_FAILED', 
@@ -305,81 +305,8 @@ async function handlePushMessage(message, client, logger, messageService, settin
             audit_type: 'ASSERT_USER',
         };
         await logger.logToDatabase(logObject);
-        const { errorType } = await classifyMessageErrorAndSetStatus(error, message);
 
-        if (errorType === MESSAGE_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND) {
-            await client.query(`
-                UPDATE push_subscriptions
-                SET status = $1
-                WHERE id = $2`,
-                [NOTIFICATION_STATUS.INACTIVE, pushSubscription.id]
-            );
-        }
-    }
-
-}
-
-async function handlePushBroadcastMessage(message, client, logger, messageService, settings) {
-    const subscription = await client.query(`
-        SELECT * FROM push_subscriptions
-        WHERE id = $1 AND status = $2`,
-        [message.push_subscription_id, NOTIFICATION_STATUS.ACTIVE]
-    );
-    ASSERT(subscription.rows.length <= 1, 'Expected exactly one subscription for broadcast', { code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00017.EXPECTED_ONE_SUBSCRIPTION', long_description: `Expected exactly one subscription for broadcast with email id: ${message.id}` });
-
-    if (subscription.rows.length === 0) {
-        await client.query(`
-            UPDATE message_queue
-            SET status = $1
-            WHERE id = $2`,
-            [MESSAGE_STATUS.FAILED, message.id]
-        );
-        await logger.info({
-            code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00006.NO_SUBSCRIPTIONS',
-            short_description: 'No push subscriptions found',
-            long_description: 'No push subscriptions available for broadcast'
-        });
-        return { id: message.id, success: false };
-    }
-
-    const pushSubscription = subscription.rows[0];
-
-    try {
-        await webpush.sendNotification(pushSubscription.data, JSON.stringify({
-            id: message.id,
-            title: message.subject,
-            body: message.text_content, 
-            ...message.notification_settings,
-        }), { 
-            TTL: message.notification_settings.TTL, 
-            urgency: message.notification_settings.urgency, 
-            topic: message.notification_settings.topic,
-        });
-        return { id: message.id, success: true };
-    } catch (error) {
-        console.log(`[processEmailQueue] error: ${error}`);
-        let short_description = error.message;
-        if (error?.statusCode === 413) {
-            short_description = 'Push notification payload too large';
-        }
-        const logObject = {
-            code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00011.PUSH_NOTIFICATION_FAILED',
-            short_description: short_description,
-            long_description: error?.body,
-            debug_info: error.stack,
-            audit_type: 'ASSERT_USER',
-        };
-        await logger.logToDatabase(logObject);
-        const { errorType } = await classifyMessageErrorAndSetStatus(error, message);
-
-        if (errorType === MESSAGE_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND) {
-            await client.query(`
-                UPDATE push_subscriptions
-                SET status = $1
-                WHERE id = $2`,
-                [NOTIFICATION_STATUS.INACTIVE, pushSubscription.id]
-            );
-        }
+        throw error;
     }
 }
 
@@ -470,7 +397,7 @@ async function handleInAppMessage(message, client, logger, messageService, setti
     return { id: message.id, success: true };
 }
 
-async function classifyMessageErrorAndSetStatus(error, message) {
+async function classifyMessageErrorAndSetStatus(error, message, client) {
     let shouldRetry = false;
     let errorType;
     if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT' || error.code === "ESOCKET") {
@@ -490,7 +417,7 @@ async function classifyMessageErrorAndSetStatus(error, message) {
     } else if (error.statusCode) {
         if ([410].includes(error.statusCode)) {
             errorType = MESSAGE_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND;
-        } else if ([400, 403, 404, 413].includes(error.responseCode)) {
+        } else if ([400, 403, 404, 413].includes(error.statusCode)) {
             errorType = MESSAGE_ERROR_TYPES.INVALID_INPUT;
         } else {
             shouldRetry = true;
@@ -504,9 +431,18 @@ async function classifyMessageErrorAndSetStatus(error, message) {
         errorType = MESSAGE_ERROR_TYPES.EXTERNAL_SERVER_ERROR;
     }
 
+    if (message.push_subscription_id && error.body && error.body.includes('A valid push subscription endpoint should be specified')) {
+        await client.query(`
+            UPDATE push_subscriptions
+            SET status = $1
+            WHERE id = $2`,
+            [NOTIFICATION_STATUS.INACTIVE, message.push_subscription_id]
+        );
+    }
+
     const status = MESSAGE_ERROR_STATUS_MAPPING[errorType]?.status;
     const errorMessage = MESSAGE_ERROR_STATUS_MAPPING[errorType]?.message;
-    await pool.query(`
+    await client.query(`
         UPDATE message_queue
         SET status = $1, error_message = $2
         WHERE id = $3`,
