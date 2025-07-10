@@ -1495,7 +1495,10 @@ class ReportService {
                 { key: 'user_email', label: 'User Email', format: 'text' },
                 { key: 'status', label: 'Status', format: 'text' },
                 { key: 'error_message', label: 'Error Message', format: 'text' },
-                { key: 'subject' , label: 'Subject', format: 'text' },
+                { key: 'ttl', label: 'TTL (ms)', format: 'number', align: 'right' },
+                { key: 'urgency', label: 'Urgency', format: 'text' },
+                { key: 'has_topic', label: 'Has Topic', format: 'text' },
+                { key: 'subject', label: 'Subject', format: 'text' },
                 { key: 'text_content', label: 'Text Content', format: 'text' },
                 { key: 'count', label: 'Count', format: 'number' }
             ]
@@ -1586,6 +1589,51 @@ class ReportService {
             label: "Error Message",
         },
         {
+            key: "ttl",
+            grouping_expression: "(N.notification_settings->>'TTL')::int",
+            filter_expression:    "(N.notification_settings->>'TTL')::int = $FILTER_VALUE$",
+            minimum_filter_expression: "(N.notification_settings->>'TTL')::int >= $FILTER_VALUE$",
+            maximum_filter_expression: "(N.notification_settings->>'TTL')::int <= $FILTER_VALUE$",
+            type: "number",
+            label: "TTL",
+            groupable: true
+        },
+        {
+            key: "urgency",
+            grouping_expression: "N.notification_settings->>'urgency'",
+            filter_expression:    "N.notification_settings->>'urgency' = $FILTER_VALUE$",
+            type: "select",
+            label: "Urgency",
+            options: [
+                { value: 'low',       label: 'Low'       },
+                { value: 'normal',    label: 'Normal'    },
+                { value: 'high',      label: 'High'      },
+            ],
+            groupable: true
+        },
+        {
+            key: "has_topic",
+            grouping_expression:`
+                CASE
+                WHEN N.notification_settings->>'topic' IS NULL
+                    OR N.notification_settings->>'topic' = ''
+                THEN 'No' ELSE 'Yes'
+                END`,   
+            filter_expression:`
+                CASE
+                WHEN N.notification_settings->>'topic' IS NULL
+                    OR N.notification_settings->>'topic' = ''
+                THEN 'No' ELSE 'Yes'
+                END = $FILTER_VALUE$`,
+            type: "select",
+            label: "Topic",
+            options: [
+                { value: 'Yes', label: 'Yes' },
+                { value: 'No',  label: 'No'  },
+            ],
+            groupable: true
+        },
+        {
             key: "count",
             type: "number",
             hideInUI: true
@@ -1600,6 +1648,9 @@ class ReportService {
             NULL AS "user_email",
             NULL AS "status",
             NULL AS "error_message",
+            NULL AS "ttl",
+            NULL AS "urgency",
+            NULL AS "has_topic",
             NULL AS "subject",
             NULL AS "text_content",
             COUNT(*) AS "count",
@@ -1615,6 +1666,10 @@ class ReportService {
             AND $error_message_filter_expression$
             AND $subject_filter_expression$
             AND $text_content_filter_expression$
+            AND $ttl_minimum_filter_expression$
+            AND $ttl_maximum_filter_expression$
+            AND $urgency_filter_expression$
+            AND $has_topic_filter_expression$
         
         UNION ALL
 
@@ -1625,6 +1680,9 @@ class ReportService {
             $user_email_grouping_expression$ AS "user_email",
             $status_grouping_expression$ AS "status",
             $error_message_grouping_expression$ AS "error_message",
+            $ttl_grouping_expression$ AS "ttl",
+            $urgency_grouping_expression$ AS "urgency",
+            $has_topic_grouping_expression$ AS "has_topic",
             $subject_grouping_expression$ AS "subject",
             $text_content_grouping_expression$ AS "text_content",
             COUNT(*) AS "count",
@@ -1640,7 +1698,11 @@ class ReportService {
             AND $error_message_filter_expression$
             AND $subject_filter_expression$
             AND $text_content_filter_expression$
-        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
+            AND $ttl_minimum_filter_expression$
+            AND $ttl_maximum_filter_expression$
+            AND $urgency_filter_expression$
+            AND $has_topic_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
         ORDER BY sort_order ASC, 1 DESC`;
 
     return { reportUIConfig, sql, reportFilters };
