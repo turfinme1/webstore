@@ -209,24 +209,10 @@ async function processMessage(message, client, logger, messageService, settings)
     } catch (error) {
         console.log(error);
         const { shouldRetry, errorType } = await classifyMessageErrorAndSetStatus(error, message, client);
-        const retryDelay = calculateRetryDelay(message.email_attempts + 1);
         error.params = { 
             code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00010.SENDING_FAILED', 
             long_description: errorType 
         };
-        
-        const maxAttemptsReached = message.email_attempts + 1 >= MAX_ATTEMPTS;
-        const newStatus = (shouldRetry && !maxAttemptsReached) ? MESSAGE_STATUS.PENDING : MESSAGE_STATUS.FAILED;
-        
-        await client.query(`
-            UPDATE message_queue 
-            SET status = $1,
-                email_attempts = email_attempts + 1,
-                email_last_attempt = NOW(),
-                email_retry_after = NOW() + (INTERVAL '1 minute' * $2),
-                email_priority = GREATEST(email_priority - 1, 1)
-            WHERE id = $3
-        `, [newStatus, retryDelay, message.id]);
 
         if (errorType === MESSAGE_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND && message.push_subscription_id) {
             await client.query(`
@@ -441,12 +427,20 @@ async function classifyMessageErrorAndSetStatus(error, message, client) {
     }
 
     const status = MESSAGE_ERROR_STATUS_MAPPING[errorType]?.status;
+    const maxAttemptsReached = message.email_attempts + 1 >= MAX_ATTEMPTS;
+    const newStatus = !maxAttemptsReached ? status : MESSAGE_STATUS.FAILED;
     const errorMessage = MESSAGE_ERROR_STATUS_MAPPING[errorType]?.message;
+    const retryDelay = calculateRetryDelay(message.email_attempts + 1);
+
     await client.query(`
         UPDATE message_queue
-        SET status = $1, error_message = $2
+        SET status = $1, error_message = $2,
+            email_attempts = email_attempts + 1,
+            email_last_attempt = NOW(),
+            email_retry_after = NOW() + (INTERVAL '1 minute' * $4),
+            email_priority = GREATEST(email_priority - 1, 1)
         WHERE id = $3`,
-        [status, errorMessage, message.id]
+        [newStatus, errorMessage, message.id, retryDelay]
     );
 
     return {
