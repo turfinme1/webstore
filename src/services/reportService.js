@@ -1495,7 +1495,7 @@ class ReportService {
                 { key: 'user_email', label: 'User Email', format: 'text' },
                 { key: 'status', label: 'Status', format: 'text' },
                 { key: 'error_message', label: 'Error Message', format: 'text' },
-                { key: 'ttl', label: 'TTL (ms)', format: 'number', align: 'right' },
+                { key: 'ttl', label: 'TTL', format: 'number', align: 'right' },
                 { key: 'urgency', label: 'Urgency', format: 'text' },
                 { key: 'has_topic', label: 'Has Topic', format: 'text' },
                 { key: 'subject', label: 'Subject', format: 'text' },
