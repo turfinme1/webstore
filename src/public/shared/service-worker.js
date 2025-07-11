@@ -38,6 +38,7 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     (async () => {
       try {
+        await event.notification.close();
         const notification = event.notification;
         const notificationId = notification.data?.id;
         currentActiveMessage.id = notificationId;
@@ -46,7 +47,7 @@ self.addEventListener("notificationclick", (event) => {
           await changeNotificationStatus(notificationId, 'clicked');
           const url = actionData[1] || '/';
           if (url) {
-            const client = await self.clients.openWindow(url);
+            return await self.clients.openWindow(url);
           }
         } else {
           await changeNotificationStatus(notificationId, 'opened');
