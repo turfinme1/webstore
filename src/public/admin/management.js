@@ -648,7 +648,7 @@ async function renderUserGroupsChart() {
   try {
     spinner.style.display = "inline-block";
 
-    const appSettings = await fetchWithErrorHandling("/app-config/rate-limit-settings");
+    const appSettings = await fetchWithErrorHandling("/app-config/settings");
 
     if (!appSettings.ok) {
       showErrorMessage(appSettings.error);

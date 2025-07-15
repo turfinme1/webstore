@@ -8,7 +8,7 @@ class AppConfigService {
   async updateRateLimitSettings(data) {
     const query = `
     UPDATE app_settings 
-    SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8, report_row_limit_display = $9, campaign_status_update_interval = $10, target_group_status_update_interval = $11, target_group_status_update_initial_time = $12, user_group_chart_count = $13, campaign_chart_count = $14
+    SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8, report_row_limit_display = $9, campaign_status_update_interval = $10, target_group_status_update_interval = $11, target_group_status_update_initial_time = $12, user_group_chart_count = $13, campaign_chart_count = $14, push_notification_provider_id = $15
     WHERE id = 1 RETURNING *`;
 
     const result = await data.dbConnection.query(query, [
@@ -26,13 +26,24 @@ class AppConfigService {
       data.body.target_group_status_update_initial_time,
       data.body.user_group_chart_count,
       data.body.campaign_chart_count,
+      data.body.push_notification_provider_id || '1',
     ]);
     return { message: "Rate limit settings updated" };
   }
 
-  async getRateLimitSettings(data) {
+  async getSettings(data) {
     const result = await data.dbConnection.query(`
       SELECT * FROM app_settings WHERE id = 1`
+    );
+    return result.rows[0];
+  }
+
+  async getPublicSettings(data) {
+    const result = await data.dbConnection.query(`
+      SELECT push_notification_provider_id, push_notification_providers.name AS push_notification_provider_name
+      FROM app_settings 
+      JOIN push_notification_providers ON app_settings.push_notification_provider_id = push_notification_providers.id
+      WHERE app_settings.id = 1`
     );
     return result.rows[0];
   }

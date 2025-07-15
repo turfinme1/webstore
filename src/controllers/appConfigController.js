@@ -21,12 +21,20 @@ class AppConfigController {
     res.status(200).json(result);
   }
 
-  getRateLimitSettings = async (req, res, next) => {
+  getSettings = async (req, res, next) => {
     ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.APP_CONF.00027.UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     const data = {
       dbConnection: req.dbConnection,
     };
-    const result = await this.appConfigService.getRateLimitSettings(data);
+    const result = await this.appConfigService.getSettings(data);
+    res.status(200).json(result);
+  }
+
+  getPublicSettings = async (req, res, next) => {
+    const data = {
+      dbConnection: req.dbConnection,
+    };
+    const result = await this.appConfigService.getPublicSettings(data);
     res.status(200).json(result);
   }
 
