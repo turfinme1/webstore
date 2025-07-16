@@ -1,7 +1,9 @@
 import * as WebSocketClientModule from "./websocketClient.js";
 import { HttpTransport, WebSocketTransport } from "./transport.js";
+import * as MessageUtil from "./firebase-init.js";
 
 let transport = new HttpTransport();
+let settings = null;
 
 async function fetchUserSchema(url) {
   const response = await fetchWithErrorHandling(url);
@@ -528,7 +530,51 @@ function createNavigation(userStatus) {
   });
 }
 
+async function prepareSubscriptionRequest(subscription, push_notification_provider_id, token) {
+  const stringifiedSubscription = JSON.stringify(subscription);
+  const parsedSubscription = JSON.parse(stringifiedSubscription);
+
+  parsedSubscription.push_notification_provider_id = push_notification_provider_id;
+  parsedSubscription.token = token;
+
+  return parsedSubscription;
+}
+
 async function initSubscriptionButton(userStatus) {
+  let token = null;
+  const subscriptionHandler = {
+    subscribe: {
+      webpush: async () => {
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: 'BJ7UuFCX99N49hlHSrTP76J_88LdIDJQ0YWuMVvC2O7GHI12eLNZK5_MGuD1leViV28gGoG1YwpYv8l3Y1yWoaU',
+        });
+        const requestBody = await prepareSubscriptionRequest(subscription, settings.push_notification_provider_id, token);
+
+        await fetch("/api/subscriptions", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+        return subscription;
+      },
+      firebase: async () => {
+        token = await MessageUtil.getToken(MessageUtil.messaging, {
+          vapidKey: "BPREQYpVsbp04NcxYjbaUxNFIJZAd6IVxZ2C-dxqO7cEpy_cKOJHZ407WN4o0OWijBDjqgRAmKOzdEcc--IZX7U",
+          serviceWorkerRegistration: registration
+        });
+        const subscription = await registration.pushManager.getSubscription();
+        const requestBody = await prepareSubscriptionRequest(subscription, settings.push_notification_provider_id, token);
+        await fetch("/api/subscriptions", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+        console.log('FCM Token:', token);
+        return subscription;
+      },
+    },
+  };
   const subscribeButton = document.querySelector(".subscribe-button");
   if (!subscribeButton) return;
 
@@ -538,11 +584,16 @@ async function initSubscriptionButton(userStatus) {
   subscribeButton.textContent = subscription ? 'Unsubscribe' : 'Subscribe';
 
   if(subscription && userStatus.session_type === "Authenticated") {
-    try{
+    try {
+      token = await MessageUtil.getToken(MessageUtil.messaging, {
+          vapidKey: "BPREQYpVsbp04NcxYjbaUxNFIJZAd6IVxZ2C-dxqO7cEpy_cKOJHZ407WN4o0OWijBDjqgRAmKOzdEcc--IZX7U",
+          serviceWorkerRegistration: registration
+      });
+      const requestBody = await prepareSubscriptionRequest(subscription, settings.push_notification_provider_id, token);
       const response = await fetch("/api/subscriptions", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(subscription)
+        body: JSON.stringify(requestBody)
       });
     } catch (error) {
       console.error('Error saving subscription:', error);
@@ -556,17 +607,12 @@ async function initSubscriptionButton(userStatus) {
     if (permission !== 'granted') return;
 
     if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: 'BJ7UuFCX99N49hlHSrTP76J_88LdIDJQ0YWuMVvC2O7GHI12eLNZK5_MGuD1leViV28gGoG1YwpYv8l3Y1yWoaU',
-      });
-      await fetch("/api/subscriptions", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(subscription)
-      });
-      subscribeButton.textContent = 'Unsubscribe';
-      window.subscription = subscription;
+      if (subscriptionHandler.subscribe[settings.push_notification_provider_name]) {
+        subscription = await subscriptionHandler.subscribe[settings.push_notification_provider_name]();
+
+        subscribeButton.textContent = 'Unsubscribe';
+        window.subscription = subscription;
+      }
     } else {
       await subscription.unsubscribe();
       await fetchWithErrorHandling(`/api/subscriptions`, {
@@ -576,6 +622,7 @@ async function initSubscriptionButton(userStatus) {
       });
       subscribeButton.textContent = 'Subscribe';
       subscription = null;
+      token = null;
       window.subscription = null;
     }
   });
@@ -1031,6 +1078,9 @@ async function initializePage() {
   const frontOfficeTransportConfigResult = frontOfficeTransportConfig.data;
   const webSocketClient = new WebSocketClientModule.WebSocketClient(frontOfficeTransportConfigResult.url);
   await webSocketClient.init();
+      
+  const settingsResult = await fetchWithErrorHandling('/app-config/public-settings');
+  settings = settingsResult.data;
   
   if (window.location.port === frontOfficeTransportConfigResult.front_office_port && frontOfficeTransportConfigResult.front_office_transport === "websocket") {
     transport = new WebSocketTransport(webSocketClient);

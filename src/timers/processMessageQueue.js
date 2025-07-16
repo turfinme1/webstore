@@ -7,6 +7,7 @@ const { ENV } = require("../serverConfigurations/constants");
 const { ASSERT } = require("../serverConfigurations/assert");
 const { hrtime } = require("process");
 const WebSocketModule = require("../serverConfigurations/webSocketModule");
+const firebaseMessagingWrapper = require("../serverConfigurations/firebaseMessagingWrapper");
 
 const isDryRun = process.env.DRY_RUN === 'true';
 
@@ -98,6 +99,17 @@ const MESSAGE_HANDLER = {
     "Notification": handleInAppMessage,
 };
 
+webpush.setVapidDetails(
+    ENV.VAPID_MAILTO,
+    ENV.VAPID_PUBLIC_KEY,
+    ENV.VAPID_PRIVATE_KEY,
+);
+
+const PUSH_MESSAGE_PROVIDER_HANDLER = {
+    "firebase": firebaseMessagingWrapper,
+    "webpush": webpush,
+};
+
 (async () => {
     let client;
     let logger;
@@ -109,11 +121,6 @@ const MESSAGE_HANDLER = {
         
         client = await pool.connect();
         logger = new Logger({ dbConnection: client });
-        webpush.setVapidDetails(
-            ENV.VAPID_MAILTO,
-            ENV.VAPID_PUBLIC_KEY,
-            ENV.VAPID_PRIVATE_KEY,
-        );
 
         await client.query('BEGIN');
         const settings = await client.query(`SELECT * FROM app_settings LIMIT 1`);
@@ -241,8 +248,12 @@ async function handleEmailMessage(message, client, logger, messageService, setti
 
 async function handlePushMessage(message, client, logger, messageService, settings) {
     const subscription = await client.query(`
-        SELECT * FROM push_subscriptions
-        WHERE id = $1 AND status = $2`,
+        SELECT push_subscriptions.*,
+            push_notification_providers.id as push_notification_provider_id,
+            push_notification_providers.name as push_notification_provider_name 
+        FROM push_subscriptions
+        JOIN push_notification_providers on push_notification_providers.id = push_subscriptions.push_notification_provider_id
+        WHERE push_subscriptions.id = $1 AND push_subscriptions.status = $2`,
         [message.push_subscription_id, NOTIFICATION_STATUS.ACTIVE]
     );
 
@@ -264,8 +275,14 @@ async function handlePushMessage(message, client, logger, messageService, settin
 
     const pushSubscription = subscription.rows[0];
 
+    const pushProviderHandler = PUSH_MESSAGE_PROVIDER_HANDLER[pushSubscription.push_notification_provider_name];
+    ASSERT(pushProviderHandler, 'Push notification provider not supported', { 
+        code: 'TIMERS.PROCESS_MESSAGE_QUEUE.000353.PUSH_PROVIDER_NOT_SUPPORTED', 
+        long_description: `Push notification provider ${pushSubscription.push_notification_provider_name} not supported` 
+    });
+
     try {
-        await webpush.sendNotification(pushSubscription.data, JSON.stringify({
+        await pushProviderHandler.sendNotification(pushSubscription.data, JSON.stringify({
             id: message.id,
             title: message.subject,
             body: message.text_content, 
@@ -286,7 +303,7 @@ async function handlePushMessage(message, client, logger, messageService, settin
         const logObject = {
             code: 'TIMERS.PROCESS_MESSAGE_QUEUE.00011.PUSH_NOTIFICATION_FAILED',
             short_description: short_description,
-            long_description: error?.body,
+            long_description: error?.body || error?.params?.body,
             debug_info: error.stack,
             audit_type: 'ASSERT_USER',
         };
@@ -413,11 +430,20 @@ async function classifyMessageErrorAndSetStatus(error, message, client) {
         // timeout on fetch request
         shouldRetry = true;
         errorType = MESSAGE_ERROR_TYPES.NETWORK;
+    } else if (error?.params?.body?.error?.code) {
+        if ([410, 404].includes(error.params.body.error.code)) {
+            errorType = MESSAGE_ERROR_TYPES.SUBSCRIPTION_NOT_FOUND;
+        } else if ([400, 403, 413].includes(error.params.body.error.code)) {
+            errorType = MESSAGE_ERROR_TYPES.INVALID_INPUT;
+        } else {
+            shouldRetry = true;
+            errorType = MESSAGE_ERROR_TYPES.EXTERNAL_SERVER_ERROR;
+        }
     } else {
         errorType = MESSAGE_ERROR_TYPES.EXTERNAL_SERVER_ERROR;
     }
 
-    if (message.push_subscription_id && error.body && error.body.includes('A valid push subscription endpoint should be specified')) {
+    if (message.push_subscription_id && error.body && error.body?.includes('A valid push subscription endpoint should be specified')) {
         await client.query(`
             UPDATE push_subscriptions
             SET status = $1

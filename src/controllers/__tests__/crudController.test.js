@@ -8,6 +8,7 @@ describe('CrudController', () => {
   let authService;
   let mockRes;
   let mockNext;
+  let req;
 
   beforeEach(() => {
     crudService = {
@@ -17,6 +18,15 @@ describe('CrudController', () => {
       getAll: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      getAllEntities: jest.fn(),
+    };
+
+    req = {
+      session: { user_id: 'user123', id: 'session123' },
+      params: { },
+      body : { },
+      dbConnection: {},
+      entitySchemaCollection: {},
     };
 
     authService = {
@@ -218,4 +228,24 @@ describe('CrudController', () => {
       });
     });
   });
+
+  describe('getAllEntities', () => {
+    it('should call crudService.getAllEntities and return the result', async () => {
+      const mockGetAllEntitiesResult = [{ id: 1, name: 'Entity 1' }, { id: 2, name: 'Entity 2' }];
+      crudService.getAllEntities.mockResolvedValue(mockGetAllEntitiesResult);
+
+      await crudController.getAllEntities(req, mockRes, mockNext);
+
+      expect(crudService.getAllEntities).toHaveBeenCalledWith({
+        body: req.body,
+        params: req.params,
+      }, {
+        dbConnection: req.dbConnection,
+        entitySchemaCollection: req.entitySchemaCollection,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(mockGetAllEntitiesResult);
+    });
+  });
+      
 });

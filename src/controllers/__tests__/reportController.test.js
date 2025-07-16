@@ -159,4 +159,31 @@ describe('ReportController', () => {
       expect(mockResponse.json).toHaveBeenCalledWith(emptyResult);
     });
   });
+
+  describe('getAllReports', () => {
+    it('should call reportService.getAllReports and respond with status 200', async () => {
+      const expectedReports = [
+        {  name: 'orders-report', title: 'Orders Report' },
+        {  name: 'users-report', title: 'Users Report' },
+      ];
+      
+      mockReportService.getAllReports.mockResolvedValue(expectedReports);
+      
+      await reportController.getAllReports(mockRequest, mockResponse, mockNext);
+      
+      expect(mockReportService.getAllReports).toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith(expectedReports);
+    });
+
+    it('should handle empty reports list', async () => {
+      mockReportService.getAllReports.mockResolvedValue([]);
+      
+      await reportController.getAllReports(mockRequest, mockResponse, mockNext);
+      
+      expect(mockReportService.getAllReports).toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith([]);
+    });
+  });
 });
