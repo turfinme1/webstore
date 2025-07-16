@@ -31,13 +31,13 @@ async function renderSettings() {
     attachValidationListeners(
       "settings-form",
       settingsSchema,
-      "/app-config/rate-limit-settings",
+      "/app-config/settings",
       "PUT"
     );
 
     await populateFormFields(
       "settings-form",
-      "/app-config/rate-limit-settings"
+      "/app-config/settings"
     );
   } catch (error) {
     console.error("Error rendering settings form:", error);

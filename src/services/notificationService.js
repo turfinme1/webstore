@@ -36,9 +36,9 @@ class NotificationService {
             platform = "linux";
         }
         await data.dbConnection.query(
-            `INSERT INTO push_subscriptions (endpoint, data, user_id, ip, user_agent, status, platform) VALUES ($1, $2, $3, $4, $5, $6, $7) 
+            `INSERT INTO push_subscriptions (endpoint, data, user_id, ip, user_agent, status, platform, push_notification_provider_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
             ON CONFLICT (endpoint) DO UPDATE SET data = $2, user_id = $3, ip = $4, user_agent = $5, status = $6, platform = $7`,
-            [data.body.endpoint, data.body, data.session.user_id, data.ip, data.userAgent, data.body.status || 'active', platform]
+            [data.body.endpoint, data.body, data.session.user_id, data.ip, data.userAgent, data.body.status || 'active', platform, data.body.push_notification_provider_id]
         );
     }
 

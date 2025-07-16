@@ -3,6 +3,7 @@ const AppConfigService = require("../appConfigService");
 describe("AppConfigService", () => {
   let appConfigService;
   let mockDbConnection;
+  let mockDb;
 
   beforeEach(() => {
     // Initialize the service
@@ -12,6 +13,8 @@ describe("AppConfigService", () => {
     mockDbConnection = {
       query: jest.fn(),
     };
+    mockDb = { query: jest.fn() };
+    jest.clearAllMocks();
   });
 
   describe("updateRateLimitSettings", () => {
@@ -201,6 +204,34 @@ describe("AppConfigService", () => {
       ).toBe(true);
     });
   });
+
+  describe("getPublicSettings", () => {
+    it("should query the push provider join and return the first row", async () => {
+      const fakeRow = {
+        push_notification_provider_id: 7,
+        push_notification_provider_name: "firebase",
+      };
+      mockDb.query.mockResolvedValue({ rows: [fakeRow] });
+
+      const result = await appConfigService.getPublicSettings({ dbConnection: mockDb });
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "SELECT push_notification_provider_id, push_notification_providers.name AS push_notification_provider_name"
+        )
+      );
+      expect(result).toEqual(fakeRow);
+    });
+
+    it("should bubble up DB errors", async () => {
+      mockDb.query.mockRejectedValue(new Error("db fail"));
+
+      await expect(
+        appConfigService.getPublicSettings({ dbConnection: mockDb })
+      ).rejects.toThrow("db fail");
+    });
+  });
+
 });
 
 function containsQueryString(actualQuery, expectedQuery) {

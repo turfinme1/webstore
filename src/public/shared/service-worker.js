@@ -4,7 +4,14 @@ importScripts(
 
 let currentActiveMessage = {};
 self.addEventListener('push', async (event) => {
-  const payload = event.data.json() || {};
+  const fullPayload = event.data.json() || {};
+  let payload;
+  if (fullPayload.notification) {
+    payload = fullPayload.notification;
+    payload.id = fullPayload.data?.id || null;
+  } else {
+    payload = fullPayload;
+  }
 
   event.waitUntil((async () => {
      self.registration.showNotification(payload.title, {

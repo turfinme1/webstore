@@ -300,5 +300,58 @@ describe("AuthController", () => {
       });
     });
   });
+
+  describe('AuthController - getUserIdBySession', () => {
+    let authController;
+    let mockAuthService;
+    let mockReq;
+    let mockRes;
+    let mockNext;
+    
+    beforeEach(() => {
+      mockAuthService = {
+        getUserIdBySession: jest.fn()
+      };
+      
+      authController = new AuthController(mockAuthService);
+      
+      mockReq = {
+        params: { some: 'params' },
+        session: { session_hash: 'abc123', user_id: 42 },
+        dbConnection: { query: jest.fn() },
+        entitySchemaCollection: { userManagementSchema: {} }
+      };
+      
+      mockRes = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn().mockReturnThis()
+      };
+      
+      mockNext = jest.fn();
+    });
+    
+    it('should call auth service with correct data from request', async () => {
+      mockAuthService.getUserIdBySession.mockResolvedValue(42);
+      
+      await authController.getUserIdBySession(mockReq, mockRes, mockNext);
+      
+      expect(mockAuthService.getUserIdBySession).toHaveBeenCalledWith({
+        params: mockReq.params,
+        session: mockReq.session,
+        dbConnection: mockReq.dbConnection,
+        entitySchemaCollection: mockReq.entitySchemaCollection
+      });
+    });
+    
+    it('should return status 200 with result from auth service', async () => {
+      const mockUserId = 42;
+      mockAuthService.getUserIdBySession.mockResolvedValue(mockUserId);
+      
+      await authController.getUserIdBySession(mockReq, mockRes, mockNext);
+      
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(mockUserId);
+    });
+  });
   
 });

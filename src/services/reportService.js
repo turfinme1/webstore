@@ -2118,6 +2118,7 @@ class ReportService {
                 { key: 'ip', label: 'IP Address', format: 'text' },
                 { key: 'user_agent', label: 'User Agent', format: 'text' },
                 { key: 'platform', label: 'Platform', format: 'text' },
+                { key: 'push_provider_name', label: 'Push Provider', format: 'text' },
                 { key: 'count', label: 'Count', format: 'number' },
             ]
         ],
@@ -2188,6 +2189,18 @@ class ReportService {
             type: "text",
             label: "Platform",
         },
+        {
+            key: "push_provider_name",
+            grouping_expression: "PNP.name",
+            filter_expression: "PNP.name = $FILTER_VALUE$",
+            type: "select",
+            label: "Push Provider",
+            options: [
+                { value: 'firebase', label: 'Firebase' },
+                { value: 'webpush', label: 'Web Push' },
+            ],
+            groupable: true,
+        },
     ];
   
     const sql = `
@@ -2200,10 +2213,12 @@ class ReportService {
             NULL AS "ip",
             NULL AS "user_agent",
             NULL AS "platform",
+            NULL AS "push_provider_name",
             COUNT(*) AS "count",
             0 AS "sort_order"
         FROM push_subscriptions P
         LEFT JOIN users U ON P.user_id = U.id
+        JOIN push_notification_providers PNP ON P.push_notification_provider_id = PNP.id
         WHERE TRUE
             AND $id_filter_expression$
             AND $created_at_minimum_filter_expression$
@@ -2214,6 +2229,7 @@ class ReportService {
             AND $user_agent_filter_expression$
             AND $status_filter_expression$
             AND $platform_filter_expression$
+            AND $push_provider_name_filter_expression$
         UNION ALL
   
         SELECT
@@ -2225,10 +2241,12 @@ class ReportService {
             $ip_grouping_expression$ AS "ip",
             $user_agent_grouping_expression$ AS "user_agent",
             $platform_grouping_expression$ AS "platform",
+            $push_provider_name_grouping_expression$ AS "push_provider_name",
             COUNT(*) AS "count",
             1 AS "sort_order"
         FROM push_subscriptions P
         LEFT JOIN users U ON P.user_id = U.id
+        JOIN push_notification_providers PNP ON P.push_notification_provider_id = PNP.id
         WHERE TRUE
             AND $id_filter_expression$
             AND $created_at_minimum_filter_expression$
@@ -2239,7 +2257,8 @@ class ReportService {
             AND $user_agent_filter_expression$
             AND $status_filter_expression$
             AND $platform_filter_expression$
-        GROUP BY 1, 2, 3, 4, 5, 6, 7
+            AND $push_provider_name_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
         ORDER BY sort_order ASC, 1 DESC`;
   
     return { reportUIConfig, sql, reportFilters };

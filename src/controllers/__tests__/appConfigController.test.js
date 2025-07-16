@@ -17,6 +17,8 @@ describe("AppConfigController", () => {
     appConfigService = {
       updateRateLimitSettings: jest.fn(),
       getSettings: jest.fn(),
+      getPublicSettings: jest.fn(),
+      getFrontOfficeTransportConfig: jest.fn(),
     };
 
     authService = {
@@ -97,6 +99,73 @@ describe("AppConfigController", () => {
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(getResult);
+    });
+  });
+
+    describe("getPublicSettings", () => {
+    it("should call appConfigService.getPublicSettings and respond with status 200", async () => {
+      const req = {
+        dbConnection: {},
+      };
+      const publicSettings = { featureFlag: true, version: "1.2.3" };
+
+      appConfigService.getPublicSettings.mockResolvedValue(publicSettings);
+
+      await appConfigController.getPublicSettings(req, mockRes, mockNext);
+
+      expect(appConfigService.getPublicSettings).toHaveBeenCalledWith({
+        dbConnection: req.dbConnection,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(publicSettings);
+    });
+  });
+
+  describe("getJavaAPIUrl", () => {
+    it("should respond with the java_api_url from context.settings", async () => {
+      const req = {
+        context: {
+          settings: {
+            java_api_url: "https://api.example.com/java",
+          },
+        },
+      };
+
+      await appConfigController.getJavaAPIUrl(req, mockRes, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        url: "https://api.example.com/java",
+      });
+    });
+  });
+
+  describe("getFrontOfficeTransportConfig", () => {
+    it("should call appConfigService.getFrontOfficeTransportConfig and respond with status 200", async () => {
+      const req = {
+        context: { some: "contextValue" },
+        session: { user_id: 42 },
+      };
+      const transportConfig = { protocol: "ws", endpoint: "/ws" };
+
+      appConfigService.getFrontOfficeTransportConfig.mockResolvedValue(
+        transportConfig
+      );
+
+      await appConfigController.getFrontOfficeTransportConfig(
+        req,
+        mockRes,
+        mockNext
+      );
+
+      expect(
+        appConfigService.getFrontOfficeTransportConfig
+      ).toHaveBeenCalledWith({
+        context: req.context,
+        session: req.session,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(transportConfig);
     });
   });
 });
