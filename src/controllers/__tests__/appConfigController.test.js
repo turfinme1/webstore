@@ -16,7 +16,7 @@ describe("AppConfigController", () => {
     // Mock the service layer
     appConfigService = {
       updateRateLimitSettings: jest.fn(),
-      getRateLimitSettings: jest.fn(),
+      getSettings: jest.fn(),
     };
 
     authService = {
@@ -74,8 +74,8 @@ describe("AppConfigController", () => {
     });
   });
 
-  describe("getRateLimitSettings", () => {
-    it("should call appConfigService.getRateLimitSettings and respond with status 200", async () => {
+  describe("getSettings", () => {
+    it("should call appConfigService.getSettings and respond with status 200", async () => {
       const req = {
         session: { admin_user_id: 1 }, // Admin user is logged in
         dbConnection: {},
@@ -83,16 +83,16 @@ describe("AppConfigController", () => {
       const getResult = { request_limit: 1000, request_window: 60 };
 
       // Mock the service result
-      appConfigService.getRateLimitSettings.mockResolvedValue(getResult);
+      appConfigService.getSettings.mockResolvedValue(getResult);
 
-      await appConfigController.getRateLimitSettings(req, mockRes, mockNext);
+      await appConfigController.getSettings(req, mockRes, mockNext);
 
       expect(ASSERT_USER).toHaveBeenCalledWith(
         req.session.admin_user_id,
         "You must be logged in to perform this action" , 
         { code: "CONTROLLER.APP_CONF.00027.UNAUTHORIZED", long_description: "You must be logged in to perform this action" }
       );
-      expect(appConfigService.getRateLimitSettings).toHaveBeenCalledWith({
+      expect(appConfigService.getSettings).toHaveBeenCalledWith({
         dbConnection: req.dbConnection,
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);

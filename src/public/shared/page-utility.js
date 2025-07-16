@@ -110,8 +110,22 @@ async function createForm(schema, formId, formType) {
       wrapper.appendChild(label);
       wrapper.appendChild(input);
 
-    } 
-    else if (schema.properties[key]?.type === "boolean"){
+    } else if (key === "push_notification_provider_id") {
+      const select = document.createElement("select");
+      select.id = key;
+      select.name = key;
+      select.className = "form-select";
+      const optionWebPush = document.createElement("option");
+      optionWebPush.value = "1";
+      optionWebPush.innerText = "Web Push";
+      const optionFirebase = document.createElement("option");
+      optionFirebase.value = "2";
+      optionFirebase.innerText = "Firebase";
+      select.appendChild(optionWebPush);
+      select.appendChild(optionFirebase);
+      wrapper.appendChild(label);
+      wrapper.appendChild(select);
+    } else if (schema.properties[key]?.type === "boolean"){
       const input = document.createElement("input");
       input.style.display = "block";
       input.type = "checkbox";

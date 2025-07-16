@@ -55,7 +55,7 @@ const routeTable = {
     "/auth/captcha": authController.getCaptcha,
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
-    "/app-config/rate-limit-settings": appConfigController.getRateLimitSettings,
+    "/app-config/settings": appConfigController.getSettings,
     "/api/test-email/:id": emailController.sendTestEmail,
     "/api/preview-email/:id": emailController.previewEmail,
     "/api/reports": reportController.getAllReports,
@@ -84,7 +84,7 @@ const routeTable = {
     "/api/products/:id": productController.update,
     "/api-back/orders/:orderId": orderController.updateOrderByStaff,
     "/auth/profile": authController.updateProfile,
-    "/app-config/rate-limit-settings": appConfigController.updateRateLimitSettings,
+    "/app-config/settings": appConfigController.updateRateLimitSettings,
   },
   delete: {
     "/crud/:entity/:id": crudController.delete,

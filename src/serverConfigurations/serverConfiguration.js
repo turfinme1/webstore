@@ -68,6 +68,7 @@ const routeTable = {
     "/api/notifications": notificationController.getNotificationByUserId,
     "/api/front-office-transport": appConfigController.getFrontOfficeTransportConfig,
     "/api/cart/validate-stock": cartController.validateStockForItems,
+    "/app-config/public-settings": appConfigController.getPublicSettings,
   },
   post: {
     "/auth/register": authController.register,
@@ -81,6 +82,7 @@ const routeTable = {
     "/api/cart/remove-voucher": cartController.removeVoucher,
     "/api/orders": orderController.createOrder,
     "/api/subscriptions": notificationController.createSubscription,
+    "/app-config/settings": appConfigController.getSettings,
   },
   put: {
     "/auth/profile": authController.updateProfile,
