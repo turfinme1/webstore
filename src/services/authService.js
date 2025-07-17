@@ -8,6 +8,7 @@ class AuthService {
   constructor(messageService, cartService) {
     this.messageService = messageService;
     this.cartService = cartService;
+    this.passwordVersion = 2;
   }
 
   async register(data) {
@@ -18,16 +19,20 @@ class AuthService {
       key === "password" ? "password_hash" : key
     );
 
-    const hashedPassword = await bcrypt.hash(data.body.password, 10);
     const values = schemaKeys.map((key) => {
-      if (key === "password") {
-        return hashedPassword;
+      if (key === "password_version") {
+        return this.passwordVersion;
       }
       return data.body[key] === undefined ? null : data.body[key];
     });
 
     const query = `INSERT INTO ${schema.routeName}(${dbColumns.join(",")}) VALUES(${dbColumns
-      .map((_, i) => `$${i + 1}`)
+      .map((column, i) => {
+        if (column === "password_hash") {
+          return `crypt($${i + 1}, gen_salt('bf', 10))`;
+        }
+        return `$${i + 1}`;
+      })
       .join(",")}) RETURNING *`;
     const createUserResult = await data.dbConnection.query(query, values);
     const user = createUserResult.rows[0];
@@ -68,7 +73,28 @@ class AuthService {
     ASSERT_USER(userResult.rows[0].is_email_verified, "Email is not verified", { code: "SERVICE.AUTH.00082.INVALID_LOGIN", long_description: `Email ${data.body.email} is not verified` });
 
     const user = userResult.rows[0];
-    const isPasswordCorrect = await bcrypt.compare(data.body.password, user.password_hash);
+    
+    let isPasswordCorrect = false;
+    if(user.password_version == 1) {
+      isPasswordCorrect = await bcrypt.compare(data.body.password, user.password_hash);
+      if (isPasswordCorrect) {
+        await data.dbConnection.query(`
+          UPDATE ${data.entitySchemaCollection.userManagementSchema.user_table} 
+          SET password_hash = crypt($1, gen_salt('bf', 10)), password_version = $2
+          WHERE id = $3`,
+          [data.body.password, this.passwordVersion, user.id]
+        );
+      }
+    } else if (user.password_version == 2) {
+      const passwordResult = await data.dbConnection.query(`
+        SELECT 1 FROM ${data.entitySchemaCollection.userManagementSchema.user_table}
+        WHERE id = $1 AND password_hash = crypt($2, password_hash)`,
+        [user.id, data.body.password]
+      );
+      isPasswordCorrect = passwordResult.rows.length === 1;
+    } else {
+      isPasswordCorrect = false;
+    }
     ASSERT_USER(isPasswordCorrect, "Invalid login", { code: "SERVICE.AUTH.00086.INVALID_LOGIN", long_description: `Invalid login with email ${data.body.email}`});
 
     const requestData = { entitySchemaCollection: data.entitySchemaCollection, dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Authenticated", userId: user.id };

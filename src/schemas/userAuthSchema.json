@@ -118,6 +118,11 @@
             "errorMessage": {
                 "type": "Address must be text."
             }
+        },
+        "password_version": {
+            "type": "integer",
+            "description": "Version of the password.",
+            "hidden": true
         }
     },
     "required": [
