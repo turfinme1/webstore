@@ -88,7 +88,6 @@ describe("AuthService", () => {
 
       // Assertions
       expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
-      expect(bcrypt.hash).toHaveBeenCalledWith("password123", 10);
       expect(mockMailService.queueEmail).toHaveBeenCalledWith({
         dbConnection: mockDbConnection,
         emailData: {
@@ -108,9 +107,6 @@ describe("AuthService", () => {
       const mockUser = { id: 1, email: "test@example.com" };
       const mockSession = { session_hash: "session123", user_id: 1 };
 
-      const mockHashedPassword = "hashed_password";
-      bcrypt.hash.mockResolvedValue(mockHashedPassword);
-
       mockDbConnection.query
         // .mockResolvedValueOnce({ rows: [] }) // No existing user
         .mockResolvedValueOnce({ rows: [mockUser] }) // New user created
@@ -125,7 +121,7 @@ describe("AuthService", () => {
         expect.stringContaining("INSERT INTO users"),
         [
           "test@example.com",
-          mockHashedPassword,
+          "password123",
           null, // This should correspond to the undefined value for someField
         ]
       );
@@ -139,6 +135,7 @@ describe("AuthService", () => {
         email: "test@example.com",
         password_hash: "hashedPassword",
         is_email_verified: true,
+        password_version: 1,
       };
       const mockSession = { session_hash: "session123", user_id: 1 };
       authService.verifyCaptcha = jest.fn().mockResolvedValueOnce(true);
@@ -147,12 +144,13 @@ describe("AuthService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [mockUser] }) // User found
+        .mockResolvedValueOnce({ rows: [] }) // update password version
         .mockResolvedValueOnce({ rows: [mockSession] }) // Session updated
         .mockResolvedValueOnce({ rows: [] }); // Insert into user_logins 
 
       const result = await authService.login(data);
 
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(2);
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
       expect(bcrypt.compare).toHaveBeenCalledWith(
         "password123",
         "hashedPassword"

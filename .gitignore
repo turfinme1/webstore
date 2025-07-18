@@ -3,3 +3,4 @@ node_modules
 cert-key.pem
 cert.pem
 package-lock.json
+firebase-private-key.json
