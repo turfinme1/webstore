@@ -2,6 +2,9 @@ importScripts(
     'https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js'
   );
 
+workbox.core.skipWaiting();
+workbox.core.clientsClaim();
+
 let currentActiveMessage = {};
 self.addEventListener('push', async (event) => {
   const fullPayload = event.data.json() || {};
