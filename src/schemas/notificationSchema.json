@@ -199,6 +199,111 @@
             "errorMessage": {
                 "type": "Invalid value for topic."
             }
+        },
+        "tag": {
+            "type": "string",
+            "label": "Tag (Replace previous messages with the same tag)",
+            "placeholder": "Enter Tag",
+            "pattern": "[A-Za-z0-9]{1,50}",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "insertConfig": {
+
+            },
+            "pattern_errorMessage": "The tag must contain only letters and numbers.",
+            "errorMessage": {
+                "type": "Invalid value for tag."
+            }
+        },
+        "use_renotify": {
+            "type": "string",
+            "label": "Use Renotify (Repeat sound/vibration for a notification with the same tag)",
+            "placeholder": "Enter Renotify",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "select",
+                "options": [
+                    {
+                        "value": "false",
+                        "label": "No"
+                    },
+                    {
+                        "value": "true",
+                        "label": "Yes"
+                    }
+                ]
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for renotify."
+            }
+        },
+        "require_interaction": {
+            "type": "string",
+            "label": "Require Interaction (Keep notification visible until user interacts with it)",
+            "placeholder": "Enter Require Interaction",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "select",
+                "options": [
+                    {
+                        "value": "false",
+                        "label": "No"
+                    },
+                    {
+                        "value": "true",
+                        "label": "Yes"
+                    }
+                ]
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for require interaction."
+            }
+        },
+        "vibrate": {
+            "type": "string",
+            "label": "Vibrate (Vibration pattern for the notification)",
+            "placeholder": "Enter Vibration Pattern",
+            "pattern": "^\\[(\\d+(,\\d+)*)\\]$",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "insertConfig": {
+            },
+            "pattern_errorMessage": "The vibration pattern must look like [100,200,300].",
+            "errorMessage": {
+                "type": "Invalid value for vibrate."
+            }
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "label": "Timestamp (display time for scheduled notifications)",
+            "placeholder": "Enter Timestamp",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "date"
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for timestamp."
+            }
         }
     },
     "table_display_columns": [

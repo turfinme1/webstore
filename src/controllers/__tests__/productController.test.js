@@ -24,6 +24,7 @@ describe("ProductController", () => {
       delete: jest.fn(),
       uploadImages: jest.fn(),
       uploadProducts: jest.fn(),
+      getQuantity: jest.fn(),
     };
 
     authService = {
@@ -311,6 +312,24 @@ describe("ProductController", () => {
       expect(productService.delete).toHaveBeenCalledWith(expectedCallObject);
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(deletedProduct);
+    });
+  });
+
+  describe('getQuantity', () => {
+    it('should call productService.getQuantity and respond with status 200', async () => {
+      const req = { params: { entity: 'testEntity', id: 1 }, session: { admin_user_id: 1 } };
+      const expectedQuantity = { quantity: 100 };
+
+      productService.getQuantity.mockResolvedValue(expectedQuantity);
+
+      await productController.getQuantity(req, mockRes, mockNext);
+
+      expect(productService.getQuantity).toHaveBeenCalledWith({
+        params: req.params,
+        dbConnection: req.dbConnection,
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith(expectedQuantity);
     });
   });
 });
