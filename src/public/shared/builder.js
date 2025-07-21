@@ -1046,6 +1046,12 @@ class CrudPageBuilder {
     const timeToLiveInput = document.querySelector("#time_to_live");
     const urgencyInput = document.querySelector("#urgency");
     const useTopicInput = document.querySelector("#use_topic");
+    const tagInput = document.querySelector("#tag");
+    const useRenotifyInput = document.querySelector("#use_renotify");
+    const requireInteractionInput = document.querySelector("#require_interaction");
+    const vibrateInput = document.querySelector("#vibrate");
+    const timestampInput = document.querySelector("#timestamp");
+    const flatpicrTimestampInstance = timestampInput._flatpickr;
 
     const filteredTemplates = this.state.fetchedSelectOptions["template_id"].filter(
       (template) => template.type === templateType
@@ -1068,6 +1074,12 @@ class CrudPageBuilder {
     urgencyInput.required = false;
     useTopicInput.disabled = true;
     useTopicInput.required = false;
+    tagInput.disabled = true;
+    useRenotifyInput.disabled = true;
+    requireInteractionInput.disabled = true;
+    vibrateInput.disabled = true;
+    timestampInput.disabled = true;
+    flatpicrTimestampInstance?._input?.setAttribute("disabled", true);
     
     if (templateType === "Push-Notification-Broadcast") {
       userIdsInput.disabled = true;
@@ -1082,6 +1094,13 @@ class CrudPageBuilder {
       urgencyInput.required = true;
       useTopicInput.disabled = false;
       useTopicInput.required = true;
+
+      tagInput.disabled = false;
+      useRenotifyInput.disabled = false;
+      requireInteractionInput.disabled = false;
+      vibrateInput.disabled = false;
+      timestampInput.disabled = false;
+      flatpicrTimestampInstance?._input?.removeAttribute("disabled");
     }
   }
 }

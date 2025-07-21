@@ -722,14 +722,25 @@ class CrudService {
     let notificationSettings = null;
     if (template.type === 'Push-Notification' || template.type === 'Push-Notification-Broadcast') {
       let topic = null;
+      let timestamp = null;
       if(data.body.use_topic === 'true') {
         topic = template.subject.substring(0, 32).replace(/[^a-zA-Z0-9-_]/g, '');
       }
+      if(data.body.timestamp) { 
+        const date = new Date(data.body.timestamp);
+        ASSERT_USER(!isNaN(date.getTime()), "Invalid timestamp format", { code: "SERVICE.CRUD.00631.INVALID_INPUT_TIMESTAMP", long_description: "Invalid timestamp format" });
+        timestamp = date.toISOString();
+      };
       notificationSettings = {
         ...template.notification_settings,
         TTL: data.body.time_to_live,
         urgency: data.body.urgency,
         topic: topic,
+        tag: data.body.tag,
+        renotify: data.body.use_renotify == "true",
+        requireInteraction: data.body.require_interaction == "true",
+        vibrate: data.body.vibrate,
+        timestamp: timestamp,
       };
     }
     

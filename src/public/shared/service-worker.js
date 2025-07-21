@@ -23,7 +23,11 @@ self.addEventListener('push', async (event) => {
       data: {
         id: payload.id || null,
       },
-      tag: payload.id,
+      tag: payload?.tag,
+      renotify: payload?.renotify,
+      requireInteraction: payload?.requireInteraction,
+      vibrate: payload?.vibrate,
+      timestamp: Math.floor(new Date(payload?.timestamp)),
     });
 
     await changeNotificationStatus(payload.id, 'delivered');
