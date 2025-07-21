@@ -2119,6 +2119,7 @@ class ReportService {
                 { key: 'user_agent', label: 'User Agent', format: 'text' },
                 { key: 'platform', label: 'Platform', format: 'text' },
                 { key: 'push_provider_name', label: 'Push Provider', format: 'text' },
+                { key: 'firebase_subscription_token', label: 'Firebase Subscription Token', format: 'text' },
                 { key: 'count', label: 'Count', format: 'number' },
             ]
         ],
@@ -2201,6 +2202,13 @@ class ReportService {
             ],
             groupable: true,
         },
+        {
+            key: "firebase_subscription_token",
+            grouping_expression: "P.data->>'token'",
+            filter_expression: "STRPOS(LOWER(CAST( P.data->>'token' AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "Firebase Subscription Token",
+        }
     ];
   
     const sql = `
@@ -2214,6 +2222,7 @@ class ReportService {
             NULL AS "user_agent",
             NULL AS "platform",
             NULL AS "push_provider_name",
+            NULL AS "firebase_subscription_token",
             COUNT(*) AS "count",
             0 AS "sort_order"
         FROM push_subscriptions P
@@ -2230,6 +2239,7 @@ class ReportService {
             AND $status_filter_expression$
             AND $platform_filter_expression$
             AND $push_provider_name_filter_expression$
+            AND $firebase_subscription_token_filter_expression$
         UNION ALL
   
         SELECT
@@ -2242,6 +2252,7 @@ class ReportService {
             $user_agent_grouping_expression$ AS "user_agent",
             $platform_grouping_expression$ AS "platform",
             $push_provider_name_grouping_expression$ AS "push_provider_name",
+            $firebase_subscription_token_grouping_expression$ AS "firebase_subscription_token",
             COUNT(*) AS "count",
             1 AS "sort_order"
         FROM push_subscriptions P
@@ -2258,7 +2269,8 @@ class ReportService {
             AND $status_filter_expression$
             AND $platform_filter_expression$
             AND $push_provider_name_filter_expression$
-        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
+            AND $firebase_subscription_token_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
         ORDER BY sort_order ASC, 1 DESC`;
   
     return { reportUIConfig, sql, reportFilters };
