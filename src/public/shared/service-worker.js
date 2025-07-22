@@ -89,6 +89,10 @@ self.addEventListener('notificationclose', (event) => {
 
 async function changeNotificationStatus(notificationId, status) {
   try {
+    if (!notificationId) {
+      console.warn('Notification ID is not provided, skipping status change.');
+      return;
+    }
     const response = await fetch(`/api/notifications/${notificationId}`, {
       method: 'PUT',
       headers: {
