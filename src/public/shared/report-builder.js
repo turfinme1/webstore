@@ -1068,7 +1068,8 @@ class ValidationService {
                     };
                 },
             },
-            {
+            {   
+                validationType: 'inPastValidation',
                 validate: (min, max) => {
                     const errors = [];
                     const now = new Date();
@@ -1129,6 +1130,9 @@ class ValidationService {
         let errors = [];
 
         for (const rule of rules) {
+            if (filter.skip_validation && filter.skip_validation?.includes(rule.validationType)) {
+                continue;
+            }
             const result = rule.validate(value, maxValue);
             if (Array.isArray(result) && result.length > 0) {
                 errors = errors.concat(result);
