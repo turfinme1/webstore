@@ -1498,6 +1498,11 @@ class ReportService {
                 { key: 'ttl', label: 'TTL', format: 'number', align: 'right' },
                 { key: 'urgency', label: 'Urgency', format: 'text' },
                 { key: 'has_topic', label: 'Has Topic', format: 'text' },
+                { key: 'tag', label: 'Tag', format: 'text' },
+                { key: 'has_renotify', label: 'Has Renotify', format: 'text' },
+                { key: 'has_require_interaction', label: 'Requires Interaction', format: 'text' },
+                { key: 'vibrate', label: 'Vibrate', format: 'text' },
+                { key: 'timestamp', label: 'Timestamp', format: 'date_time' },
                 { key: 'subject', label: 'Subject', format: 'text' },
                 { key: 'text_content', label: 'Text Content', format: 'text' },
                 { key: 'count', label: 'Count', format: 'number' }
@@ -1634,6 +1639,76 @@ class ReportService {
             groupable: true
         },
         {
+            key: "tag",
+            grouping_expression: "N.notification_settings->>'tag'",
+            filter_expression: "STRPOS(LOWER(CAST( N.notification_settings->>'tag' AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "Tag",
+            groupable: true
+        },
+        {
+            key: "has_renotify",
+            grouping_expression:`
+                CASE
+                WHEN N.notification_settings->>'renotify' IS NULL
+                    OR N.notification_settings->>'renotify' = 'false'
+                THEN 'No' ELSE 'Yes'
+                END`,
+            filter_expression:`
+                CASE
+                WHEN N.notification_settings->>'renotify' IS NULL
+                    OR N.notification_settings->>'renotify' = 'false'
+                THEN 'No' ELSE 'Yes'
+                END = $FILTER_VALUE$`,
+            type: "select",
+            label: "Renotify",
+            options: [
+                { value: 'Yes', label: 'Yes' },
+                { value: 'No',  label: 'No'  },
+            ],
+            groupable: true
+        },
+        {
+            key: "has_require_interaction",
+            grouping_expression:`
+                CASE
+                WHEN N.notification_settings->>'requireInteraction' IS NULL
+                    OR N.notification_settings->>'requireInteraction' = 'false'
+                THEN 'No' ELSE 'Yes'
+                END`,   
+            filter_expression:`
+                CASE
+                WHEN N.notification_settings->>'requireInteraction' IS NULL
+                    OR N.notification_settings->>'requireInteraction' = 'false'
+                THEN 'No' ELSE 'Yes'
+                END = $FILTER_VALUE$`,
+            type: "select",
+            label: "Requires Interaction",
+            options: [
+                { value: 'Yes', label: 'Yes' },
+                { value: 'No',  label: 'No'  },
+            ],
+            groupable: true
+        },
+        {
+            key: "vibrate",
+            grouping_expression: "N.notification_settings->>'vibrate'",
+            filter_expression: "STRPOS(LOWER(CAST( N.notification_settings->>'vibrate' AS text )), LOWER( $FILTER_VALUE$ )) > 0",
+            type: "text",
+            label: "Vibrate",
+        },
+        {
+            key: "timestamp",
+            grouping_expression: "(N.notification_settings->>'timestamp')::timestamptz",
+            filter_expression: "(N.notification_settings->>'timestamp')::timestamptz = $FILTER_VALUE$",
+            minimum_filter_expression: "(N.notification_settings->>'timestamp')::timestamptz >= $FILTER_VALUE$",
+            maximum_filter_expression: "(N.notification_settings->>'timestamp')::timestamptz <= $FILTER_VALUE$",
+            type: "timestamp",
+            label: "Timestamp",
+            skip_validation: ["inPastValidation"],
+            groupable: true
+        },
+        {
             key: "count",
             type: "number",
             hideInUI: true
@@ -1651,6 +1726,11 @@ class ReportService {
             NULL AS "ttl",
             NULL AS "urgency",
             NULL AS "has_topic",
+            NULL AS "tag",
+            NULL AS "has_renotify",
+            NULL AS "has_require_interaction",
+            NULL AS "vibrate",
+            NULL AS "timestamp",
             NULL AS "subject",
             NULL AS "text_content",
             COUNT(*) AS "count",
@@ -1670,6 +1750,12 @@ class ReportService {
             AND $ttl_maximum_filter_expression$
             AND $urgency_filter_expression$
             AND $has_topic_filter_expression$
+            AND $tag_filter_expression$
+            AND $has_renotify_filter_expression$
+            AND $has_require_interaction_filter_expression$
+            AND $vibrate_filter_expression$
+            AND $timestamp_minimum_filter_expression$
+            AND $timestamp_maximum_filter_expression$
         
         UNION ALL
 
@@ -1683,6 +1769,11 @@ class ReportService {
             $ttl_grouping_expression$ AS "ttl",
             $urgency_grouping_expression$ AS "urgency",
             $has_topic_grouping_expression$ AS "has_topic",
+            $tag_grouping_expression$ AS "tag",
+            $has_renotify_grouping_expression$ AS "has_renotify",
+            $has_require_interaction_grouping_expression$ AS "has_require_interaction",
+            $vibrate_grouping_expression$ AS "vibrate",
+            $timestamp_grouping_expression$ AS "timestamp",
             $subject_grouping_expression$ AS "subject",
             $text_content_grouping_expression$ AS "text_content",
             COUNT(*) AS "count",
@@ -1702,7 +1793,13 @@ class ReportService {
             AND $ttl_maximum_filter_expression$
             AND $urgency_filter_expression$
             AND $has_topic_filter_expression$
-        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+            AND $tag_filter_expression$
+            AND $has_renotify_filter_expression$
+            AND $has_require_interaction_filter_expression$
+            AND $vibrate_filter_expression$
+            AND $timestamp_minimum_filter_expression$
+            AND $timestamp_maximum_filter_expression$
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
         ORDER BY sort_order ASC, 1 DESC`;
 
     return { reportUIConfig, sql, reportFilters };
