@@ -2,6 +2,7 @@
   "type": "object",
   "name": "admin-users",
   "table": "admin_users",
+  "href": "/crud-staff-user",
   "views": "admin_users_view",
   "queryValidationSchema": "userQueryParamsSchema",
   "properties": {

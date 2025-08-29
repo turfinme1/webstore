@@ -1408,7 +1408,7 @@ describe("CrudService", () => {
           await crudService.emailTemplateUpdateHook(mockData, mockInsertObject);
   
           expect(mockData.dbConnection.query).toHaveBeenCalledWith(
-              expect.stringContaining('SELECT * FROM email_templates'),
+              expect.stringContaining('SELECT * FROM message_templates'),
               [mockData.params.id]
           );
           expect(mockData.body.placeholders).toBe(JSON.stringify(mockTemplate.placeholders));
@@ -1424,7 +1424,7 @@ describe("CrudService", () => {
               .toThrow('Email template not found');
   
           expect(mockData.dbConnection.query).toHaveBeenCalledWith(
-              expect.stringContaining('SELECT * FROM email_templates'),
+              expect.stringContaining('SELECT * FROM message_templates'),
               [mockData.params.id]
           );
       });
@@ -1453,6 +1453,11 @@ describe("CrudService", () => {
           mockData = {
               dbConnection: {
                   query: jest.fn()
+              },
+              body: {
+                use_topic: "true",
+                time_to_live: 3600,
+                urgency: "high",
               }
           };
   
@@ -1470,6 +1475,7 @@ describe("CrudService", () => {
                   id: 123,
                   subject: 'Test Subject',
                   template: 'Hello {first_name} {last_name}!',
+                  type: "Push-Notification",
                   placeholders: ['{first_name}', '{last_name}']
               }]
           });
@@ -1489,20 +1495,20 @@ describe("CrudService", () => {
   
           // Verify template query
           expect(mockData.dbConnection.query).toHaveBeenNthCalledWith(1,
-              expect.stringContaining('SELECT * FROM email_templates'),
+              expect.stringContaining('SELECT * FROM message_templates'),
               [123]
           );
   
           // Verify users query
           expect(mockData.dbConnection.query).toHaveBeenNthCalledWith(2,
-              expect.stringContaining('SELECT id, email, first_name, last_name'),
+              expect.stringContaining('SELECT users.id, email, first_name, last_name, phone' ),
               [[1, 2, 3]]
           );
   
           // Verify email insertions
           expect(mockData.dbConnection.query).toHaveBeenNthCalledWith(3,
-              expect.stringContaining('INSERT INTO emails'),
-              [1, 'user1@test.com', 'Test Subject', 'Hello John Doe!', 1]
+              expect.stringContaining('INSERT INTO message_queue'),
+              [1, 'user1@test.com', 'Test Subject', 'Hello John Doe!', 1, "Push-Notification", expect.any(Object)]
           );
       });
   
@@ -1548,11 +1554,126 @@ describe("CrudService", () => {
           });
   
           mockData.dbConnection.query.mockResolvedValueOnce({ rows: [] });
-  
-          await crudService.notificationCreateHook(mockData, mockMainEntity);
+          
+          await expect(crudService.notificationCreateHook(mockData, mockMainEntity))
+              .rejects
+              .toThrow('No users found');
   
           expect(mockData.dbConnection.query).toHaveBeenCalledTimes(2);
       });
     });
+
+    describe("notificationDryRunHook", () => {
+    let data;
+    let svc;
+
+    beforeEach(() => {
+      data = {
+        body: {},
+        dbConnection: { query: jest.fn() },
+      };
+      svc = new CrudService();
+    });
+
+    it("throws if template not found", async () => {
+      data.body.template_id = 123;
+      data.dbConnection.query.mockResolvedValueOnce({ rows: [] });
+
+      await expect(svc.notificationDryRunHook(data))
+        .rejects.toMatchObject({ message: "Template not found" });
+      expect(data.dbConnection.query).toHaveBeenCalledWith(
+        expect.stringContaining("FROM message_templates"),
+        [123]
+      );
+    });
+
+    it("handles Push-Notification-Broadcast", async () => {
+      data.body.template_id = 1;
+      // first call returns template row
+      data.dbConnection.query
+        .mockResolvedValueOnce({ rows: [{ type: "Push-Notification-Broadcast" }] })
+        // second call returns active subscriptions count
+        .mockResolvedValueOnce({ rows: [{ count: 42 }] });
+
+      const result = await svc.notificationDryRunHook(data);
+      expect(data.dbConnection.query).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining("FROM push_subscriptions"),
+      );
+      expect(result).toEqual({ message: "This will affect 42 users. Proceed?" });
+    });
+
+    it("handles Push-Notification (filtered users)", async () => {
+      data.body.template_id = 2;
+      data.body.user_ids = "5, 6,7";
+      data.dbConnection.query
+        .mockResolvedValueOnce({ rows: [{ type: "Push-Notification" }] })
+        .mockResolvedValueOnce({ rows: [{ count: 7 }] });
+
+      const result = await svc.notificationDryRunHook(data);
+      expect(data.dbConnection.query).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining("COUNT(DISTINCT user_id)"),
+        [[5,6,7]]
+      );
+      expect(result).toEqual({ message: "This will affect 7 users. Proceed?" });
+    });
+
+    it("handles other notification types (regular users)", async () => {
+      data.body.template_id = 3;
+      data.body.user_ids = "10";
+      data.dbConnection.query
+        .mockResolvedValueOnce({ rows: [{ type: "Email" }] })
+        .mockResolvedValueOnce({ rows: [{ count: 3 }] });
+
+      const result = await svc.notificationDryRunHook(data);
+      expect(data.dbConnection.query).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining("FROM users"),
+        [[10]]
+      );
+      expect(result).toEqual({ message: "This will affect 3 users. Proceed?" });
+    });
+  });
+
+  describe("voucherCreateHook", () => {
+    let data;
+    let svc = new CrudService();
+    const RealDate = Date;
+
+    beforeEach(() => {
+      data = { body: {} };
+      // freeze "now" at 2024-01-01
+      global.Date = class extends RealDate {
+        constructor(arg) {
+          if (arg) return super(arg);
+          return new RealDate("2024-01-01T00:00:00Z");
+        }
+      };
+    });
+    afterEach(() => {
+      global.Date = RealDate;
+    });
+
+    it("accepts a valid future-dated voucher", async () => {
+      data.body.start_date = "2024-01-02T00:00:00Z";
+      data.body.end_date   = "2024-02-01T00:00:00Z";
+      await expect(svc.voucherCreateHook(data)).resolves.toBeUndefined();
+    });
+
+    it("throws if start_date ≥ end_date", async () => {
+      data.body.start_date = "2024-01-10T00:00:00Z";
+      data.body.end_date   = "2024-01-05T00:00:00Z";
+      await expect(svc.voucherCreateHook(data))
+        .rejects.toMatchObject({ message: "Start date must be before end date" });
+    });
+
+    it("throws if end_date is not in the future", async () => {
+      data.body.start_date = "2023-12-01T00:00:00Z";
+      data.body.end_date   = "2023-12-31T23:59:59Z";
+      await expect(svc.voucherCreateHook(data))
+        .rejects.toMatchObject({ message: "End date must be in the future" });
+    });
+  });
   });
 });

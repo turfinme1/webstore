@@ -1,7 +1,14 @@
+import * as WebSocketClientModule from "./websocketClient.js";
+import { HttpTransport, WebSocketTransport } from "./transport.js";
+import * as MessageUtil from "./firebase-init.js";
+
+let transport = new HttpTransport();
+let settings = null;
+
 async function fetchUserSchema(url) {
-  const response = await fetch(url);
+  const response = await fetchWithErrorHandling(url);
   if (!response.ok) throw new Error("Failed to fetch schema");
-  return await response.json();
+  return response.data;
 }
 
 async function createForm(schema, formId, formType) {
@@ -105,8 +112,22 @@ async function createForm(schema, formId, formType) {
       wrapper.appendChild(label);
       wrapper.appendChild(input);
 
-    } 
-    else if (schema.properties[key]?.type === "boolean"){
+    } else if (key === "push_notification_provider_id") {
+      const select = document.createElement("select");
+      select.id = key;
+      select.name = key;
+      select.className = "form-select";
+      const optionWebPush = document.createElement("option");
+      optionWebPush.value = "1";
+      optionWebPush.innerText = "Web Push";
+      const optionFirebase = document.createElement("option");
+      optionFirebase.value = "2";
+      optionFirebase.innerText = "Firebase";
+      select.appendChild(optionWebPush);
+      select.appendChild(optionFirebase);
+      wrapper.appendChild(label);
+      wrapper.appendChild(select);
+    } else if (schema.properties[key]?.type === "boolean"){
       const input = document.createElement("input");
       input.style.display = "block";
       input.type = "checkbox";
@@ -163,9 +184,9 @@ async function createForm(schema, formId, formType) {
 
 async function populateFormFields(formId, url) {
   const form = document.getElementById(formId);
-  const response = await fetch(url);
+  const response = await fetchWithErrorHandling(url);
   if (!response.ok) throw new Error("Failed to fetch user data");
-  const userData = await response.json();
+  const userData = response.data;
 
   Object.keys(userData).forEach((key) => {
     const input = form.querySelector(`[name="${key}"], [id="${key}"]`);
@@ -210,9 +231,10 @@ async function populateFormFields(formId, url) {
 
 async function fetchCountryCodes(apiUrl) {
   try {
-    const response = await fetch(apiUrl);
+    const response = await fetchWithErrorHandling(apiUrl);
     if (!response.ok) throw new Error("Failed to fetch country codes");
-    return await response.json();
+    // return await response.json();
+    return response.data;
   } catch (error) {
     console.error("Error fetching country codes:", error);
     return [];
@@ -365,8 +387,8 @@ function getFormTypeBasedOnUrl() {
 }
 
 async function getUserStatus() {
-  const response = await fetch("/auth/status");
-  return await response.json();
+  const response = await fetchWithErrorHandling("/auth/status");
+  return response.data;
 }
 
 async function loadCaptchaImage() {
@@ -407,12 +429,18 @@ function createNavigation(userStatus) {
               </button>
               <div class="collapse navbar-collapse" id="navbarNav">
                   <ul class="navbar-nav ms-auto">
+                    ${userStatus.user_type !== "admin" 
+                      ? `
                       <li class="nav-item">
                           <a class="nav-link" href="/index.html">Products</a>
                       </li>
                       <li class="nav-item">
                           <a class="nav-link" href="/cart">My Cart</a>
                       </li>
+                      <li class="nav-item">
+                          <a class="nav-link subscribe-button">Subscribe</a>
+                      </li>` 
+                      : ""}
                       ${
                         userStatus.session_type === "Authenticated"
                           ? `
@@ -423,6 +451,7 @@ function createNavigation(userStatus) {
                               : `Welcome ${userStatus.first_name}`
                           }</a>
                       </li>
+                       
                       <li class="nav-item">
                           <a class="nav-link logout-btn" href="/logout">Logout</a>
                       </li>
@@ -479,17 +508,190 @@ function createNavigation(userStatus) {
 
   document.body.prepend(navBar);
 
+  initSubscriptionButton(userStatus);
+
   const logoutButton = document.querySelector(".logout-btn");
-  if (!logoutButton) return;
-  logoutButton.addEventListener("click", async (event) => {
-    event.preventDefault();
-    const response = await fetch("/auth/logout");
-    window.location.href = "/index";
-  });
+  if (logoutButton) {
+    logoutButton.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const response = await fetch("/auth/logout");
+      window.location.href = "/index";
+    });
+  }
 
   if (userStatus.session_type === "Authenticated" && userStatus.user_type === "user") {
     updateNotificationsList();
-    setInterval(updateNotificationsList, 60000); // Update every 30 seconds
+  }
+
+  window.addEventListener('notification', async (e) => {
+    console.log('New notification received:', e.data);
+    await updateNotificationsList();
+    showMessage("You have a new notification");
+  });
+}
+
+async function prepareSubscriptionRequest(subscription, push_notification_provider_id, token) {
+  const stringifiedSubscription = JSON.stringify(subscription);
+  const parsedSubscription = JSON.parse(stringifiedSubscription);
+
+  parsedSubscription.push_notification_provider_id = push_notification_provider_id;
+  parsedSubscription.token = token;
+
+  return parsedSubscription;
+}
+
+async function initSubscriptionButton(userStatus) {
+  let token = null;
+  const subscriptionHandler = {
+    subscribe: {
+      webpush: async () => {
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: 'BJ7UuFCX99N49hlHSrTP76J_88LdIDJQ0YWuMVvC2O7GHI12eLNZK5_MGuD1leViV28gGoG1YwpYv8l3Y1yWoaU',
+        });
+        const requestBody = await prepareSubscriptionRequest(subscription, settings.push_notification_provider_id, token);
+
+        await fetch("/api/subscriptions", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+        return subscription;
+      },
+      firebase: async () => {
+        token = await MessageUtil.getToken(MessageUtil.messaging, {
+          vapidKey: "BPREQYpVsbp04NcxYjbaUxNFIJZAd6IVxZ2C-dxqO7cEpy_cKOJHZ407WN4o0OWijBDjqgRAmKOzdEcc--IZX7U",
+          serviceWorkerRegistration: registration
+        });
+        const subscription = await registration.pushManager.getSubscription();
+        const requestBody = await prepareSubscriptionRequest(subscription, settings.push_notification_provider_id, token);
+        await fetch("/api/subscriptions", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+        console.log('FCM Token:', token);
+        return subscription;
+      },
+    },
+  };
+  const subscribeButton = document.querySelector(".subscribe-button");
+  if (!subscribeButton) return;
+
+  const registration = await navigator.serviceWorker.ready;
+  let subscription = await registration.pushManager.getSubscription();
+
+  subscribeButton.textContent = subscription ? 'Unsubscribe' : 'Subscribe';
+
+  if(subscription && userStatus.session_type === "Authenticated") {
+    try {
+      token = await MessageUtil.getToken(MessageUtil.messaging, {
+          vapidKey: "BPREQYpVsbp04NcxYjbaUxNFIJZAd6IVxZ2C-dxqO7cEpy_cKOJHZ407WN4o0OWijBDjqgRAmKOzdEcc--IZX7U",
+          serviceWorkerRegistration: registration
+      });
+      const requestBody = await prepareSubscriptionRequest(subscription, settings.push_notification_provider_id, token);
+      const response = await fetch("/api/subscriptions", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+    } catch (error) {
+      console.error('Error saving subscription:', error);
+    }
+  }
+
+  setupPermissionChangeListener();
+
+  subscribeButton.addEventListener("click", async () => {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+
+    if (!subscription) {
+      if (subscriptionHandler.subscribe[settings.push_notification_provider_name]) {
+        subscription = await subscriptionHandler.subscribe[settings.push_notification_provider_name]();
+
+        subscribeButton.textContent = 'Unsubscribe';
+        window.subscription = subscription;
+      }
+    } else {
+      await subscription.unsubscribe();
+      await fetchWithErrorHandling(`/api/subscriptions`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
+      });
+      subscribeButton.textContent = 'Subscribe';
+      subscription = null;
+      token = null;
+      window.subscription = null;
+    }
+  });
+}
+
+function setupPermissionChangeListener() {
+  // Store current permission state
+  let currentPermission = Notification.permission;
+  
+  // Check if browser supports the Permissions API
+  if (navigator.permissions) {
+    navigator.permissions.query({ name: 'notifications' })
+      .then(permissionStatus => {
+        // Listen for permission changes
+        permissionStatus.onchange = async () => {
+          const newPermission = Notification.permission;
+          console.log(`Notification permission changed: ${currentPermission} → ${newPermission}`);
+          const subscription = window?.subscription;
+          
+          // If permission changed from granted to denied/blocked and we have a subscription
+          if (currentPermission === 'granted' && 
+              newPermission !== 'granted' && 
+              subscription) {
+            try {
+              console.log('Updating subscription status to blocked');
+              subscription.status = 'blocked';
+              const body = subscription.toJSON();
+              body.status = subscription.status; 
+              await fetchWithErrorHandling("/api/subscriptions", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+              });
+            } catch (error) {
+              console.error('Error updating subscription status:', error);
+            }
+          }
+          
+          currentPermission = newPermission;
+        };
+      });
+  } else {
+    // Fallback for browsers without Permissions API
+    // Use visibility change as opportunity to check permission changes
+    document.addEventListener('visibilitychange', async () => {
+      const subscription = window?.subscription;
+
+      if (document.visibilityState === 'visible') {
+        const newPermission = Notification.permission;
+        if (currentPermission === 'granted' && 
+            newPermission !== 'granted' && 
+            subscription) {
+          try {
+            console.log('Visibility change - updating subscription status');
+            subscription.status = 'blocked';
+            const body = subscription.toJSON();
+            body.status = subscription.status; 
+            await fetchWithErrorHandling("/api/subscriptions", {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+          } catch (error) {
+            console.error('Error updating subscription status:', error);
+          }
+        }
+        currentPermission = newPermission;
+      }
+    });
   }
 }
 
@@ -598,9 +800,9 @@ async function updateNotificationCount() {
 
 async function loadNotifications() {
   try {
-      const response = await fetch('/api/notifications');
+      const response = await fetchWithErrorHandling('/api/notifications');
       if (!response.ok) return [];
-      const data = await response.json();
+      const data = response.data;
       return data;
   } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -610,7 +812,7 @@ async function loadNotifications() {
 
 async function markNotificationAsRead(notificationId) {
   try {
-      await fetch(`/api/notifications/${notificationId}`, {
+      return await fetchWithErrorHandling(`/api/notifications/${notificationId}`, {
           method: 'PUT'
       });
   } catch (error) {
@@ -618,11 +820,47 @@ async function markNotificationAsRead(notificationId) {
   }
 }
 
-
-function createBackofficeNavigation(userStatus) {
+async function createBackofficeNavigation(userStatus) {
   const navContainer = document.getElementById("dynamic-nav");
   navContainer.innerHTML = ""; // Clear previous content
 
+
+  const crudResult = await fetchWithErrorHandling("/api/crud");
+  if (!crudResult.ok) {
+    showErrorMessage(crudResult.error);
+  }
+
+  const crudLinks = crudResult.data.map((entity) => {
+    if (entity.name.toLowerCase().includes("admin")) {
+      return {
+        text: `CRUD Staff Users`,
+        href: entity.href,
+        permission: "view",
+        interface: entity.name,
+      }
+    }
+
+    return {
+      text: `CRUD ${entity.name.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ")}`,
+      href: entity.href,
+      permission: "view",
+      interface: entity.name,
+    };
+  });
+
+  const reportResults = await fetchWithErrorHandling("/api/reports");
+  if (!reportResults.ok) {
+    showErrorMessage(reportResults.error);
+  }
+
+  const reportLinks = reportResults.data.map((report) => {
+    return {
+      text: report.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "),
+      href: `/report?report=${report}`,
+      permission: "view",
+      interface: report,
+    };
+  });
   const navItems = [
     {
       id: "settings-link",
@@ -633,24 +871,10 @@ function createBackofficeNavigation(userStatus) {
     },
     {
       id: "crud-product-link",
-      text: "CRUD Products",
-      href: "/crud-product",
-      permission: "view",
-      interface: "products",
-    },
-    {
-      id: "crud-product-link",
       text: "CRUD Products - JAVA",
       href: "/crud-product-java",
       permission: "view",
       interface: "products",
-    },
-    {
-      id: "crud-user-link",
-      text: "CRUD Users",
-      href: "/crud-user",
-      permission: "view",
-      interface: "users",
     },
     {
       id: "crud-user-link",
@@ -659,120 +883,8 @@ function createBackofficeNavigation(userStatus) {
       permission: "view",
       interface: "users",
     },
-    {
-      id: "crud-staff-user-link",
-      text: "CRUD Staff Users",
-      href: "/crud-staff-user",
-      permission: "view",
-      interface: "admin-users",
-    },
-    {
-      id: "crud-order-link",
-      text: "CRUD Orders",
-      href: "/crud-order",
-      permission: "view",
-      interface: "orders",
-    },
-    {
-      id: "crud-role-link",
-      text: "CRUD Roles",
-      href: "/crud-role",
-      permission: "view",
-      interface: "roles",
-    },
-    {
-      id:"promotion-link",
-      text: "CRUD Promotions",
-      href: "/crud-promotion",
-      permission: "view",
-      interface: "promotions",
-    },
-    {
-      id: "crud-voucher-link",
-      text: "CRUD Vouchers",
-      href: "/crud-voucher",
-      permission: "view",
-      interface: "vouchers",
-    },
-    {
-      id: "crud-campaign-link",
-      text: "CRUD Campaigns",
-      href: "/crud-campaign",
-      permission: "view",
-      interface: "campaigns",
-    },
-    {
-      id: "crud-notification-link",
-      text: "CRUD Notifications",
-      href: "/crud-notification",
-      permission: "view",
-      interface: "notifications",
-    },
-    // {
-    //   id: "logs-link",
-    //   text: "Report Logs",
-    //   href: "/logs",
-    //   permission: "view",
-    //   interface: "report-logs",
-    // },
-    // {
-    //   id: "report-order-link",
-    //   text: "Report Orders",
-    //   href: "/report-order",
-    //   permission: "view",
-    //   interface: "report-orders",
-    // },
-    // {
-    //   id: "report-order-by-user-link",
-    //   text: "Report Orders by User",
-    //   href: "/report-order-by-user",
-    //   permission: "view",
-    //   interface: "report-orders",
-    // },
-    {
-      id: "report-link",
-      text: "Report Logs",
-      href: "/report?report=report-logs",
-      permission: "view",
-      interface: "report-logs",
-    },
-    {
-      id: "report-link",
-      text: "Report Orders",
-      href: "/report?report=report-orders",
-      permission: "view",
-      interface: "report-orders",
-    },
-    {
-      id: "report-link",
-      text: "Report Order By User",
-      href: "/report?report=report-orders-by-user",
-      permission: "view",
-      // to be changed to the correct interface
-      interface: "report-orders",
-    },
-    {
-      id: "report-link",
-      text: "Report Users",
-      href: "/report?report=report-users",
-      permission: "view",
-      // to be changed to the correct interface
-      interface: "report-orders",
-    },
-    {
-      id: "report-link",
-      text: "Report Notifications",
-      href: "/report?report=report-notifications",
-      permission: "view",
-      interface: "report-orders",
-    },
-    {
-      id: "report-link",
-      text: "Report Notification Status",
-      href: "/report?report=report-notifications-status",
-      permission: "view",
-      interface: "report-orders",
-    },
+    ...crudLinks,
+    ...reportLinks,
     {
       id: "upload-products-link",
       text: "Upload Products from CSV",
@@ -786,13 +898,6 @@ function createBackofficeNavigation(userStatus) {
       href: "/target-group",
       permission: "create",
       interface: "target-groups",
-    },
-    {
-      id: "email-templates-link",
-      text: "CRUD Templates",
-      href: "/crud-templates",
-      permission: "view",
-      interface: "email-templates",
     },
   ];
 
@@ -813,8 +918,8 @@ function createBackofficeNavigation(userStatus) {
 
 async function fetchWithErrorHandling(url, options) {
   try {
-    const response = await fetch(url, options);
-    const data = await response.json();
+    const response = await transport.fetch(url, options);
+    const data = response.payload;
 
     if (response.ok) {
       return {
@@ -829,22 +934,24 @@ async function fetchWithErrorHandling(url, options) {
       error: data.error || "Failed to fetch data, please try again later",
     };
   } catch (error) {
+    console.error("Error fetching data:", error);
     if (!navigator.onLine) {
+      showErrorMessage("No internet connection. Please reconnect and try again.");
       return {
         ok: false,
-        error: "No internet connection",
+        error: "No internet connection. Please reconnect and try again.",
       };
     } else {
-      console.error("Error fetching data:", error);
+      showErrorMessage(error?.error || error.message || "Failed to fetch data, please try again later");
       return {
         ok: false,
-        error: "Failed to fetch data, please try again later",
+        error: error?.error || error.message || "Failed to fetch data, please try again later",
       };
     }
   }
 }
 
-function showToastMessage(message, type) {
+function showMessage(message) {
   let container = document.getElementById("message-container");
   if (!container) {
     const messageContainer = document.createElement("div");
@@ -867,10 +974,54 @@ function showToastMessage(message, type) {
   toast.setAttribute("role", "alert");
   toast.innerHTML = `
         <div class="toast-header ${
-          type === "error" ? "bg-danger text-white" : "bg-success text-white"
+          "bg-success text-white"
         }">
           <strong class="me-auto">${
-            type === "error" ? "Error" : "Success"
+            "Success"
+          }</strong>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+          ${message}
+        </div>
+      `;
+
+  container.appendChild(toast);
+  const toastInstance = new bootstrap.Toast(toast, { delay: 5000 });
+  toastInstance.show();
+
+  toast.addEventListener("hidden.bs.toast", () => {
+    toast.remove();
+  });
+}
+
+function showErrorMessage(message) {
+  let container = document.getElementById("message-container");
+  if (!container) {
+    const messageContainer = document.createElement("div");
+    messageContainer.id = "message-container";
+    messageContainer.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1050;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      `;
+    document.body.appendChild(messageContainer);
+    container = messageContainer;
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast`;
+  toast.setAttribute("role", "alert");
+  toast.innerHTML = `
+        <div class="toast-header ${
+          "bg-danger text-white"
+        }">
+          <strong class="me-auto">${
+            "Error"
           }</strong>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
         </div>
@@ -922,6 +1073,20 @@ function formatCurrency(number) {
   return `$${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2}).format(parseFloat(number)).replace(',', '.')}`;
 }
 
+async function initializePage() {
+  const frontOfficeTransportConfig = await fetchWithErrorHandling('/api/front-office-transport');
+  const frontOfficeTransportConfigResult = frontOfficeTransportConfig.data;
+  const webSocketClient = new WebSocketClientModule.WebSocketClient(frontOfficeTransportConfigResult.url);
+  await webSocketClient.init();
+      
+  const settingsResult = await fetchWithErrorHandling('/app-config/public-settings');
+  settings = settingsResult.data;
+  
+  if (window.location.port === frontOfficeTransportConfigResult.front_office_port && frontOfficeTransportConfigResult.front_office_transport === "websocket") {
+    transport = new WebSocketTransport(webSocketClient);
+  }
+}
+
 export {
   fetchUserSchema,
   createForm,
@@ -934,9 +1099,11 @@ export {
   createNavigation,
   createBackofficeNavigation,
   fetchWithErrorHandling,
-  showToastMessage,
+  showMessage,
+  showErrorMessage,
   populateFormFields,
   getUrlParams,
   updateUrlParams,
   formatCurrency,
+  initializePage,
 };

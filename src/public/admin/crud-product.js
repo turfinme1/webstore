@@ -1,4 +1,4 @@
-import { createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage, hasPermission, getUrlParams, updateUrlParams } from "./page-utility.js";
+import { createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage, hasPermission, getUrlParams, updateUrlParams } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const mainContainer = document.getElementById("main-container");
@@ -232,7 +232,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const response = await fetchWithErrorHandling(`/api/products?${queryParams.toString()}`);
 
       if(!response.ok) {
-        showToastMessage(response.error, "error");
+        showErrorMessage(response.error);
         return;
       }
       const data = await response.data;
@@ -260,6 +260,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         priceCell.textContent = `$${product.price}`;
         priceCell.style.textAlign = "right";
         productRow.appendChild(priceCell);
+
+        // Quantity Column
+        const quantityCell = document.createElement("td");
+        quantityCell.textContent = product.quantity || 0;
+        quantityCell.style.textAlign = "right";
+        productRow.appendChild(quantityCell);
         
         // Price with VAT Column
         const priceWithVatCell = document.createElement("td");
@@ -369,7 +375,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       if (!productResponse.ok) {
         console.error("Product not found");
-        showToastMessage(productResponse.error, "error");
+        showErrorMessage(productResponse.error);
         return;
       }
       const product = await productResponse.data;
@@ -381,6 +387,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Populate form fields with product data
       productUpdateForm["name"].value = product.name;
       productUpdateForm["price"].value = product.price;
+      productUpdateForm["quantity"].value = product.quantity || 0;
       productUpdateForm["short_description"].value = product.short_description;
       productUpdateForm["long_description"].value = product.long_description;
 
@@ -468,7 +475,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             );
 
             if (imageUploadResponse.ok) {
-              showToastMessage("Product updated successfully!", "success");
+              showMessage("Product updated successfully!");
               await new Promise((resolve) => setTimeout(resolve, 1000));
               productUpdateForm.reset();
               window.location.reload();
@@ -481,11 +488,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
           } else {
             console.error("Error:", error);
-            showToastMessage(`Failed to update product: ${response.error}`, "error");
+            showErrorMessage(`Failed to update product: ${response.error}`);
           }
         } catch (error) {
           console.error("Error submitting the form:", error);
-          showToastMessage("Failed to update product.", "error");
+          showErrorMessage("Failed to update product.");
         }
       });
     } catch (error) {
@@ -502,12 +509,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         if (response.ok) {
           alert("Product deleted successfully!");
-          showToastMessage("Product deleted successfully!", "success");
+          showMessage("Product deleted successfully!");
           await new Promise((resolve) => setTimeout(resolve, 1000));
           window.location.reload();
           loadProducts(currentPage); // Reload the product list after deletion
         } else {
-          showToastMessage(`Failed to delete product: ${response.error}`, "error");
+          showErrorMessage(`Failed to delete product: ${response.error}`);
         }
       } catch (error) {
         console.error("Error deleting product:", error);

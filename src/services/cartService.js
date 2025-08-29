@@ -2,15 +2,6 @@ const { ASSERT_USER } = require("../serverConfigurations/assert");
 
 class CartService {
   constructor() {
-    this.getOrCreateCart = this.getOrCreateCart.bind(this);
-    this.mergeCartsOnLogin = this.mergeCartsOnLogin.bind(this);
-    this.getCart = this.getCart.bind(this);
-    this.updateItem = this.updateItem.bind(this);
-    this.deleteItem = this.deleteItem.bind(this);
-    this.clearCart = this.clearCart.bind(this);
-    this.getActiveVouchers = this.getActiveVouchers.bind(this);
-    this.applyVoucher = this.applyVoucher.bind(this);
-    this.removeVoucher = this.removeVoucher.bind(this);
   }
 
   async getOrCreateCart(data) {
@@ -55,6 +46,38 @@ class CartService {
     await dbConnection.query(`UPDATE carts SET is_active = FALSE WHERE id = $1`, [sessionCart.id]);
   }
 
+  async cloneCartForNewSession(oldUserId, newSessionId, dbConnection) {
+    const oldCartResult = await dbConnection.query(`
+      SELECT * FROM carts WHERE user_id = $1 AND is_active = TRUE LIMIT 1`,
+      [oldUserId]
+    );
+
+    if (oldCartResult.rows.length === 0) {
+      return null;
+    }
+
+    const oldCart = oldCartResult.rows[0];
+
+    const newCartResult = await dbConnection.query(`
+      INSERT INTO carts (session_id)
+      VALUES ($1)
+      RETURNING *`,
+      [newSessionId]
+    );
+    
+    const newCart = newCartResult.rows[0];
+
+    await dbConnection.query(`
+      INSERT INTO cart_items (cart_id, product_id, quantity, unit_price)
+      SELECT $1, product_id, quantity, unit_price
+      FROM cart_items
+      WHERE cart_id = $2`,
+      [newCart.id, oldCart.id]
+    );
+
+    return newCart;
+  }
+
   async getCart(data) {
     const { user_id } = data.session;
 
@@ -68,6 +91,7 @@ class CartService {
 
       if (userCart.rows.length > 0) {
         await this.mergeCartsOnLogin(cart, userCart.rows[0], data.dbConnection);
+        await this.sendCartUpdateSyncClientsEvent(data);
         return this.getCart(data); // Re-fetch the merged cart
       } else {
         // Assign the session cart to the user and remove session_id
@@ -126,14 +150,14 @@ class CartService {
         SELECT
           SUM(cart_items_cte.total_price) AS total_price,
           largest_discount.discount_percentage,
-          ROUND(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2) AS discount_amount,
-          ROUND(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100), 2) AS total_price_after_discount,
+          TRUNC(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2) AS discount_amount,
+          TRUNC(SUM(cart_items_cte.total_price) - TRUNC(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2), 2) AS total_price_after_discount,
           vat.vat_percentage,
-          ROUND(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100) * vat.vat_percentage / 100, 2) AS vat_amount,
+          TRUNC((SUM(cart_items_cte.total_price) - TRUNC(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2)) * vat.vat_percentage / 100, 2) AS vat_amount,
           cart_details.voucher_amount,
           cart_details.voucher_code,
-          ROUND(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
-          ROUND(GREATEST(SUM(cart_items_cte.total_price) * (1 - largest_discount.discount_percentage / 100) * (1 + vat.vat_percentage / 100) - cart_details.voucher_amount, 0), 2) AS total_price_with_voucher
+          TRUNC((SUM(cart_items_cte.total_price) - TRUNC(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2)) * (1 + vat.vat_percentage / 100), 2) AS total_price_with_vat,
+          TRUNC(GREATEST((SUM(cart_items_cte.total_price) - TRUNC(SUM(cart_items_cte.total_price) * largest_discount.discount_percentage / 100, 2))*  (1 + vat.vat_percentage / 100) - cart_details.voucher_amount, 0), 2) AS total_price_with_voucher
         FROM cart_items_cte, vat, largest_discount, cart_details
         GROUP BY vat.vat_percentage, largest_discount.discount_percentage, cart_details.voucher_amount, cart_details.voucher_code
       )
@@ -166,6 +190,8 @@ class CartService {
       [cart.id, data.body.product_id, data.body.quantity]
     );
 
+    await this.sendCartUpdateSyncClientsEvent(data);
+
     return result.rows[0];
   }
 
@@ -178,6 +204,8 @@ class CartService {
       RETURNING *`,
       [cart.id, data.params.itemId]
     );
+
+    await this.sendCartUpdateSyncClientsEvent(data);
 
     return result.rows[0];
   }
@@ -248,6 +276,8 @@ class CartService {
       [voucher.id, voucher.discount_amount, cart.id]
     );
 
+    await this.sendCartUpdateSyncClientsEvent(data);
+
     return { message: "Voucher applied successfully." };
   }
 
@@ -264,7 +294,43 @@ class CartService {
       [cart.id]
     );
 
+    await this.sendCartUpdateSyncClientsEvent(data);
+
     return { message: "Voucher removed successfully." };
+  }
+
+  async sendCartUpdateSyncClientsEvent(data) {
+    await data.dbConnection.query(`
+      INSERT INTO message_queue (recipient_id, subject, text_content, type, event_type)
+      VALUES ($1, $2, $3, $4, $5)`,
+      [data.session.user_id, "Cart updated", "Your cart was updated", "Notification", "cart_update_sync_clients"]
+    );
+  }
+
+  async validateStockForItems(data) {
+    const cartResult = await data.dbConnection.query(`
+      SELECT ci.*, p.name, c.voucher_id
+      FROM carts c
+      LEFT JOIN cart_items ci ON c.id = ci.cart_id
+      LEFT JOIN products p ON ci.product_id = p.id
+      WHERE c.user_id = $1 AND c.is_active = TRUE`,
+      [data.session.user_id]
+    );
+    const cartItems = cartResult.rows;
+    ASSERT_USER(cartResult.rows.length > 0, "Cart is empty", { code: "SERVICE.ORDER.00067.ORDER_INVALID_INPUT", long_description: "Cart is empty" });
+
+    for (const item of cartItems) {
+      const inventoryResult = await data.dbConnection.query(`
+        SELECT quantity 
+        FROM inventories 
+        WHERE product_id = $1`,
+        [item.product_id]
+      );
+      ASSERT_USER(inventoryResult.rows.length > 0, `Not enough stock for product ${item.name}`, { code: "SERVICE.ORDER.00085.ORDER_INVALID_INPUT.NO_STOCK", long_description: `Not enough stock for product ${item.name}` });
+      ASSERT_USER(parseInt(item.quantity) <= parseInt(inventoryResult.rows[0].quantity), `Not enough stock for product ${item.name}`, { code: "SERVICE.ORDER.00086.NO_STOCK", long_description: `Not enough stock for product ${item.name}` });
+    }
+
+    return { message: "Stock validation successful" };
   }
 }
 

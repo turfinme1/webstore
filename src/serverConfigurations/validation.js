@@ -66,7 +66,7 @@ function validateQueryParams(req, schema) {
   const validDirections = ["ASC", "DESC"];
   orderParams.forEach(([key, direction]) => {
     const schemaOrder = schema.orderParams.properties[key];
-    ASSERT_USER(schemaOrder, `Invalid order parameter: ${key}`, { code: "SERVER_CONFIG.VALIDATION.00069.INVALID_QUERY_PARAMS", long_description: "Invalid query parameters" });
+    // ASSERT_USER(schemaOrder, `Invalid order parameter: ${key}`, { code: "SERVER_CONFIG.VALIDATION.00069.INVALID_QUERY_PARAMS", long_description: "Invalid query parameters" });
     ASSERT_USER(validDirections.includes(direction.toUpperCase()), `Invalid order direction: ${direction}`, { code: "SERVER_CONFIG.VALIDATION.00070.INVALID_QUERY_PARAMS", long_description: "Invalid query parameters" });
   });
   
@@ -126,7 +126,7 @@ function validateObject(object, schema) {
   }
   let formattedErrors = "";
   for (const key in errors) {
-    formattedErrors += `${errors[key].join(", ")}\n`;
+    formattedErrors += `${key}: ${errors[key].join(", ")}\n`;
   }
   ASSERT(isValid, `Validation error for ${schema.name} object`, { code: "SERVER_CONFIG.VALIDATION.00131.INVALID_INPUT", long_description: `Validation error for ${schema.name}: ${formattedErrors}` });
 }

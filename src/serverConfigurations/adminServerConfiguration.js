@@ -13,8 +13,8 @@ const OrderService = require("../services/orderService");
 const OrderController = require("../controllers/orderController");
 const ExportService = require("../services/exportService");
 const ExportController = require("../controllers/exportController");
-const { EmailService, transporter } = require("../services/emailService");
-const EmailController = require("../controllers/emailController");
+const { MessageService, transporter} = require("../services/messageService");
+const MessageController = require("../controllers/messageController");
 const { TemplateLoader } = require("./templateLoader");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const AppConfigService = require("../services/appConfigService");
@@ -22,20 +22,19 @@ const AppConfigController = require("../controllers/appConfigController");
 const ReportService = require("../services/reportService");
 const ReportController = require("../controllers/reportController");
 const Logger = require("./logger");
-
 const entitySchemaCollection = loadEntitySchemas("admin");
 const templateLoader = new TemplateLoader();
-const emailService = new EmailService(transporter, templateLoader);
-const emailController = new EmailController(emailService);
-const authService = new AuthService(emailService);
+const messageService = new MessageService(transporter, templateLoader);
+const emailController = new MessageController(messageService);
+const authService = new AuthService(messageService);
 const authController = new AuthController(authService);
-const crudService = new CrudService();
+const crudService = new CrudService(new ReportService());
 const crudController = new CrudController(crudService, authService);
 const productService = new ProductService();
 const productController = new ProductController(productService, authService);
 const appConfigService = new AppConfigService();
 const appConfigController = new AppConfigController(appConfigService, authService);
-const orderService = new OrderService(emailService);
+const orderService = new OrderService(messageService);
 const orderController = new OrderController(orderService, authService);
 const exportService = new ExportService(crudService);
 const exportController = new ExportController(exportService);
@@ -56,9 +55,13 @@ const routeTable = {
     "/auth/captcha": authController.getCaptcha,
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
-    "/app-config/rate-limit-settings": appConfigController.getRateLimitSettings,
+    "/app-config/settings": appConfigController.getSettings,
     "/api/test-email/:id": emailController.sendTestEmail,
     "/api/preview-email/:id": emailController.previewEmail,
+    "/api/reports": reportController.getAllReports,
+    "/api/crud": crudController.getAllEntities,
+    "/api/java-url": appConfigController.getJavaAPIUrl,
+    "/api/reports/:report/preferences": reportController.getReportPreference,
   },
   post: {
     "/crud/:entity": crudController.create,
@@ -74,13 +77,14 @@ const routeTable = {
     '/api/products/upload': productController.uploadProducts,
     "/api/reports/:report": reportController.getReport,
     "/api/reports/:report/export/:format": reportController.exportReport,
+    "/api/reports/:report/preferences": reportController.setReportPreference,
   },
   put: {
     "/crud/:entity/:id": crudController.update,
     "/api/products/:id": productController.update,
     "/api-back/orders/:orderId": orderController.updateOrderByStaff,
     "/auth/profile": authController.updateProfile,
-    "/app-config/rate-limit-settings": appConfigController.updateRateLimitSettings,
+    "/app-config/settings": appConfigController.updateRateLimitSettings,
   },
   delete: {
     "/crud/:entity/:id": crudController.delete,
@@ -134,6 +138,10 @@ function requestMiddleware(handler) {
   
       await req.dbConnection?.query("ROLLBACK");
       await req.logger.error(error);
+
+      if(!(error instanceof UserError)) {
+        await req.logger.createIssue(error, req);
+      }
 
       if(req.signal?.aborted) {
         if(res.headersSent) {

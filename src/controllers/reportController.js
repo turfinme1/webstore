@@ -1,11 +1,9 @@
 class ReportController {
   constructor(reportService) {
     this.reportService = reportService;
-    this.getReport = this.getReport.bind(this);
-    this.exportReport = this.exportReport.bind(this);
   }
 
-  async getReport(req, res, next) {
+  getReport = async (req, res, next) => {
     const data = {
       body: req.body,
       params: req.params,
@@ -18,7 +16,7 @@ class ReportController {
     res.status(200).json(result);
   }
 
-  async exportReport(req, res, next) {
+  exportReport = async (req, res, next) => {
     const data = {
       res: res,
       body: req.body,
@@ -28,6 +26,35 @@ class ReportController {
       dbConnection: req.dbConnection,
     };
     const result = await this.reportService.exportReport(data);
+    res.status(200).json(result);
+  }
+
+  getAllReports = async (req, res, next) => {
+    const result = await this.reportService.getAllReports();
+    res.status(200).json(result);
+  }
+
+  setReportPreference = async (req, res, next) => {
+    const data = {
+      body: req.body,
+      params: req.params,
+      session: req.session,
+      context: req.context,
+      dbConnection: req.dbConnection,
+    };
+    const result = await this.reportService.setReportPreference(data);
+    res.status(200).json(result);
+  }
+
+  getReportPreference = async (req, res, next) => {
+    const data = {
+      body: req.body,
+      params: req.params,
+      session: req.session,
+      context: req.context,
+      dbConnection: req.dbConnection,
+    };
+    const result = await this.reportService.getReportPreference(data);
     res.status(200).json(result);
   }
 }

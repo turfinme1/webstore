@@ -1,6 +1,6 @@
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showErrorMessage, showMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
 
-const javaApiUrl = "http://localhost:8080";
+let javaApiUrl;
 
 // Centralized state object
 const state = {
@@ -54,6 +54,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   state.pageSize = urlParams.pageSize || 10;
   state.filterParams = urlParams.filterParams || {};
   state.orderParams = urlParams.orderParams || [];
+
+  const javaApiUrlResult = await fetch("/api/java-url");
+  const json = await javaApiUrlResult.json();
+  javaApiUrl = json.url;
 
   if (!hasPermission(userStatus, "read", "users")) {
     elements.mainContainer.innerHTML = "<h1>User Management</h1>";
@@ -157,7 +161,7 @@ async function loadUsers(page) {
       `${javaApiUrl}/crud/users/filtered?${queryParams.toString()}`
     );
     if(!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
     const { result, count } = await response.data;
@@ -272,6 +276,12 @@ async function handleCreateUser(event) {
   const data = Object.fromEntries(formData);
   if(data.birth_date === ""){
     data.birth_date = null;
+  } else {
+    const birthDate = new Date(data.birth_date);
+    if(birthDate > new Date()){
+      showErrorMessage("Birth date must be in the past");
+      return;
+    }
   }
   try {
     const response = await fetchWithErrorHandling(`${javaApiUrl}/crud/users`, {
@@ -280,13 +290,13 @@ async function handleCreateUser(event) {
       body: JSON.stringify(data),
     });
     if (response.ok) {
-      showToastMessage("User created successfully!", "success");
+      showMessage("User created successfully!");
       elements.userForm.reset();
       hideForm();
       await new Promise((resolve) => setTimeout(resolve, 2000));
       loadUsers(state.currentPage);
     } else {
-      showToastMessage(`Failed to create user: ${response.error}`, "error");
+      showErrorMessage(`Failed to create user: ${response.error}`);
     }
   } catch (error) {
     console.error("Error creating user:", error);
@@ -299,6 +309,12 @@ async function handleUpdateUser(event) {
   const data = Object.fromEntries(formData);
   if(data.birth_date === ""){
     data.birth_date = null;
+  } else {
+    const birthDate = new Date(data.birth_date);
+    if(birthDate > new Date()){
+      showErrorMessage("Birth date must be in the past");
+      return;
+    }
   }
   console.log(JSON.stringify(formData));
   try {
@@ -308,7 +324,7 @@ async function handleUpdateUser(event) {
       body: JSON.stringify(data),
     });
     if (response.ok) {
-      showToastMessage("User updated successfully!", "success");
+      showMessage("User updated successfully!");
       elements.userUpdateForm.reset();
       state.filterParams = {};
       state.currentPage = 1;
@@ -316,7 +332,7 @@ async function handleUpdateUser(event) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
       loadUsers(state.currentPage);
     } else {
-      showToastMessage(`Failed to update user: ${response.error}`, "error");
+      showErrorMessage(`Failed to update user: ${response.error}`);
     }
   } catch (error) {
     console.error("Error updating user:", error);
@@ -327,7 +343,7 @@ async function displayUpdateForm(userId) {
   try {
     const userResponse = await fetchWithErrorHandling(`${javaApiUrl}/crud/users/${userId}`);
     if (!userResponse.ok) {
-      showToastMessage(userResponse.error, "error");
+      showErrorMessage(userResponse.error);
       return;
     }
     const user = await userResponse.data;
@@ -365,11 +381,11 @@ async function handleDeleteUser(userId) {
       method: "DELETE",
     });
     if (response.ok) {
-      showToastMessage("User deleted successfully!", "success");
+      showMessage("User deleted successfully!");
       await new Promise((resolve) => setTimeout(resolve, 2000));
       loadUsers(state.currentPage);
     } else {
-      showToastMessage(`Failed to delete user: ${response.error}`, "error");
+      showErrorMessage(`Failed to delete user: ${response.error}`);
     }
   } catch (error) {
     console.error("Error deleting user:", error);

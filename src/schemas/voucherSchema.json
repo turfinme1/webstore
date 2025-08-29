@@ -2,6 +2,7 @@
     "type": "object",
     "name": "vouchers",
     "table": "vouchers",
+    "href": "/crud-voucher",
     "views": "vouchers_view",
     "queryValidationSchema": "voucherQueryParamsSchema",
     "properties": {
@@ -23,7 +24,7 @@
         "code": {
             "type": "string",
             "minLength": 3,
-            "pattern": "^[a-zA-Z0-9_-]+$",
+            "pattern": "[A-Za-z0-9]{8}",
             "label": "Voucher Code",
             "placeholder": "Enter Voucher Code",
             "filterable": true,
@@ -31,6 +32,7 @@
                 "create": true,
                 "update": true
             },
+            "pattern_errorMessage": "The voucher code must be 8 characters long and contain only letters and numbers",
             "errorMessage": {
                 "type": "Invalid value for voucher code."
             }
@@ -81,7 +83,8 @@
                 "update": true
             },
             "renderConfig": {
-                "type": "date"
+                "type": "date",
+                "in_past": true
             },
             "errorMessage": {
                 "type": "Invalid value for end date."

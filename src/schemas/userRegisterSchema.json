@@ -12,7 +12,7 @@
             "placeholder": "Enter First Name",
             "errorMessage": {
                 "minLength": "Name must be at least 3 characters long.",
-                "pattern": "Name can only contain letters and spaces."
+                "pattern": "Name can only contain letters and no spaces."
             }
         },
         "last_name": {
@@ -23,7 +23,7 @@
             "placeholder": "Enter Last Name",
             "errorMessage": {
                 "minLength": "Name must be at least 3 characters long.",
-                "pattern": "Name can only contain letters and spaces."
+                "pattern": "Name can only contain letters and no spaces."
             }
         },
         "email": {
@@ -68,9 +68,11 @@
         },
         "birth_date": {
             "type": "string",
+            "minLength": 3,
             "label": "Birth Date",
             "placeholder": "Enter Birth Date",
             "errorMessage": {
+                "minLength": "Birth date is required.",
                 "format": "Birth date must be a valid date."
             }
         },
@@ -136,6 +138,7 @@
         "email",
         "phone",
         "iso_country_code_id",
+        "birth_date",
         "captcha_answer"
     ],
     "additionalProperties": false,

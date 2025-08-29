@@ -2,7 +2,6 @@ const { ASSERT_USER } = require("../serverConfigurations/assert");
 
 class PaymentService {
   constructor() {
-    this.createPayment = this.createPayment.bind(this);
   }
 
   async createPayment(data) {

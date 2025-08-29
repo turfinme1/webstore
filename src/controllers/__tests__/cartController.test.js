@@ -15,6 +15,7 @@ describe('CartController', () => {
       getActiveVouchers: jest.fn(),
       applyVoucher: jest.fn(),
       removeVoucher: jest.fn(),
+      validateStockForItems: jest.fn(),
     };
 
     cartController = new CartController(cartService);
@@ -144,6 +145,22 @@ describe('CartController', () => {
       });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(mockRemoveVoucherResult);
+    });
+  });
+
+  describe('validateStockForItems', () => {
+    it('should call cartService.validateStockForItems and return the result', async () => {
+      const mockValidateStockResult = { valid: true };
+      cartService.validateStockForItems.mockResolvedValue(mockValidateStockResult);
+
+      await cartController.validateStockForItems(req, res);
+
+      expect(cartService.validateStockForItems).toHaveBeenCalledWith({
+        session: req.session,
+        dbConnection: req.dbConnection,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockValidateStockResult);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, fetchWithErrorHandling } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();
@@ -31,13 +31,13 @@ async function renderSettings() {
     attachValidationListeners(
       "settings-form",
       settingsSchema,
-      "/app-config/rate-limit-settings",
+      "/app-config/settings",
       "PUT"
     );
 
     await populateFormFields(
       "settings-form",
-      "/app-config/rate-limit-settings"
+      "/app-config/settings"
     );
   } catch (error) {
     console.error("Error rendering settings form:", error);

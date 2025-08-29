@@ -2,8 +2,10 @@
     "type": "object",
     "name": "notifications",
     "table": "notifications",
+    "href": "/crud-notification",
     "views": "notifications_view",
     "queryValidationSchema": "notificationQueryParamsSchema",
+    "dryRun": true,
     "properties": {
         "name": {
             "type": "string",
@@ -20,6 +22,42 @@
                 "type": "Invalid value for Notification name."
             }
         },
+        "notification_type": {
+            "type": "string",
+            "label": "Notification Type",
+            "placeholder": "Select Notification Type",
+            "required": {
+                "create": true,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "select",
+                "conditionalTemplateDisplay": true,
+                "options": [
+                    {
+                        "value": "Email",
+                        "label": "Email"
+                    },
+                    {
+                        "value": "Notification",
+                        "label": "Notification"
+                    },
+                    {
+                        "value": "Push-Notification",
+                        "label": "Push Notification"
+                    },
+                    {
+                        "value": "Push-Notification-Broadcast",
+                        "label": "Push Notification Broadcast"
+                    }
+                ]
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for template type."
+            }
+        },
         "template_id": {
             "type": "integer",
             "label": "Template",
@@ -30,11 +68,27 @@
             },
             "renderConfig": {
                 "type": "select",
-                "fetchFrom": "/crud/email-templates",
+                "fetchFrom": "/crud/message-templates",
                 "displayKey": "name"
             },
             "errorMessage": {
                 "type": "Invalid value for template."
+            }
+        },
+        "valid_to_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "label": "Valid Date",
+            "placeholder": "Enter Valid Date",
+            "required": {
+                "create": true,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "date"
+            },
+            "errorMessage": {
+                "type": "Invalid value for valid date."
             }
         },
         "user_ids": {
@@ -68,18 +122,205 @@
             "errorMessage": {
                 "type": "Invalid value for created at."
             }
+        },
+        "time_to_live": {
+            "type": "number",
+            "label": "Time to Live (in seconds)",
+            "placeholder": "Enter Time to Live",
+            "required": {
+                "create": true,
+                "update": false
+            },
+            "renderConfig": {
+                "minimum": "0",
+                "maximum": "2419200",
+                "step": "1"
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for time to live."
+            }
+        },
+        "urgency": {
+            "type": "string",
+            "label": "Urgency",
+            "placeholder": "Select Urgency",
+            "required": {
+                "create": true,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "select",
+                "options": [
+                    {
+                        "value": "normal",
+                        "label": "Normal"
+                    },
+                    {
+                        "value": "low",
+                        "label": "Low"
+                    },
+                    {
+                        "value": "high",
+                        "label": "High"
+                    }
+                ]
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for urgency."
+            }
+        },
+        "use_topic": {
+            "type": "string",
+            "label": "Use Topic (Replace previous messages with the same topic)",
+            "placeholder": "Enter Topic",
+            "required": {
+                "create": true,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "select",
+                "options": [
+                    {
+                        "value": "false",
+                        "label": "No"
+                    },
+                    {
+                        "value": "true",
+                        "label": "Yes"
+                    }
+                ]
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for topic."
+            }
+        },
+        "tag": {
+            "type": "string",
+            "label": "Tag (Replace previous messages with the same tag)",
+            "placeholder": "Enter Tag",
+            "pattern": "[A-Za-z0-9]{1,50}",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "insertConfig": {
+
+            },
+            "pattern_errorMessage": "The tag must contain only letters and numbers.",
+            "errorMessage": {
+                "type": "Invalid value for tag."
+            }
+        },
+        "use_renotify": {
+            "type": "string",
+            "label": "Use Renotify (Repeat sound/vibration for a notification with the same tag)",
+            "placeholder": "Enter Renotify",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "select",
+                "options": [
+                    {
+                        "value": "false",
+                        "label": "No"
+                    },
+                    {
+                        "value": "true",
+                        "label": "Yes"
+                    }
+                ]
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for renotify."
+            }
+        },
+        "require_interaction": {
+            "type": "string",
+            "label": "Require Interaction (Keep notification visible until user interacts with it)",
+            "placeholder": "Enter Require Interaction",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "select",
+                "options": [
+                    {
+                        "value": "false",
+                        "label": "No"
+                    },
+                    {
+                        "value": "true",
+                        "label": "Yes"
+                    }
+                ]
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for require interaction."
+            }
+        },
+        "vibrate": {
+            "type": "string",
+            "label": "Vibrate (Vibration pattern for the notification)",
+            "placeholder": "Enter Vibration Pattern",
+            "pattern": "^\\[(\\d+(,\\d+)*)\\]$",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "insertConfig": {
+            },
+            "pattern_errorMessage": "The vibration pattern must look like [100,200,300].",
+            "errorMessage": {
+                "type": "Invalid value for vibrate."
+            }
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "label": "Timestamp (display time for scheduled notifications)",
+            "placeholder": "Enter Timestamp",
+            "required": {
+                "create": false,
+                "update": false
+            },
+            "renderConfig": {
+                "type": "date"
+            },
+            "insertConfig": {
+            },
+            "errorMessage": {
+                "type": "Invalid value for timestamp."
+            }
         }
     },
     "table_display_columns": [
         "created_at",
         "name",
         "template_type",
+        "valid_to_timestamp",
         "user_ids"
     ],
     "required": [
         "name",
         "template_id",
-        "user_ids"
+        "user_ids",
+        "valid_to_timestamp",
+        "time_to_live",
+        "urgency",
+        "use_topic"
     ],
     "crud": {
         "update": false,

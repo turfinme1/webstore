@@ -1,2 +1,6 @@
 node_modules
 /src/public/images/
+cert-key.pem
+cert.pem
+package-lock.json
+firebase-private-key.json

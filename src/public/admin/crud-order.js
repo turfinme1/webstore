@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage, formatCurrency, getUrlParams, updateUrlParams  } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showErrorMessage, showMessage, formatCurrency, getUrlParams, updateUrlParams  } from "./page-utility.js";
 
 // Centralized state object
 const state = {
@@ -365,7 +365,7 @@ async function loadOrders(page) {
     toggleExportLoadingState();
     const response = await fetchWithErrorHandling(`/crud/orders/filtered?${queryParams}`);
     if(!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
     const { result, count } = await response.data;
@@ -398,6 +398,7 @@ function renderOrders(orders) {
     mainRow.appendChild(createTableCell(formatCurrency(order.total_price), "right"));
     mainRow.appendChild(createTableCell(`${order.discount_percentage}%`, "right"));
     mainRow.appendChild(createTableCell(formatCurrency(order.discount_amount), "right"));
+    mainRow.appendChild(createTableCell(formatCurrency(order.total_price_after_discount), "right"));
     mainRow.appendChild(createTableCell(`${order.vat_percentage}%`, "right"));
     mainRow.appendChild(createTableCell(formatCurrency(order.vat_amount), "right"));
     mainRow.appendChild(createTableCell(formatCurrency(order.total_price_with_vat), "right"));
@@ -433,7 +434,7 @@ function renderOrders(orders) {
         try {
           const response = await fetchWithErrorHandling(`/crud/orders/${order.id}`);
           if (!response.ok) {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
           }
           const orderDetails = await response.data;
           
@@ -728,9 +729,9 @@ async function handleCreateOrder(event) {
     });
 
     if (!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     } else {
-      showToastMessage("Order created successfully", "success");
+      showMessage("Order created successfully");
       elements.createForm.reset();
       state.productsInOrder = [];
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -748,7 +749,7 @@ async function displayUpdateForm(orderId) {
   try {
     const orderResponse = await fetchWithErrorHandling(`/crud/orders/${orderId}`);
     if(!orderResponse.ok) {
-      showToastMessage(orderResponse.error, "error");
+      showErrorMessage(orderResponse.error);
       return;
     }
     const order = await orderResponse.data;
@@ -876,9 +877,9 @@ async function handleUpdateOrder(event) {
     });
 
     if (!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     } else {
-      showToastMessage("Order updated successfully", "success");
+      showMessage("Order updated successfully");
       elements.updateForm.reset();
       state.productsInOrder = [];
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -901,16 +902,16 @@ async function handleDeleteOrder(orderId) {
     });
 
     if (!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     } else {
-      showToastMessage("Order deleted successfully", "success");
+      showMessage("Order deleted successfully");
       await new Promise((resolve) => setTimeout(resolve, 2000));
       await loadOrders(state.currentPage);
     }
 
   } catch (error) {
     console.error("Error deleting order:", error);
-    showToastMessage("Failed to delete order", "error");
+    showErrorMessage("Failed to delete order");
   }
 }
 

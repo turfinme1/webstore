@@ -1,4 +1,4 @@
-import { hasPermission, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { hasPermission, fetchWithErrorHandling, showErrorMessage, showMessage } from "./page-utility.js";
 
 class CrudPageBuilder {
   constructor(schema, apiEndpoint, rootContainerId, userStatus, querySchema) {
@@ -15,11 +15,17 @@ class CrudPageBuilder {
       pageSize: 10,
       filterParams: {},
       orderParams: [],
+      sortCriteria: [],
       updateEntityId: null,
       collectValuesCallbacks: {
         create: [],
         update: [],
       },
+      formHookCallbacks: {
+        create: [],
+        update: [],
+      },
+      fetchedSelectOptions: {},
     };
     this.elements = {
       filterContainer: null,
@@ -35,7 +41,6 @@ class CrudPageBuilder {
       currentPageDisplay: null,
       showFilterButton: null,
       showCreateFormButton: null,
-      orderSelect: null,
     };
   }
 
@@ -45,8 +50,8 @@ class CrudPageBuilder {
     await this.renderForm("create");
     // this.renderForm("update"); // Render Update form
     await this.renderFilterForm();
-    this.loadRecords(); // Load initial records with pagination
-    this.attachEventListeners(); // Attach necessary event listeners
+    await this.loadRecords(); // Load initial records with pagination
+    await this.attachEventListeners(); // Attach necessary event listeners
   }
 
   createContainers() {
@@ -76,33 +81,12 @@ class CrudPageBuilder {
     if (hasPermission(this.userStatus, "read", this.schema.name)) {
       filterDiv.appendChild(showFilterButton);
     }
-
-    const orderSelect = document.createElement("select");
-    orderSelect.id = "order-select";
-    orderSelect.classList.add("btn", "btn-primary", "ms-2");
-    const emptyOption = document.createElement("option");
-    emptyOption.value = "";
-    emptyOption.text = `Order ${this.schema.name}`;
-    orderSelect.appendChild(emptyOption);
-    for (const [key, value] of Object.entries(this.querySchema.orderParams.properties)) {
-      const option = document.createElement("option");
-      option.value = `${key} asc`;
-      option.text = `${value.label} (ASC)`;
-      orderSelect.appendChild(option);
-
-      const optionDesc = document.createElement("option");
-      optionDesc.value = `${key} desc`;
-      optionDesc.text = `${value.label} (DESC)`;
-      orderSelect.appendChild(optionDesc);
-    }
-    this.elements.orderSelect = orderSelect;
     
     // orderSelect.addEventListener("change", (event) => {
     //   this.state.filterParams.orderBy = event.target.value;
     //   this.loadRecords();
     // });
 
-    filterDiv.appendChild(orderSelect);
     buttonContainer.appendChild(filterDiv);
 
     const showCreateFormButton = document.createElement("button");
@@ -228,6 +212,11 @@ class CrudPageBuilder {
     submitButton.textContent = type === "create" ? "Submit" : "Update";
     form.appendChild(submitButton);
 
+    const formHookCallbacks = this.state.formHookCallbacks[type];
+    for (const callback of formHookCallbacks) {
+      await callback(form, type);
+    }
+
     form.addEventListener("submit", (event) =>
       this.handleFormSubmit(event, type, this.state.collectValuesCallbacks)
     );
@@ -258,6 +247,8 @@ class CrudPageBuilder {
         input.name = field;
         const response = await fetch(property.renderConfig.fetchFrom);
         const data = await response.json();
+        this.state.fetchedSelectOptions[field] = data;
+        console.log(this.state.fetchedSelectOptions);
 
         const emptyOption = new Option("Select an option", "");
         input.appendChild(emptyOption);
@@ -460,10 +451,37 @@ class CrudPageBuilder {
       if (property.pattern) {
         input.pattern = property.pattern;
       }
+      if(property.pattern_errorMessage) {
+        input.title = property.pattern_errorMessage;
+      }
       if (property?.required?.[formType]) {
         input.required = true;
         label.innerHTML = `${label.textContent} <span style="color:red;">*</span>`;
       }
+    }
+
+    if(property?.renderConfig?.conditionalTemplateDisplay === true) {
+      input.addEventListener("change", (event) => this.handleTemplateChange(event));
+      this.state.formHookCallbacks.create.push((form, type) => {
+        const event = new Event("change");
+        input.dispatchEvent(event);
+      });
+    }
+
+    if (property?.renderConfig?.in_past === true) {
+      if(formType) {
+        this.state.collectValuesCallbacks[formType].push(() => {
+          const date = new Date(input.value);
+          const today = new Date();
+          if (date < today) {
+            showErrorMessage("Date must be in the future");
+            throw new Error("Date must be in the future");
+          }
+
+          return;
+        });
+      }
+
     }
 
     if (input) {
@@ -571,15 +589,17 @@ class CrudPageBuilder {
 
     for (const callback of collectValuesCallbacks[type]) {
       const additionalData = callback();
-      for (const [key, value] of Object.entries(additionalData)) {
-        data[key] = value;
+
+      if(additionalData) {
+        for (const [key, value] of Object.entries(additionalData)) {
+          data[key] = value;
+        }
       }
     }
 
     // Add additional form data to the form data object
     for (const [key, value] of Object.entries(this.state.additionalFormData)) {
       console.log("Additional form data:", key, value);
-      // console.log(JSON.stringify(value));
       data[key] = value;
     }
 
@@ -593,6 +613,24 @@ class CrudPageBuilder {
         : `${this.apiEndpoint}/${this.elements.updateEntityId}`;
     const method = type === "create" ? "POST" : "PUT";
 
+    if(this.schema.dryRun === true) {
+      const dryRunresponse = await fetchWithErrorHandling(url, {
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({...data, dry_run: true}),
+      });
+
+      if (dryRunresponse.ok) {
+        const confirmResult = confirm(dryRunresponse.data.message);
+        if (!confirmResult) {
+          return;
+        }
+      } else {
+        showErrorMessage(dryRunresponse.error);
+        return;
+      }
+    }
+
     console.log("Data to be submitted:", data);
     const response = await fetchWithErrorHandling(url, {
       method: method,
@@ -601,14 +639,14 @@ class CrudPageBuilder {
     });
 
     if (response.ok) {
-      showToastMessage(type === "create" ? "Record created successfully!" : "Record updated successfully!", "success");
+      showMessage(type === "create" ? "Record created successfully!" : "Record updated successfully!");
       this.elements.createFormContainer.style.display = "none";
       this.elements.updateFormContainer.style.display = "none";
       await new Promise((resolve) => setTimeout(resolve, 2000));
       this.loadRecords();
       event.target.reset();
     } else {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     }
   }
 
@@ -620,22 +658,23 @@ class CrudPageBuilder {
     ) {
       return;
     }
-
+    const orderDirection = this.state.sortCriteria.map(item => [item.key, item.direction]);
     const queryParams = new URLSearchParams({
       filterParams: JSON.stringify(this.state.filterParams),
-      orderParams: JSON.stringify(this.state.orderParams),
+      orderParams: JSON.stringify(orderDirection),
       page: this.state.currentPage,
       pageSize: this.state.pageSize,
     });
 
     const response = await fetchWithErrorHandling(`${this.apiEndpoint}/filtered?${queryParams}`);
     if(!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
       return;
     }
     const { result, count } = await response.data;
 
     this.renderTable(result);
+    this.updateSortIndicators();
     this.renderPagination(count, this.state.currentPage);
   }
 
@@ -650,6 +689,9 @@ class CrudPageBuilder {
     const headerRow = document.createElement("tr");
     this.schema.table_display_columns.forEach((column) => {
       const th = document.createElement("th");
+      th.classList.add("sortable");
+      th.style.cursor = "pointer";
+      th.dataset.sortKey = column;
       th.textContent = column
         .split("_")
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -679,7 +721,18 @@ class CrudPageBuilder {
         if (property?.renderConfig?.type === "date") {
           td.textContent = new Date(record[key]).toLocaleDateString();
           td.textContent = new Date(record[key]).toLocaleString();
-          // td.textContent = new Date(record[key]).toLocaleString();
+
+          if (!record[key] || record[key] === "All") {
+            return '---';
+          }
+          const date = new Date(record[key]);
+          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+          const year = date.getFullYear();
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          const seconds = String(date.getSeconds()).padStart(2, '0');
+          td.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
         } else if (Array.isArray(record[key])) {
           td.textContent = record[key].map((item) => item.name).join(", ");
         } else if (property?.renderConfig?.currency) {
@@ -715,7 +768,45 @@ class CrudPageBuilder {
     table.appendChild(tbody);
 
     this.elements.tableContainer.appendChild(table);
+
+    document.querySelectorAll('th.sortable').forEach(header => {
+      header.addEventListener('click', async (e) => {
+          await this.handleSortChange(e);
+      });
+    });
   }
+
+  updateSortIndicators() {
+    document.querySelectorAll('th[data-sort-key]').forEach(header => {
+        const key = header.dataset.sortKey;
+        const sortEntry = this.state.sortCriteria.find(c => c.key === key);
+        const sortEntryPosition = this.state.sortCriteria.findIndex(c => c.key === key);
+        header.innerHTML = header.innerHTML.replace(/\d+/s, '');
+        header.innerHTML = header.innerHTML.replace(/ ↑| ↓/g, '');
+        if (sortEntry) header.innerHTML += sortEntry.direction === 'ASC' ? ` ${sortEntryPosition+1}↑` : `${sortEntryPosition+1}↓`;
+    });
+  }
+
+  async handleSortChange(e) {
+    const key = e.currentTarget.dataset.sortKey;
+    const currentCriteria = [...this.state.sortCriteria];
+    const existingIndex = currentCriteria.findIndex(c => c.key === key);
+
+    let newDirection;
+    if (existingIndex === -1) {
+        newDirection = 'ASC';
+    } else {
+        const currentDirection = currentCriteria[existingIndex].direction;
+        newDirection = currentDirection === 'ASC' ? 'DESC' : 'none';
+    }
+
+    if (existingIndex !== -1) currentCriteria.splice(existingIndex, 1);
+    if (newDirection !== 'none') currentCriteria.unshift({ key, direction: newDirection });
+
+    this.state.sortCriteria = currentCriteria;
+
+    await this.loadRecords();
+}
 
   createActionButton(text, onClick) {
     const button = document.createElement("button");
@@ -746,10 +837,10 @@ class CrudPageBuilder {
         this.elements.createFormContainer.style.display = "none";
       } else {
         this.elements.updateEntityId = null;
-        showToastMessage(`${response.error}`, "error");
+        showErrorMessage(`${response.error}`);
       }
     } catch (error) {
-      showToastMessage("An error occurred while fetching the record.", "error");
+      showErrorMessage("An error occurred while fetching the record.");
     }
   }
 
@@ -760,15 +851,15 @@ class CrudPageBuilder {
           method: "DELETE",
         });
         if (result.ok) {
-          showToastMessage("Record deleted successfully!", "success");
+          showMessage("Record deleted successfully!");
           await new Promise((resolve) => setTimeout(resolve, 2000));
           await this.loadRecords();
         } else {
-          showToastMessage(`Error deleting record: ${result.error}`, "error");
+          showErrorMessage(`Error deleting record: ${result.error}`);
         }
       }
     } catch (error) {
-      showToastMessage("An error occurred while deleting the record.", "error");
+      showErrorMessage("An error occurred while deleting the record.");
     }
   }
 
@@ -836,6 +927,74 @@ class CrudPageBuilder {
     cancelButton.addEventListener("click", () => {
       this.elements.filterContainer.style.display = "none";
     });
+
+    flatpickr('.form-control[type="datetime-local"]', {
+      enableTime: true,
+      enableSeconds: true,
+      altInput: true,
+      altFormat: "d-m-Y H:i:S",
+      dateFormat: "Z",
+      time_24hr: true,
+      formatDate: (date, format) => {
+        if (format === "Z") {
+            const tzOffset = date.getTimezoneOffset();
+            const tzSign = tzOffset <= 0 ? '+' : '-';
+            
+            const tzHours = Math.abs(Math.floor(tzOffset / 60));
+            const tzMinutes = Math.abs(tzOffset % 60);
+            
+            const tzString = `${tzSign}${String(tzHours).padStart(2, '0')}:${String(tzMinutes).padStart(2, '0')}`;
+            
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}${tzString}`;
+        }
+        return flatpickr.formatDate(date, format);
+    },
+      onReady: function(selectedDates, dateStr, instance) {
+          var customContainer = document.createElement("div");
+          customContainer.className = "custom-buttons-container";
+          customContainer.style.marginTop = "10px";
+          
+          function addButton(label, callback) {
+              var btn = document.createElement("button");
+              btn.type = "button";
+              btn.textContent = label;
+              btn.style.marginRight = "5px";
+              btn.style.padding = "5px 10px";
+              btn.addEventListener("click", callback);
+              customContainer.appendChild(btn);
+          }
+          
+          addButton("Clear", function() {
+              instance.clear();
+          });
+
+          addButton("Last Day", function() {
+              var now = new Date();
+              now.setDate(now.getDate() - 1);
+              instance.setDate(now);
+          });
+          
+          addButton("Last Week", function() {
+              var now = new Date();
+              now.setDate(now.getDate() - 7);
+              instance.setDate(now);
+          });
+
+          addButton("Last Month", function() {
+              var now = new Date();
+              now.setMonth(now.getMonth() - 1);
+              instance.setDate(now);
+          });
+
+          addButton("Last Year", function() {
+              var now = new Date();
+              now.setFullYear(now.getFullYear() - 1);
+              instance.setDate(now);
+          });
+          
+          instance.calendarContainer.appendChild(customContainer);
+      }
+  });
   }
 
   attachEventListeners() {
@@ -856,17 +1015,6 @@ class CrudPageBuilder {
         this.loadRecords();
       });
     }
-
-    this.elements.orderSelect.addEventListener("change", async (event) => {
-      if(event.target.value) {
-          this.state.currentPage = 1;
-          this.state.orderParams = [ event.target.value.split(" ") ];
-      } else {
-        this.state.orderParams = [];
-      }
-
-      await this.loadRecords();
-    });
 
     this.elements.showCreateFormButton.addEventListener("click", () => {
       this.elements.filterContainer.style.display = "none";
@@ -889,6 +1037,71 @@ class CrudPageBuilder {
         }
       }
     });
+  }
+
+  handleTemplateChange(event) {
+    const templateType = event.target.value;
+    const userIdsInput = document.querySelector("#user_ids");
+    const templateIdInput = document.querySelector("#template_id");
+    const timeToLiveInput = document.querySelector("#time_to_live");
+    const urgencyInput = document.querySelector("#urgency");
+    const useTopicInput = document.querySelector("#use_topic");
+    const tagInput = document.querySelector("#tag");
+    const useRenotifyInput = document.querySelector("#use_renotify");
+    const requireInteractionInput = document.querySelector("#require_interaction");
+    const vibrateInput = document.querySelector("#vibrate");
+    const timestampInput = document.querySelector("#timestamp");
+    const flatpicrTimestampInstance = timestampInput._flatpickr;
+
+    const filteredTemplates = this.state.fetchedSelectOptions["template_id"].filter(
+      (template) => template.type === templateType
+    );
+    templateIdInput.innerHTML = "";
+    for (const template of filteredTemplates) {
+      const optionElement = new Option(
+        template.name,
+        template.id 
+      );
+      templateIdInput.appendChild(optionElement);
+    }
+
+    userIdsInput.disabled = false;
+    userIdsInput.required = this.schema.properties.user_ids.required.create || 
+                            this.schema.properties.user_ids.required.update;
+    timeToLiveInput.disabled = true;
+    timeToLiveInput.required = false;
+    urgencyInput.disabled = true;
+    urgencyInput.required = false;
+    useTopicInput.disabled = true;
+    useTopicInput.required = false;
+    tagInput.disabled = true;
+    useRenotifyInput.disabled = true;
+    requireInteractionInput.disabled = true;
+    vibrateInput.disabled = true;
+    timestampInput.disabled = true;
+    flatpicrTimestampInstance?._input?.setAttribute("disabled", true);
+    
+    if (templateType === "Push-Notification-Broadcast") {
+      userIdsInput.disabled = true;
+      userIdsInput.required = false;
+      userIdsInput.value = "";
+    }
+
+    if (templateType === "Push-Notification" || templateType === "Push-Notification-Broadcast") {
+      timeToLiveInput.disabled = false;
+      timeToLiveInput.required = true;
+      urgencyInput.disabled = false;
+      urgencyInput.required = true;
+      useTopicInput.disabled = false;
+      useTopicInput.required = true;
+
+      tagInput.disabled = false;
+      useRenotifyInput.disabled = false;
+      requireInteractionInput.disabled = false;
+      vibrateInput.disabled = false;
+      timestampInput.disabled = false;
+      flatpicrTimestampInstance?._input?.removeAttribute("disabled");
+    }
   }
 }
 

@@ -5,10 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Page</title>
-    <link rel="stylesheet" href="/bootstrap.min.css">
-    <link rel="stylesheet" href="/styles.css">
+    <meta name="description" content="Product Listing Page">
+    <link rel="manifest" href="/manifest.json">
+    <!-- <link rel="stylesheet" href="/bootstrap.min.css"> -->
+    <!-- <link rel="stylesheet" href="/styles.css"> -->
     <script defer src="/bootstrap.bundle.min.js"></script>
     <script defer type="module" src="/script.js"></script>
+    <link rel="stylesheet" href="/bootstrap.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/bootstrap.min.css"></noscript>
+    <link rel="stylesheet" href="/styles.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/styles.css"></noscript>
+
 </head>
 
 <body>
@@ -28,7 +35,7 @@
                         <option value="">Sort Products</option>
                         <option value="price asc">Price: Low to High</option>
                         <option value="price desc">Price: High to Low</option>
-                        <option value="rating desc">Rating: High to Low</option>
+                        <!-- <option value="rating desc">Rating: High to Low</option> -->
                     </select>
                 </div>
             </div>
@@ -78,6 +85,12 @@
             <div id="current-page-display" class="col-md-6 d-flex justify-content-center mt-4"></div>
         </div>
     </div>
+
+    <script>
+        if('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+        }
+    </script>
 
 </body>
 

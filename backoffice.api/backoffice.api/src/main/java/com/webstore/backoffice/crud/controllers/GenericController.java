@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:4000")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public abstract class GenericController<D extends BaseDto<E>, E extends BaseEntity<ID>, ID> {
 
     private final GenericAppService<D, ?, ID> service;

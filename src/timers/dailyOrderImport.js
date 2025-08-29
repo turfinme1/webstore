@@ -4,8 +4,8 @@ const pool = require("../database/dbConfig");
 const Logger = require("../serverConfigurations/logger");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 
-const TOTAL_ORDERS_PER_DAY = 500000;
-const BATCH_SIZE = 2000;
+const TOTAL_ORDERS_PER_DAY = 10000;
+const BATCH_SIZE = 1000;
 const BATCHES_PER_DAY = Math.ceil(TOTAL_ORDERS_PER_DAY / BATCH_SIZE);
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MS_PER_BATCH = Math.floor(MS_PER_DAY / BATCHES_PER_DAY);
@@ -23,7 +23,7 @@ async function getRandomProducts(client, count) {
 
 async function getRandomUsers(client, count) {
   const result = await client.query(`
-    SELECT id 
+    SELECT id, email 
     FROM users 
     WHERE is_active = TRUE 
     ORDER BY RANDOM() 
@@ -59,6 +59,7 @@ async function generateOrders(client, count) {
 
     orders.push({
       user_id: user.id,
+      email: user.email,
       items: orderItems,
       status,
       total_price: totalPrice,
@@ -86,29 +87,49 @@ async function insertOrderBatch(orders, client, logger) {
           ) as total_with_vat,
           $4::decimal as total_stock_price
         FROM settings
+      ),
+      new_order AS (
+        INSERT INTO orders (
+          user_id,
+          status,
+          total_price,
+          total_stock_price,
+          vat_percentage,
+          discount_percentage,
+          paid_amount
+        )
+        SELECT
+          $3,
+          status,
+          base_total,
+          total_stock_price,
+          vat_percentage,
+          0,
+          CASE WHEN status = 'Paid' THEN total_with_vat ELSE 0 END
+        FROM total_calc
+        RETURNING *
+      ),
+      new_log AS (
+        INSERT INTO logs (
+          user_id,
+          status_code,
+          log_level,
+          short_description,
+          long_description,
+          created_at,
+          audit_type
+        )
+        SELECT
+          $3,
+          'CONTROLLER.AUTH.00051.LOGIN_SUCCESS',     
+          'INFO',
+          'Login successful',
+          'User ${order.email} logged in successfully',
+          NOW(),
+          'INFO'
+        FROM new_order
       )
-      INSERT INTO orders (
-        user_id, 
-        status, 
-        total_price,
-        total_stock_price,
-        vat_percentage,
-        discount_percentage,
-        paid_amount
-      ) 
-      SELECT 
-        $3,
-        status,
-        base_total,
-        total_stock_price,
-        vat_percentage,
-        0,
-        CASE 
-          WHEN status = 'Paid' THEN total_with_vat
-          ELSE 0
-        END
-      FROM total_calc
-      RETURNING *`,
+      SELECT * FROM new_order;`,
       [order.total_price, order.status, order.user_id, order.total_stock_price]
     );
 

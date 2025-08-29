@@ -1,4 +1,4 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage, formatCurrency, initializePage } from "./page-utility.js";
 
 // Centralized state for the cart
 const state = {
@@ -16,6 +16,7 @@ const elements = {
 
 // Initialize cart page and attach event listeners
 document.addEventListener('DOMContentLoaded', async () => {
+  await initializePage();
   state.userStatus = await getUserStatus();
   createNavigation(state.userStatus);
   const cartData = await getCartItems();
@@ -23,6 +24,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   state.cart = cartData;
   updateCartDisplay(state);
   attachEventListeners();
+
+  window.addEventListener('cart_update_sync_clients', async (e) => {
+    console.log('Cart updated on another device');
+    const cartData = await getCartItems();
+    state.items = cartData.items;
+    state.cart = cartData;
+    updateCartDisplay(state);
+  });
 });
 
 // Attach event listeners
@@ -56,7 +65,7 @@ async function updateCartItemQuantity(productId, newQuantity) {
       body: JSON.stringify({ product_id: productId, quantity: newQuantity }),
     });
     if (!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     } else {
       const cartData = await getCartItems();
       state.items = cartData.items;
@@ -77,7 +86,7 @@ async function removeItemFromCart(itemId) {
     });
 
     if (!response.ok) {
-      showToastMessage(response.error, "error");
+      showErrorMessage(response.error);
     } else {
       const cartData = await getCartItems();
       state.items = cartData.items;
@@ -100,6 +109,11 @@ async function handleCheckout() {
       return;
     }
 
+    const response = await fetchWithErrorHandling('/api/cart/validate-stock');
+    if (!response.ok) {
+      return;
+    }
+
     window.location.href = '/order';
 
   } catch (error) {
@@ -113,7 +127,7 @@ async function handleCheckout() {
 async function getCartItems() {
   const response = await fetchWithErrorHandling('/api/cart');
   if (!response.ok) {
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
   } else {
     return await response.data;
   }
@@ -136,8 +150,8 @@ function renderCartItem(item) {
         <button class="btn btn-outline-secondary quantity-increase" id="quantity-increase-${item.id}" type="button" data-item-id="${item.id}">+</button>
       </div>
     </td>
-    <td style="vertical-align: middle; text-align: right">$${item.unit_price}</td>
-    <td style="vertical-align: middle; text-align: right">$${item.total_price}</td>
+    <td style="vertical-align: middle; text-align: right">${formatCurrency(item.unit_price)}</td>
+    <td style="vertical-align: middle; text-align: right">${formatCurrency(item.total_price)}</td>
     <td style="vertical-align: middle; text-align: center">
       <button class="remove-item btn btn-sm btn-danger" data-item-id="${item.id}">Remove</button>
     </td>
@@ -152,7 +166,7 @@ function renderCartTotalRow() {
   subtotalRow.classList.add('cart-subtotal');
   subtotalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Subtotal:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price)}</td>
     <td></td>
   `;
   fragment.appendChild(subtotalRow);
@@ -161,7 +175,7 @@ function renderCartTotalRow() {
   discountRow.classList.add('cart-discount');
   discountRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Discount (${state.cart.discount_percentage}%):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.discount_amount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.discount_amount)}</td>
     <td></td>
   `;
   fragment.appendChild(discountRow);
@@ -170,7 +184,7 @@ function renderCartTotalRow() {
   priceAfterDiscountRow.classList.add('cart-price-after-discount');
   priceAfterDiscountRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Price after discount:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_after_discount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price_after_discount)}</td>
     <td></td>
   `;
   fragment.appendChild(priceAfterDiscountRow);
@@ -179,7 +193,7 @@ function renderCartTotalRow() {
   vatRow.classList.add('cart-vat');
   vatRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">VAT (${state.cart.vat_percentage}%):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.vat_amount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.vat_amount)}</td>
     <td></td>
   `;
   fragment.appendChild(vatRow);
@@ -188,7 +202,7 @@ function renderCartTotalRow() {
   priceWithVatRow.classList.add('cart-price-with-vat');
   priceWithVatRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total price with VAT:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_with_vat}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price_with_vat)}</td>
     <td></td>
   `;
   fragment.appendChild(priceWithVatRow);
@@ -205,7 +219,7 @@ function renderCartTotalRow() {
         </div>
       </div>
     </td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">-$${state.cart.voucher_amount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${state.cart.voucher_amount ? `-${formatCurrency(state.cart.voucher_amount)}`: `${formatCurrency(state.cart.voucher_amount)}`}</td>
    <td>
       <button class="btn btn-secondary" id="browse-vouchers-btn">Browse Vouchers</button>
    </td>
@@ -230,7 +244,7 @@ function renderCartTotalRow() {
   totalRow.classList.add('cart-total');
   totalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_with_voucher}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price_with_voucher)}</td>
     <td></td>
   `;
   fragment.appendChild(totalRow);
@@ -281,7 +295,7 @@ async function attachVoucherEvents() {
     if (code) {
       await applyVoucher(code);
     } else {
-      showToastMessage('Please enter a valid voucher code', 'error');
+      showErrorMessage('Please enter a valid voucher code');
     }
   });
 
@@ -306,7 +320,7 @@ async function loadAvailableVouchers() {
     }
   } catch (error) {
     console.error('Error loading vouchers:', error);
-    showToastMessage('Failed to load vouchers', 'error');
+    showErrorMessage('Failed to load vouchers', 'error');
   }
 }
 
@@ -316,7 +330,7 @@ function renderVouchersList() {
     <div class="voucher-item card mb-2">
       <div class="card-body">
         <h6 class="card-title">${voucher.name}</h6>
-        <p class="card-text">Discount: $${voucher.discount_amount}</p>
+        <p class="card-text">Discount: ${formatCurrency(voucher.discount_amount)}</p>
         <p class="card-text">Code: ${voucher.code}</p>
         <button class="btn btn-sm btn-primary select-voucher" data-code="${voucher.code}">
           Use this voucher
@@ -345,14 +359,14 @@ async function applyVoucher(code) {
   });
 
   if(!response.ok) {
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
     return;
   }
 
   const cartData = await getCartItems();
   state.cart = cartData;
   updateCartDisplay(state);
-  showToastMessage('Voucher applied successfully', 'success');
+  showMessage('Voucher applied successfully');
 }
 
 async function removeVoucher() {
@@ -361,12 +375,12 @@ async function removeVoucher() {
   });
 
   if(!response.ok) {
-    showToastMessage(response.error, "error");
+    showErrorMessage(response.error);
     return;
   }
 
   const cartData = await getCartItems();
   state.cart = cartData;
   updateCartDisplay(state);
-  showToastMessage('Voucher removed successfully', 'success');
+  showMessage('Voucher removed successfully');
 }

@@ -5,11 +5,9 @@ class AppConfigController {
   constructor(appConfigService, authService) {
     this.appConfigService = appConfigService;
     this.authService = authService;
-    this.updateRateLimitSettings = this.updateRateLimitSettings.bind(this);
-    this.getRateLimitSettings = this.getRateLimitSettings.bind(this);
   }
 
-  async updateRateLimitSettings(req, res, next) {
+  updateRateLimitSettings = async (req, res, next) => {
     ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.APP_CONF.00013.UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     validateBody(req, req.entitySchemaCollection.appSettingsSchema);
     this.authService.requirePermission(req, "update", 'site-settings');
@@ -23,12 +21,33 @@ class AppConfigController {
     res.status(200).json(result);
   }
 
-  async getRateLimitSettings(req, res, next) {
+  getSettings = async (req, res, next) => {
     ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.APP_CONF.00027.UNAUTHORIZED", long_description: "You must be logged in to perform this action" });
     const data = {
       dbConnection: req.dbConnection,
     };
-    const result = await this.appConfigService.getRateLimitSettings(data);
+    const result = await this.appConfigService.getSettings(data);
+    res.status(200).json(result);
+  }
+
+  getPublicSettings = async (req, res, next) => {
+    const data = {
+      dbConnection: req.dbConnection,
+    };
+    const result = await this.appConfigService.getPublicSettings(data);
+    res.status(200).json(result);
+  }
+
+  getJavaAPIUrl = async (req, res, next) => {
+    res.status(200).json({ url: req.context.settings.java_api_url });
+  }
+
+  getFrontOfficeTransportConfig = async (req, res, next) => {
+    const data = {
+      context: req.context,
+      session: req.session,
+    };
+    const result = await this.appConfigService.getFrontOfficeTransportConfig(data);
     res.status(200).json(result);
   }
 }

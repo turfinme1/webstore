@@ -7,17 +7,6 @@ const fetch = require("node-fetch");
 
 class ProductService {
   constructor() {
-    this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
-    this.createComment = this.createComment.bind(this);
-    this.createRating = this.createRating.bind(this);
-    this.getComments = this.getComments.bind(this);
-    this.getRatings = this.getRatings.bind(this);
-    this.create = this.create.bind(this);
-    this.update = this.update.bind(this);
-    this.delete = this.delete.bind(this);
-    this.uploadProducts = this.uploadProducts.bind(this);
-    this.uploadImages = this.uploadImages.bind(this);
-    this.handleFileUploads = this.handleFileUploads.bind(this);
   }
 
   async getFilteredPaginated(data) {
@@ -79,6 +68,7 @@ class ProductService {
           JOIN products_categories pc ON pc.product_id = products.id
           JOIN categories c ON pc.category_id = c.id
           ${combinedConditions}
+          GROUP BY products.id
           ${orderByClause !== "" ? `ORDER BY ${orderByClause}` : ""} 
           LIMIT $${searchValues.length + 1} OFFSET $${searchValues.length + 2}
       ),
@@ -90,6 +80,7 @@ class ProductService {
           p.code,
           p.name,
           p.price,
+          inv.quantity,
           p.short_description,
           p.long_description,
           COALESCE(i.urls, ARRAY[]::text[]) AS images,
@@ -117,15 +108,16 @@ class ProductService {
           FROM ratings
           WHERE product_id IN (SELECT id FROM top_products)
           GROUP BY product_id
-      ) r ON p.id = r.product_id;
+      ) r ON p.id = r.product_id
+      LEFT JOIN inventories inv ON p.id = inv.product_id;
       `;
     
     const countQuery = `
-          SELECT COUNT(*) as count FROM products
+          SELECT COUNT(DISTINCT products.id) as count FROM products
           JOIN products_categories pc ON pc.product_id = products.id
           JOIN categories c ON pc.category_id = c.id
           ${combinedConditions}`;
-    
+
     const totalCount = await data.dbConnection.query(countQuery, searchValues); 
     const result = await data.dbConnection.query(dataQuery, [...searchValues, data.query.pageSize , offset]);
     return { result: result.rows, count: totalCount.rows[0].count };
@@ -177,6 +169,15 @@ class ProductService {
     return result.rows;
   }
 
+  async getQuantity(data) {
+    const result = await data.dbConnection.query(`
+      SELECT COALESCE((SELECT quantity FROM inventories WHERE product_id = $1), 0) AS quantity`,
+      [data.params.id]
+    );
+
+    return result.rows[0];
+  }
+
   async create(data) {
     const schema = data.entitySchemaCollection["products"];
     const keys = Object.keys(schema.properties);
@@ -196,6 +197,11 @@ class ProductService {
       const categoryQuery = `INSERT INTO products_categories(product_id, category_id) VALUES ${categoryValues}`;
       await data.dbConnection.query(categoryQuery, [productResult.rows[0].id, ...categories]);
     }
+
+    await data.dbConnection.query(
+      `INSERT INTO inventories(product_id, quantity) VALUES($1, $2)`,
+      [productResult.rows[0].id, data.body.quantity]
+    );
 
     for (const filePath of filePaths) {
       await data.dbConnection.query(
@@ -230,6 +236,39 @@ class ProductService {
       await data.dbConnection.query(`
         INSERT INTO products_categories(product_id, category_id) VALUES ${categoryValues}`,
         [productResult.rows[0].id, ...data.body.categories]
+      );
+    }
+
+    const inventoryResult = await data.dbConnection.query(`
+      SELECT * FROM inventories WHERE product_id = $1`,
+      [productResult.rows[0].id]
+    );
+
+    if (inventoryResult.rows.length === 0) {
+      await data.dbConnection.query(`
+        INSERT INTO inventories(product_id, quantity) VALUES($1, $2)`,
+        [productResult.rows[0].id, data.body.quantity]
+      );
+    } else {
+      
+      if (inventoryResult.rows[0].quantity !== data.body.quantity) {
+        await data.dbConnection.query(`
+          INSERT INTO message_queue (subject, text_content, type, event_type)
+          VALUES ($1, $2, $3, $4)`,
+          ["Quantity changed", "Product Quantity changed", "Notification", "quantity_update_sync_clients"]
+        );
+      }
+      if (inventoryResult.rows[0].price !== data.body.price) {
+        await data.dbConnection.query(`
+          INSERT INTO message_queue (subject, text_content, type, event_type)
+          VALUES ($1, $2, $3, $4)`,
+          ["Quantity changed", "Product Quantity changed", "Notification", "quantity_update_sync_clients"]
+        );
+      }
+
+      await data.dbConnection.query(`
+        UPDATE inventories SET quantity = $1 WHERE product_id = $2`,
+        [data.body.quantity, productResult.rows[0].id]
       );
     }
 

@@ -1,15 +1,12 @@
 const bcrypt = require("bcrypt");
 const { ASSERT, ASSERT_USER } = require("../serverConfigurations/assert");
+const { hrtime } = require("process");
+const sanitizeHtml = require('sanitize-html');
+const he = require('he');
 
 class CrudService {
-  constructor() {
-    this.getAll = this.getAll.bind(this);
-    this.getById = this.getById.bind(this);
-    this.update = this.update.bind(this);
-    this.delete = this.delete.bind(this);
-    this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
-    this.buildFilteredPaginatedQuery =
-      this.buildFilteredPaginatedQuery.bind(this);
+  constructor(reportService) {
+    this.reportService = reportService;
   }
 
   async create(data) {
@@ -18,6 +15,10 @@ class CrudService {
     // Hash the password if it exists
     if (data.body.password_hash) {
       data.body.password_hash = await bcrypt.hash(data.body.password_hash, 10);
+    }
+
+    if (data.body.dry_run === true && this.hooks().dry_run[data.params.entity]) {
+      return await this.hooks().dry_run[data.params.entity](data);
     }
 
     if (this.hooks().create[data.params.entity]?.before) {
@@ -400,6 +401,12 @@ class CrudService {
     }
   }
 
+  async getAllEntities(data, context) {
+    return Object.keys(context.entitySchemaCollection)
+      .filter((property)=> context.entitySchemaCollection[property].table)
+      .map((property)=> context.entitySchemaCollection[property]);
+  }
+
   hooks() {
     return {
       create: {
@@ -409,9 +416,15 @@ class CrudService {
         "target-groups": {
           after: this.targetGroupCreateHook.bind(this),
         },
-        notifications: {
+        "user-groups": {
+          after: this.userGroupCreateHook.bind(this),
+        },
+        "notifications": {
           after: this.notificationCreateHook.bind(this),
-        }
+        },
+        "vouchers": {
+          before: this.voucherCreateHook.bind(this),
+        },
       },
       update: {
         roles: {
@@ -420,9 +433,15 @@ class CrudService {
         "admin-users": {
           before: this.adminUsersUpdateHook,
         },
-        "email-templates": {
+        "message-templates": {
           before: this.emailTemplateUpdateHook,
-        }
+        },
+        "user-groups": {
+          before: this.userGroupUpdateHook.bind(this),
+        },
+      },
+      dry_run: {
+        "notifications": this.notificationDryRunHook.bind(this),
       },
     }
   };
@@ -614,20 +633,82 @@ class CrudService {
     const result = await data.dbConnection.query(insertQuery, queryValues);
   }
 
-  async emailTemplateUpdateHook(data, insertObject) {
-    const currentEmailTemplateResult = await data.dbConnection.query(`
-      SELECT * FROM email_templates
+  async userGroupCreateHook(data, mainEntity) {
+    data.body.metadataRequest = true;
+    data.params.report = 'report-users'
+    const reportDefinition = await this.reportService.getReport(data)
+    const replacedQueryData = await this.reportService.replaceFilterExpressions(data, reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.reportUIConfig, data.body.filters, false);
+    
+    const insertQuery = `
+      INSERT INTO user_user_groups (user_id, user_group_id)
+      SELECT users_view.id, $${replacedQueryData.insertValues.length + 1}
+      FROM (${replacedQueryData.sql}) AS users_view
+      WHERE users_view.id IS NOT NULL`;
+
+    const queryValues = [...replacedQueryData.insertValues, mainEntity.id];
+    const result = await data.dbConnection.query(insertQuery, queryValues);
+  }
+
+  async userGroupUpdateHook(data, insertObject) {
+    data.body.metadataRequest = true;
+    data.params.report = 'report-users'
+    const reportDefinition = await this.reportService.getReport(data)
+    const replacedQueryData = await this.reportService.replaceFilterExpressions(data, reportDefinition.sql, reportDefinition.reportFilters, reportDefinition.reportUIConfig, data.body.filters, false);
+
+    await data.dbConnection.query(`
+      DELETE FROM user_user_groups
+      WHERE user_group_id = $${replacedQueryData.insertValues.length + 1}
+      AND user_id NOT IN (
+        SELECT users_view.id 
+        FROM (${replacedQueryData.sql}) AS users_view
+        WHERE users_view.id IS NOT NULL
+      )`,
+      [...replacedQueryData.insertValues, data.params.id]
+    );
+
+    await data.dbConnection.query(`
+      INSERT INTO user_user_groups (user_id, user_group_id)
+      SELECT users_view.id, $${replacedQueryData.insertValues.length + 1}
+      FROM (${replacedQueryData.sql}) AS users_view
+      WHERE users_view.id IS NOT NULL
+      ON CONFLICT (user_id, user_group_id) DO NOTHING`,
+      [...replacedQueryData.insertValues, data.params.id]
+    );
+
+    await data.dbConnection.query(`
+      UPDATE user_groups
+      SET updated_at = NOW()
       WHERE id = $1`,
       [data.params.id]
     );
-    ASSERT_USER(currentEmailTemplateResult.rows.length > 0, "Email template not found", { code: "SERVICE.CRUD.00620.INVALID_INPUT_UPDATE_EMAIL_TEMPLATE_NOT_FOUND", long_description: "Email template not found" });
+  }
+
+  async emailTemplateUpdateHook(data, insertObject) {
+    const currentEmailTemplateResult = await data.dbConnection.query(`
+      SELECT * FROM message_templates
+      WHERE id = $1`,
+      [data.params.id]
+    );
+    ASSERT_USER(currentEmailTemplateResult.rows.length > 0, "Email template not found", { code: "SERVICE.CRUD.00620.INVALID_INPUT_UPDATE_TEMPLATE_NOT_FOUND", long_description: "Email template not found" });
     const currentEmailTemplate = currentEmailTemplateResult.rows[0];
     data.body.placeholders = JSON.stringify(currentEmailTemplate.placeholders);
   }
 
+  async sanitizeHTMLTemplateText(templateText) {
+    let sanitizedText = sanitizeHtml(templateText, {
+      allowedTags: [],
+      allowedAttributes: {}
+    });
+    sanitizedText = he.decode(sanitizedText);
+    sanitizedText = sanitizedText.replace(/\u00A0/g, ' ');
+    return sanitizedText.trim();
+  }
+
   async notificationCreateHook(data, mainEntity) {
+    const start = hrtime();
+
     const templateResult = await data.dbConnection.query(
-        `SELECT * FROM email_templates WHERE id = $1`,
+        `SELECT * FROM message_templates WHERE id = $1`,
         [mainEntity.template_id]
     );
     ASSERT_USER(templateResult.rows.length > 0, "Template not found", {
@@ -636,17 +717,70 @@ class CrudService {
     });
     
     const template = templateResult.rows[0];
+    template.template = await this.sanitizeHTMLTemplateText(template.template);
+
+    let notificationSettings = null;
+    if (template.type === 'Push-Notification' || template.type === 'Push-Notification-Broadcast') {
+      let topic = null;
+      let timestamp = null;
+      if(data.body.use_topic === 'true') {
+        topic = template.subject.substring(0, 32).replace(/[^a-zA-Z0-9-_]/g, '');
+      }
+      if(data.body.timestamp) { 
+        const date = new Date(data.body.timestamp);
+        ASSERT_USER(!isNaN(date.getTime()), "Invalid timestamp format", { code: "SERVICE.CRUD.00631.INVALID_INPUT_TIMESTAMP", long_description: "Invalid timestamp format" });
+        timestamp = date.toISOString();
+      };
+      notificationSettings = {
+        ...template.notification_settings,
+        TTL: data.body.time_to_live,
+        urgency: data.body.urgency,
+        topic: topic,
+        tag: data.body.tag,
+        renotify: data.body.use_renotify == "true",
+        requireInteraction: data.body.require_interaction == "true",
+        vibrate: data.body.vibrate,
+        timestamp: timestamp,
+      };
+    }
     
-    // Get users data
+    if (template.type === 'Push-Notification-Broadcast') {
+        await data.dbConnection.query(`
+          INSERT INTO message_queue (recipient_id, push_subscription_id, subject, text_content, notification_id, type, notification_settings)
+          SELECT user_id, id, $1, $2, $3, $4, $5
+          FROM push_subscriptions
+          WHERE status = 'active'`,
+          [template.subject, template.template, mainEntity.id, template.type, notificationSettings]
+        );
+
+        const endBroadcast = hrtime(start);
+        const elapsedTimeBroadcast = (endBroadcast[0] * 1e9 + endBroadcast[1]) / 1e6; // Convert to milliseconds
+        console.log(`Email queue process completed in ${elapsedTimeBroadcast} ms`);
+        return;
+    }
+
     const userIds = mainEntity.user_ids.split(',').map(id => parseInt(id.trim()));
-    const usersResult = await data.dbConnection.query(
-      `SELECT id, email, first_name, last_name, phone 
-      FROM users 
-      WHERE id = ANY($1)`,
-      [userIds]
-    );
-    
-    // Create emails for each user
+    let usersResult;
+
+    if(template.type === 'Notification') {
+      usersResult = await data.dbConnection.query(`
+        SELECT DISTINCT id, email, first_name, last_name, phone 
+        FROM users
+        WHERE id = ANY($1)`,
+        [userIds]
+      );
+    } else {
+      usersResult = await data.dbConnection.query(`
+        SELECT users.id, email, first_name, last_name, phone, push_subscriptions.id as push_subscription_id
+        FROM users
+        JOIN push_subscriptions ON users.id = push_subscriptions.user_id
+        WHERE push_subscriptions.status = 'active' AND users.id = ANY($1)`,
+        [userIds]
+      );
+    }
+    ASSERT_USER(usersResult.rows.length > 0, "No users found", { code: "SERVICE.EMAIL.00114.INVALID_USERS", long_description: "No users found" });
+
+    // Create message for each user
     for (const user of usersResult.rows) {
         let text_content = template.template;
         for (const placeholder of template.placeholders) {
@@ -656,11 +790,57 @@ class CrudService {
         }
         
         await data.dbConnection.query(
-          `INSERT INTO emails (recipient_id, recipient_email, subject, text_content, notification_id, type) 
-          VALUES ($1, $2, $3, $4, $5, 'Notification')`,
-          [user.id, user.email, template.subject, text_content, mainEntity.id]
+          `INSERT INTO message_queue (recipient_id, recipient_email, subject, text_content, notification_id, type, event_type, notification_settings, push_subscription_id) 
+          VALUES ($1, $2, $3, $4, $5, $6, 'notification', $7, $8)`,
+          [user.id, user.email, template.subject, text_content, mainEntity.id, template.type, notificationSettings, user.push_subscription_id]
         );
     }
+
+    const end = hrtime(start);
+    const elapsedTime = (end[0] * 1e9 + end[1]) / 1e6; // Convert to milliseconds
+    console.log(`Email queue process completed in ${elapsedTime} ms`);
+  }
+
+  async notificationDryRunHook(data) {
+    const templateResult = await data.dbConnection.query(
+      `SELECT * FROM message_templates WHERE id = $1`,
+      [data.body.template_id]
+    );
+    ASSERT_USER(templateResult.rows.length > 0, "Template not found", {
+        code: "SERVICE.CRUD.00630.TEMPLATE_NOT_FOUND",
+        long_description: "Notification template not found"
+    });
+
+    const template = templateResult.rows[0];
+
+    if (template.type === 'Push-Notification-Broadcast') {
+      const countResult = await data.dbConnection.query(`
+        SELECT COUNT(*) FROM push_subscriptions WHERE status = 'active'`,
+      );
+      return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
+    } else if (template.type === 'Push-Notification') {
+      const userIds = data.body.user_ids.split(',').map(id => parseInt(id.trim()));
+      const countResult = await data.dbConnection.query(`
+        SELECT COUNT(DISTINCT user_id) FROM push_subscriptions WHERE user_id = ANY($1) AND status = 'active'`,
+        [userIds]
+      );
+      return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
+    } else {
+      const userIds = data.body.user_ids.split(',').map(id => parseInt(id.trim()));
+      const countResult = await data.dbConnection.query(`
+        SELECT COUNT(DISTINCT id) FROM users WHERE id = ANY($1)`,
+        [userIds]
+      );
+      return { message: `This will affect ${countResult.rows[0].count} users. Proceed?` }
+    }
+  }
+
+  async voucherCreateHook(data) {
+    const currentDate = new Date();
+    const start_date = new Date(data.body.start_date);
+    const end_date = new Date(data.body.end_date);
+    ASSERT_USER(start_date < end_date, "Start date must be before end date", { code: "SERVICE.CRUD.00444.INVALID_INPUT_CREATE_VOUCHER_DATE_RANGE", long_description: "Start date must be before end date" });
+    ASSERT_USER(end_date > currentDate, "End date must be in the future", { code: "SERVICE.CRUD.00445.INVALID_INPUT_CREATE_VOUCHER_END_DATE", long_description: "End date must be in the future" });
   }
 }
 

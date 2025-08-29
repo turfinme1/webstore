@@ -1,23 +1,36 @@
 const ReportController = require("../reportController");
 
-describe("ReportController", () => {
+describe('ReportController', () => {
   let reportController;
-  let reportService;
-  let mockRes;
+  let mockReportService;
+  let mockRequest;
+  let mockResponse;
   let mockNext;
 
   beforeEach(() => {
-    reportService = {
+    mockReportService = {
       getReport: jest.fn(),
-      exportReport: jest.fn()
+      exportReport: jest.fn(),
+      getAllReports: jest.fn(),
+      setReportPreference: jest.fn(),
+      getReportPreference: jest.fn()
     };
-
-    reportController = new ReportController(reportService);
-
-    mockRes = {
+    
+    reportController = new ReportController(mockReportService);
+    
+    mockRequest = {
+      body: { headerGroups: [{ key: 'column1', hideInUI: true }] },
+      params: { report: 'test-report' },
+      session: { admin_user_id: 123 },
+      context: { settings: {} },
+      dbConnection: {}
+    };
+    
+    mockResponse = {
       status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
+      json: jest.fn()
     };
+
     mockNext = jest.fn();
   });
 
@@ -37,19 +50,19 @@ describe("ReportController", () => {
       };
 
       const result = { rows: [], filters: [], overRowDisplayLimit: false };
-      reportService.getReport.mockResolvedValue(result);
+      mockReportService.getReport.mockResolvedValue(result);
 
-      await reportController.getReport(req, mockRes, mockNext);
+      await reportController.getReport(req, mockResponse, mockNext);
 
-      expect(reportService.getReport).toHaveBeenCalledWith({
+      expect(mockReportService.getReport).toHaveBeenCalledWith({
         body: req.body,
         params: req.params,
         session: req.session,
         dbConnection: req.dbConnection,
         entitySchemaCollection: req.entitySchemaCollection
       });
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(result);
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith(result);
     });
   });
 
@@ -63,19 +76,114 @@ describe("ReportController", () => {
       };
 
       const result = {};
-      reportService.exportReport.mockResolvedValue(result);
+      mockReportService.exportReport.mockResolvedValue(result);
 
-      await reportController.exportReport(req, mockRes, mockNext);
+      await reportController.exportReport(req, mockResponse, mockNext);
 
-      expect(reportService.exportReport).toHaveBeenCalledWith({
-        res: mockRes,
+      expect(mockReportService.exportReport).toHaveBeenCalledWith({
+        res: mockResponse,
         body: req.body,
         params: req.params,
         session: req.session,
         dbConnection: req.dbConnection
       });
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(result);
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith(result);
+    });
+  });
+
+  describe('setReportPreference', () => {
+    it('should call reportService.setReportPreference with correct data', async () => {
+      // Arrange
+      const expectedResult = { success: true };
+      mockReportService.setReportPreference.mockResolvedValue(expectedResult);
+      
+      // Act
+      await reportController.setReportPreference(mockRequest, mockResponse);
+      
+      // Assert
+      expect(mockReportService.setReportPreference).toHaveBeenCalledWith({
+        body: mockRequest.body,
+        params: mockRequest.params,
+        session: mockRequest.session,
+        context: mockRequest.context,
+        dbConnection: mockRequest.dbConnection
+      });
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith(expectedResult);
+    });
+  });
+
+  describe('getReportPreference', () => {
+    it('should call reportService.getReportPreference with correct data', async () => {
+      // Arrange
+      const expectedResult = {
+        rows: [
+          {
+            preference: {
+              headerGroups: [
+                { key: 'column1', hideInUI: true }
+              ]
+            }
+          }
+        ]
+      };
+      mockReportService.getReportPreference.mockResolvedValue(expectedResult);
+      
+      // Act
+      await reportController.getReportPreference(mockRequest, mockResponse);
+      
+      // Assert
+      expect(mockReportService.getReportPreference).toHaveBeenCalledWith({
+        body: mockRequest.body,
+        params: mockRequest.params,
+        session: mockRequest.session,
+        context: mockRequest.context,
+        dbConnection: mockRequest.dbConnection
+      });
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith(expectedResult);
+    });
+
+    it('should handle case when no preferences exist', async () => {
+      // Arrange
+      const emptyResult = { rows: [] };
+      mockReportService.getReportPreference.mockResolvedValue(emptyResult);
+      
+      // Act
+      await reportController.getReportPreference(mockRequest, mockResponse);
+      
+      // Assert
+      expect(mockReportService.getReportPreference).toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith(emptyResult);
+    });
+  });
+
+  describe('getAllReports', () => {
+    it('should call reportService.getAllReports and respond with status 200', async () => {
+      const expectedReports = [
+        {  name: 'orders-report', title: 'Orders Report' },
+        {  name: 'users-report', title: 'Users Report' },
+      ];
+      
+      mockReportService.getAllReports.mockResolvedValue(expectedReports);
+      
+      await reportController.getAllReports(mockRequest, mockResponse, mockNext);
+      
+      expect(mockReportService.getAllReports).toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith(expectedReports);
+    });
+
+    it('should handle empty reports list', async () => {
+      mockReportService.getAllReports.mockResolvedValue([]);
+      
+      await reportController.getAllReports(mockRequest, mockResponse, mockNext);
+      
+      expect(mockReportService.getAllReports).toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith([]);
     });
   });
 });

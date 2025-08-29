@@ -1,8 +1,12 @@
+if (typeof global.crypto === 'undefined') {
+  const { webcrypto } = require('crypto');
+  global.crypto = webcrypto;
+}
+
 const pool = require("../database/dbConfig");
 const { UserError } = require("../serverConfigurations/assert");
 const { loadEntitySchemas } = require("../schemas/entitySchemaCollection");
 
-// const paypalClient = require("./paypalClient");
 const { ENV } = require("./constants");
 const CrudService = require("../services/crudService");
 const CrudController = require("../controllers/crudController");
@@ -14,7 +18,9 @@ const CartController = require("../controllers/cartController");
 const CartService = require("../services/cartService");
 const OrderService = require("../services/orderService");
 const OrderController = require("../controllers/orderController");
-const { EmailService, transporter } = require("../services/emailService");
+const AppConfigService = require("../services/appConfigService");
+const AppConfigController = require("../controllers/appConfigController");
+const { MessageService, transporter } = require("../services/messageService");
 const { TemplateLoader } = require("./templateLoader");
 const { DbConnectionWrapper } = require("../database/DbConnectionWrapper");
 const NotificationService = require("../services/notificationService");
@@ -25,8 +31,10 @@ const paypalClientWrapper = require("./paypalClient");
 const paypalClient = new paypalClientWrapper.core.PayPalHttpClient(ENV.PAYPAL_CLIENT_ID, ENV.PAYPAL_CLIENT_SECRET);
 const entitySchemaCollection = loadEntitySchemas("user");
 const templateLoader = new TemplateLoader();
-const emailService = new EmailService(transporter, templateLoader);
-const authService = new AuthService(emailService);
+const messageService = new MessageService(transporter, templateLoader);
+const cartService = new CartService();
+const cartController = new CartController(cartService);
+const authService = new AuthService(messageService, cartService);
 const authController = new AuthController(authService);
 const notificationService = new NotificationService();
 const notificationController = new NotificationController(notificationService);
@@ -34,10 +42,10 @@ const service = new CrudService();
 const controller = new CrudController(service);
 const productService = new ProductService();
 const productController = new ProductController(productService);
-const cartService = new CartService();
-const cartController = new CartController(cartService);
-const orderService = new OrderService(emailService, paypalClient);
+const orderService = new OrderService(messageService, paypalClient, cartService);
 const orderController = new OrderController(orderService);
+const appConfigService = new AppConfigService();
+const appConfigController = new AppConfigController(appConfigService, authService);
 
 const routeTable = {
   get: {
@@ -48,14 +56,19 @@ const routeTable = {
     "/auth/status": authController.getStatus,
     "/auth/logout": authController.logout,
     "/auth/captcha": authController.getCaptcha,
+    "/auth/session/user": authController.getUserIdBySession,
     "/api/products/:id/comments": productController.getComments,
     "/api/products/:id/ratings": productController.getRatings,
+    "/api/products/:id/quantity": productController.getQuantity,
     "/api/cart": cartController.getCart,
     "/api/cart/active-vouchers": cartController.getActiveVouchers,
     "/api/orders/:orderId": orderController.getOrder,
     "/api/paypal/capture/:orderId": orderController.capturePaypalPayment,
     "/api/paypal/cancel/:orderId": orderController.cancelPaypalPayment,
     "/api/notifications": notificationController.getNotificationByUserId,
+    "/api/front-office-transport": appConfigController.getFrontOfficeTransportConfig,
+    "/api/cart/validate-stock": cartController.validateStockForItems,
+    "/app-config/public-settings": appConfigController.getPublicSettings,
   },
   post: {
     "/auth/register": authController.register,
@@ -68,13 +81,16 @@ const routeTable = {
     "/api/cart/apply-voucher": cartController.applyVoucher,
     "/api/cart/remove-voucher": cartController.removeVoucher,
     "/api/orders": orderController.createOrder,
+    "/api/subscriptions": notificationController.createSubscription,
+    "/app-config/settings": appConfigController.getSettings,
   },
   put: {
     "/auth/profile": authController.updateProfile,
-    "/api/notifications/:id": notificationController.markAsRead,
+    "/api/notifications/:id": notificationController.updateNotificationStatus,
   },
   delete: {
     "/api/cart/:itemId": cartController.deleteItem,
+    "/api/subscriptions": notificationController.deleteSubscription,
   },
 };
 
@@ -107,6 +123,10 @@ function requestMiddleware(handler) {
       }
 
       await req.logger.error(error);
+
+      if(!(error instanceof UserError)) {
+        await req.logger.createIssue(error, req);
+      }
       
       if (error instanceof UserError) {
         return res.status(400).json({ error: error.message });

@@ -1,0 +1,55 @@
+{
+    "type": "object",
+    "name": "user-groups",
+    "table": "user_groups",
+    "views": "user_groups_view",
+    "href": "/crud-user-groups",
+    "export_view": "user_groups_export_view",
+    "queryValidationSchema": "userGroupQueryParamsSchema",
+    "properties": {
+        "name": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[a-zA-Z_-]+$",
+            "label": "User Group Name",
+            "placeholder": "Enter User Group Name",
+            "filterable": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for user group name."
+            }
+        },
+        "filters": {
+            "type": "object",
+            "label": "Filters",
+            "placeholder": "Enter Filters",
+            "hideInCreate": true,
+            "required": {
+                "create": true,
+                "update": true
+            },
+            "errorMessage": {
+                "type": "Invalid value for filters."
+            }
+        }
+    },
+    "table_display_columns": ["name","created_at", "updated_at", "user_count", "filters"],
+    "relationships": {
+        "target_group_members": {
+            "table": "target_group_members",
+            "foreign_key": "target_group_id"
+        }
+    },
+    "required": ["name", "filters"],
+    "additionalProperties": false,
+    "errorMessage": {
+        "required": {
+            "name": "Name is required.",
+            "filters": "Filters are required."
+        },
+        "additionalProperties": "No additional properties are allowed."
+    }
+}

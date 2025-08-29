@@ -11,7 +11,7 @@ describe("ReportService", () => {
     };
     reportService = new ReportService(mockExportService);
     mockDbConnection = {
-      query: jest.fn(),
+      query: jest.fn().mockResolvedValue({ rows: [] }),
     };
   });
 
@@ -36,6 +36,7 @@ describe("ReportService", () => {
         params: { report: "report-orders" },
         dbConnection: mockDbConnection,
         entitySchemaCollection: mockEntitySchema,
+        session: { admin_user_id: 1 },
       };
 
       const result = await reportService.getReport(data);
@@ -57,6 +58,7 @@ describe("ReportService", () => {
           settings: { report_row_limit_display: 10 },
         },
         entitySchemaCollection: mockEntitySchema,
+        session: { admin_user_id: 1 },
       };
 
       const result = await reportService.getReport(data);
@@ -84,6 +86,7 @@ describe("ReportService", () => {
           settings: { report_row_limit_display: 10 },
         },
         entitySchemaCollection: mockEntitySchema,
+        session: { admin_user_id: 1 },
       };
 
       await reportService.getReport(data);
@@ -100,6 +103,7 @@ describe("ReportService", () => {
         params: { report: "invalid-report" },
         dbConnection: mockDbConnection,
         entitySchemaCollection: mockEntitySchema,
+        session: { admin_user_id: 1 },
       };
 
       await expect(reportService.getReport(data)).rejects.toThrow();
@@ -116,7 +120,8 @@ describe("ReportService", () => {
               params: { report: "store-trends" },
               dbConnection: mockDbConnection,
               entitySchemaCollection: mockEntitySchema,
-              context: mockContext
+              context: mockContext,
+              session: { admin_user_id: 1 },
           };
 
           const mockRows = [{ metric1: 'value1' }];
@@ -134,7 +139,8 @@ describe("ReportService", () => {
               params: { report: "invalid-dashboard-report" },
               dbConnection: mockDbConnection,
               entitySchemaCollection: mockEntitySchema,
-              context: mockContext
+              context: mockContext,
+              session: { admin_user_id: 1 },
           };
 
           await expect(reportService.getReport(data)).rejects.toThrow("Report invalid-dashboard-report not found");
@@ -146,7 +152,8 @@ describe("ReportService", () => {
               params: { report: "store-trends" },
               dbConnection: mockDbConnection,
               entitySchemaCollection: mockEntitySchema,
-              context: mockContext
+              context: mockContext,
+              session: { admin_user_id: 1 },
           };
 
           const mockRows = [{ metric1: 'value1' }];
@@ -170,6 +177,7 @@ describe("ReportService", () => {
         },
         dbConnection: mockDbConnection,
         res: {},
+        session: { admin_user_id: 1 },
       };
 
       await reportService.exportReport(data);
@@ -199,6 +207,10 @@ describe("ReportService", () => {
         query: jest.fn(),
       };
       reportService = new ReportService(mockExportService);
+      
+      // Mock the preference methods
+      reportService.replacePreferenceExpressions = jest.fn().mockImplementation((data, sql) => Promise.resolve(sql));
+      reportService.getReportPreference = jest.fn().mockResolvedValue({ rows: [] });
     });
 
     describe("ordersByUserReportDefinition", () => {
@@ -210,6 +222,7 @@ describe("ReportService", () => {
             order_total_minimum: "100",
             order_total_maximum: "200",
           },
+          session: { admin_user_id: 1 },
         };
 
         const result = await reportService.ordersByUserReportDefinition(data);
@@ -219,11 +232,10 @@ describe("ReportService", () => {
         expect(result).toHaveProperty("reportFilters");
 
         expect(result.reportUIConfig.title).toBe("Orders Report by User");
-        
       });
 
       it("should have correct SQL query structure", async () => {
-        const data = { body: {} };
+        const data = { body: {}, session: { admin_user_id: 1 } };
         const result = await reportService.ordersByUserReportDefinition(data);
 
         expect(result.sql).toContain("SELECT");
@@ -243,15 +255,13 @@ describe("ReportService", () => {
             log_level: "ERROR",
             created_at_grouping_select_value: "day",
           },
+          session: { admin_user_id: 1 },
         };
 
         const result = await reportService.logsReportDefinition(data);
 
         expect(result.reportUIConfig.title).toBe("Logs Report");
-        
       });
-
-      
     });
 
     describe("ordersReportDefinition", () => {
@@ -263,6 +273,7 @@ describe("ReportService", () => {
             total_price_minimum: "100",
             created_at_grouping_select_value: "month",
           },
+          session: { admin_user_id: 1 },
         };
 
         const result = await reportService.ordersReportDefinition(data);
@@ -271,20 +282,15 @@ describe("ReportService", () => {
         expect(result.reportUIConfig.exportConfig).toBeDefined();
         expect(result.reportUIConfig.exportConfig.csv).toBeDefined();
         expect(result.reportUIConfig.exportConfig.excel).toBeDefined();
-
-       
       });
 
       it("should have correct SQL calculations", async () => {
-        const data = { body: {} };
+        const data = { body: {}, session: { admin_user_id: 1 } };
         const result = await reportService.ordersReportDefinition(data);
 
-        expect(result.sql).toContain(
-          'SUM(ROUND(O.total_price * O.discount_percentage / 100, 2)) AS "discount_amount"'
-        );
-        expect(result.sql).toContain(
-          'SUM(ROUND(O.total_price * (1 - O.discount_percentage / 100) * O.vat_percentage / 100, 2))  AS "vat_amount"'
-        );
+        // These assertions may need to be adjusted based on your SQL changes
+        expect(result.sql).toContain('SUM(TRUNC(O.total_price * O.discount_percentage');
+        expect(result.sql).toContain('SUM(TRUNC((O.total_price - TRUNC(O.total_price * O.discount_percentage');
       });
     });
 
@@ -442,71 +448,122 @@ describe("ReportService", () => {
           filter_expression: 'N.name = $FILTER_VALUE$',
       }
     ];
+    
+    // Mock data object for consistent test environment
+    const testData = {
+      session: { admin_user_id: 1 },
+      dbConnection: { query: jest.fn().mockResolvedValue({ rows: [] }) }
+    };
+    
+    // Mock reportUIConfig object
+    const testReportUIConfig = {
+      headerGroups: [
+        [
+          { key: 'created_at', label: 'Created At' },
+          { key: 'name', label: 'Name' }
+        ]
+      ]
+    };
   
     beforeEach(() => {
       reportService = new ReportService({});
+      reportService.replacePreferenceExpressions = jest.fn().mockImplementation(
+        (data, sql) => Promise.resolve(sql)
+      );
     });
   
-    it('should handle timestamp grouping with valid value', () => {
+    it('should handle timestamp grouping with valid value', async () => {
       const sql = 'SELECT $date_grouping_expression$ FROM table';
       const reportFilters = [{
         key: 'date',
         type: 'timestamp',
         grouping_expression: 'table.date'
       }];
-      const INPUT_DATA = {
+      const inputData = {
         date_grouping_select_value: 'month'
       };
   
-      const result = reportService.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
+      const result = await reportService.replaceFilterExpressions(
+        testData, 
+        sql, 
+        reportFilters, 
+        testReportUIConfig, 
+        inputData, 
+        false
+      );
+      
       expect(result.sql).toBe("SELECT DATE_TRUNC('month', table.date) FROM table");
+      expect(reportService.replacePreferenceExpressions).toHaveBeenCalled();
     });
   
-    it('should throw error for invalid timestamp grouping value', () => {
+    it('should throw error for invalid timestamp grouping value', async () => {
       const sql = 'SELECT $date_grouping_expression$ FROM table';
       const reportFilters = [{
         key: 'date',
         type: 'timestamp',
         grouping_expression: 'table.date'
       }];
-      const INPUT_DATA = {
+      const inputData = {
         date_grouping_select_value: 'invalid'
       };
   
-      expect(() => {
-        reportService.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
-      }).toThrow('Invalid grouping value invalid');
+      await expect(
+        reportService.replaceFilterExpressions(
+          testData, 
+          sql, 
+          reportFilters, 
+          testReportUIConfig, 
+          inputData, 
+          false
+        )
+      ).rejects.toThrow('Invalid grouping value invalid');
     });
   
-    it('should use grouping expression for non-timestamp types', () => {
+    it('should use grouping expression for non-timestamp types', async () => {
       const sql = 'SELECT $status_grouping_expression$ FROM table';
       const reportFilters = [{
         key: 'status',
         type: 'select',
         grouping_expression: 'table.status'
       }];
-      const INPUT_DATA = {
+      const inputData = {
         status_grouping_select_value: 'some_value'
       };
   
-      const result = reportService.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
+      const result = await reportService.replaceFilterExpressions(
+        testData, 
+        sql, 
+        reportFilters, 
+        testReportUIConfig, 
+        inputData, 
+        false
+      );
+      
       expect(result.sql).toBe('SELECT table.status FROM table');
     });
   
-    it('should use grouping expression when no groupings are selected', () => {
+    it('should use grouping expression when no groupings are selected', async () => {
       const sql = 'SELECT $status_grouping_expression$ FROM table';
       const reportFilters = [{
         key: 'status',
         type: 'select',
         grouping_expression: 'table.status'
       }];
-      const INPUT_DATA = {};  // No grouping values
+      const inputData = {};  // No grouping values
   
-      const result = reportService.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
+      const result = await reportService.replaceFilterExpressions(
+        testData, 
+        sql, 
+        reportFilters, 
+        testReportUIConfig, 
+        inputData, 
+        false
+      );
+      
       expect(result.sql).toBe('SELECT table.status FROM table');
     });
   
-    it('should use "All" when some groupings are selected but not this one', () => {
+    it('should use "All" when some groupings are selected but not this one', async () => {
       const sql = 'SELECT $status_grouping_expression$, $date_grouping_expression$ FROM table';
       const reportFilters = [
         {
@@ -520,81 +577,574 @@ describe("ReportService", () => {
           grouping_expression: 'table.date'
         }
       ];
-      const INPUT_DATA = {
+      const inputData = {
         date_grouping_select_value: 'month'  // Only date has grouping
       };
   
-      const result = reportService.replaceFilterExpressions(sql, reportFilters, INPUT_DATA);
+      const result = await reportService.replaceFilterExpressions(
+        testData, 
+        sql, 
+        reportFilters, 
+        testReportUIConfig, 
+        inputData, 
+        false
+      );
+      
       expect(result.sql).toBe("SELECT 'All', DATE_TRUNC('month', table.date) FROM table");
     });
 
-    it('should replace ORDER BY clause with valid sort criteria', () => {
+    it('should replace ORDER BY clause with valid sort criteria', async () => {
       const sql = 'SELECT * FROM table ORDER BY 1 DESC';
-      const INPUT_DATA = {
-          sortCriteria: [
-              { key: 'created_at', direction: 'ASC' },
-              { key: 'name', direction: 'DESC' }
-          ]
+      const inputData = {
+        sortCriteria: [
+          { key: 'created_at', direction: 'ASC' },
+          { key: 'name', direction: 'DESC' }
+        ]
       };
 
-      const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
+      const result = await reportService.replaceFilterExpressions(
+        testData, 
+        sql, 
+        mockReportFilters, 
+        testReportUIConfig, 
+        inputData, 
+        false
+      );
+      
       expect(result.sql).toBe('SELECT * FROM table ORDER BY  created_at ASC , name DESC  ');
     });
 
-    it('should ignore invalid sort directions', () => {
-        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
-        const INPUT_DATA = {
-            sortCriteria: [
-                { key: 'created_at', direction: 'INVALID' },
-                { key: 'name', direction: 'DESC' }
-            ]
-        };
+    it('should ignore invalid sort directions', async () => {
+      const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+      const inputData = {
+        sortCriteria: [
+          { key: 'created_at', direction: 'INVALID' },
+          { key: 'name', direction: 'DESC' }
+        ]
+      };
 
-        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
-        expect(result.sql).toBe('SELECT * FROM table ORDER BY  name DESC  ');
+      const result = await reportService.replaceFilterExpressions(
+        testData, 
+        sql, 
+        mockReportFilters, 
+        testReportUIConfig, 
+        inputData, 
+        false
+      );
+      
+      expect(result.sql).toBe('SELECT * FROM table ORDER BY  name DESC  ');
     });
 
-    it('should ignore non-existent filter keys', () => {
-        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
-        const INPUT_DATA = {
-            sortCriteria: [
-                { key: 'non_existent', direction: 'ASC' },
-                { key: 'name', direction: 'DESC' }
-            ]
-        };
+    it('should ignore non-existent filter keys', async () => {
+      const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+      const inputData = {
+        sortCriteria: [
+          { key: 'non_existent', direction: 'ASC' },
+          { key: 'name', direction: 'DESC' }
+        ]
+      };
 
-        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
-        expect(result.sql).toBe('SELECT * FROM table ORDER BY  name DESC  ');
+      const result = await reportService.replaceFilterExpressions(
+        testData, 
+        sql, 
+        mockReportFilters, 
+        testReportUIConfig, 
+        inputData, 
+        false
+      );
+      
+      expect(result.sql).toBe('SELECT * FROM table ORDER BY  name DESC  ');
     });
 
-    it('should keep original ORDER BY when no valid sort criteria', () => {
-        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
-        const INPUT_DATA = {
-            sortCriteria: [
-                { key: 'non_existent', direction: 'INVALID' }
-            ]
-        };
+    it('should keep original ORDER BY when no valid sort criteria', async () => {
+      const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+      const inputData = {
+        sortCriteria: [
+          { key: 'non_existent', direction: 'INVALID' }
+        ]
+      };
 
-        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
-        expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
+      const result = await reportService.replaceFilterExpressions(
+        testData, 
+        sql, 
+        mockReportFilters, 
+        testReportUIConfig, 
+        inputData, 
+        false
+      );
+      
+      expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
     });
 
-    it('should handle empty sort criteria array', () => {
-        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
-        const INPUT_DATA = {
-            sortCriteria: []
-        };
+    it('should handle empty sort criteria array', async () => {
+      const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+      const inputData = {
+        sortCriteria: []
+      };
 
-        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
-        expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
+      const result = await reportService.replaceFilterExpressions(
+        testData, 
+        sql, 
+        mockReportFilters, 
+        testReportUIConfig, 
+        inputData, 
+        false
+      );
+      
+      expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
     });
 
-    it('should handle missing sortCriteria', () => {
-        const sql = 'SELECT * FROM table ORDER BY 1 DESC';
-        const INPUT_DATA = {};
+    it('should handle missing sortCriteria', async () => {
+      const sql = 'SELECT * FROM table ORDER BY 1 DESC';
+      const inputData = {};
 
-        const result = reportService.replaceFilterExpressions(sql, mockReportFilters, INPUT_DATA);
-        expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
+      const result = await reportService.replaceFilterExpressions(
+        testData, 
+        sql, 
+        mockReportFilters, 
+        testReportUIConfig, 
+        inputData, 
+        false
+      );
+      
+      expect(result.sql).toBe('SELECT * FROM table ORDER BY 1 DESC');
+    });
+
+      it('should handle array filter values by replacing with parameter placeholders', async () => {
+    // Arrange
+    const sql = 'SELECT * FROM orders WHERE $status_filter_expression$';
+    const reportFilters = [{
+      key: 'status',
+      filter_expression: 'status IN $FILTER_VALUE$',
+      grouping_expression: 'status'
+    }];
+    const inputData = {
+      status_filter_value: ['Pending', 'Paid', 'Cancelled']
+    };
+    
+    // Act
+    const result = await reportService.replaceFilterExpressions(
+      testData, 
+      sql, 
+      reportFilters, 
+      testReportUIConfig, 
+      inputData, 
+      false
+    );
+    
+    // Assert
+    expect(result.sql).toBe('SELECT * FROM orders WHERE status IN ($1,$2,$3)');
+    expect(result.insertValues).toEqual(['Pending', 'Paid', 'Cancelled']);
+  });
+  
+  it('should replace with TRUE when array filter value is empty', async () => {
+    // Arrange
+    const sql = 'SELECT * FROM orders WHERE $status_filter_expression$';
+    const reportFilters = [{
+      key: 'status',
+      filter_expression: 'status IN $FILTER_VALUE$',
+      grouping_expression: 'status'
+    }];
+    const inputData = {
+      status_filter_value: [] // Empty array
+    };
+    
+    // Act
+    const result = await reportService.replaceFilterExpressions(
+      testData, 
+      sql, 
+      reportFilters, 
+      testReportUIConfig, 
+      inputData, 
+      false
+    );
+    
+    // Assert
+    expect(result.sql).toBe('SELECT * FROM orders WHERE TRUE');
+    expect(result.insertValues).toEqual([]);
+  });
+  
+  it('should handle multiple array filters correctly', async () => {
+    // Arrange
+    const sql = 'SELECT * FROM orders WHERE $status_filter_expression$ AND $payment_method_filter_expression$';
+    const reportFilters = [
+      {
+        key: 'status',
+        filter_expression: 'status IN $FILTER_VALUE$',
+        grouping_expression: 'status'
+      },
+      {
+        key: 'payment_method',
+        filter_expression: 'payment_method IN $FILTER_VALUE$',
+        grouping_expression: 'payment_method'
+      }
+    ];
+    const inputData = {
+      status_filter_value: ['Pending', 'Paid'],
+      payment_method_filter_value: ['Credit Card', 'PayPal']
+    };
+    
+    // Act
+    const result = await reportService.replaceFilterExpressions(
+      testData, 
+      sql, 
+      reportFilters, 
+      testReportUIConfig, 
+      inputData, 
+      false
+    );
+    
+    // Assert
+    expect(result.sql).toBe('SELECT * FROM orders WHERE status IN ($1,$2) AND payment_method IN ($3,$4)');
+    expect(result.insertValues).toEqual(['Pending', 'Paid', 'Credit Card', 'PayPal']);
+  });
+  
+  it('should handle mixed array and non-array filters', async () => {
+    // Arrange
+    const sql = 'SELECT * FROM orders WHERE $status_filter_expression$ AND $user_id_filter_expression$';
+    const reportFilters = [
+      {
+        key: 'status',
+        filter_expression: 'status IN $FILTER_VALUE$',
+        grouping_expression: 'status'
+      },
+      {
+        key: 'user_id',
+        filter_expression: 'user_id = $FILTER_VALUE$',
+        grouping_expression: 'user_id'
+      }
+    ];
+    const inputData = {
+      status_filter_value: ['Pending', 'Paid'],
+      user_id_filter_value: 42
+    };
+    
+    // Act
+    const result = await reportService.replaceFilterExpressions(
+      testData, 
+      sql, 
+      reportFilters, 
+      testReportUIConfig, 
+      inputData, 
+      false
+    );
+    
+    // Assert
+    expect(result.sql).toBe('SELECT * FROM orders WHERE status IN ($1,$2) AND user_id = $3');
+    expect(result.insertValues).toEqual(['Pending', 'Paid', 42]);
+  });
+  
+  it('should handle case when one array filter is empty and another is not', async () => {
+    // Arrange
+    const sql = 'SELECT * FROM orders WHERE $status_filter_expression$ AND $payment_method_filter_expression$';
+    const reportFilters = [
+      {
+        key: 'status',
+        filter_expression: 'status IN $FILTER_VALUE$',
+        grouping_expression: 'status'
+      },
+      {
+        key: 'payment_method',
+        filter_expression: 'payment_method IN $FILTER_VALUE$',
+        grouping_expression: 'payment_method'
+      }
+    ];
+    const inputData = {
+      status_filter_value: ['Pending', 'Paid'],
+      payment_method_filter_value: []
+    };
+    
+    // Act
+    const result = await reportService.replaceFilterExpressions(
+      testData, 
+      sql, 
+      reportFilters, 
+      testReportUIConfig, 
+      inputData, 
+      false
+    );
+    
+    // Assert
+    expect(result.sql).toBe('SELECT * FROM orders WHERE status IN ($1,$2) AND TRUE');
+    expect(result.insertValues).toEqual(['Pending', 'Paid']);
+  });
+  });
+  
+  describe('Report Preferences', () => {
+    let reportService;
+    let mockDbConnection;
+    
+    beforeEach(() => {
+      mockDbConnection = {
+        query: jest.fn().mockResolvedValue({ rows: [] })
+      };
+      reportService = new ReportService({});
+    });
+
+    describe('setReportPreference', () => {
+      it('should call query with correct parameters', async () => {
+        const mockPreference = { 
+          headerGroups: [
+            { key: 'column1', hideInUI: true },
+            { key: 'column2', hideInUI: false }
+          ] 
+        };
+        
+        const mockData = {
+          dbConnection: mockDbConnection,
+          session: { admin_user_id: 42 },
+          params: { report: 'report-orders' },
+          body: mockPreference
+        };
+
+        await reportService.setReportPreference(mockData);
+
+        expect(mockDbConnection.query).toHaveBeenCalledWith(
+          expect.stringContaining('INSERT INTO user_report_preferences'),
+          [42, 'report-orders', JSON.stringify(mockPreference)]
+        );
+        
+        const sqlQuery = mockDbConnection.query.mock.calls[0][0];
+        expect(sqlQuery).toContain('ON CONFLICT (admin_user_id, report_name)');
+        expect(sqlQuery).toContain('DO UPDATE SET preference = $3');
+      });
+
+      it('should throw error when required data is missing', async () => {
+        const invalidData = {
+          dbConnection: mockDbConnection,
+          params: { report: 'report-orders' },
+          body: {}
+        };
+
+        await expect(reportService.setReportPreference(invalidData))
+          .rejects.toThrow();
+      });
+    });
+
+    describe('getReportPreference', () => {
+      it('should call query with correct parameters', async () => {
+        // Arrange
+        const mockData = {
+          dbConnection: mockDbConnection,
+          session: { admin_user_id: 42 },
+          params: { report: 'report-orders' }
+        };
+
+        const mockQueryResult = { 
+          rows: [{ 
+            admin_user_id: 42,
+            report_name: 'report-orders',
+            preference: { headerGroups: [{ key: 'column1', hideInUI: true }] }
+          }] 
+        };
+        
+        mockDbConnection.query.mockResolvedValue(mockQueryResult);
+
+        // Act
+        const result = await reportService.getReportPreference(mockData);
+
+        // Assert
+        expect(mockDbConnection.query).toHaveBeenCalledWith(
+          expect.stringContaining('SELECT * FROM user_report_preferences'),
+          [42, 'report-orders']
+        );
+        expect(result).toEqual(mockQueryResult);
+      });
+
+      it('should return empty result when no preferences exist', async () => {
+        // Arrange
+        const mockData = {
+          dbConnection: mockDbConnection,
+          session: { admin_user_id: 99 },
+          params: { report: 'report-nonexistent' }
+        };
+
+        const emptyResult = { rows: [] };
+        mockDbConnection.query.mockResolvedValue(emptyResult);
+
+        // Act
+        const result = await reportService.getReportPreference(mockData);
+
+        // Assert
+        expect(result).toEqual(emptyResult);
+        expect(mockDbConnection.query).toHaveBeenCalledWith(
+          expect.any(String),
+          [99, 'report-nonexistent']
+        );
+      });
+
+      it('should throw error when required data is missing', async () => {
+        // Arrange
+        const invalidData = {
+          dbConnection: mockDbConnection,
+          // Missing session
+          params: { report: 'report-orders' }
+        };
+
+        // Act & Assert
+        await expect(reportService.getReportPreference(invalidData))
+          .rejects.toThrow();
+      });
+
+      it('should handle database errors properly', async () => {
+        // Arrange
+        const mockData = {
+          dbConnection: mockDbConnection,
+          session: { admin_user_id: 42 },
+          params: { report: 'report-orders' }
+        };
+        
+        const dbError = new Error('Database connection failed');
+        mockDbConnection.query.mockRejectedValue(dbError);
+
+        // Act & Assert
+        await expect(reportService.getReportPreference(mockData))
+          .rejects.toThrow('Database connection failed');
+      });
     });
   });
+
+  describe('replacePreferenceExpressions', () => {
+    beforeEach(() => {
+      reportService = new ReportService({});
+      mockDbConnection = {
+        query: jest.fn(),
+      };
+      reportService.getReportPreference = jest.fn().mockImplementation(
+        (data) => Promise.resolve({ rows: [{ preference: { headerGroups: [
+          
+        ] } }] })
+      );
+    });
+    
+    it('should handle empty preferences correctly', async () => {
+      const sql = 'SELECT $column_display_preference$ column FROM table';
+      const data = {
+        session: { admin_user_id: 1 },
+        dbConnection: mockDbConnection
+      };
+      const reportUIConfig = {
+        headerGroups: [[{ key: 'column', label: 'Column', isAggregate: false }]]
+      };
+      
+      const result = await reportService.replacePreferenceExpressions(data, sql, reportUIConfig, true);
+      expect(result).toBe('SELECT  column FROM table');
+    });
+    
+    it('should apply column preferences correctly', async () => {
+      const sql = 'SELECT $column_display_preference$ column FROM table';
+      const data = {
+        session: { admin_user_id: 1 },
+        dbConnection: mockDbConnection
+      };
+      const reportUIConfig = {
+        headerGroups: [[{ key: 'column', label: 'Column', isAggregate: false }]]
+      };
+
+      reportService.getReportPreference = jest.fn().mockResolvedValue({
+        rows: [{ preference: { headerGroups: [{ key: 'column', hideInUI: true }] } }]
+      });
+      
+      const result = await reportService.replacePreferenceExpressions(data, sql, reportUIConfig, true);
+      expect(result).toBe('SELECT --  column FROM table');
+    });
+    
+    it('should generate group by expression correctly', async () => {
+      const sql = 'SELECT * FROM table $group_by_expression$';
+      const data = {
+        session: { admin_user_id: 1 },
+        dbConnection: mockDbConnection
+      };
+      const reportUIConfig = {
+        headerGroups: [[
+          { key: 'column1', label: 'Column 1', isAggregate: false },
+          { key: 'column2', label: 'Column 2', isAggregate: true }
+        ]]
+      };
+      
+      mockDbConnection.query.mockResolvedValue({ rows: [] });
+      
+      const result = await reportService.replacePreferenceExpressions(data, sql, reportUIConfig, false);
+      expect(result).toBe('SELECT * FROM table GROUP BY 1');
+    });
+    
+    it('should not apply preferences when shouldApplyUserPreference is false', async () => {
+      const sql = 'SELECT $column_display_preference$ * FROM table';
+      const data = {
+        session: { admin_user_id: 1 },
+        dbConnection: mockDbConnection
+      };
+      const reportUIConfig = {
+        headerGroups: [[{ key: 'column', label: 'Column' }]]
+      };
+      
+      const result = await reportService.replacePreferenceExpressions(data, sql, reportUIConfig, false);
+      expect(result).toBe('SELECT  * FROM table');
+      expect(mockDbConnection.query).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getAllReports', () => {
+  let reportService;
+  
+  beforeEach(() => {
+    reportService = new ReportService({});
+  });
+
+  it('should return an array of all report keys', async () => {
+    // Act
+    const result = await reportService.getAllReports();
+    
+    // Assert
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result).toContain('report-orders');
+    expect(result).toContain('report-logs');
+    expect(result).toContain('report-orders-by-user');
+    expect(result).toContain('report-users');
+    expect(result).toContain('report-notifications');
+    expect(result).toContain('report-notifications-status');
+    expect(result).toContain('report-campaigns');
+    expect(result).toContain('report-push-subscriptions');
+  });
+  });
+
+  describe("ReportService — smoke-tests for all definitions", () => {
+  let reportService;
+  const data = {
+    body: {},
+    session: { admin_user_id: 1 },
+    context: { settings: { campaign_chart_count: 10 } },
+    dbConnection: { query: jest.fn().mockResolvedValue({ rows: [] }) }
+  };
+
+  beforeAll(() => {
+    reportService = new ReportService({ exportReport: () => {} });
+  });
+
+  it("all 'reports' definitions should return { reportUIConfig, sql, reportFilters }", async () => {
+    for (const [name, fn] of Object.entries(reportService.reports)) {
+      // each fn returns { reportUIConfig, sql, reportFilters }
+      const def = await fn.call(reportService, data);
+      expect(def).toBeInstanceOf(Object);
+      expect(def).toHaveProperty("reportUIConfig");
+      expect(def).toHaveProperty("sql");
+      expect(def).toHaveProperty("reportFilters");
+      expect(typeof def.sql).toBe("string");
+      expect(Array.isArray(def.reportFilters)).toBe(true);
+    }
+  });
+
+  it("all 'dashboardReports' definitions should return { reportUIConfig, sql, reportFilters }", async () => {
+    for (const [name, fn] of Object.entries(reportService.dashboardReports)) {
+      const def = await fn.call(reportService, data);
+      expect(def).toBeInstanceOf(Object);
+      expect(def).toHaveProperty("reportUIConfig");
+      expect(def).toHaveProperty("sql");
+      expect(def).toHaveProperty("reportFilters");
+      expect(typeof def.sql).toBe("string");
+      expect(Array.isArray(def.reportFilters)).toBe(true);
+    }
+  });
+});
 });

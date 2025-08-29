@@ -5,23 +5,10 @@ const { Readable } = require("nodemailer/lib/xoauth2");
 const { ENV }  = require("../serverConfigurations/constants");
 
 class AuthService {
-  constructor(emailService) {
-    this.emailService = emailService;
-    this.register = this.register.bind(this);
-    this.login = this.login.bind(this);
-    this.logout = this.logout.bind(this);
-    this.verifyMail = this.verifyMail.bind(this);
-    this.createSession = this.createSession.bind(this);
-    this.getSession = this.getSession.bind(this);
-    this.refreshSessionExpiry = this.refreshSessionExpiry.bind(this);
-    this.changeSessionType = this.changeSessionType.bind(this);
-    this.getStatus = this.getStatus.bind(this);
-    this.generateCaptcha = this.getCaptcha.bind(this);
-    this.generateCaptchaImage = this.generateCaptchaImage.bind(this);
-    this.verifyCaptcha = this.verifyCaptcha.bind(this);
-    this.updateProfile = this.updateProfile.bind(this);
-    this.forgotPassword = this.forgotPassword.bind(this);
-    this.requirePermission = this.requirePermission.bind(this);
+  constructor(messageService, cartService) {
+    this.messageService = messageService;
+    this.cartService = cartService;
+    this.passwordVersion = 2;
   }
 
   async register(data) {
@@ -32,16 +19,20 @@ class AuthService {
       key === "password" ? "password_hash" : key
     );
 
-    const hashedPassword = await bcrypt.hash(data.body.password, 10);
     const values = schemaKeys.map((key) => {
-      if (key === "password") {
-        return hashedPassword;
+      if (key === "password_version") {
+        return this.passwordVersion;
       }
       return data.body[key] === undefined ? null : data.body[key];
     });
 
     const query = `INSERT INTO ${schema.routeName}(${dbColumns.join(",")}) VALUES(${dbColumns
-      .map((_, i) => `$${i + 1}`)
+      .map((column, i) => {
+        if (column === "password_hash") {
+          return `crypt($${i + 1}, gen_salt('bf', 10))`;
+        }
+        return `$${i + 1}`;
+      })
       .join(",")}) RETURNING *`;
     const createUserResult = await data.dbConnection.query(query, values);
     const user = createUserResult.rows[0];
@@ -60,13 +51,13 @@ class AuthService {
       dbConnection: data.dbConnection,
       emailData: {
         templateType: "Email verification",
-        recipient: user.email,
+        recipient_email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
-        address: `<a href="${ENV.DEVELOPMENT_URL}/auth/verify-mail?token=${verifyToken}">Verify Email</a>`
+        address: `<a href="${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/auth/verify-mail?token=${verifyToken}">Verify Email</a>`
       }
     }
-    await this.emailService.queueEmail(emailObject);
+    await this.messageService.queueEmail(emailObject);
 
     return session;
   }
@@ -82,7 +73,28 @@ class AuthService {
     ASSERT_USER(userResult.rows[0].is_email_verified, "Email is not verified", { code: "SERVICE.AUTH.00082.INVALID_LOGIN", long_description: `Email ${data.body.email} is not verified` });
 
     const user = userResult.rows[0];
-    const isPasswordCorrect = await bcrypt.compare(data.body.password, user.password_hash);
+    
+    let isPasswordCorrect = false;
+    if(user.password_version == 1) {
+      isPasswordCorrect = await bcrypt.compare(data.body.password, user.password_hash);
+      if (isPasswordCorrect) {
+        await data.dbConnection.query(`
+          UPDATE ${data.entitySchemaCollection.userManagementSchema.user_table} 
+          SET password_hash = crypt($1, gen_salt('bf', 10)), password_version = $2
+          WHERE id = $3`,
+          [data.body.password, this.passwordVersion, user.id]
+        );
+      }
+    } else if (user.password_version == 2) {
+      const passwordResult = await data.dbConnection.query(`
+        SELECT 1 FROM ${data.entitySchemaCollection.userManagementSchema.user_table}
+        WHERE id = $1 AND password_hash = crypt($2, password_hash)`,
+        [user.id, data.body.password]
+      );
+      isPasswordCorrect = passwordResult.rows.length === 1;
+    } else {
+      isPasswordCorrect = false;
+    }
     ASSERT_USER(isPasswordCorrect, "Invalid login", { code: "SERVICE.AUTH.00086.INVALID_LOGIN", long_description: `Invalid login with email ${data.body.email}`});
 
     const requestData = { entitySchemaCollection: data.entitySchemaCollection, dbConnection: data.dbConnection, sessionHash: data.session.session_hash, sessionType: "Authenticated", userId: user.id };
@@ -99,7 +111,20 @@ class AuthService {
     );
     ASSERT_USER(result.rows.length === 1, "Invalid session", { code: "SERVICE.AUTH.00100.INVALID_SESSION", long_description: `Invalid session ${data.session.session_hash}` });
 
-    return result.rows[0];
+    const newSessionData = {
+      entitySchemaCollection: data.entitySchemaCollection,
+      dbConnection: data.dbConnection,
+      userId: null,
+      ipAddress: data.session.ip_address,
+      sessionType: "Anonymous"
+    };
+    const newSession = await this.createSession(newSessionData);
+
+    if(data.session.user_id){ 
+      await this.cartService.cloneCartForNewSession(data.session.user_id, newSession.id, data.dbConnection);
+    }
+
+    return newSession;
   }
 
   async verifyMail(data) {
@@ -156,6 +181,10 @@ class AuthService {
     return result.rows[0];
   }
 
+  async getUserIdBySession(data) {
+    return data.session.user_id;
+  }
+
   async refreshSessionExpiry(data) {
     const result = await data.dbConnection.query(`
       UPDATE ${data.entitySchemaCollection.userManagementSchema.session_table} SET expires_at = NOW() + INTERVAL '40 minutes' WHERE session_hash = $1 RETURNING *`,
@@ -180,7 +209,7 @@ class AuthService {
 
   async getStatus(data) {
     const result = await data.dbConnection.query(`
-      SELECT u.first_name, u.last_name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.birth_date, u.country_id, u.address, u.has_first_login, st.type as session_type
+      SELECT u.first_name, u.last_name, u.email, u.has_first_login, st.type as session_type
       FROM ${data.entitySchemaCollection.userManagementSchema.session_table} s
       JOIN session_types st ON s.session_type_id = st.id
       LEFT JOIN ${data.entitySchemaCollection.userManagementSchema.user_table} u ON s.${data.entitySchemaCollection.userManagementSchema.user_id} = u.id
@@ -412,11 +441,11 @@ class AuthService {
       dbConnection: data.dbConnection,
       emailData: {
         templateType: "Forgot password",
-        recipient: user.email,
-        address: `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=${createResetTokenResult.rows[0].token_hash}">Reset Password</a>`
+        recipient_email: user.email,
+        address: `<a href="${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/reset-password?token=${createResetTokenResult.rows[0].token_hash}">Reset Password</a>`
       }
     }
-    await this.emailService.queueEmail(emailObject);
+    await this.messageService.queueEmail(emailObject);
 
     return { message: "If the email exists, a password reset link will be sent"};
   }

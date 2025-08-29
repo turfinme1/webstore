@@ -6,8 +6,6 @@ const { ASSERT } = require("../serverConfigurations/assert");
 class ExportService {
     constructor(crudService) {
         this.crudService = crudService;
-        this.exportToExcel = this.exportToExcel.bind(this);
-        this.exportToCsv = this.exportToCsv.bind(this);
     }
 
     async exportToExcel(data) {
@@ -297,11 +295,18 @@ class ExportService {
         });
 
         const dbRowGenerator = this.fetchRowsWithCursor;
-        const csvStream = Readable.from(this.csvRowGenerator(data, dbRowGenerator));
+        const userPreference = await data.dbConnection.query(`
+            SELECT * FROM user_report_preferences
+            WHERE admin_user_id = $1 AND report_name = $2`,
+            [data.session.admin_user_id, data.params.report]
+        );
+        const preference = userPreference.rows[0]?.preference?.headerGroups || [];
+
+        const csvStream = Readable.from(this.csvRowGenerator(data, dbRowGenerator, preference));
         await pipeline(csvStream, data.res);
     }
 
-    async* csvRowGenerator(data, dbRowGenerator) {
+    async* csvRowGenerator(data, dbRowGenerator, preference) {
         yield "\uFEFF"; 
 
         if (data.filters || data.groupings) {
@@ -326,16 +331,24 @@ class ExportService {
             yield "\n";
         }
 
+        let preferedColumnOrder;
+        if (preference && preference.length > 0) {
+            preferedColumnOrder = preference.filter(c => !c.hideInUI).map(c => c.key);
+        } else {
+            preferedColumnOrder = null;
+        }
+
         let headers = null;
         for await (const rows of await dbRowGenerator(data)) {
             for (const row of rows) {
                 if (!headers) {
-                    headers = Object.keys(row)
+                    headers = preferedColumnOrder || Object.keys(row);
                     yield `${headers.join(",")}\n`;
                 }
 
-                const rowValues = Object.values(row)
-                    .map(value => {
+                const rowValues = headers
+                    .map(key => {
+                        const value = row[key];
                         if (Array.isArray(value)) {
                             return value.join(':');
                         }
@@ -388,16 +401,33 @@ class ExportService {
                 worksheet.addRow([]).commit(); 
             }
         }
-    
+
+        const userPreference = await data.dbConnection.query(`
+            SELECT * FROM user_report_preferences
+            WHERE admin_user_id = $1 AND report_name = $2`,
+            [data.session.admin_user_id, data.params.report]
+        );
+        const preference = userPreference.rows[0]?.preference?.headerGroups || [];
+        let preferedColumnOrder;
+        if (preference && preference.length > 0) {
+            preferedColumnOrder = preference.filter(c => !c.hideInUI).map(c => c.key);
+        } else {
+            preferedColumnOrder = null;
+        }
+
         let headers;
         const dbRowGenerator = this.fetchRowsWithCursor;
         for await (const rows of await dbRowGenerator(data)) {
             for (const row of rows) {
                 if (!headers) {
-                    headers = Object.keys(row);
+                    headers = preferedColumnOrder || Object.keys(row);
                     worksheet.addRow(headers).commit();
                 }
-                worksheet.addRow(Object.values(row)).commit();
+                const rowValues = headers.map(header => {
+                    return row[header];
+                });
+
+                worksheet.addRow(rowValues).commit();
             }
         }
     

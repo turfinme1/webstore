@@ -232,7 +232,7 @@ describe("OrderController", () => {
       await orderController.deleteOrder(req, mockRes, mockNext);
 
       expect(ASSERT_USER).toHaveBeenCalledWith(
-        req.session.user_id,
+        req.session.admin_user_id,
         "You must be logged in to perform this action",
         { code: "CONTROLLER.ORDER.00093.UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" }
       );

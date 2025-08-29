@@ -10,6 +10,7 @@ const CrudService = require("../services/crudService");
 
     while (true) {
         try {
+            console.log("Starting updateTargetGroupUsers");
             const settingsResult = await pool.query(`
                 SELECT 
                     target_group_status_update_interval as interval,
@@ -33,6 +34,7 @@ const CrudService = require("../services/crudService");
 
             const entitySchemaCollection = loadEntitySchemas("admin");
             const crudService = new CrudService();
+            console.log('[updateTargetGroupUsers] Aquire client from pool...');
             client = await pool.connect();
             logger = new Logger({ dbConnection: new DbConnectionWrapper(client) });
 
@@ -93,10 +95,13 @@ const CrudService = require("../services/crudService");
                 long_description: "Target groups update completed by cron"
             });
         } catch (error) {
-            if (logger) await logger.error(error);
             console.error("Error during target groups update:", error);
+            if (logger) await logger.error(error);
         } finally {
-            if (client) client.release();
+            if (client) {
+                console.log('[updateTargetGroupUsers] Release client to pool');
+                client.release();
+            }
         }
     }
 })();

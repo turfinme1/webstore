@@ -1,4 +1,4 @@
-import { createNavigation, getUserStatus, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { createNavigation, getUserStatus, fetchWithErrorHandling, showErrorMessage, showMessage, formatCurrency, initializePage } from "./page-utility.js";
 
 const state = {
   userStatus: null,
@@ -15,6 +15,7 @@ const elements = {
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    await initializePage();
     state.userStatus = await getUserStatus();
     createNavigation(state.userStatus, document.getElementById("navigation-container"));
 
@@ -31,7 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await attachEventListeners();
   } catch (error) {
     console.error("Error loading order:", error);
-    showToastMessage("Failed to load order", "error");
+    showErrorMessage("Failed to load order");
   }
 });
 
@@ -72,7 +73,9 @@ async function handlePayWithPayPal(event) {
     city: document.getElementById("city").value,
   };
 
+  const payButton = document.getElementById("pay-with-paypal");
   try {
+    payButton.disabled = true;
     elements.spinner.style.display = "inline-block";
     const response = await fetchWithErrorHandling('/api/orders', {
       method: 'POST',
@@ -82,25 +85,26 @@ async function handlePayWithPayPal(event) {
 
    elements.spinner.style.display = "none";
     if (!response.ok) {
-      showToastMessage(response.error, "error");
+      payButton.disabled = false;
       return;
     }
     const data = await response.data;
 
     if(state.cart.total_price_with_voucher == 0){
-      showToastMessage("Order placed successfully. Navigating to order complete page...", "success");
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      showMessage("Order placed successfully. Navigating to order complete page...");
+      await new Promise(resolve => setTimeout(resolve, 2000));
       window.location.href = `/order-complete?orderId=${data.orderId}`;
       return;
     }
-    showToastMessage("Order placed successfully. Navigating to Paypal...", "success");
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    showMessage("Order placed successfully. Navigating to Paypal...");
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     window.location.href = data.approvalUrl;
   } catch (error) {
+    payButton.disabled = false;
     elements.spinner.style.display = "none";
     console.error("Error placing order:", error);
-    showToastMessage("Failed to place order", "error");
+    showErrorMessage("Failed to place order");
   }
 }
 
@@ -146,15 +150,15 @@ async function populateCountryDropdown() {
 }
 
 async function getCountries() {
-  const response = await fetch("/crud/iso-country-codes");
+  const response = await fetchWithErrorHandling("/crud/iso-country-codes");
   if (!response.ok) throw new Error("Failed to fetch countries");
-  return await response.json();
+  return response.data;
 }
 
 async function getCartItems() {
-  const response = await fetch('/api/cart');
+  const response = await fetchWithErrorHandling('/api/cart');
   if (!response.ok) throw new Error('Failed to fetch cart items');
-  return await response.json();
+  return response.data;
 }
 
 function renderCartItemReadOnly(item) {
@@ -167,8 +171,8 @@ function renderCartItemReadOnly(item) {
     </td>
     <td style="vertical-align: middle;">${item.product_code}</td>
     <td style="vertical-align: middle; text-align: center;">${item.quantity}</td>
-    <td style="vertical-align: middle; text-align: right;">$${item.unit_price}</td>
-    <td style="vertical-align: middle; text-align: right;">$${item.total_price}</td>
+    <td style="vertical-align: middle; text-align: right;">${formatCurrency(item.unit_price)}</td>
+    <td style="vertical-align: middle; text-align: right;">${formatCurrency(item.total_price)}</td>
   `;
   return itemRow;
 }
@@ -179,7 +183,7 @@ function renderCartTotalRowReadOnly() {
   const subtotalRow = document.createElement('tr');
   subtotalRow.innerHTML = `
     <td colspan="4" style="text-align: right; font-weight: bold;">Subtotal:</td>
-    <td style="text-align: right; font-weight: bold;">$${state.cart.total_price}</td>
+    <td style="text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price)}</td>
   `;
   fragment.appendChild(subtotalRow);
 
@@ -187,7 +191,7 @@ function renderCartTotalRowReadOnly() {
   discountRow.classList.add('cart-discount');
   discountRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Discount (${state.cart.discount_percentage}%):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.discount_amount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.discount_amount)}</td>
   `;
   fragment.appendChild(discountRow);
 
@@ -195,14 +199,14 @@ function renderCartTotalRowReadOnly() {
   priceAfterDiscountRow.classList.add('cart-price-after-discount');
   priceAfterDiscountRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Price after discount:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_after_discount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price_after_discount)}</td>
   `;
   fragment.appendChild(priceAfterDiscountRow);
 
   const vatRow = document.createElement('tr');
   vatRow.innerHTML = `
     <td colspan="4" style="text-align: right; font-weight: bold;">VAT (${state.cart.vat_percentage}%):</td>
-    <td style="text-align: right; font-weight: bold;">$${state.cart.vat_amount}</td>
+    <td style="text-align: right; font-weight: bold;">${formatCurrency(state.cart.vat_amount)}</td>
   `;
   fragment.appendChild(vatRow);
 
@@ -210,7 +214,7 @@ function renderCartTotalRowReadOnly() {
   priceWithVatRow.classList.add('cart-price-with-vat');
   priceWithVatRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total price with VAT:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_with_vat}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price_with_vat)}</td>
     <td></td>
   `;
   fragment.appendChild(priceWithVatRow);
@@ -219,7 +223,7 @@ function renderCartTotalRowReadOnly() {
   voucherRow.classList.add('cart-voucher');
   voucherRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Voucher (${state.cart.voucher_code || "Not applied"}):</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">-$${state.cart.voucher_amount}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">-${formatCurrency(state.cart.voucher_amount)}</td>
     <td></td>
   `;
   fragment.appendChild(voucherRow);
@@ -228,7 +232,7 @@ function renderCartTotalRowReadOnly() {
   totalRow.classList.add('cart-total');
   totalRow.innerHTML = `
     <td colspan="4" style="vertical-align: middle; text-align: right; font-weight: bold;">Total:</td>
-    <td style="vertical-align: middle; text-align: right; font-weight: bold;">$${state.cart.total_price_with_voucher}</td>
+    <td style="vertical-align: middle; text-align: right; font-weight: bold;">${formatCurrency(state.cart.total_price_with_voucher)}</td>
     <td></td>
   `;
   fragment.appendChild(totalRow);

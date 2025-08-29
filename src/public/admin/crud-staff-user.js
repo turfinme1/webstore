@@ -1,5 +1,5 @@
 import { CrudPageBuilder } from "./builder.js";
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling } from "./page-utility.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const userStatus = await getUserStatus();

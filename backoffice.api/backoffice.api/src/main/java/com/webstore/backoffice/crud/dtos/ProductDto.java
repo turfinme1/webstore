@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Set;
@@ -23,6 +24,9 @@ public class ProductDto extends BaseDto<Product> {
 
     @NotBlank(message = CrudConstants.PRICE_REQUIRED)
     private BigDecimal price;
+
+    @NotBlank(message = CrudConstants.QUANTITY_REQUIRED)
+    private Long quantity;
 
     @NotBlank(message = CrudConstants.SHORT_DESCRIPTION_REQUIRED)
     @JsonProperty("short_description")
@@ -50,6 +54,9 @@ public class ProductDto extends BaseDto<Product> {
         this.id = product.getId();
         this.name = product.getName();
         this.price = product.getPrice();
+        if (product.getInventory() != null) {
+            this.quantity = product.getInventory().getQuantity();
+        }
         this.shortDescription = product.getShortDescription();
         this.longDescription = product.getLongDescription();
         this.categories = product.getCategories()
@@ -77,6 +84,7 @@ public class ProductDto extends BaseDto<Product> {
         product.setId(this.id);
         product.setName(this.name);
         product.setPrice(this.price);
+        product.setCode(this.code);
         product.setShortDescription(this.shortDescription);
         product.setLongDescription(this.longDescription);
         product.setCategories(this.categories
@@ -184,5 +192,13 @@ public class ProductDto extends BaseDto<Product> {
     }
 
     public ProductDto() {
+    }
+
+    public Long getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Long quantity) {
+        this.quantity = quantity;
     }
 }

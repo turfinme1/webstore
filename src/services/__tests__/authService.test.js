@@ -3,10 +3,12 @@ const AuthService = require("../authService");
 const bcrypt = require("bcrypt");
 const { fa } = require("@faker-js/faker");
 const { ENV } = require("../../serverConfigurations/constants");
+const { url } = require("inspector");
 
 describe("AuthService", () => {
   let authService;
   let mockMailService;
+  let mockCartService;
   let mockDbConnection;
   let data;
 
@@ -16,12 +18,15 @@ describe("AuthService", () => {
       sendVerificationEmail: jest.fn(),
       queueEmail: jest.fn(),
     };
+    mockCartService = {
+      cloneCartForNewSession: jest.fn(),
+    };
 
     mockDbConnection = {
       query: jest.fn(),
     };
 
-    authService = new AuthService(mockMailService);
+    authService = new AuthService(mockMailService, mockCartService);
 
     // Data structure passed to the AuthService methods
     data = {
@@ -52,6 +57,11 @@ describe("AuthService", () => {
       session: {
         session_hash: "session123",
       },
+      context:{
+        settings: {
+          url: "http://localhost",
+        }
+      }
     };
   });
 
@@ -78,14 +88,13 @@ describe("AuthService", () => {
 
       // Assertions
       expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
-      expect(bcrypt.hash).toHaveBeenCalledWith("password123", 10);
       expect(mockMailService.queueEmail).toHaveBeenCalledWith({
         dbConnection: mockDbConnection,
         emailData: {
-          address: `<a href="${ENV.DEVELOPMENT_URL}/auth/verify-mail?token=token123">Verify Email</a>`,
+          address: `<a href="${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/auth/verify-mail?token=token123">Verify Email</a>`,
           first_name: undefined,
           last_name: undefined,
-          recipient: "test@example.com",
+          recipient_email: "test@example.com",
           templateType: "Email verification",
         },
       });
@@ -97,9 +106,6 @@ describe("AuthService", () => {
       data.body.name = undefined;
       const mockUser = { id: 1, email: "test@example.com" };
       const mockSession = { session_hash: "session123", user_id: 1 };
-
-      const mockHashedPassword = "hashed_password";
-      bcrypt.hash.mockResolvedValue(mockHashedPassword);
 
       mockDbConnection.query
         // .mockResolvedValueOnce({ rows: [] }) // No existing user
@@ -115,7 +121,7 @@ describe("AuthService", () => {
         expect.stringContaining("INSERT INTO users"),
         [
           "test@example.com",
-          mockHashedPassword,
+          "password123",
           null, // This should correspond to the undefined value for someField
         ]
       );
@@ -129,6 +135,7 @@ describe("AuthService", () => {
         email: "test@example.com",
         password_hash: "hashedPassword",
         is_email_verified: true,
+        password_version: 1,
       };
       const mockSession = { session_hash: "session123", user_id: 1 };
       authService.verifyCaptcha = jest.fn().mockResolvedValueOnce(true);
@@ -137,11 +144,13 @@ describe("AuthService", () => {
 
       mockDbConnection.query
         .mockResolvedValueOnce({ rows: [mockUser] }) // User found
-        .mockResolvedValueOnce({ rows: [mockSession] }); // Session updated
+        .mockResolvedValueOnce({ rows: [] }) // update password version
+        .mockResolvedValueOnce({ rows: [mockSession] }) // Session updated
+        .mockResolvedValueOnce({ rows: [] }); // Insert into user_logins 
 
       const result = await authService.login(data);
 
-      expect(mockDbConnection.query).toHaveBeenCalledTimes(2);
+      expect(mockDbConnection.query).toHaveBeenCalledTimes(3);
       expect(bcrypt.compare).toHaveBeenCalledWith(
         "password123",
         "hashedPassword"
@@ -162,6 +171,8 @@ describe("AuthService", () => {
       mockDbConnection.query.mockResolvedValueOnce({
         rows: [{ session_hash: "session123" }],
       });
+      // mock createSession for logout to return a session
+      authService.createSession = jest.fn().mockResolvedValue({ id: 1, session_hash: "session123" });
 
       const result = await authService.logout(data);
 
@@ -327,7 +338,7 @@ describe("AuthService", () => {
 
       // Expected query
       const expectedQuery = `
-        SELECT u.first_name, u.last_name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.birth_date, u.country_id, u.address, u.has_first_login, st.type as session_type
+        SELECT u.first_name, u.last_name, u.email, u.has_first_login, st.type as session_type
         FROM sessions s
         JOIN session_types st ON s.session_type_id = st.id
         LEFT JOIN users u ON s.user_id = u.id
@@ -357,7 +368,7 @@ describe("AuthService", () => {
 
       // Expected query
       const expectedQuery = `
-        SELECT u.first_name, u.last_name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.birth_date, u.country_id, u.address, u.has_first_login, st.type as session_type
+        SELECT u.first_name, u.last_name, u.email, u.has_first_login, st.type as session_type
         FROM sessions s
         JOIN session_types st ON s.session_type_id = st.id
         LEFT JOIN users u ON s.user_id = u.id
@@ -384,7 +395,7 @@ describe("AuthService", () => {
 
       // Ensure the query was still called
       const expectedQuery = `
-        SELECT u.first_name, u.last_name, u.email, u.iso_country_code_id, u.phone, u.gender_id, u.birth_date, u.country_id, u.address, u.has_first_login, st.type as session_type
+        SELECT u.first_name, u.last_name, u.email, u.has_first_login, st.type as session_type
         FROM sessions s
         JOIN session_types st ON s.session_type_id = st.id
         LEFT JOIN users u ON s.user_id = u.id
@@ -851,8 +862,8 @@ describe("AuthService", () => {
       expect(mockMailService.queueEmail).toHaveBeenCalledWith({
         dbConnection: mockDbConnection,
         emailData: {
-          address: `<a href="${ENV.DEVELOPMENT_URL}/reset-password?token=resetToken123">Reset Password</a>`,
-          recipient: "test@example.com",
+          address: `<a href="${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/reset-password?token=resetToken123">Reset Password</a>`,
+          recipient_email: "test@example.com",
           templateType: "Forgot password",
         },
       });

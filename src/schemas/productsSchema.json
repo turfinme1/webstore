@@ -1,6 +1,8 @@
 {
   "type": "object",
   "name": "products",
+  "table": "products",
+  "href": "/crud-product",
   "routeName": "products",
   "views": "products_view",
   "queryValidationSchema": "productQueryParamsSchema",
@@ -84,6 +86,10 @@
     },
     "ratings": {
       "table" : "ratings",
+      "foreign_key": "product_id"
+    },
+    "inventories": {
+      "table" : "inventories",
       "foreign_key": "product_id"
     }
   },

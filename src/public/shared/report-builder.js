@@ -1,9 +1,9 @@
-import { showToastMessage } from "./page-utility.js";
+import { showErrorMessage } from "./page-utility.js";
 
 class ReportBuilder {
     constructor(config) {
         this.config = config;
-        this.config.filters = this.config.filters.filter(filter => filter.displayInUI);
+        this.config.filters = this.config.filters.filter(filter => filter.hideInUI !== true);
         this.elements = {};
         this.state = {
             filters: {},
@@ -15,94 +15,196 @@ class ReportBuilder {
     static filterTypes = {
         text: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
-                    <input type="text" 
-                           id="${filter.key}_filter_value" 
-                           name="${filter.key}_filter_value" 
-                           class="form-control" 
-                           placeholder="${filter.placeholder || ''}"
-                           ${filter.required ? 'required' : ''}>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_filter_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                     <div class="row g-2">
+                            <div class="col-4">
+                                <input type="text" 
+                                    id="${filter.key}_filter_value" 
+                                    name="${filter.key}_filter_value" 
+                                    class="form-control" 
+                                    placeholder="${filter.placeholder || ''}"
+                                    ${filter.required ? 'required' : ''}>
+                            </div>
+                            ${filter?.groupable ? `
+                                 <div class="col-4">
+                                    <select 
+                                            id="${filter.key}_grouping_select_value"
+                                            name="${filter.key}_grouping_select_value"
+                                            class="form-select"
+                                            ${filter.required ? 'required' : ''}>
+                                        <option value="">No grouping</option>
+                                        <option value="group">Group by ${filter.label}</option>
+                                    </select>
+                                </div>
+                            ` 
+                            : ''}
+                        </div>
+                    </div>
                 </div>
             `
         },
         number: {
             template: (filter) => `
-                <div class="row g-3">
-                    <div class="mb-3 col-auto">
-                        <label for="${filter.key}_minimum_filter_value" class="form-label">${filter.label} Min</label>
-                        <input type="number" 
-                               id="${filter.key}_minimum_filter_value" 
-                               name="${filter.key}_minimum_filter_value" 
-                               class="form-control" 
-                               step="${filter.step || '1'}"
-                               min="${filter.min || '0'}"
-                               max="${filter.max || ''}"
-                               placeholder="Min">
-                    </div>
-                    <div class="mb-3 col-auto">
-                        <label for="${filter.key}_maximum_filter_value" class="form-label">${filter.label} Max</label>
-                        <input type="number" 
-                               id="${filter.key}_maximum_filter_value"   
-                               name="${filter.key}_maximum_filter_value" 
-                               class="form-control" 
-                               step="${filter.step || '1'}"
-                               min="${filter.min || '0'}"
-                               max="${filter.max || ''}"
-                               placeholder="Max">
+                <div class="mb-3 row align-items-center">
+                    <label class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <input type="number" 
+                                      id="${filter.key}_minimum_filter_value" 
+                                      name="${filter.key}_minimum_filter_value" 
+                                      class="form-control" 
+                                      step="${filter.step || '1'}"
+                                      min="${filter.min || '0'}"
+                                      max="${filter.max || ''}"
+                                      placeholder="Min">
+                            </div>
+                            <div class="col-4">
+                                <input type="number" 
+                                      id="${filter.key}_maximum_filter_value"   
+                                      name="${filter.key}_maximum_filter_value" 
+                                      class="form-control" 
+                                      step="${filter.step || '1'}"
+                                      min="${filter.min || '0'}"
+                                      max="${filter.max || ''}"
+                                      placeholder="Max">
+                            </div>
+                        </div>
                     </div>
                 </div>
             `
         },
         number_single: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
-                    <input type="number"
-                            id="${filter.key}_filter_value"
-                            name="${filter.key}_filter_value"
-                            class="form-control"
-                            step="${filter.step || '1'}"
-                            min="${filter.min || '0'}"
-                            max="${filter.max || ''}"
-                            placeholder="${filter.placeholder || ''}"
-                            ${filter.required ? 'required' : ''}>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_filter_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <input type="number"
+                                        id="${filter.key}_filter_value"
+                                        name="${filter.key}_filter_value"
+                                        class="form-control"
+                                        step="${filter.step || '1'}"
+                                        min="${filter.min || '0'}"
+                                        max="${filter.max || ''}"
+                                        placeholder="${filter.placeholder || ''}"
+                                        ${filter.required ? 'required' : ''}>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `
         },
         timestamp: {
             template: (filter) => `
-                <div class="row g-3">
-                    <div class="mb-3 col-auto">
-                        <label for="${filter.key}_minimum_filter_value" class="form-label">${filter.label} Start (Time is in UTC)</label>
-                        <input type="datetime-local" step="1" 
-                               id="${filter.key}_minimum_filter_value"
-                               value="${new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0, 16)}"
-                               name="${filter.key}_minimum_filter_value" 
-                               class="form-control">
-                    </div>
-                    <div class="mb-3 col-auto">
-                        <label for="${filter.key}_maximum_filter_value" class="form-label">${filter.label} End (Time is in UTC)</label>
-                        <input type="datetime-local" step="1" 
-                               id="${filter.key}_maximum_filter_value"
-                               value="${new Date().toISOString().slice(0, 16)}" 
-                               name="${filter.key}_maximum_filter_value" 
-                               class="form-control">
+                <div class="mb-3 row align-items-center">
+                    <label class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <input type="datetime-local" step="1" 
+                                      id="${filter.key}_minimum_filter_value"
+                                      value="${this.toLocalDate(new Date(new Date().setDate(new Date().getDate() - 1))).toISOString().slice(0, 16)}"
+                                      name="${filter.key}_minimum_filter_value" 
+                                      class="form-control"
+                                      aria-label="Start (UTC)">
+                            </div>
+                            <div class="col-4">
+                                <input type="datetime-local" step="1" 
+                                      id="${filter.key}_maximum_filter_value"
+                                      value="${this.toLocalDate(new Date()).toISOString().slice(0, 16)}" 
+                                      name="${filter.key}_maximum_filter_value" 
+                                      class="form-control"
+                                      aria-label="End (UTC)">
+                            </div>
+                            ${filter?.groupable ? `
+                                <div class="col-4">
+                                    <select 
+                                            id="${filter.key}_grouping_select_value"
+                                            name="${filter.key}_grouping_select_value"
+                                            class="form-select"
+                                            ${filter.required ? 'required' : ''}>
+                                        <option value="">No grouping</option>
+                                        <option value="hour">Group by Hour</option>
+                                        <option value="day">Group by Day</option>
+                                        <option value="week">Group by Week</option>
+                                        <option value="month">Group by Month</option>
+                                        <option value="year">Group by Year</option>
+                                    </select>
+                                </div>
+                           ` 
+                           : ''}
+                        </div>
                     </div>
                 </div>
             `
         },
         select: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_filter_value" class="form-label">${filter.label}</label>
-                    <select id="${filter.key}_filter_value"
-                            name="${filter.key}_filter_value"
-                            class="form-select"
-                            ${filter.required ? 'required' : ''}>
-                        <option value="">Select ${filter.label}</option>
-                        ${filter.options.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
-                    </select>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_filter_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <select id="${filter.key}_filter_value"
+                                        name="${filter.key}_filter_value"
+                                        class="form-select"
+                                        ${filter.required ? 'required' : ''}>
+                                    <option value="">Select ${filter.label}</option>
+                                    ${filter.options.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+                                </select>
+                            </div>
+                            ${filter?.groupable ? `
+                                <div class="col-4">
+                                    <select 
+                                            id="${filter.key}_grouping_select_value"
+                                            name="${filter.key}_grouping_select_value"
+                                            class="form-select"
+                                            ${filter.required ? 'required' : ''}>
+                                        <option value="">No grouping</option>
+                                        <option value="group">Group by ${filter.label}</option>
+                                    </select>
+                                </div>
+                                `
+                                : ''}
+                        </div>
+                    </div>
+                </div>
+            `
+        },
+        select_multiple: {
+            template: (filter) => `
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_filter_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <select id="${filter.key}_filter_value"
+                                        name="${filter.key}_filter_value"
+                                        class="form-select"
+                                        multiple
+                                        ${filter.required ? 'required' : ''}>
+                                    ${filter.options.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+                                </select>
+                            </div>
+                            ${filter?.groupable ? `
+                                <div class="col-4">
+                                    <select 
+                                            id="${filter.key}_grouping_select_value"
+                                            name="${filter.key}_grouping_select_value"
+                                            class="form-select"
+                                            ${filter.required ? 'required' : ''}>
+                                        <option value="">No grouping</option>
+                                        <option value="group">Group by ${filter.label}</option>
+                                    </select>
+                                </div>
+                                `
+                                : ''}
+                        </div>
+                    </div>
                 </div>
             `
         },
@@ -111,53 +213,56 @@ class ReportBuilder {
     static groupTypes = {
         select: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_grouping_select_value" class="form-label">${filter.label}</label>
-                    <select 
-                            id="${filter.key}_grouping_select_value"
-                            name="${filter.key}_grouping_select_value"
-                            class="form-select"
-                            ${filter.required ? 'required' : ''}
-                    >
-                        <option value="">No grouping</option>
-                        <option value="group">Group by ${filter.label}</option>
-                    </select>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_grouping_select_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <select 
+                                id="${filter.key}_grouping_select_value"
+                                name="${filter.key}_grouping_select_value"
+                                class="form-select"
+                                ${filter.required ? 'required' : ''}>
+                            <option value="">No grouping</option>
+                            <option value="group">Group by ${filter.label}</option>
+                        </select>
+                    </div>
                 </div>
             `
         },
         timestamp: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_grouping_select_value" class="form-label">${filter.label}</label>
-                    <select 
-                            id="${filter.key}_grouping_select_value"
-                            name="${filter.key}_grouping_select_value"
-                            class="form-select"
-                            ${filter.required ? 'required' : ''}
-                    >
-                        <option value="">No grouping</option>
-                        <option value="hour">Group by Hour</option>
-                        <option value="day">Group by Day</option>
-                        <option value="week">Group by Week</option>
-                        <option value="month">Group by Month</option>
-                        <option value="year">Group by Year</option>
-                    </select>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_grouping_select_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <select 
+                                id="${filter.key}_grouping_select_value"
+                                name="${filter.key}_grouping_select_value"
+                                class="form-select"
+                                ${filter.required ? 'required' : ''}>
+                            <option value="">No grouping</option>
+                            <option value="hour">Group by Hour</option>
+                            <option value="day">Group by Day</option>
+                            <option value="week">Group by Week</option>
+                            <option value="month">Group by Month</option>
+                            <option value="year">Group by Year</option>
+                        </select>
+                    </div>
                 </div>
             `
         },
         text: {
             template: (filter) => `
-                <div class="mb-3">
-                    <label for="${filter.key}_grouping_select_value" class="form-label">${filter.label}</label>
-                    <select 
-                            id="${filter.key}_grouping_select_value"
-                            name="${filter.key}_grouping_select_value"
-                            class="form-select"
-                            ${filter.required ? 'required' : ''}
-                    >
-                        <option value="">No grouping</option>
-                        <option value="group">Group by ${filter.label}</option>
-                    </select>
+                <div class="mb-3 row align-items-center">
+                    <label for="${filter.key}_grouping_select_value" class="col-md-3 col-form-label text-md-start">${filter.label}</label>
+                    <div class="col-md-9">
+                        <select 
+                                id="${filter.key}_grouping_select_value"
+                                name="${filter.key}_grouping_select_value"
+                                class="form-select"
+                                ${filter.required ? 'required' : ''}>
+                            <option value="">No grouping</option>
+                            <option value="group">Group by ${filter.label}</option>
+                        </select>
+                    </div>
                 </div>
             `
         },
@@ -186,7 +291,7 @@ class ReportBuilder {
                 return `
                     <tr>
                         ${columns.map((col, index) => `
-                            <td style="text-align: ${col.align || 'left'};">
+                            <td style="text-align: ${col.align || ['currency', 'number', 'percentage'].includes(col.format) ? 'right' : 'left'};">
                                 ${index === 0 && !rowData[col.key] 
                                     ? "Total:"
                                     : col.format 
@@ -227,17 +332,17 @@ class ReportBuilder {
             return new Date(value).toLocaleTimeString('en-US');
         },
         date_time: (value) => {
-            if(!value || value ==="All") {
-                return '---';
+            if (!value || value === "All") {
+              return '---';
             }
-            return new Date(value).toLocaleString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-            })
+            const date = new Date(value);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
         },
         number: (value) => {
             if(value == 0) {
@@ -265,7 +370,7 @@ class ReportBuilder {
         },
     };
 
-    async buildFilterForm() {
+    async buildFilterForm(parentContainer) {
         const formContainer = document.createElement('div');
         formContainer.className = 'bg-white p-4 rounded shadow-sm mb-5';
         
@@ -274,7 +379,7 @@ class ReportBuilder {
         form.className = 'mb-3';
 
         for (const filter of this.config.filters) {
-            if (filter.type === 'select' && !filter.options) {
+            if ((filter.type === 'select' || filter.type === 'select_multiple') && !filter.options) {
                 filter.options = await this.fetchOptions(filter);
             }
         }
@@ -284,19 +389,12 @@ class ReportBuilder {
             return filterType.template(filter);
         }).join('');
 
-        const groupHTML = this.config.filters.filter(filter=> filter?.groupable).map(filter => {
-            const filterType = ReportBuilder.groupTypes[filter.type];
-            return filterType.template(filter);
-        }).join('');
-
         form.innerHTML = `
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     ${filterHTML}
                 </div>
-                <div class="col-md-6">
-                    ${groupHTML}
-                </div>
+                
             </div>
             <div class="d-flex justify-content-start align-items-center mb-3">
                 <button type="submit" class="btn btn-primary">Apply Filters</button>
@@ -307,6 +405,112 @@ class ReportBuilder {
         `;
 
         formContainer.appendChild(form);
+        parentContainer.appendChild(formContainer);
+
+        flatpickr('.form-control[type="datetime-local"]', {
+            enableTime: true,
+            enableSeconds: true,
+            altInput: true,
+            altFormat: "d-m-Y H:i:S",
+            dateFormat: "Z",
+            time_24hr: true,
+            formatDate: (date, format) => {
+                if (format === "Z") {
+                    const tzOffset = date.getTimezoneOffset();
+                    const tzSign = tzOffset <= 0 ? '+' : '-';
+                    
+                    const tzHours = Math.abs(Math.floor(tzOffset / 60));
+                    const tzMinutes = Math.abs(tzOffset % 60);
+                    
+                    const tzString = `${tzSign}${String(tzHours).padStart(2, '0')}:${String(tzMinutes).padStart(2, '0')}`;
+                    
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}${tzString}`;
+                }
+                return flatpickr.formatDate(date, format);
+            },
+            onValueUpdate: function(selectedDates, dateStr, instance) {
+                if (instance.input && instance.input.id.endsWith('_maximum_filter_value')) {
+                    let date = selectedDates[0];
+                    if (!date) return;
+                    date.setMilliseconds(999);
+
+                    const pad = (n, d = 2) => String(n).padStart(d, "0");
+                    const ms = pad(date.getMilliseconds(), 3);
+                    console.log(`${date}, with ${ms}ms`);
+                    const tzOffset = date.getTimezoneOffset();
+                    const tzSign = tzOffset <= 0 ? '+' : '-';
+                    
+                    const tzHours = Math.abs(Math.floor(tzOffset / 60));
+                    const tzMinutes = Math.abs(tzOffset % 60);
+                    
+                    const tzString = `${tzSign}${String(tzHours).padStart(2, '0')}:${String(tzMinutes).padStart(2, '0')}`;
+                    
+                    const formatedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}.${ms}${tzString}`;
+                
+                    instance.input.value = formatedDate;
+                }
+            },
+            onReady: function(selectedDates, dateStr, instance) {
+                var customContainer = document.createElement("div");
+                customContainer.className = "custom-buttons-container";
+                customContainer.style.marginTop = "10px";
+                
+                function addButton(label, callback) {
+                    var btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.textContent = label;
+                    btn.style.marginRight = "5px";
+                    btn.style.padding = "5px 10px";
+                    btn.addEventListener("click", callback);
+                    customContainer.appendChild(btn);
+                }
+                
+                addButton("Clear", function() {
+                    instance.clear();
+                });
+
+                addButton("Last Day", function() {
+                    var now = new Date();
+                    now.setDate(now.getDate() - 1);
+                    instance.setDate(now);
+                });
+                
+                addButton("Last Week", function() {
+                    var now = new Date();
+                    now.setDate(now.getDate() - 7);
+                    instance.setDate(now);
+                });
+
+                addButton("Last Month", function() {
+                    var now = new Date();
+                    now.setMonth(now.getMonth() - 1);
+                    instance.setDate(now);
+                });
+
+                addButton("Last Year", function() {
+                    var now = new Date();
+                    now.setFullYear(now.getFullYear() - 1);
+                    instance.setDate(now);
+                });
+                
+                instance.calendarContainer.appendChild(customContainer);
+            }
+        });
+
+        $(document).ready(function() {
+          $('select[multiple]').multiselect({
+            enableClickableOptGroups: true,
+            enableCollapsibleOptGroups: true,
+            buttonWidth: '100%',
+            maxHeight: 400,
+            buttonClass: 'form-select text-start',
+            nonSelectedText: 'Select options',
+            templates: {
+              button: '<button type="button" class="multiselect dropdown-toggle form-select" data-bs-toggle="dropdown"><span class="multiselect-selected-text"></span></button>'
+            }
+          });
+        });
+
         return formContainer;
     }
 
@@ -342,16 +546,19 @@ class ReportBuilder {
         title.textContent = this.config.title;
         container.appendChild(title);
 
-        // Add export section
-        container.appendChild(this.buildExportSection(this.config.exportConfig));
+        // Add option section
+        container.appendChild(this.buildOptionSection(this.config));
 
         // Add filter form
-        container.appendChild(await this.buildFilterForm());
+        await this.buildFilterForm(container);
 
         // Add table
         container.appendChild(this.buildTable());
 
         this.attachEventListeners();
+
+        /// Check if filters are present in the URL and populate the form fields
+        await this.handleUrlFilters();
     }
 
     attachEventListeners() {
@@ -361,8 +568,7 @@ class ReportBuilder {
 
             if(await this.validateForm()) {
                 const formData = new FormData(form);
-                const filters = Object.fromEntries(formData);
-                await this.fetchData(filters);
+                await this.fetchData(formData);
                 this.state.sortCriteria = [];
                 this.updateSortIndicators();
             }
@@ -392,10 +598,71 @@ class ReportBuilder {
     
         this.state.sortCriteria = currentCriteria;
 
-        if(await this.validateForm()) {
-            const formData = new FormData(document.getElementById('report-form'));
-            const filters = Object.fromEntries(formData);
-            await this.fetchData(filters, this.state.sortCriteria);
+        if(this.state.tableData && this.state.tableData?.rows?.length >= 2) {
+            const sortedData = this.applySorting(this.state.tableData, this.state.sortCriteria);
+            this.renderTableData(sortedData);
+            this.updateSortIndicators();
+        } else {
+            this.state.sortCriteria = [];
+            this.updateSortIndicators();
+        }
+    }
+
+    applySorting(data, sortCriteria) {
+        if (!sortCriteria || sortCriteria?.length === 0 || data?.rows?.length <= 2) {
+            return data;
+        }
+
+        const sortedDataCopy = {
+            ...data,
+            rows: [...data.rows]
+        }
+
+        const totalRow = sortedDataCopy.rows.pop();
+        const reversedSortCriteria = [...sortCriteria].reverse();
+
+        sortedDataCopy.rows.sort((rowA, rowB) => {
+            for (const { key, direction } of sortCriteria) {
+                const rowAValue = rowA[key];
+                const rowBValue = rowB[key];
+
+                const columnConfig = this.config.headerGroups.flat().find(col => col.key === key);
+
+                const conmparison = this.compareValues(rowAValue, rowBValue, columnConfig?.format);
+
+                if (conmparison !== 0) {
+                    return direction === 'ASC' ? conmparison : -conmparison;
+                }
+            }
+
+            return 0;
+        });
+
+        sortedDataCopy.rows.push(totalRow);
+        return sortedDataCopy;
+    }
+
+    compareValues(valueA, valueB, format) {
+        if (valueA === null || valueA === undefined) return 1;
+        if (valueB === null || valueB === undefined) return -1;
+        if (valueA === valueB) return 0;
+        
+        switch (format) {
+            case 'number':
+            case 'currency':
+            case 'percentage':
+                return parseFloat(valueA) - parseFloat(valueB);
+                
+            case 'date':
+            case 'time':
+            case 'date_time':
+                return new Date(valueA) - new Date(valueB);
+                
+            case 'boolean':
+                return (valueA === true ? 1 : 0) - (valueB === true ? 1 : 0);
+                
+            default:
+                return String(valueA).localeCompare(String(valueB));
         }
     }
 
@@ -404,17 +671,38 @@ class ReportBuilder {
             const key = header.dataset.sortKey;
             const sortEntry = this.state.sortCriteria.find(c => c.key === key);
             const sortEntryPosition = this.state.sortCriteria.findIndex(c => c.key === key);
-            header.innerHTML = header.innerHTML.replace(/\d+/s, '');
-            header.innerHTML = header.innerHTML.replace(/ ↑| ↓/g, '');
-            if (sortEntry) header.innerHTML += sortEntry.direction === 'ASC' ? ` ${sortEntryPosition+1}↑` : `${sortEntryPosition+1}↓`;
+            
+            // First, remove any existing sort indicators
+            const existingIndicator = header.querySelector('.sort-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+            
+            // Add new indicator if this column is sorted
+            if (sortEntry) {
+                const indicator = document.createElement('span');
+                indicator.className = 'sort-indicator';
+                indicator.textContent = ` ${sortEntryPosition + 1}${sortEntry.direction === 'ASC' ? '↑' : '↓'}`;
+                header.appendChild(indicator);
+            }
         });
     }
 
-    async fetchData(filters, sortCriteria) {
+    async fetchData(formData, sortCriteria) {
+        const filters = {};
         const spinner = document.getElementById('spinner');
         const button = document.querySelector('button[type="submit"]');
         button.disabled = true;
         spinner.style.display = 'block';
+        for (const [key, value] of formData.entries()) {
+            if (key.endsWith('_filter_value') && document.getElementById(key)?.multiple) {
+                if (!filters[key]) {
+                    filters[key] = formData.getAll(key);
+                }
+            } else {
+                filters[key] = typeof value === 'string' ? value.trim() : value;
+            }    
+        }
         document.querySelectorAll('th.sortable').forEach(header => header.style.pointerEvents = 'none');
 
         try {
@@ -425,16 +713,18 @@ class ReportBuilder {
             });
             
             const data = await response.json();
+            this.state.tableData = data;
+
             if(data.overRowDisplayLimit){
-                showToastMessage("The row limit has been reached. Please refine your search criteria.", "error");
+                showErrorMessage("The row limit has been reached. Please refine your search criteria.");
             }
             this.renderTableData(data);
         } catch (error) {
             console.error('Error fetching data:', error);
             if (!navigator.onLine) {
-                showToastMessage('No internet connection', 'error');
+                showErrorMessage('No internet connection');
             } else {
-                showToastMessage('Error fetching data', 'error');
+                showErrorMessage('Error fetching data');
             }
         } finally {
             button.disabled = false;
@@ -473,25 +763,39 @@ class ReportBuilder {
         this.updateSortIndicators();
     }
 
-    buildExportSection(exportConfig) {
+    buildOptionSection(config) {
         const exportContainer = document.createElement('div');
-        // exportContainer.className = 'mt-5';
         exportContainer.className = 'mb-3';
 
-        if(exportConfig?.csv) {
+        if(config.exportConfig?.csv) {
             const exportButton = document.createElement('button');
             exportButton.className = 'btn btn-primary export';
             exportButton.textContent = 'Export to CSV';
-            exportButton.addEventListener('click', async () => this.handleExport(exportConfig.csv.endpoint));
+            exportButton.addEventListener('click', async () => this.handleExport(config.exportConfig.csv.endpoint));
             exportContainer.appendChild(exportButton);
         }
 
-        if(exportConfig?.excel) {
+        if(config.exportConfig?.excel) {
             const exportButton = document.createElement('button');
             exportButton.className = 'btn btn-primary ms-3 export';
             exportButton.textContent = 'Export to Excel';
-            exportButton.addEventListener('click', async () => this.handleExport(exportConfig.excel.endpoint));
+            exportButton.addEventListener('click', async () => this.handleExport(config.exportConfig.excel.endpoint));
             exportContainer.appendChild(exportButton);
+        }
+
+        if(config?.isPreferenceConfigurable) {
+            const preferenceButton = document.createElement('button');
+            preferenceButton.className = 'btn btn-primary ms-3';
+            preferenceButton.textContent = 'Configure Preferences';
+            preferenceButton.addEventListener('click', () => {
+                const currentParams = new URLSearchParams(window.location.search);
+                const reportName = currentParams.get('report');
+                const url = new URL(window.location.origin + '/report-preference');
+                url.searchParams.set('report', reportName);
+                window.location.href = url.toString();
+            });
+
+            exportContainer.appendChild(preferenceButton);
         }
 
         return exportContainer;
@@ -506,7 +810,16 @@ class ReportBuilder {
         exportButtons.forEach(button => button.disabled = true);
         try {
             const formData = new FormData(document.getElementById('report-form'));
-            const filters = Object.fromEntries(formData);
+            const filters = {};
+            for (const [key, value] of formData.entries()) {
+                if (key.endsWith('_filter_value') && document.getElementById(key)?.multiple) {
+                    if (!filters[key]) {
+                        filters[key] = formData.getAll(key);
+                    }
+                } else {
+                    filters[key] = typeof value === 'string' ? value.trim() : value;
+                }    
+            }
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -525,9 +838,9 @@ class ReportBuilder {
             URL.revokeObjectURL(url);
         } catch (error) {
             if (!navigator.onLine) {
-                showToastMessage('No internet connection', 'error');
+                showErrorMessage('No internet connection');
             } else {
-                showToastMessage('Export failed.', 'error');
+                showErrorMessage('Export failed.');
             }
         } finally {
             button.disabled = false;
@@ -544,8 +857,8 @@ class ReportBuilder {
 
         for (const filter of this.config.filters) {
             if (filter.type === 'number' || filter.type === 'timestamp') {
-                const minInput = document.getElementById(`${filter.key}_minimum`);
-                const maxInput = document.getElementById(`${filter.key}_maximum`);
+                const minInput = document.getElementById(`${filter.key}_minimum_filter_value`);
+                const maxInput = document.getElementById(`${filter.key}_maximum_filter_value`);
                 
                 if (minInput && maxInput) {
                     const validationResults = ValidationService.validateField(
@@ -599,7 +912,7 @@ class ReportBuilder {
         }
 
         if (!isValid) {
-            showToastMessage('Please correct the validation errors', 'error');
+            showErrorMessage('Please correct the validation errors');
         }
 
         return isValid;
@@ -615,9 +928,9 @@ class ReportBuilder {
             let inputElement;
 
             if (field === 'min') {
-                inputElement = document.getElementById(`${filterKey}_minimum`);
+                inputElement = document.getElementById(`${filterKey}_minimum_filter_value`);
             } else if (field === 'max') {
-                inputElement = document.getElementById(`${filterKey}_maximum`);
+                inputElement = document.getElementById(`${filterKey}_maximum_filter_value`);
             } else {
                 inputElement = document.getElementById(filterKey);
             }
@@ -638,6 +951,103 @@ class ReportBuilder {
     clearValidationErrors() {
         document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
         document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    }
+
+    async handleUrlFilters() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const filters = JSON.parse(decodeURIComponent(urlParams.get('filters')));
+        if (filters) {
+            this.populateFormFieldsWithFilters(filters);
+        }
+
+        const form = document.getElementById('report-form');
+        if(filters) {
+            window.history.replaceState({}, document.title, window.location.pathname
+                + window.location.search.replace(/&?filters=[^&]*/g, ''));
+
+            setTimeout(() => {
+                const submitEvent = new Event('submit', { cancelable: true });
+                form.dispatchEvent(submitEvent);
+            }, 100);
+        }
+    }
+    populateFormFieldsWithFilters(filters) {
+        for (const [key, value] of Object.entries(filters)) {
+            if (key.includes('_minimum_filter_value') || key.includes('_maximum_filter_value')) {
+                const element = document.getElementById(key);
+                if (!element) continue;
+                
+                const flatpickrElement = document.querySelector(`[name="${key}"]`);
+                if (!flatpickrElement) continue;
+                
+                let instance = flatpickrElement._flatpickr;
+                if (!instance) {
+                    const wrapper = flatpickrElement.closest('.flatpickr-wrapper');
+                    if (wrapper) {
+                        const altInput = wrapper.querySelector('.flatpickr-input');
+                        if (altInput) instance = altInput._flatpickr;
+                    }
+                }
+                
+                if (instance) {
+                    try {
+                        if (!value || value === '') {
+                            instance.clear();
+                            console.log(`Cleared date for ${key}`);
+                        } else {
+                            const dateValue = new Date(value);
+                            if (!isNaN(dateValue.getTime())) {
+                                instance.setDate(dateValue, true);
+                                console.log(`Set date for ${key} to ${dateValue}`);
+                            } else {
+                                instance.clear();
+                                console.warn(`Invalid date format for ${key}: ${value}`);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`Error setting date for ${key}:`, e);
+                    }
+                }
+            }
+
+            if (!value) continue; // Skip empty values
+            
+            const element = document.getElementById(key);
+            if (!element) continue; // Skip if element doesn't exist
+            
+            if (element.tagName === 'SELECT') {
+                if (element.multiple) {
+                    // Handle multi-select
+                    if (Array.isArray(value)) {
+                        // For Bootstrap multiselect
+                        if ($(element).data('multiselect')) {
+                            $(element).multiselect('deselectAll', false);
+                            $(element).multiselect('select', value);
+                            $(element).multiselect('refresh');
+                        } else {
+                            // Standard multi-select
+                            Array.from(element.options).forEach(option => {
+                                option.selected = value.includes(option.value);
+                            });
+                        }
+                    }
+                } else {
+                    element.value = value;
+                }
+            } else if (element.type === 'checkbox') {
+                element.checked = value === 'true' || value === true;
+            } else {
+                element.value = value;
+            }
+            
+            // Trigger change event to ensure any dependent UI is updated
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+
+    static toLocalDate(date) {
+        const tzOffsetMs = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - tzOffsetMs);
     }
 }
 
@@ -662,7 +1072,6 @@ class ValidationService {
                 validate: (min, max) => {
                     const errors = [];
                     const now = new Date();
-                    now.setHours(now.getHours() - 2);
                     if (min && new Date(min) > now) {
                         errors.push({
                             isValid: false,

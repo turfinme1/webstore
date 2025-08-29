@@ -2,6 +2,7 @@
     "type": "object",
     "name": "promotions",
     "table": "promotions",
+    "href": "/crud-promotion",
     "views": "promotions_view",
     "queryValidationSchema": "promotionQueryParamsSchema",
     "properties": {

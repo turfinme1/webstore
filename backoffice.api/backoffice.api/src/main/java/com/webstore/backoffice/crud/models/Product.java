@@ -45,6 +45,9 @@ public class Product extends BaseEntity<Long> {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = false)
     private Set<Image> images = new HashSet<>();
 
+    @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = false)
+    private Inventory inventory;
+
     @Override
     public boolean isValid() {
         return true;
@@ -114,5 +117,13 @@ public class Product extends BaseEntity<Long> {
 
     public void setCode(String code) {
         this.code = code;
+    }
+
+    public Inventory getInventory() {
+        return inventory;
+    }
+
+    public void setInventory(Inventory inventory) {
+        this.inventory = inventory;
     }
 }

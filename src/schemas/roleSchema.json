@@ -2,13 +2,14 @@
   "type": "object",
   "name": "roles",
   "table": "roles",
+  "href": "/crud-role",
   "views": "roles_view",
   "queryValidationSchema": "roleQueryParamsSchema",
   "properties": {
     "name": {
       "type": "string",
       "minLength": 3,
-      "pattern": "^[a-zA-Z_-]+$",
+      "pattern": "(?=.{3,}$)[A-Za-z]+(?: [A-Za-z]+)*",
       "label": "Role Name",
       "placeholder": "Enter Role Name",
       "filterable": true,

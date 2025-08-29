@@ -3,6 +3,7 @@ const AppConfigService = require("../appConfigService");
 describe("AppConfigService", () => {
   let appConfigService;
   let mockDbConnection;
+  let mockDb;
 
   beforeEach(() => {
     // Initialize the service
@@ -12,6 +13,8 @@ describe("AppConfigService", () => {
     mockDbConnection = {
       query: jest.fn(),
     };
+    mockDb = { query: jest.fn() };
+    jest.clearAllMocks();
   });
 
   describe("updateRateLimitSettings", () => {
@@ -50,7 +53,7 @@ describe("AppConfigService", () => {
 
       const expectedQuery = `
         UPDATE app_settings 
-        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8, report_row_limit_display = $9, campaign_status_update_interval = $10, target_group_status_update_interval = $11, target_group_status_update_initial_time = $12
+        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8, report_row_limit_display = $9, campaign_status_update_interval = $10, target_group_status_update_interval = $11, target_group_status_update_initial_time = $12, user_group_chart_count = $13, campaign_chart_count = $14, push_notification_provider_id = $15
         WHERE id = 1 RETURNING *`;
 
       expect(
@@ -98,7 +101,7 @@ describe("AppConfigService", () => {
 
       const expectedQuery = `
         UPDATE app_settings 
-        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8, report_row_limit_display = $9, campaign_status_update_interval = $10, target_group_status_update_interval = $11, target_group_status_update_initial_time = $12
+        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8, report_row_limit_display = $9, campaign_status_update_interval = $10, target_group_status_update_interval = $11, target_group_status_update_initial_time = $12, user_group_chart_count = $13, campaign_chart_count = $14, push_notification_provider_id = $15
         WHERE id = 1 RETURNING *`;
 
       expect(
@@ -135,7 +138,7 @@ describe("AppConfigService", () => {
 
       const expectedQuery = `
         UPDATE app_settings 
-        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8, report_row_limit_display = $9, campaign_status_update_interval = $10, target_group_status_update_interval = $11, target_group_status_update_initial_time = $12
+        SET request_limit = $1, request_window = $2, request_block_duration = $3, password_require_digit = $4, password_require_lowercase = $5, password_require_uppercase = $6, password_require_special = $7, vat_percentage = $8, report_row_limit_display = $9, campaign_status_update_interval = $10, target_group_status_update_interval = $11, target_group_status_update_initial_time = $12, user_group_chart_count = $13, campaign_chart_count = $14, push_notification_provider_id = $15
         WHERE id = 1 RETURNING *`;
 
       expect(
@@ -164,7 +167,7 @@ describe("AppConfigService", () => {
         rows: [mockRateLimitSettings],
       });
 
-      const result = await appConfigService.getRateLimitSettings(data);
+      const result = await appConfigService.getSettings(data);
 
       const expectedQuery = `
         SELECT * FROM app_settings WHERE id = 1`;
@@ -186,7 +189,7 @@ describe("AppConfigService", () => {
       // Mock a database error
       mockDbConnection.query.mockRejectedValueOnce(new Error("Database error"));
 
-      await expect(appConfigService.getRateLimitSettings(data)).rejects.toThrow(
+      await expect(appConfigService.getSettings(data)).rejects.toThrow(
         "Database error"
       );
 
@@ -201,6 +204,34 @@ describe("AppConfigService", () => {
       ).toBe(true);
     });
   });
+
+  describe("getPublicSettings", () => {
+    it("should query the push provider join and return the first row", async () => {
+      const fakeRow = {
+        push_notification_provider_id: 7,
+        push_notification_provider_name: "firebase",
+      };
+      mockDb.query.mockResolvedValue({ rows: [fakeRow] });
+
+      const result = await appConfigService.getPublicSettings({ dbConnection: mockDb });
+
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "SELECT push_notification_provider_id, push_notification_providers.name AS push_notification_provider_name"
+        )
+      );
+      expect(result).toEqual(fakeRow);
+    });
+
+    it("should bubble up DB errors", async () => {
+      mockDb.query.mockRejectedValue(new Error("db fail"));
+
+      await expect(
+        appConfigService.getPublicSettings({ dbConnection: mockDb })
+      ).rejects.toThrow("db fail");
+    });
+  });
+
 });
 
 function containsQueryString(actualQuery, expectedQuery) {

@@ -1,7 +1,6 @@
 // schemaService.js
 async function fetchUserSchema(url) {
   const response = await fetch(url);
-  if (!response.ok) throw new Error("Failed to fetch schema");
   return await response.json();
 }
 
@@ -162,6 +161,7 @@ function attachValidationListeners(formId, schema, url, method) {
   const ajv = new Ajv({ allErrors: true, strict: false });
   window.ajvErrors(ajv);
   const validate = ajv.compile(schema);
+  let valid = false;
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -175,16 +175,54 @@ function attachValidationListeners(formId, schema, url, method) {
       el.classList.remove("is-invalid");
     });
 
-    const valid = validate(data);
-    if (!valid) {
-      validate.errors.forEach((error) => {
-        const field = error.instancePath.slice(1);
-        const errorMessageEl = document.getElementById(`${field}-error`);
+    valid = validate(data);
+
+    if(data.birth_date) {
+      const birthDate = new Date(data.birth_date);
+      const today = new Date();
+      if (birthDate > today) {
+        valid = false;
+        const errorMessageEl = document.getElementById(`birth_date-error`);
         if (errorMessageEl) {
-          errorMessageEl.innerText = error.message;
-          document.getElementById(field).classList.add("is-invalid");
+          errorMessageEl.innerText = "Birth date must be in the past.";
+          document.getElementById("birth_date").classList.add("is-invalid");
         }
-      });
+      }
+      if (birthDate.getFullYear() < 1900) {
+        valid = false;
+        const errorMessageEl = document.getElementById(`birth_date-error`);
+        if (errorMessageEl) {
+          errorMessageEl.innerText = "Birth date must be after 1900.";
+          document.getElementById("birth_date").classList.add("is-invalid");
+        }
+      }
+      
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      if (age < 10) {
+        valid = false;
+        const errorMessageEl = document.getElementById(`birth_date-error`);
+        if (errorMessageEl) {
+          errorMessageEl.innerText = "You must be at least 10 years old.";
+          document.getElementById("birth_date").classList.add("is-invalid");
+        }
+      }
+    }
+
+    if (!valid) {
+      if(validate.errors) {
+        validate.errors.forEach((error) => {
+          const field = error.instancePath.slice(1);
+          const errorMessageEl = document.getElementById(`${field}-error`);
+          if (errorMessageEl) {
+            errorMessageEl.innerText = error.message;
+            document.getElementById(field).classList.add("is-invalid");
+          }
+        });
+      }
     } else {
       handleFormSubmission(url, method, data, formId);
     }

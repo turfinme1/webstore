@@ -5,15 +5,9 @@ class CrudController {
   constructor(crudService, authService) {
     this.crudService = crudService;
     this.authService = authService;
-    this.create = this.create.bind(this);
-    this.getAll = this.getAll.bind(this);
-    this.getById = this.getById.bind(this);
-    this.update = this.update.bind(this);
-    this.delete= this.delete.bind(this);
-    this.getFilteredPaginated = this.getFilteredPaginated.bind(this);
   }
 
-  async create(req, res, next) {
+  create = async (req, res, next) => {
     ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.CRUD.00017.UNAUTHORIZED_CREATE", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "create", req.params.entity);
     const data = {
@@ -29,7 +23,7 @@ class CrudController {
     await req.logger.info({ code: "CONTROLLER.CRUD.00029.CREATE_SUCCESS", short_description: `Created ${data.params.entity}`, long_description: `Created ${data.params.entity} with id ${result.id}` });
   } 
 
-  async getById(req, res, next) {
+  getById = async (req, res, next) => {
     const data = {
       body: req.body,
       params: req.params,
@@ -40,7 +34,7 @@ class CrudController {
     res.status(200).json(result);
   }
 
-  async getFilteredPaginated(req, res) {
+  getFilteredPaginated = async (req, res, next) => {
     validateQueryParams(req, req.entitySchemaCollection[req.entitySchemaCollection[req.params.entity].queryValidationSchema]);
     const data = {
       query: req.query,
@@ -52,7 +46,7 @@ class CrudController {
     res.status(200).json(result);
   }
 
-  async getAll(req, res, next) {
+  getAll = async (req, res, next) => {
     const data = {
       body: req.body,
       params: req.params,
@@ -63,7 +57,7 @@ class CrudController {
     res.status(200).json(result);
   }
 
-  async update(req, res, next) {
+  update = async (req, res, next) => {
     ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.CRUD.00067.UNAUTHORIZED_UPDATE", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "update", req.params.entity);
     const data = {
@@ -80,7 +74,7 @@ class CrudController {
     await req.logger.info({ code: "CONTROLLER.CRUD.00080.UPDATE_SUCCESS", short_description: `Updated ${data.params.entity}`, long_description: `Updated ${data.params.entity} with id ${data.params.id}` });
   }
 
-  async delete(req, res, next) {
+  delete = async (req, res, next) => {
     ASSERT_USER(req.session.admin_user_id, "You must be logged in to perform this action", { code: "CONTROLLER.CRUD.00084.UNAUTHORIZED_DELETE", long_description: "You must be logged in to perform this action" });
     this.authService.requirePermission(req, "delete", req.params.entity);
     const data = {
@@ -93,7 +87,20 @@ class CrudController {
     res.status(200).json(result);
 
     await req.logger.info({ code: "CONTROLLER.CRUD.00095.DELETE_SUCCESS", short_description: `Deleted ${data.params.entity}`, long_description: `Deleted ${data.params.entity} with id ${data.params.id}` });
-  }  
+  }
+  
+  getAllEntities = async (req, res, next) => {
+    const data = {
+      body: req.body,
+      params: req.params,
+    };
+    const context = {
+      dbConnection: req.dbConnection,
+      entitySchemaCollection: req.entitySchemaCollection,
+    }  
+    const result = await this.crudService.getAllEntities(data, context);
+    res.status(200).json(result);
+  }
 }
 
 module.exports = CrudController;

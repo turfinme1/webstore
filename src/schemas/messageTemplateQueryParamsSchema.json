@@ -1,0 +1,59 @@
+{   
+    "type": "object",
+    "name": "messageTemplateQueryParamsSchema",
+    "searchParams": {
+        "type": "object",
+        "properties": {
+            "keyword": {
+                "type": "string"
+            }
+        }
+    },
+    "filterParams": {
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string"
+            },
+            "type": {
+                "type": "string"
+            },
+            "subject": {
+                "type": "string"
+            },
+            "template": {
+                "type": "string"
+            }
+        }
+    },
+    "orderParams": {
+        "type": "array",
+        "properties": {
+            "name": {
+                "type": "string",
+                "label": "Name"
+            },
+            "type": {
+                "type": "string",
+                "label": "Type"
+            },
+            "subject": {
+                "type": "string",
+                "label": "Subject"
+            },
+            "template": {
+                "type": "string",
+                "label": "Template"
+            }
+        }
+    },
+    "pageSize": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 100
+    },
+    "page": {
+        "type": "number",
+        "minimum": 1
+    }
+}

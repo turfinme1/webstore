@@ -1,4 +1,4 @@
-import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showToastMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
+import { fetchUserSchema, createNavigation, createBackofficeNavigation, populateFormFields, createForm, attachValidationListeners, getUserStatus, hasPermission, fetchWithErrorHandling, showErrorMessage, showMessage, getUrlParams, updateUrlParams } from "./page-utility.js";
 
 // Centralized state object
 const state = {
@@ -27,12 +27,18 @@ const elements = {
     currentPageDisplay: document.getElementById("current-page-display"),
     resultCountDisplay: document.getElementById("result-count"),
     placeholderArea: document.getElementById("placeholders"),
+    typeSelectCreate: document.getElementById("type"),
+    typeSelectCreateUpdate: document.getElementById("type-update"),
+    placeholdersCreate: document.getElementById("placeholders-create"),
 
     showFilterButton: document.getElementById("show-filter-btn"),
     cancelFilterButton: document.getElementById("cancel-filter-btn"),
     filterContainer: document.getElementById("filter-container"),
     filterForm: document.getElementById("filter-form"),
     orderBySelect: document.getElementById("order_by"),
+
+    addNewButton: document.getElementById("add-button"),
+    addNewButtonUpdateForm: document.getElementById("add-button-update"),
 };
 
 // Initialize page
@@ -45,11 +51,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.pageSize = urlParams.pageSize || 10;
     state.filterParams = urlParams.filterParams || {};
     state.orderParams = urlParams.orderParams || [];
+    
+    if (!hasPermission(state.userStatus, "read", "message-templates")) {
+        elements.mainContainer.innerHTML = "<h1>Email Template Management</h1>";
+        return;
+    }
 
-    // if (!hasPermission(state.userStatus, "read", "email-templates")) {
-    //     elements.mainContainer.innerHTML = "<h1>Email Template Management</h1>";
-    //     return;
-    // }
+    if(!hasPermission(state.userStatus, "create", "message-templates")) {
+        elements.showFormButton.style.display = "none";
+    }
 
     // Initialize CKEditor
     CKEDITOR.replace("template", {
@@ -67,6 +77,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     attachEventListeners();
+    elements.typeSelectCreate.dispatchEvent(new Event("change"));
     await loadTemplates(state.currentPage);
 });
 
@@ -82,6 +93,12 @@ function attachEventListeners() {
     elements.cancelFilterButton.addEventListener("click", hideFilterForm);
     elements.filterForm.addEventListener("submit", handleFilterTemplates);
     elements.orderBySelect.addEventListener("change", handleFilterTemplates);
+
+    elements.typeSelectCreate.addEventListener("change", handleTypeChange);
+    elements.typeSelectCreateUpdate.addEventListener("change", handleTypeChange);
+
+    elements.addNewButton.addEventListener("click", handleAddNewButtonToTemplate);
+    elements.addNewButtonUpdateForm.addEventListener("click", handleAddNewButtonToUpdateForm);
 }
 
 // Show/Hide Forms
@@ -126,14 +143,14 @@ async function loadTemplates(page) {
             page: page.toString(),
         });
         updateUrlParams(state);
-        const response = await fetchWithErrorHandling(`/crud/email-templates/filtered?${queryParams.toString()}`);
+        const response = await fetchWithErrorHandling(`/crud/message-templates/filtered?${queryParams.toString()}`);
         if (!response.ok) {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
             return;
         }
         const { result, count } = await response.data;
         
-        renderTemplateList(result);
+        await renderTemplateList(result);
         updatePagination(count, page);
     } catch (error) {
         console.error("Error loading users:", error);
@@ -141,10 +158,47 @@ async function loadTemplates(page) {
 }
 
 // UI Functions
-function renderTemplateList(templates) {
+async function renderTemplateList(templates) {
     elements.templateList.innerHTML = "";
-    templates.forEach((template) => {
+    for (const template of templates) {
         const row = document.createElement("tr");
+
+        const previewCell = document.createElement("td");
+        
+        previewCell.align = "center";
+        const iframe = document.createElement("iframe");
+        
+        iframe.style.width = "100px";  
+         iframe.style.height = "120px";
+        iframe.style.border = "1px solid #dee2e6";
+        iframe.scrolling = "no";
+        iframe.style.overflow = "hidden";
+    
+        const response = await fetchWithErrorHandling(`/api/preview-email/${template.id}`);
+        const email = await response.data;
+    
+        const scaledEmail = `
+          <html>
+            <head>
+              <style>
+                body { margin: 0; padding: 0; }
+                .scale-wrapper {
+                  transform: scale(0.2);
+                  transform-origin: top left;
+                  width: 500%; /* 1 / 0.4 = 500% so that the full content is visible */
+                }
+              </style>
+            </head>
+            <body>
+              <div class="scale-wrapper">
+                ${email}
+              </div>
+            </body>
+          </html>
+        `;
+        iframe.srcdoc = scaledEmail;
+        previewCell.appendChild(iframe);
+        row.appendChild(previewCell);
         
         // Create cells
         row.appendChild(createTableCell(template.name));
@@ -153,14 +207,14 @@ function renderTemplateList(templates) {
 
         // Actions cell
         const actionsCell = document.createElement("td");
-        // if (hasPermission(state.userStatus, "update", "email-templates")) {
+        if (hasPermission(state.userStatus, "update", "message-templates")) {
             actionsCell.appendChild(
                 createActionButton("Edit", "btn-warning", () =>
                     displayUpdateForm(template.id)
                 )
             );
-        // }
-        // if (hasPermission(state.userStatus, "delete", "email-templates")) {
+        }
+        // if (hasPermission(state.userStatus, "delete", "message-templates")) {
             // actionsCell.appendChild(
             //     createActionButton("Delete", "btn-danger", () =>
             //         handleDeleteTemplate(template.id)
@@ -168,13 +222,13 @@ function renderTemplateList(templates) {
             // );
         // }
 
-        if (template.type !== "Notification") {
-            actionsCell.appendChild(
-                createActionButton("Preview email", "btn-warning", () =>
-                    handlePreviewEmail(template.id)
-                )
-            );
-
+        actionsCell.appendChild(
+            createActionButton("Preview", "btn-warning", () =>
+                handlePreviewEmail(template.id)
+            )
+        );
+        
+        if (template.type === "Email") {
             actionsCell.appendChild(
                 createActionButton("Send test email", "btn-warning", () =>
                     handleSendTestEmail(template.id)
@@ -185,7 +239,7 @@ function renderTemplateList(templates) {
         row.appendChild(actionsCell);
 
         elements.templateList.appendChild(row);
-    });
+    };
 }
 
 function createTableCell(text) {
@@ -241,10 +295,10 @@ function createPaginationButton(text, enabled, onClick) {
 async function displayUpdateForm(templateId) {
     try {
         const response = await fetchWithErrorHandling(
-            `/crud/email-templates/${templateId}`
+            `/crud/message-templates/${templateId}`
         );
         if (!response.ok) {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
             return;
         }
         const template = await response.data;
@@ -253,7 +307,7 @@ async function displayUpdateForm(templateId) {
         state.currentTemplateId = templateId;
     } catch (error) {
         console.error("Error loading user for update:", error);
-        showToastMessage("Error loading template", "error");
+        showErrorMessage("Error loading template");
     }
 }
 
@@ -262,12 +316,15 @@ function populateUpdateForm(template) {
     elements.templateUpdateForm["type-update"].value = template.type;
     elements.templateUpdateForm["type-update"].disabled = true;
     elements.templateUpdateForm["subject-update"].value = template.subject;
+    elements.templateUpdateForm["icon-update"].value = template?.notification_settings?.icon || "";
+    elements.templateUpdateForm["badge-update"].value = template?.notification_settings?.badge || "";
+    elements.templateUpdateForm["image-update"].value = template?.notification_settings?.image || "";
     CKEDITOR.instances["template-update"].setData(template.template);
     elements.placeholderArea.innerHTML =
     "Available placeholders: " + template.placeholders.join(", ") ||
     "No placeholders";
 
-    if (template.type !== "notification") {
+    if (template.type === "Email") {
         elements.borderCustomizationElements.forEach((element) => {
             element.style.display = "block";
         });
@@ -278,6 +335,15 @@ function populateUpdateForm(template) {
             element.style.display = "none";
         });
     }
+
+    elements.typeSelectCreateUpdate.dispatchEvent(new Event("change"));
+
+    const buttonContainer = document.getElementById("buttons-update-container");
+    buttonContainer.innerHTML = ""; // Clear previous entries
+    const buttons = template.notification_settings?.actions || [];
+    buttons.forEach((btn) => {
+        handleAddNewButtonToUpdateForm(btn);
+    });
 }
 
 async function handleCreateTemplate(event) {
@@ -287,21 +353,37 @@ async function handleCreateTemplate(event) {
     data.template = CKEDITOR.instances.template.getData();
     data.table_border_color = null;
     data.table_border_width = null;
-    data.placeholders = JSON.stringify(["{first_name}","{last_name}","{email}","{phone}"]);
+    data.notification_settings = {
+        icon: data.icon || null,
+        badge: data.badge || null,
+        image: data.image || null,
+        actions: getButtonsData(),
+    };
+    delete data.icon;
+    delete data.badge;
+    delete data.image;
+
+    data
+
+    if(data.type === 'Push-Notification' || data.type === 'Notification'){
+        data.placeholders = JSON.stringify(["{first_name}","{last_name}","{email}","{phone}"]);
+    } else {
+        data.placeholders = JSON.stringify([]);
+    }
     try {
-        const response = await fetchWithErrorHandling("/crud/email-templates", {
+        const response = await fetchWithErrorHandling("/crud/message-templates", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
 
         if (response.ok) {
-            showToastMessage("Template created successfully!", "success");
+            showMessage("Template created successfully!");
             elements.templateForm.reset();
             hideForm();
             await loadTemplates(state.currentPage);
         } else {
-            showToastMessage(`Failed to create template: ${response.error}`, "error");
+            showErrorMessage(`Failed to create template: ${response.error}`);
         }
     } catch (error) {
         console.error("Error creating user:", error);
@@ -314,16 +396,25 @@ async function handleUpdateTemplate(event) {
     const data = Object.fromEntries(formData);
     data.template = CKEDITOR.instances["template-update"].getData();
     data.type = elements.templateUpdateForm["type-update"].value;
-    if (data.type !== "notification") {
+    if (data.type === "email") {
         data.table_border_color = elements.templateUpdateForm["table-border-color-update"].value || null;
         data.table_border_width = elements.templateUpdateForm["table-border-width-update"].value || null;
     } else {
         data.table_border_color = null;
         data.table_border_width = null
     }
+    data.notification_settings = {
+        icon: data.icon || null,
+        badge: data.badge || null,
+        image: data.image || null,
+        actions: getButtonsData("update"),
+    };
+    delete data.icon;
+    delete data.badge;
+    delete data.image;
     try {
         const response = await fetchWithErrorHandling(
-            `/crud/email-templates/${state.currentTemplateId}`,
+            `/crud/message-templates/${state.currentTemplateId}`,
             {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
@@ -332,17 +423,17 @@ async function handleUpdateTemplate(event) {
         );
 
         if (response.ok) {
-            showToastMessage("Template updated successfully!", "success");
+            showMessage("Template updated successfully!");
             hideUpdateForm();
             state.currentTemplateId = null;
             state.currentPage = 1;
             state.filterParams = {};
             await loadTemplates(state.currentPage);
         } else {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
         }
     } catch (error) {
-        showToastMessage("Error updating template", "error");
+        showErrorMessage("Error updating template");
     }
 }
 
@@ -351,18 +442,18 @@ async function handleDeleteTemplate(templateId) {
 
     try {
         const response = await fetchWithErrorHandling(
-            `/crud/email-templates/${templateId}`,
+            `/crud/message-templates/${templateId}`,
             { method: "DELETE" }
         );
 
         if (response.ok) {
-            showToastMessage("Template deleted successfully!", "success");
+            showMessage("Template deleted successfully!");
             await loadTemplates();
         } else {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
         }
     } catch (error) {
-        showToastMessage("Error deleting template", "error");
+        showErrorMessage("Error deleting template");
     }
 }
 
@@ -388,15 +479,17 @@ async function handleFilterTemplates(event) {
 
 async function handleSendTestEmail(templateId) {
     try {
+        // confirmation before sending test email
+        if (!confirm("Are you sure you want to send a test email?")) return;
         const response = await fetchWithErrorHandling(`/api/test-email/${templateId}`);
         if (response.ok) {
-            showToastMessage("Test email sent successfully!", "success");
+            showMessage("Test email sent successfully!");
         } else {
-            showToastMessage(response.error, "error");
+            showErrorMessage(response.error);
         }
     } catch (error) {
         console.error("Error sending test email:", error);
-        showToastMessage("Error sending test email", "error");
+        showErrorMessage("Error sending test email");
     }
 }
 
@@ -429,6 +522,82 @@ async function handlePreviewEmail(templateId) {
         modal.appendChild(iframe);
         document.body.appendChild(modal);
     } else {
-        showToastMessage(response.error, "error");
+        showErrorMessage(response.error);
     }
+}
+
+async function handleAddNewButtonToTemplate() {
+    const container = document.getElementById("buttons-container");
+    const index = container.children.length;
+
+    const group = document.createElement("div");
+    group.className = "input-group mb-2";
+
+    group.innerHTML = `
+        <input type="text" class="form-control" name="button_title_${index}" placeholder="Button Title" required>
+        <input type="url" class="form-control" name="button_link_${index}" placeholder="Button Link" required>
+        <button type="button" class="btn btn-outline-danger remove-button">✖</button>
+    `;
+
+    container.appendChild(group);
+
+    group.querySelector(".remove-button").addEventListener("click", () => {
+        group.remove();
+    });
+}
+
+function handleAddNewButtonToUpdateForm(buttonData = null) {
+    const container = document.getElementById("buttons-update-container");
+    const index = container.children.length;
+
+    const group = document.createElement("div");
+    group.className = "input-group mb-2";
+
+    group.innerHTML = `
+        <input type="text" class="form-control" name="button_title_update_${index}" placeholder="Button Title" required value="${buttonData?.title || ''}">
+        <input type="url" class="form-control" name="button_link_update_${index}" placeholder="Button Link" required value="${buttonData?.action?.split('$__$')[1] || ''}">
+        <button type="button" class="btn btn-outline-danger remove-button">✖</button>
+    `;
+
+    container.appendChild(group);
+
+    group.querySelector(".remove-button").addEventListener("click", () => {
+        group.remove();
+    });
+}
+
+function getButtonsData(mode = "create") {
+    const containerId = mode === "update" ? "buttons-update-container" : "buttons-container";
+    const buttons = [];
+
+    document.querySelectorAll(`#${containerId} .input-group`).forEach((group) => {
+        const inputs = group.querySelectorAll("input");
+        if (inputs[0].value && inputs[1].value) {
+            buttons.push({
+                title: inputs[0].value,
+                action: `redirect$__$${inputs[1].value}`
+            });
+        }
+    });
+
+    return buttons;
+}
+
+
+async function handleTypeChange(params) {
+    const selectedType = params.target.value;
+    if (selectedType === "Push-Notification") {
+        elements.placeholdersCreate.innerHTML = "Available placeholders: {first_name}, {last_name}, {email}, {phone}";
+    } else if (selectedType === "Notification") { 
+        elements.placeholdersCreate.innerHTML = "Available placeholders: {first_name}, {last_name}, {email}, {phone}";
+    } else {
+        elements.placeholdersCreate.innerHTML = "No available placeholders";
+    }
+
+      // 2. Notification customization (icon, badge, image, buttons)
+    const notifElems = document.querySelectorAll(".notification-customization");
+    const showNotificationOptions = ["Push-Notification", "Push-Notification-Broadcast"].includes(selectedType);
+    notifElems.forEach(el => {
+        el.style.display = showNotificationOptions ? "block" : "none";
+    });
 }

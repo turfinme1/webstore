@@ -3,17 +3,10 @@ const { ENV } = require("../serverConfigurations/constants");
 const paypal = require("../serverConfigurations/paypalClient");
 
 class OrderService {
-  constructor(emailService, paypalClient) { 
-    this.emailService = emailService;
+  constructor(messageService, paypalClient, cartService) {
+    this.cartService = cartService; 
+    this.messageService = messageService;
     this.paypalClient = paypalClient;
-    this.createOrder = this.createOrder.bind(this);
-    this.createOrderByStaff = this.createOrderByStaff.bind(this);
-    this.updateOrderByStaff = this.updateOrderByStaff.bind(this);
-    this.getOrder = this.getOrder.bind(this);
-    this.capturePaypalPayment = this.capturePaypalPayment.bind(this);
-    this.cancelPaypalPayment = this.cancelPaypalPayment.bind(this);
-    this.verifyCartPricesAreUpToDate = this.verifyCartPricesAreUpToDate.bind(this);
-    this.deleteOrder = this.deleteOrder.bind(this);
   }
   
   async createOrder(data) {
@@ -39,7 +32,7 @@ class OrderService {
         'Pending',
         $2,
         $3,
-        (SELECT COALESCE(SUM(discount_percentage), 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date),
+        (SELECT COALESCE( (SELECT discount_percentage FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date ORDER BY discount_percentage DESC LIMIT 1), 0)),
         (SELECT SUM(ci.quantity * p.price) 
         FROM cart_items ci 
         JOIN products p ON ci.product_id = p.id 
@@ -133,8 +126,8 @@ class OrderService {
           },
         ],
         application_context: {
-          return_url: `${ENV.DEVELOPMENT_URL}/api/paypal/capture/${order.id}`,
-          cancel_url: `${ENV.DEVELOPMENT_URL}/api/paypal/cancel/${order.id}`,
+          return_url: `${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/api/paypal/capture/${order.id}`,
+          cancel_url: `${data.context.settings.url}:${ENV.FRONTOFFICE_PORT}/api/paypal/cancel/${order.id}`,
           shipping_preference: 'NO_SHIPPING',
           user_action: 'PAY_NOW'
         }
@@ -164,7 +157,9 @@ class OrderService {
         order_number: orderView.id,
       }
     };
-    await this.emailService.queueEmail(emailObject);
+    await this.messageService.queueEmail(emailObject);
+    await this.sendQuantityUpdateSyncClientsEvent(data);
+    await this.cartService.sendCartUpdateSyncClientsEvent(data);
 
     return { approvalUrl, message: "Order placed successfully", orderId: order.id };
   }
@@ -174,7 +169,7 @@ class OrderService {
     const orderResult = await data.dbConnection.query(
       `
       INSERT INTO orders (user_id, status, vat_percentage, discount_percentage, total_price, total_stock_price) 
-      VALUES ($1, $2, $3, (SELECT COALESCE(SUM(discount_percentage), 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date),
+      VALUES ($1, $2, $3, (SELECT COALESCE(discount_percentage, 0) FROM promotions WHERE is_active = TRUE AND NOW() BETWEEN start_date AND end_date ORDER BY discount_percentage DESC LIMIT 1),
       (
         SELECT SUM(p.price * (oi->>'quantity')::BIGINT)
         FROM products p
@@ -236,6 +231,8 @@ class OrderService {
       [addressId, order.id]
     );
 
+    await this.sendQuantityUpdateSyncClientsEvent(data);
+
     return { order, message: "Order created successfully" };
   }
 
@@ -249,7 +246,7 @@ class OrderService {
 
     const orderResult = await data.dbConnection.query(
       `
-      SELECT * FROM orders_view WHERE id = $1`,
+      SELECT * FROM orders_detail_view WHERE id = $1`,
       [data.params.orderId]
     );
     ASSERT_USER(orderResult.rows.length === 1, "Order not found", { code: "SERVICE.ORDER.00255.ORDER_NOT_FOUND" , long_description: "Order not found" });
@@ -421,7 +418,7 @@ class OrderService {
         payment_number: payment.payment_hash,
       }
     };
-    await this.emailService.queueEmail(emailObject);
+    await this.messageService.queueEmail(emailObject);
 
     return { message: "Payment completed successfully" };
   }
@@ -512,6 +509,14 @@ class OrderService {
     ASSERT_USER(orderResult.rows.length > 0, "Order not found", { code: "SERVICE.ORDER.00512.ORDER_NOT_FOUND", long_description: "Order not found" });
 
     return { message: "Order deleted successfully" };
+  }
+
+  async sendQuantityUpdateSyncClientsEvent(data) {
+    await data.dbConnection.query(`
+      INSERT INTO message_queue (subject, text_content, type, event_type)
+      VALUES ($1, $2, $3, $4)`,
+      ["Quantity changed", "Product Quantity changed", "Notification", "quantity_update_sync_clients"]
+    );
   }
 }
 
